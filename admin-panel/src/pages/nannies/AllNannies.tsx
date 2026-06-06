@@ -10,7 +10,7 @@ import {
   StatusBadge,
   TableCard,
 } from '../../components/ui/AdminUI';
-import { FilterBar, FilterSelect, Pagination } from '../../components/ui/ListControls';
+import { FilterBar, FilterSelect, Pagination, distinctOptions } from '../../components/ui/ListControls';
 import { useListControls } from '../../hooks/useListControls';
 import { NannyService, NannyRow } from '../../services/firestore';
 import { initials, gradientFor } from '../../utils/avatar';
@@ -40,6 +40,8 @@ export default function AllNannies() {
   const [loading, setLoading] = useState(true);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState('all');
+  const [nationality, setNationality] = useState('all');
+  const [city, setCity] = useState('all');
 
   useEffect(() => {
     NannyService.list()
@@ -62,8 +64,11 @@ export default function AllNannies() {
   };
 
   const extraFilter = useMemo(
-    () => (n: NannyRow) => status === 'all' || n.status === status,
-    [status],
+    () => (n: NannyRow) =>
+      (status === 'all' || n.status === status) &&
+      (nationality === 'all' || n.nationality === nationality) &&
+      (city === 'all' || n.city === city),
+    [status, nationality, city],
   );
 
   const lc = useListControls(items, {
@@ -82,6 +87,15 @@ export default function AllNannies() {
     const rejected = items.filter((n) => n.status === 'rejected').length;
     return { approved, pendingDocs, rejected };
   }, [items]);
+
+  const nationalityOptions = useMemo(
+    () => distinctOptions(items, (n) => n.nationality, 'All nationalities'),
+    [items],
+  );
+  const cityOptions = useMemo(
+    () => distinctOptions(items, (n) => n.city, 'All cities'),
+    [items],
+  );
 
   const onExport = () => {
     exportCsv('nannies.csv', lc.filtered, [
@@ -132,10 +146,7 @@ export default function AllNannies() {
           setFrom={lc.setFrom}
           to={lc.to}
           setTo={lc.setTo}
-          onClear={() => {
-            lc.clear();
-            setStatus('all');
-          }}
+          onClear={() => { lc.clear(); setStatus('all'); setNationality('all'); setCity('all'); }}
           searchPlaceholder="Search by name, nationality, city, language…"
           dateLabel="Submitted"
         >
@@ -145,6 +156,8 @@ export default function AllNannies() {
             onChange={setStatus}
             options={[{ value: 'all', label: 'All statuses' }, ...STATUSES.map((s) => ({ value: s, label: s }))]}
           />
+          <FilterSelect label="Nationality" value={nationality} onChange={setNationality} options={nationalityOptions} />
+          <FilterSelect label="City" value={city} onChange={setCity} options={cityOptions} />
         </FilterBar>
 
         <TableCard title="All nannies">

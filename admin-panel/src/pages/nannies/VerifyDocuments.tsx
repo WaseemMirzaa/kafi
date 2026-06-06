@@ -14,7 +14,7 @@ import { NannyService, NannyRow } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
 import { useAuthStore } from '../../hooks/useAuth';
 import { NannyProfileView } from '../../components/nanny/NannyProfileView';
-import { FilterBar, FilterSelect, Pagination } from '../../components/ui/ListControls';
+import { FilterBar, FilterSelect, Pagination, distinctOptions } from '../../components/ui/ListControls';
 import { useListControls } from '../../hooks/useListControls';
 
 const DOC_STATUSES = ['approved', 'rejected', 'resubmitted', 'uploaded', 'pending', 'missing'];
@@ -44,6 +44,8 @@ export default function VerifyDocuments() {
   const [docRejectReason, setDocRejectReason] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
   const [docStatus, setDocStatus] = useState('all');
+  const [nationality, setNationality] = useState('all');
+  const [city, setCity] = useState('all');
   // Popup state: the nanny whose documents are being viewed, and whether the
   // popup is currently showing the full profile instead of the document list.
   const [docsFor, setDocsFor] = useState<NannyRow | null>(null);
@@ -92,8 +94,19 @@ export default function VerifyDocuments() {
 
   const extraFilter = useMemo(
     () => (n: NannyRow) =>
-      docStatus === 'all' || (n.documents ?? []).some((d) => d.status === docStatus),
-    [docStatus],
+      (docStatus === 'all' || (n.documents ?? []).some((d) => d.status === docStatus)) &&
+      (nationality === 'all' || n.nationality === nationality) &&
+      (city === 'all' || n.city === city),
+    [docStatus, nationality, city],
+  );
+
+  const nationalityOptions = useMemo(
+    () => distinctOptions(items, (n) => n.nationality, 'All nationalities'),
+    [items],
+  );
+  const cityOptions = useMemo(
+    () => distinctOptions(items, (n) => n.city, 'All cities'),
+    [items],
   );
 
   const lc = useListControls(items, {
@@ -194,10 +207,7 @@ export default function VerifyDocuments() {
           setFrom={lc.setFrom}
           to={lc.to}
           setTo={lc.setTo}
-          onClear={() => {
-            lc.clear();
-            setDocStatus('all');
-          }}
+          onClear={() => { lc.clear(); setDocStatus('all'); setNationality('all'); setCity('all'); }}
           searchPlaceholder="Search by name, nationality, city…"
           dateLabel="Submitted"
         >
@@ -207,6 +217,8 @@ export default function VerifyDocuments() {
             onChange={setDocStatus}
             options={[{ value: 'all', label: 'All documents' }, ...DOC_STATUSES.map((s) => ({ value: s, label: s }))]}
           />
+          <FilterSelect label="Nationality" value={nationality} onChange={setNationality} options={nationalityOptions} />
+          <FilterSelect label="City" value={city} onChange={setCity} options={cityOptions} />
         </FilterBar>
 
         <TableCard title="Document verification queue">
