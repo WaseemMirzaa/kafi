@@ -16,7 +16,8 @@ standalone change).
 
 | Slug | Project | Epic / phase | Branch | Status | Updated | Artifacts |
 | ---- | ------- | ------------ | ------ | ------ | ------- | --------- |
-| kafi-dashboard-revert-revenue-filters | Nannies app (Kafi admin) | — (standalone) | feat/kafi-dashboard-revert-revenue-filters | READY_FOR_REVIEW | 2026-06-07 | scope · plan · build |
+| kafi-dashboard-revert-revenue-filters | Nannies app (Kafi admin) | — (standalone) | feat/kafi-dashboard-revert-revenue-filters | PR_OPEN | 2026-06-07 | scope · plan · build · review · [PR #1](https://github.com/WaseemMirzaa/kafi/pull/1) |
+| kafi-revenue-trend-chart | Nannies app (Kafi admin) | — (standalone) | feat/kafi-revenue-trend-chart | READY_FOR_REVIEW | 2026-06-07 | scope · plan · build |
 
 <!--
 Task status flow:
