@@ -1,3 +1,21 @@
+/** Distinct, alphabetically-sorted dropdown options derived from rows.
+ *  Prepends an "all" entry. Skips empty/undefined accessor values. */
+export function distinctOptions<T>(
+  rows: T[],
+  accessor: (row: T) => string | undefined | null,
+  allLabel: string,
+): { value: string; label: string }[] {
+  const seen = new Set<string>();
+  for (const r of rows) {
+    const v = accessor(r);
+    if (v != null && v.trim() !== '') seen.add(v);
+  }
+  const sorted = [...seen].sort((a, b) =>
+    a.localeCompare(b, undefined, { sensitivity: 'base' }),
+  );
+  return [{ value: 'all', label: allLabel }, ...sorted.map((v) => ({ value: v, label: v }))];
+}
+
 const inputCls =
   'admin-card text-[10px] font-semibold text-navy px-2.5 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30';
 

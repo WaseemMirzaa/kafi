@@ -10,6 +10,8 @@ import {
   StatusBadge,
   TableCard,
 } from '../../components/ui/AdminUI';
+import { FilterBar, FilterSelect, Pagination, distinctOptions } from '../../components/ui/ListControls';
+import { useListControls } from '../../hooks/useListControls';
 import { FamilyService, FamilyRow } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
 import { exportCsv } from '../../utils/csv';
@@ -30,11 +32,21 @@ const statusLabel: Record<string, string> = {
   paymentFailed: 'Payment failed',
 };
 
+const SUB_STATUSES: FamilyRow['subscription']['status'][] = [
+  'free',
+  'active',
+  'cancelled',
+  'expired',
+  'paymentFailed',
+];
+
 export default function AllFamilies() {
   const [items, setItems] = useState<FamilyRow[]>([]);
   const [loading, setLoading] = useState(true);
-  const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [nationality, setNationality] = useState('all');
+  const [city, setCity] = useState('all');
+  const [subStatus, setSubStatus] = useState('all');
 
   useEffect(() => {
     FamilyService.list()
@@ -56,20 +68,40 @@ export default function AllFamilies() {
     }
   };
 
-  const filtered = useMemo(() => {
-    const q = search.trim().toLowerCase();
-    if (!q) return items;
-    return items.filter((f) =>
-      [f.fullName, f.nationality, f.city].some((s) => s?.toLowerCase().includes(q))
-    );
-  }, [items, search]);
+  const extraFilter = useMemo(
+    () => (f: FamilyRow) =>
+      (nationality === 'all' || f.nationality === nationality) &&
+      (city === 'all' || f.city === city) &&
+      (subStatus === 'all' || f.subscription.status === subStatus),
+    [nationality, city, subStatus],
+  );
+
+  const lc = useListControls(items, {
+    search: (f, q) => [f.fullName, f.nationality, f.city].some((s) => s?.toLowerCase().includes(q)),
+    getDate: (f) => f.createdAt,
+    extraFilter,
+    pageSize: 8,
+  });
+
+  const nationalityOptions = useMemo(
+    () => distinctOptions(items, (f) => f.nationality, 'All nationalities'),
+    [items],
+  );
+  const cityOptions = useMemo(
+    () => distinctOptions(items, (f) => f.city, 'All cities'),
+    [items],
+  );
+  const subStatusOptions = [
+    { value: 'all', label: 'All subscriptions' },
+    ...SUB_STATUSES.map((s) => ({ value: s, label: statusLabel[s] ?? s })),
+  ];
 
   const subscribed = items.filter((f) => ['active', 'cancelled'].includes(f.subscription.status)).length;
   const free = items.filter((f) => f.subscription.status === 'free').length;
   const expired = items.filter((f) => ['expired', 'paymentFailed'].includes(f.subscription.status)).length;
 
   const onExport = () => {
-    exportCsv('families.csv', filtered, [
+    exportCsv('families.csv', lc.filtered, [
       { header: 'ID', value: (r) => r.id },
       { header: 'Name', value: (r) => r.fullName },
       { header: 'Nationality', value: (r) => r.nationality },
@@ -87,18 +119,9 @@ export default function AllFamilies() {
         title="All families"
         subtitle={`${items.length} total · Manage accounts & subscriptions`}
         actions={
-          <>
-            <input
-              type="search"
-              placeholder="Search families…"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="admin-card text-[10px] font-semibold text-navy px-3 py-2 w-52 border-[#EBEEF8] focus:outline-none"
-            />
-            <button type="button" className="qa-btn qa-g" onClick={onExport}>
-              Export CSV
-            </button>
-          </>
+          <button type="button" className="qa-btn qa-g" onClick={onExport}>
+            Export CSV
+          </button>
         }
       />
       <PageContent>
@@ -108,12 +131,28 @@ export default function AllFamilies() {
           <ColStat num={String(expired)} label="Expired" change="⚠ Reactivate" numColor="#FF5C8A" />
         </div>
 
+        <FilterBar
+          query={lc.query}
+          setQuery={lc.setQuery}
+          from={lc.from}
+          setFrom={lc.setFrom}
+          to={lc.to}
+          setTo={lc.setTo}
+          onClear={() => { lc.clear(); setNationality('all'); setCity('all'); setSubStatus('all'); }}
+          searchPlaceholder="Search by name, nationality, city…"
+          dateLabel="Joined"
+        >
+          <FilterSelect label="Subscription" value={subStatus} onChange={setSubStatus} options={subStatusOptions} />
+          <FilterSelect label="Nationality" value={nationality} onChange={setNationality} options={nationalityOptions} />
+          <FilterSelect label="City" value={city} onChange={setCity} options={cityOptions} />
+        </FilterBar>
+
         <TableCard title="Family accounts">
           {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
-          {!loading && filtered.length === 0 && (
-            <div className="px-3 py-4 text-[10px] text-[#8090B0]">No families found.</div>
+          {!loading && lc.total === 0 && (
+            <div className="px-3 py-4 text-[10px] text-[#8090B0]">No families match your filters.</div>
           )}
-          {filtered.map((f) => (
+          {lc.pageItems.map((f) => (
             <Row key={f.id}>
               <Avatar letter={initials(f.fullName)} gradient={gradientFor(f.id)} />
               <div className="flex-1 min-w-0">
@@ -147,6 +186,14 @@ export default function AllFamilies() {
               </Link>
             </Row>
           ))}
+          <Pagination
+            page={lc.page}
+            pageCount={lc.pageCount}
+            rangeStart={lc.rangeStart}
+            rangeEnd={lc.rangeEnd}
+            total={lc.total}
+            onPage={lc.setPage}
+          />
         </TableCard>
       </PageContent>
     </PageShell>
