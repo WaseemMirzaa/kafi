@@ -1,0 +1,192 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // ---------- helpers ----------
+    function isSignedIn() {
+      return request.auth != null;
+    }
+    function isUser(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+    function existing() {
+      return resource.data;
+    }
+    function incoming() {
+      return request.resource.data;
+    }
+    function isFamily(uid) {
+      return exists(/databases/$(database)/documents/families/$(uid));
+    }
+    function isNanny(uid) {
+      return exists(/databases/$(database)/documents/nannies/$(uid));
+    }
+    function familySub(uid) {
+      return get(/databases/$(database)/documents/families/$(uid)).data.subscription;
+    }
+    function familyHasAccess(uid) {
+      let s = familySub(uid);
+      return s.status == 'active' || s.status == 'cancelled';
+    }
+    function hasActiveTrialWith(familyId, nannyId) {
+      let f = get(/databases/$(database)/documents/families/$(familyId)).data;
+      return f.activeTrialNannyIds is list && f.activeTrialNannyIds.hasAny([nannyId]);
+    }
+
+    // ---------- users ----------
+    match /users/{uid} {
+      allow read: if isUser(uid) || isAdmin();
+      allow create: if isUser(uid);
+      allow update: if isUser(uid) || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---------- nannies ----------
+    match /nannies/{nannyId} {
+      // Public read for verified/approved nannies; full read for self/admin.
+      allow read: if isUser(nannyId)
+        || isAdmin()
+        || (existing().status == 'approved' && existing().isVerified == true);
+      allow create: if isUser(nannyId);
+      allow update: if isUser(nannyId) || isAdmin();
+      allow delete: if isAdmin();
+
+      match /documents/{docId} {
+        allow read: if isUser(nannyId) || isAdmin();
+        allow write: if isUser(nannyId) || isAdmin();
+      }
+    }
+
+    // ---------- families ----------
+    match /families/{familyId} {
+      allow read: if isUser(familyId) || isAdmin();
+      allow create: if isUser(familyId);
+      // Family may edit profile fields but not subscription/freeContactsUsed/activeTrialNannyIds — admin/server only.
+      allow update: if (isUser(familyId)
+                      && !(incoming().diff(existing()).affectedKeys()
+                          .hasAny(['subscription', 'freeContactsUsed', 'activeTrialNannyIds', 'viewedProfiles'])))
+                   || isAdmin();
+      allow delete: if isAdmin();
+    }
+
+    // ---------- jobs ----------
+    match /jobs/{jobId} {
+      allow read: if isSignedIn();
+      allow create: if isSignedIn() && incoming().familyId == request.auth.uid;
+      allow update, delete: if isAdmin() || (isSignedIn() && existing().familyId == request.auth.uid);
+    }
+
+    // ---------- applications ----------
+    match /applications/{appId} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && (existing().nannyId == request.auth.uid
+                || existing().familyId == request.auth.uid));
+      allow create: if isSignedIn() && incoming().nannyId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && (existing().nannyId == request.auth.uid
+                || existing().familyId == request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    // ---------- shortlists ----------
+    match /shortlists/{shortlistId} {
+      allow read, write: if isAdmin()
+        || (isSignedIn() && (existing().familyId == request.auth.uid
+                            || incoming().familyId == request.auth.uid));
+    }
+
+    // ---------- chatThreads ----------
+    match /chatThreads/{threadId} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && (existing().familyId == request.auth.uid
+                || existing().nannyId == request.auth.uid));
+      allow create: if isSignedIn()
+        && incoming().familyId == request.auth.uid
+        && (familyHasAccess(request.auth.uid)
+            || hasActiveTrialWith(incoming().familyId, incoming().nannyId));
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && (existing().familyId == request.auth.uid
+                || existing().nannyId == request.auth.uid));
+      allow delete: if isAdmin();
+
+      match /messages/{msgId} {
+        allow read: if isAdmin()
+          || (isSignedIn()
+              && (get(/databases/$(database)/documents/chatThreads/$(threadId)).data.familyId == request.auth.uid
+                  || get(/databases/$(database)/documents/chatThreads/$(threadId)).data.nannyId == request.auth.uid));
+        // Family must have access OR thread has active trial.
+        allow create: if isAdmin() || (
+          isSignedIn() && (
+            // Nannies always allowed
+            get(/databases/$(database)/documents/chatThreads/$(threadId)).data.nannyId == request.auth.uid
+            ||
+            (
+              get(/databases/$(database)/documents/chatThreads/$(threadId)).data.familyId == request.auth.uid
+              && (
+                familyHasAccess(request.auth.uid)
+                || hasActiveTrialWith(
+                  request.auth.uid,
+                  get(/databases/$(database)/documents/chatThreads/$(threadId)).data.nannyId
+                )
+              )
+            )
+          )
+        );
+        allow update: if isAdmin();
+        allow delete: if isAdmin();
+      }
+    }
+
+    // ---------- trials ----------
+    match /trials/{trialId} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && (existing().familyId == request.auth.uid
+                || existing().nannyId == request.auth.uid));
+      allow create: if isSignedIn() && incoming().familyId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && (existing().familyId == request.auth.uid
+                || existing().nannyId == request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
+    // ---------- notifications ----------
+    match /notifications/{notifId} {
+      allow read, update, delete: if isAdmin()
+        || (isSignedIn() && existing().userId == request.auth.uid);
+      allow create: if isAdmin();
+    }
+
+    // ---------- disputes / reports ----------
+    match /disputes/{disputeId} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && (existing().reporterId == request.auth.uid
+                || existing().reportedUserId == request.auth.uid));
+      allow create: if isSignedIn() && incoming().reporterId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
+    // ---------- admin config ----------
+    match /settings/{settingId} {
+      allow read: if isSignedIn();
+      allow write: if isAdmin();
+    }
+    match /admins/{uid} {
+      allow read: if isUser(uid) || isAdmin();
+      allow write: if isAdmin();
+    }
+    match /broadcasts/{id} {
+      allow read: if isAdmin();
+      allow write: if isAdmin();
+    }
+  }
+}

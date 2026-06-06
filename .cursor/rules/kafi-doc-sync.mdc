@@ -1,0 +1,63 @@
+---
+description: Always follow Kafi spec docs; confirm scope in chat, update MD files first, then code
+alwaysApply: true
+---
+
+# Kafi Documentation Sync Workflow
+
+**Always follow the three spec documents while coding.** Implementation must match what is written in the docs — not assumptions from chat or the HTML mockup alone.
+
+Source of truth (read and update together):
+
+- `KAFI_APP_DOCUMENTATION.md` — screens, UX, functional flows
+- `KAFI_SYSTEM_SPECIFICATION.md` — business rules, data models, system flows
+- `KAFI_TECHNICAL_ARCHITECTURE.md` — Flutter/GetX, Firebase, admin, services
+
+## Mandatory order of work
+
+```
+Chat request → Search docs → User confirms scope → Update MD files → Write code → Log Implementation History
+```
+
+1. **Search** all three docs for the task (screen, flow, feature, API, model).
+2. **Confirm with user** before changing anything — especially document files:
+   - Task is **not documented**, **unclear**, or **differs from docs** → stop. List related sections, propose what to add/change in which MD file(s), and **wait for explicit user confirmation**.
+   - Do **not** edit `KAFI_*.md` or start coding until the user confirms scope.
+3. **Update documents first** — after confirmation, edit the relevant `KAFI_*.md` file(s) so the spec reflects the agreed scope **before** any code changes.
+4. **Then implement** — code must match the updated docs.
+5. **After completion** — compare app vs docs, fix doc drift, append `## Implementation History` rows.
+
+## Before coding (every task)
+
+- **Documented and matches chat** → cite which sections apply; implement exactly as specified.
+- **Not documented / new in chat / conflicts with docs** → do **not** code. Ask user to confirm; update docs; only then code.
+- **Never** skip doc updates for new features, rule changes, or scope agreed in chat.
+
+## During implementation
+
+- Treat gaps in the app that are already specified in docs as **bugs** — fix to match the doc.
+- Do not contradict docs without user approval; if docs conflict, ask which wins.
+- If chat asks for something not yet in the MD files, **pause** and get confirmation + doc update first.
+
+## After task completion
+
+1. **Compare** finished work against the three docs (screens, flows, fields, states, edge cases).
+2. **Fix** anything in docs that is missing or wrong relative to what was built (with user approval if it changes agreed spec).
+3. **Log history** in each touched doc — append to `## Implementation History` at the end (create section if missing):
+
+```markdown
+## Implementation History
+
+| Date (YYYY-MM-DD) | Task | Status | Summary |
+|-------------------|------|--------|---------|
+| 2026-05-19 | Screen 17 chat lockdown | Done | Matched expired-subscription hide/send rules |
+```
+
+- One row per completed task; `Summary` = what changed in code vs doc.
+- Cross-link: if a task spans docs, use the same date and task name in each file.
+
+## Doc update rules
+
+- New feature → update App + System (+ Technical if architecture/services change).
+- UI-only → App doc; business rule → System; code structure/API → Technical.
+- Keep user-edited wording intact; only add spec/history rows, not rewrite their prose.

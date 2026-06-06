@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>$(DEVELOPMENT_LANGUAGE)</string>
+	<key>CFBundleDisplayName</key>
+	<string>Kafi App</string>
+	<key>CFBundleExecutable</key>
+	<string>$(EXECUTABLE_NAME)</string>
+	<key>CFBundleIdentifier</key>
+	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>kafi_app</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>$(FLUTTER_BUILD_NAME)</string>
+	<key>CFBundleSignature</key>
+	<string>????</string>
+	<key>CFBundleVersion</key>
+	<string>$(FLUTTER_BUILD_NUMBER)</string>
+	<key>LSRequiresIPhoneOS</key>
+	<true/>
+
+	<!-- ─── Camera & Microphone ──────────────────────────────────────── -->
+	<key>NSCameraUsageDescription</key>
+	<string>Kafi uses your camera to capture profile photos and intro videos.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kafi uses your microphone to record audio for your intro video.</string>
+
+	<!-- ─── Photo Library ────────────────────────────────────────────── -->
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kafi accesses your photo library to let you upload profile photos and documents.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Kafi saves photos to your library after capture.</string>
+
+	<!-- ─── Location ─────────────────────────────────────────────────── -->
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Kafi uses your location to autofill your city and help find nearby opportunities.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Kafi uses your location to autofill your city and help find nearby opportunities.</string>
+
+	<!-- ─── Contacts ─────────────────────────────────────────────────── -->
+	<key>NSContactsUsageDescription</key>
+	<string>Kafi may access your contacts to help you invite references.</string>
+
+	<!-- ─── Push Notifications / FCM background ──────────────────────── -->
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+	</array>
+
+	<!-- ─── App Transport Security ───────────────────────────────────── -->
+	<key>NSAppTransportSecurity</key>
+	<dict>
+		<key>NSAllowsArbitraryLoads</key>
+		<false/>
+		<key>NSAllowsArbitraryLoadsInWebContent</key>
+		<true/>
+	</dict>
+
+	<key>UILaunchStoryboardName</key>
+	<string>LaunchScreen</string>
+	<key>UIMainStoryboardFile</key>
+	<string>Main</string>
+	<key>UISupportedInterfaceOrientations</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>UISupportedInterfaceOrientations~ipad</key>
+	<array>
+		<string>UIInterfaceOrientationPortrait</string>
+		<string>UIInterfaceOrientationPortraitUpsideDown</string>
+		<string>UIInterfaceOrientationLandscapeLeft</string>
+		<string>UIInterfaceOrientationLandscapeRight</string>
+	</array>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+</dict>
+</plist>

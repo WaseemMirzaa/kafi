@@ -1,0 +1,299 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:kafi_app/config/routes.dart';
+import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/nanny_model.dart';
+import 'package:kafi_app/models/user_model.dart';
+import 'package:kafi_app/services/interfaces/i_auth_service.dart';
+import 'package:kafi_app/services/interfaces/i_notification_service.dart';
+import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/utils/constants/auth_constants.dart';
+import 'package:kafi_app/utils/constants/mock_constants.dart';
+
+class AuthController extends GetxController {
+  final IAuthService _authService = Get.find<IAuthService>();
+
+  final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
+  final RxBool isLoading = false.obs;
+  final RxBool isReturning = false.obs;
+  final RxString countryCode = AuthConstants.defaultCountryCode.obs;
+  final RxString otpCode = ''.obs;
+  final RxDouble passwordStrength = 0.0.obs;
+  final RxInt otpSecondsLeft = AuthConstants.otpExpirySeconds.obs;
+
+  final phoneController = TextEditingController(text: '50 234 5678');
+  final passwordController = TextEditingController();
+  final newPasswordController = TextEditingController();
+  final confirmPasswordController = TextEditingController();
+
+  Timer? _otpTimer;
+  UserType _pendingRole = UserType.nanny;
+
+  String get formattedPhone =>
+      '${countryCode.value} ${phoneController.text.trim()}';
+
+  String get otpTimerLabel {
+    final m = otpSecondsLeft.value ~/ 60;
+    final s = otpSecondsLeft.value % 60;
+    return '$m:${s.toString().padLeft(2, '0')}';
+  }
+
+  bool get hasMinLength =>
+      newPasswordController.text.length >= AuthConstants.minPasswordLength;
+  bool get hasNumber => RegExp(r'\d').hasMatch(newPasswordController.text);
+  bool get hasUppercase =>
+      RegExp(r'[A-Z]').hasMatch(newPasswordController.text);
+  bool get hasSpecial =>
+      RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(newPasswordController.text);
+  bool get passwordsMatch =>
+      newPasswordController.text.isNotEmpty &&
+      newPasswordController.text == confirmPasswordController.text;
+  bool get canSavePassword => hasMinLength && passwordsMatch;
+
+  String get passwordStrengthLabel {
+    if (passwordStrength.value >= 0.8) return AppStrings.pwStrong.tr;
+    if (passwordStrength.value >= 0.5) return AppStrings.pwGood.tr;
+    return AppStrings.pwWeak.tr;
+  }
+
+  @override
+  void onInit() {
+    super.onInit();
+    _restoreSession();
+  }
+
+  @override
+  void onClose() {
+    _otpTimer?.cancel();
+    phoneController.dispose();
+    passwordController.dispose();
+    newPasswordController.dispose();
+    confirmPasswordController.dispose();
+    super.onClose();
+  }
+
+  Future<void> _restoreSession() async {
+    final user = await _authService.getCurrentUser();
+    if (user != null) {
+      currentUser.value = user;
+      await _navigateHome(user);
+    }
+  }
+
+  void prepareNannyLogin() {
+    isReturning.value = false;
+    _pendingRole = UserType.nanny;
+    countryCode.value = AuthConstants.defaultCountryCode;
+    _authService.setUserRole(UserType.nanny);
+  }
+
+  void prepareFamilyLogin() {
+    isReturning.value = false;
+    _pendingRole = UserType.family;
+    countryCode.value = AuthConstants.defaultCountryCode;
+    _authService.setUserRole(UserType.family);
+  }
+
+  Future<void> sendOtpAndNavigate() async {
+    final phone = phoneController.text.replaceAll(RegExp(r'\s+'), '');
+    if (phone.isEmpty) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.phoneRequired.tr);
+      return;
+    }
+    isLoading.value = true;
+    bool sent = false;
+    try {
+      await _authService.sendOtp(phone, countryCode.value);
+      _startOtpTimer();
+      sent = true;
+      Get.snackbar(
+        AppStrings.authOtpSentTitle.tr,
+        AppStrings.authOtpSentBody.trParams({'otp': MockConstants.otp}),
+      );
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+    if (sent) await Get.toNamed(Routes.otpVerify);
+  }
+
+  /// Re-issue OTP from the verify screen. Disabled until timer expires.
+  bool get canResendOtp => otpSecondsLeft.value <= 0;
+
+  Future<void> resendOtp() async {
+    if (!canResendOtp) return;
+    final phone = phoneController.text.replaceAll(RegExp(r'\s+'), '');
+    if (phone.isEmpty) return;
+    isLoading.value = true;
+    try {
+      await _authService.sendOtp(phone, countryCode.value);
+      _startOtpTimer();
+      otpCode.value = '';
+      Get.snackbar(
+        AppStrings.authOtpSentTitle.tr,
+        AppStrings.authOtpSentBody.trParams({'otp': MockConstants.otp}),
+      );
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> verifyOtpAndNavigate() async {
+    if (otpCode.value.length < AuthConstants.otpLength) return;
+    if (otpSecondsLeft.value <= 0) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.otpExpiredMessage.tr);
+      return;
+    }
+    isLoading.value = true;
+    try {
+      await _authService.verifyOtp(otpCode.value);
+      _otpTimer?.cancel();
+    } catch (_) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.authInvalidOtp.tr);
+      return;
+    } finally {
+      isLoading.value = false;
+    }
+    // Phone-only signup: both returning and new users skip the create-password
+    // screen and go straight to their home/onboarding after OTP.
+    await completeSignupAfterOtp(skipPassword: true);
+  }
+
+  /// After OTP: phone-only signup (no create-password screen).
+  Future<void> completeSignupAfterOtp({bool skipPassword = false}) async {
+    isLoading.value = true;
+    try {
+      if (skipPassword) {
+        await _authService.finalizePhoneRegistration();
+      }
+      final user = await _authService.getCurrentUser();
+      if (user == null) {
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.authSessionLost.tr);
+        return;
+      }
+      currentUser.value = user;
+      await _navigateHome(
+        user,
+        isNewFamilyRegistration: user.isFamily,
+      );
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> loginWithPassword() async {
+    final phone = phoneController.text.replaceAll(RegExp(r'\s+'), '');
+    if (phone.isEmpty || passwordController.text.isEmpty) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.authMissingFields.tr);
+      return;
+    }
+    isLoading.value = true;
+    try {
+      final user = await _authService.loginWithPassword(
+        '${countryCode.value}$phone',
+        passwordController.text,
+      );
+      if (user == null) return;
+      currentUser.value = user;
+      await _navigateHome(user, isNewFamilyRegistration: false);
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  Future<void> savePasswordAndNavigate() async {
+    if (!canSavePassword) return;
+    isLoading.value = true;
+    try {
+      await _authService.createPassword(newPasswordController.text);
+      final user = await _authService.getCurrentUser();
+      if (user == null) {
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.authSessionLost.tr);
+        return;
+      }
+      currentUser.value = user;
+      await _navigateHome(
+        user,
+        isNewFamilyRegistration: _pendingRole == UserType.family,
+      );
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  void updatePasswordStrength() {
+    var score = 0.0;
+    if (hasMinLength) score += 0.25;
+    if (hasNumber) score += 0.25;
+    if (hasUppercase) score += 0.25;
+    if (hasSpecial) score += 0.15;
+    if (passwordsMatch) score += 0.1;
+    passwordStrength.value = score.clamp(0.0, 1.0);
+  }
+
+  void _startOtpTimer() {
+    otpSecondsLeft.value = AuthConstants.otpExpirySeconds;
+    _otpTimer?.cancel();
+    _otpTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (otpSecondsLeft.value <= 0) {
+        t.cancel();
+      } else {
+        otpSecondsLeft.value--;
+      }
+    });
+  }
+
+  Future<void> _navigateHome(UserModel user, {bool isNewFamilyRegistration = false}) async {
+    if (user.isNanny) {
+      final nanny = await Get.find<IUserService>().getNanny(user.id);
+      if (nanny?.status == NannyOnboardingStatus.approved) {
+        Get.offAllNamed(Routes.nannyHome);
+      } else if (nanny?.status == NannyOnboardingStatus.pending) {
+        Get.offAllNamed(Routes.nannyPending);
+      } else {
+        Get.offAllNamed(Routes.nannyInfo);
+      }
+    } else if (isNewFamilyRegistration) {
+      Get.offAllNamed(Routes.familyForm);
+    } else {
+      Get.offAllNamed(Routes.browse);
+    }
+  }
+
+  Future<void> signOut() async {
+    final uid = currentUser.value?.id;
+    if (uid != null && Get.isRegistered<INotificationService>()) {
+      final token = await Get.find<INotificationService>().getToken();
+      if (token != null) {
+        await Get.find<INotificationService>().removeToken(uid, token);
+      }
+    }
+    await _authService.logout();
+    currentUser.value = null;
+    isReturning.value = false;
+    _otpTimer?.cancel();
+  }
+
+  Future<void> deleteAccount(String reason) async {
+    await _authService.deleteAccount(reason);
+    currentUser.value = null;
+    _otpTimer?.cancel();
+    phoneController.clear();
+    passwordController.clear();
+    newPasswordController.clear();
+    confirmPasswordController.clear();
+    // The delete-account screen navigates to /welcome via `offAllNamed`, so
+    // ephemeral controllers get torn down with their bindings. Permanent
+    // controllers (`NotificationController`, `SubscriptionController`,
+    // `ChatController`) clear their own caches via `ever(currentUser)`.
+  }
+}

@@ -1,0 +1,48 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+body {
+  font-family: 'Nunito', sans-serif;
+  background: #f7f8fc;
+}
+
+@layer components {
+  .admin-main-bg {
+    background: #f7f8fc;
+  }
+  .admin-card {
+    @apply bg-white rounded-[10px] shadow-[0_2px_7px_rgba(30,42,74,0.06)] border border-[#EBEEF8];
+  }
+  .admin-table {
+    @apply admin-card rounded-[11px] overflow-hidden mb-2.5;
+  }
+  .cs-up {
+    @apply text-green-dark;
+  }
+  .qa-btn {
+    @apply border-0 rounded-[10px] py-[7px] px-[11px] font-fredoka text-[10px] font-semibold cursor-pointer inline-flex items-center gap-1 no-underline;
+  }
+  .qa-r {
+    @apply bg-rose-pale text-rose-dark;
+  }
+  .qa-p {
+    @apply bg-purple-light text-purple;
+  }
+  .qa-g {
+    @apply bg-green-light text-green-dark;
+  }
+  .qa-n {
+    @apply bg-navy-soft text-navy;
+  }
+  .verify-btn {
+    @apply border-0 rounded-md py-0.5 px-2 font-fredoka text-[8.5px] font-bold cursor-pointer text-white;
+    background: linear-gradient(135deg, #6dbf8a, #2e9a58);
+  }
+  .reject-btn {
+    @apply border-0 rounded-md py-0.5 px-2 font-fredoka text-[8.5px] font-bold cursor-pointer bg-rose-pale text-rose-dark;
+  }
+  .admin-input {
+    @apply w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30;
+  }
+}

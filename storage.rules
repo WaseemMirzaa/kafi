@@ -1,0 +1,44 @@
+rules_version = '2';
+
+service firebase.storage {
+  match /b/{bucket}/o {
+    function isSignedIn() { return request.auth != null; }
+    function isUser(uid) { return isSignedIn() && request.auth.uid == uid; }
+    function isAdmin() { return isSignedIn() && request.auth.token.admin == true; }
+    function isImage() { return request.resource.contentType.matches('image/.*'); }
+    function isVideo() { return request.resource.contentType.matches('video/.*'); }
+    function isPdf() { return request.resource.contentType == 'application/pdf'; }
+    function under(maxMB) { return request.resource.size <= maxMB * 1024 * 1024; }
+
+    // Nanny photos (max 5 MB each)
+    match /nannies/{uid}/photos/{file} {
+      allow read: if true;
+      allow write: if (isUser(uid) || isAdmin()) && isImage() && under(5);
+    }
+    // Intro videos (max 25 MB, <= 60s enforced client-side)
+    match /nannies/{uid}/videos/{file} {
+      allow read: if true;
+      allow write: if (isUser(uid) || isAdmin()) && isVideo() && under(25);
+    }
+    // Sensitive documents (passport, visa, EID, police, training)
+    match /nannies/{uid}/documents/{file} {
+      allow read: if isUser(uid) || isAdmin();
+      allow write: if (isUser(uid) || isAdmin()) && (isImage() || isPdf()) && under(10);
+    }
+    // Family avatar
+    match /families/{uid}/avatar/{file} {
+      allow read: if isSignedIn();
+      allow write: if (isUser(uid) || isAdmin()) && isImage() && under(5);
+    }
+    // Chat attachments (images only)
+    match /chats/{threadId}/{file} {
+      allow read: if isSignedIn();
+      allow write: if isSignedIn() && isImage() && under(8);
+    }
+    // Public marketing/assets — admin only
+    match /public/{file=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+  }
+}

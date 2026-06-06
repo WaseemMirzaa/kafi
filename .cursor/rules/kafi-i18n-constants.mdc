@@ -1,0 +1,51 @@
+---
+description: No hardcoded UI strings; use l10n files and utils/constants for keys and magic values
+alwaysApply: true
+---
+
+# Kafi — Localization & Constants
+
+## UI text (never hardcode in widgets)
+
+- **Flutter:** All user-visible strings go in `kafi_app/lib/l10n/` — keys in `app_strings.dart`, copy in `locales/en_us.dart` (and `ar_ae.dart` when RTL is enabled).
+- **In UI:** use GetX — `AppStrings.someKey.tr` (not raw `'Hello'` in `Text()`).
+- **Snackbar/dialog titles:** same rule — use `.tr` keys.
+- **Admin (React):** use `admin-panel/src/locales/en.ts` (and `ar.ts` later); import via a small `t()` helper — no literal UI strings in JSX.
+
+```dart
+// ❌ BAD — widget
+Text('Get Started')
+
+// ✅ GOOD
+Text(AppStrings.welcomeGetStarted.tr)
+```
+
+Add new keys to **all** locale files when adding a key (at minimum `en_us`; stub `ar_ae` with English until translated).
+
+## Non-UI constants (controllers, services, config)
+
+- Put in `kafi_app/lib/utils/constants/` — one file per domain (`app_constants.dart`, `auth_constants.dart`, `subscription_constants.dart`, etc.).
+- **Do not** put user-facing copy in `utils/constants/` — that belongs in l10n.
+- **Do not** put magic numbers/strings in controllers (OTP length, free contact limit, plan IDs, mock OTP, route names stay in `config/routes.dart` or constants).
+
+```dart
+// ❌ BAD — controller
+if (otp.length < 4) ...
+Get.snackbar('Error', 'Invalid OTP');
+
+// ✅ GOOD
+if (otp.length < AuthConstants.otpLength) ...
+Get.snackbar(AppStrings.errorTitle.tr, AppStrings.authInvalidOtp.tr);
+```
+
+## GetX controllers
+
+- Import `app_strings.dart` + use `.tr` for any message shown to the user.
+- Import domain constants from `utils/constants/` for limits, durations, IDs, feature flags.
+- Expose `Rx` state only; no UI layout in controllers.
+
+## New screen checklist
+
+1. Add string keys to `app_strings.dart` + `locales/en_us.dart`.
+2. Wire widget labels/buttons with `.tr`.
+3. Move any new magic values to the right file under `utils/constants/`.
