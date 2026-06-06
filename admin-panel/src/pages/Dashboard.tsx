@@ -156,7 +156,6 @@ export default function Dashboard() {
   const [activeTrials, setActiveTrials] = useState<TrialAdminRow[]>([]);
   const [monthlyRevenue, setMonthlyRevenue] = useState<number>(0);
   const [monthlyVat, setMonthlyVat] = useState<number>(0);
-  const [byPlan, setByPlan] = useState<{ plan: string; subs: number; revenue: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
@@ -177,7 +176,6 @@ export default function Dashboard() {
       setFamilies(fams);
       setMonthlyRevenue(rev.monthly);
       setMonthlyVat(rev.vat);
-      setByPlan(rev.byPlan);
       setActiveTrials(trials);
     } catch (e) {
       setError((e as Error).message || 'Failed to load dashboard');
@@ -276,41 +274,13 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Revenue row — live plan split from RevenueService.summary() */}
-      {(() => {
-        const planMeta: Record<string, { label: string; color: string }> = {
-          weekly: { label: 'Weekly · AED 89', color: '#FFB347' },
-          monthly: { label: 'Monthly · AED 239', color: '#9B6EDB' },
-          twoMonths: { label: '2 months · AED 369', color: '#2E9A58' },
-        };
-        const maxRevenue = Math.max(...byPlan.map((p) => p.revenue), 1);
-        const planOf = (key: string) => byPlan.find((p) => p.plan === key);
-        return (
-          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 px-[18px] pb-3">
-            {Object.entries(planMeta).map(([key, meta]) => {
-              const p = planOf(key);
-              return (
-                <RevCard
-                  key={key}
-                  label={meta.label}
-                  amount={loading ? '—' : `AED ${(p?.revenue ?? 0).toLocaleString()}`}
-                  sub={loading ? '' : `${p?.subs ?? 0} active`}
-                  pct={Math.round(((p?.revenue ?? 0) / maxRevenue) * 100)}
-                  color={meta.color}
-                />
-              );
-            })}
-            <RevCard
-              label="VAT (5%)"
-              amount={loading ? '—' : `AED ${monthlyVat.toLocaleString()}`}
-              sub="Due to FTA"
-              pct={100}
-              color="#FF8FAB"
-              borderRose
-            />
-          </div>
-        );
-      })()}
+      {/* Revenue row */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 px-[18px] pb-3">
+        <RevCard label="Weekly · AED 89" amount="AED 2,225" sub="25 active" pct={38} color="#FFB347" />
+        <RevCard label="Monthly · AED 239" amount="AED 7,170" sub="30 active" pct={60} color="#9B6EDB" />
+        <RevCard label="2 months · AED 369" amount="AED 3,690" sub="10 active" pct={30} color="#2E9A58" />
+        <RevCard label="VAT (5%)" amount="AED 654" sub="Due to FTA" pct={100} color="#FF8FAB" borderRose />
+      </div>
 
       <div className="h-px bg-[#EBEEF8] mx-[18px] mb-3" />
 
