@@ -52,6 +52,8 @@ export default function DisputeDetail() {
   const [resolution, setResolution] = useState('');
   const [decision, setDecision] = useState<'resolved' | 'dismissed'>('resolved');
   const [busy, setBusy] = useState(false);
+  // Dispute details start collapsed so the support chat is front and centre.
+  const [detailsOpen, setDetailsOpen] = useState(false);
 
   const load = async () => {
     if (!id) return;
@@ -118,27 +120,44 @@ export default function DisputeDetail() {
       />
       <PageContent>
         <DetailCard>
-          <div className="flex items-center justify-between gap-2">
+          {/* Collapsed summary row — tap to expand the full details. */}
+          <button
+            type="button"
+            className="w-full flex items-center gap-2 text-left"
+            onClick={() => setDetailsOpen((v) => !v)}
+            aria-expanded={detailsOpen}
+          >
             <div className="text-[12px] font-black text-navy">{categoryLabel[dispute.category]}</div>
             <StatusBadge variant={statusVariant[dispute.status]}>{dispute.status}</StatusBadge>
-          </div>
-          <FieldGrid>
-            <Field
-              label="Reporter"
-              value={`${dispute.reporterName ?? dispute.reporterId}${dispute.reporterType ? ` (${dispute.reporterType})` : ''}`}
-            />
-            <Field label="Reported user" value={dispute.reportedName ?? dispute.reportedUserId} />
-            <Field label="Category" value={categoryLabel[dispute.category]} />
-            <Field label="Related trial" value={dispute.relatedTrialId ?? '—'} />
-            <Field label="Filed on" value={dispute.createdAt.toLocaleDateString()} />
-          </FieldGrid>
-          <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mt-3">Description</div>
-          <p className="text-[10.5px] font-semibold text-navy/80 leading-relaxed mt-0.5">{dispute.description}</p>
-          {dispute.resolution && (
-            <div className="mt-3 rounded-lg bg-green-pale px-3 py-2">
-              <div className="text-[8px] font-bold text-green-dark uppercase tracking-wide">Resolution</div>
-              <p className="text-[10px] font-semibold text-navy/80 mt-0.5">{dispute.resolution}</p>
+            <div className="flex-1 min-w-0 text-[8.5px] font-semibold text-[#8090B0] truncate">
+              {dispute.reporterName ?? dispute.reporterId} → {dispute.reportedName ?? dispute.reportedUserId} ·{' '}
+              {dispute.createdAt.toLocaleDateString()}
             </div>
+            <span className="text-[9.5px] font-bold text-purple font-fredoka flex-shrink-0">
+              {detailsOpen ? 'Hide details ▴' : 'View details ▾'}
+            </span>
+          </button>
+          {detailsOpen && (
+            <>
+              <FieldGrid>
+                <Field
+                  label="Reporter"
+                  value={`${dispute.reporterName ?? dispute.reporterId}${dispute.reporterType ? ` (${dispute.reporterType})` : ''}`}
+                />
+                <Field label="Reported user" value={dispute.reportedName ?? dispute.reportedUserId} />
+                <Field label="Category" value={categoryLabel[dispute.category]} />
+                <Field label="Related trial" value={dispute.relatedTrialId ?? '—'} />
+                <Field label="Filed on" value={dispute.createdAt.toLocaleDateString()} />
+              </FieldGrid>
+              <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mt-3">Description</div>
+              <p className="text-[10.5px] font-semibold text-navy/80 leading-relaxed mt-0.5">{dispute.description}</p>
+              {dispute.resolution && (
+                <div className="mt-3 rounded-lg bg-green-pale px-3 py-2">
+                  <div className="text-[8px] font-bold text-green-dark uppercase tracking-wide">Resolution</div>
+                  <p className="text-[10px] font-semibold text-navy/80 mt-0.5">{dispute.resolution}</p>
+                </div>
+              )}
+            </>
           )}
         </DetailCard>
 

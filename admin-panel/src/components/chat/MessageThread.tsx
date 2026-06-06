@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 
 /** Normalized message shape the thread renders. Pages map their domain
  *  messages (chat messages, dispute messages) into this shape. */
@@ -61,6 +61,7 @@ export function MessageThread({
   onSend,
   sending,
   placeholder = 'Type a reply…',
+  fill = false,
 }: {
   messages: ThreadMessage[];
   emptyText?: string;
@@ -68,8 +69,18 @@ export function MessageThread({
   onSend?: (text: string) => void | Promise<void>;
   sending?: boolean;
   placeholder?: string;
+  /** Fill the parent's height (for modal/full-screen) instead of capping at 360px. */
+  fill?: boolean;
 }) {
   const [text, setText] = useState('');
+  const listRef = useRef<HTMLDivElement>(null);
+
+  // Keep the view anchored to the latest message (chat-style): jump to the
+  // bottom whenever messages load or a new one arrives.
+  useEffect(() => {
+    const el = listRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
+  }, [messages]);
 
   const submit = async () => {
     const t = text.trim();
@@ -79,13 +90,22 @@ export function MessageThread({
   };
 
   return (
-    <div className="flex flex-col">
-      <div className="max-h-[360px] overflow-y-auto px-1 py-1">
-        {messages.length === 0 ? (
-          <div className="text-[10px] text-[#8090B0] px-2 py-4">{emptyText}</div>
-        ) : (
-          messages.map((m) => <Bubble key={m.id} m={m} />)
-        )}
+    <div className={`flex flex-col ${fill ? 'h-full' : ''}`}>
+      {/* Inner-scrollable message panel; the page itself never scrolls for chat. */}
+      <div
+        ref={listRef}
+        className={`overflow-y-auto px-2 py-1.5 ${
+          fill ? 'flex-1 min-h-0' : 'h-[340px] rounded-lg border border-[#EBEEF8] bg-[#FBFCFF]'
+        }`}
+      >
+        {/* Bottom-anchor short threads so messages sit at the composer like a real chat. */}
+        <div className={`min-h-full flex flex-col ${messages.length ? 'justify-end' : 'justify-center items-center'}`}>
+          {messages.length === 0 ? (
+            <div className="text-[10px] text-[#8090B0] px-2 py-4">{emptyText}</div>
+          ) : (
+            messages.map((m) => <Bubble key={m.id} m={m} />)
+          )}
+        </div>
       </div>
       {onSend && (
         <div className="flex items-end gap-1.5 mt-2 pt-2 border-t border-[#F4F5FC]">

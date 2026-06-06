@@ -314,9 +314,7 @@ export default function TrialDetail() {
             Messages between {trial.nannyName ?? 'the nanny'} and {trial.familyName ?? 'the family'} (read-only).
           </p>
           {thread ? (
-            <div className="rounded-lg border border-[#EBEEF8] p-2">
-              <MessageThread messages={toThreadMessages(messages, thread)} />
-            </div>
+            <MessageThread messages={toThreadMessages(messages, thread)} />
           ) : (
             <div className="text-[10px] text-[#8090B0]">No conversation linked to this trial.</div>
           )}
