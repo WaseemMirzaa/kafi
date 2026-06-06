@@ -3,7 +3,7 @@ slug: kafi-revenue-trend-chart
 project: Nannies app (Kafi admin)
 title: Professional Recharts revenue-trend graph on Revenue page, driven by enriched mock data
 owner: project-manager
-status: READY_FOR_BUILD
+status: PR_OPEN
 updated: 2026-06-07
 ---
 
