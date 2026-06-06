@@ -1410,6 +1410,28 @@ export const RevenueService = {
       };
     });
   },
+  /** Full transaction history (no 50-row cap) for the Revenue page's
+   *  client-side period filtering. Newest first. */
+  async allTransactions(): Promise<RevenueTransaction[]> {
+    if (useMock()) {
+      return [...mockTransactions].sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+    }
+    const snap = await getDocs(
+      query(collection(db!, 'transactions'), orderBy('createdAt', 'desc')),
+    );
+    return snap.docs.map((d) => {
+      const data = d.data() as Record<string, unknown>;
+      return {
+        id: d.id,
+        familyId: (data.familyId as string) ?? '',
+        familyName: (data.familyName as string) ?? '',
+        plan: (data.plan as string) ?? '',
+        amount: (data.amount as number) ?? 0,
+        status: (data.status as RevenueTransaction['status']) ?? 'paid',
+        createdAt: parseTimestamp(data.createdAt),
+      };
+    });
+  },
   async summary(): Promise<RevenueSummary> {
     if (useMock()) {
       return {
