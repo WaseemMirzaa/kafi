@@ -1387,18 +1387,134 @@ export interface RevenueTransaction {
   createdAt: Date;
 }
 
-const mockTransactions: RevenueTransaction[] = [
-  { id: 'tx1', familyId: 'f1', familyName: 'Al Mansoori Family', plan: 'monthly', amount: 239, status: 'paid', createdAt: new Date(Date.now() - 12 * 86400000) },
-  { id: 'tx2', familyId: 'f2', familyName: 'James & Sarah K.', plan: 'twoMonths', amount: 369, status: 'paid', createdAt: new Date(Date.now() - 13 * 86400000) },
-  { id: 'tx3', familyId: 'f4', familyName: 'Mohammed Al Rashid', plan: 'weekly', amount: 89, status: 'paid', createdAt: new Date(Date.now() - 10 * 86400000) },
-  { id: 'tx4', familyId: 'f4', familyName: 'Mohammed Al Rashid', plan: 'weekly', amount: 89, status: 'failed', createdAt: new Date(Date.now() - 3 * 86400000) },
-  { id: 'tx5', familyId: 'f3', familyName: 'Lin Chen', plan: 'monthly', amount: 239, status: 'refunded', createdAt: new Date(Date.now() - 7 * 86400000) },
-  { id: 'tx6', familyId: 'f1', familyName: 'Al Mansoori Family', plan: 'monthly', amount: 239, status: 'paid', createdAt: new Date(Date.now() - 42 * 86400000) },
-  { id: 'tx7', familyId: 'f2', familyName: 'James & Sarah K.', plan: 'twoMonths', amount: 369, status: 'paid', createdAt: new Date(Date.now() - 75 * 86400000) },
-  { id: 'tx8', familyId: 'f3', familyName: 'Lin Chen', plan: 'monthly', amount: 239, status: 'paid', createdAt: new Date(Date.now() - 100 * 86400000) },
-  { id: 'tx9', familyId: 'f4', familyName: 'Mohammed Al Rashid', plan: 'weekly', amount: 89, status: 'paid', createdAt: new Date(Date.now() - 130 * 86400000) },
-  { id: 'tx10', familyId: 'f1', familyName: 'Al Mansoori Family', plan: 'monthly', amount: 239, status: 'paid', createdAt: new Date(Date.now() - 160 * 86400000) },
-];
+// ─── Deterministic mock transaction generator (WU2) ───────────────────────
+// Produces ~12 months of stable, seeded history so all period presets render
+// non-flat area charts. Does NOT touch RevenueTransaction, buildTrend, or any
+// live Firestore path.
+
+/** Mulberry32-style PRNG. Fixed seed → identical sequence on every reload. */
+function seeded(seed: number): () => number {
+  let a = seed >>> 0;
+  return () => {
+    a |= 0; a = (a + 0x6d2b79f5) | 0;
+    let t = Math.imul(a ^ (a >>> 15), 1 | a);
+    t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+    return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+  };
+}
+
+/** Family roster — familyId↔familyName kept consistent throughout. */
+const MOCK_FAMILIES = [
+  { familyId: 'f1', familyName: 'Al Mansoori Family' },
+  { familyId: 'f2', familyName: 'James & Sarah K.' },
+  { familyId: 'f3', familyName: 'Lin Chen' },
+  { familyId: 'f4', familyName: 'Mohammed Al Rashid' },
+] as const;
+
+/** Plan prices match subscription plan prices exactly (89/239/369 AED). */
+const MOCK_PLANS = [
+  { plan: 'weekly',    amount: 89  },
+  { plan: 'monthly',   amount: 239 },
+  { plan: 'twoMonths', amount: 369 },
+] as const;
+
+const mockTransactions: RevenueTransaction[] = (() => {
+  const rng = seeded(0xdeadbeef);
+  const now = Date.now();
+  const rows: RevenueTransaction[] = [];
+  let idx = 0;
+
+  // Weighted plan picker: ~45% monthly, ~35% weekly, ~20% twoMonths
+  const pickPlan = (): typeof MOCK_PLANS[number] => {
+    const r = rng();
+    if (r < 0.45) return MOCK_PLANS[1]; // monthly 239
+    if (r < 0.80) return MOCK_PLANS[0]; // weekly 89
+    return MOCK_PLANS[2];               // twoMonths 369
+  };
+
+  // Status picker: ~87% paid, ~7% refunded, ~6% failed
+  const pickStatus = (): RevenueTransaction['status'] => {
+    const r = rng();
+    if (r < 0.87) return 'paid';
+    if (r < 0.94) return 'refunded';
+    return 'failed';
+  };
+
+  // Family picker (PRNG-indexed; preserves familyId↔familyName pairing)
+  const pickFamily = (): typeof MOCK_FAMILIES[number] =>
+    MOCK_FAMILIES[Math.floor(rng() * MOCK_FAMILIES.length)];
+
+  // ── Days 365 → 31: older history (yearly-preset monthly-bucket view) ──
+  // Density scales up slightly toward the present to give a mild upward trend.
+  for (let dayOffset = 365; dayOffset > 30; dayOffset--) {
+    const densityBase = dayOffset > 180 ? 2 : dayOffset > 90 ? 3 : 4;
+    const rowsToday = rng() < 0.5 ? densityBase : densityBase - 1;
+    for (let r = 0; r < rowsToday; r++) {
+      const family = pickFamily();
+      const { plan, amount } = pickPlan();
+      rows.push({
+        id: `tx${idx++}`,
+        familyId: family.familyId,
+        familyName: family.familyName,
+        plan,
+        amount,
+        status: pickStatus(),
+        createdAt: new Date(now - dayOffset * 86400000),
+      });
+    }
+  }
+
+  // ── Days 30 → 7: dense daily coverage (monthly-preset daily-bucket view) ─
+  for (let dayOffset = 30; dayOffset > 6; dayOffset--) {
+    const rowsToday = rng() < 0.6 ? 2 : 1;
+    for (let r = 0; r < rowsToday; r++) {
+      const family = pickFamily();
+      const { plan, amount } = pickPlan();
+      rows.push({
+        id: `tx${idx++}`,
+        familyId: family.familyId,
+        familyName: family.familyName,
+        plan,
+        amount,
+        status: pickStatus(),
+        createdAt: new Date(now - dayOffset * 86400000),
+      });
+    }
+  }
+
+  // ── Days 6 → 0: guaranteed paid row each day (weekly-preset coverage) ───
+  // Forced paid presence per day; only plan/family chosen via PRNG.
+  for (let dayOffset = 6; dayOffset >= 0; dayOffset--) {
+    // Guaranteed paid row — ensures weekly paid curve is never empty.
+    const family = pickFamily();
+    const { plan, amount } = pickPlan();
+    rows.push({
+      id: `tx${idx++}`,
+      familyId: family.familyId,
+      familyName: family.familyName,
+      plan,
+      amount,
+      status: 'paid',
+      createdAt: new Date(now - dayOffset * 86400000),
+    });
+    // Optional second row with PRNG status
+    if (rng() < 0.5) {
+      const f2 = pickFamily();
+      const p2 = pickPlan();
+      rows.push({
+        id: `tx${idx++}`,
+        familyId: f2.familyId,
+        familyName: f2.familyName,
+        plan: p2.plan,
+        amount: p2.amount,
+        status: pickStatus(),
+        createdAt: new Date(now - dayOffset * 86400000),
+      });
+    }
+  }
+
+  return rows;
+})();
 
 /** Bucket paid transactions into the last `months` calendar months (oldest →
  *  newest) so the revenue trend chart reflects real data. `pct` is relative to

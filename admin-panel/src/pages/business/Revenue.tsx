@@ -10,6 +10,7 @@ import {
   TopStat,
 } from '../../components/ui/AdminUI';
 import { FilterBar, FilterSelect } from '../../components/ui/ListControls';
+import RevenueTrendChart from '../../components/charts/RevenueTrendChart';
 import { RevenueService, RevenueTransaction } from '../../services/firestore';
 import { exportCsv } from '../../utils/csv';
 
@@ -99,6 +100,15 @@ function buildRangeTrend(
   }));
 }
 
+/** Bucket granularity for a given inclusive range (mirrors buildRangeTrend). */
+function trendMode(from: string, to: string): 'daily' | 'monthly' {
+  if (!from || !to) return 'monthly';
+  const fromMs = new Date(from).getTime();
+  const toMs = new Date(to).getTime() + 86400000 - 1;
+  const spanDays = Math.max(1, Math.round((toMs - fromMs) / 86400000));
+  return spanDays <= 31 ? 'daily' : 'monthly';
+}
+
 export default function Revenue() {
   const defaultRange = presetRange('monthly');
   const [txns, setTxns] = useState<RevenueTransaction[]>([]);
@@ -146,8 +156,9 @@ export default function Revenue() {
 
     const trend = buildRangeTrend(paid, from, to);
     const hasTrendData = trend.some((b) => b.amount > 0);
+    const mode = trendMode(from, to);
 
-    return { paid, total, vat, byPlan, trend, hasTrendData };
+    return { paid, total, vat, byPlan, trend, hasTrendData, mode };
   }, [inRange, from, to]);
 
   /** Recent transactions filtered by txnQuery (familyName or plan). */
@@ -270,17 +281,7 @@ export default function Revenue() {
             {!derived.hasTrendData ? (
               <div className="text-[10px] text-[#8090B0]">No data for selected period.</div>
             ) : (
-              <div className="h-40 flex items-end gap-2 overflow-x-auto">
-                {derived.trend.map((m) => (
-                  <div key={m.label} className="flex-1 flex flex-col items-center gap-1 min-w-[28px]">
-                    <div
-                      className="w-full rounded-t bg-gradient-to-t from-rose-dark to-rose"
-                      style={{ height: `${m.pct}%` }}
-                    />
-                    <span className="text-[8px] font-bold text-[#8090B0] whitespace-nowrap">{m.label}</span>
-                  </div>
-                ))}
-              </div>
+              <RevenueTrendChart data={derived.trend} mode={derived.mode} />
             )}
           </div>
         </TableCard>
