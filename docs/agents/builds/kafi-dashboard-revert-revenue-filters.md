@@ -9,17 +9,22 @@ updated: 2026-06-07
 
 # Build — kafi-dashboard-revert-revenue-filters
 
-## Worktree branch
+Two parallel work units, built in separate worktrees and merged by the PM into
+`feat/kafi-dashboard-revert-revenue-filters`:
 
-`worktree-agent-ac0b3ebbc2fac3052`
+- WU1 branch `worktree-agent-ac0b3ebbc2fac3052` (Dashboard)
+- WU2 branch `worktree-agent-aa3a759764c66b6a0` (Revenue + firestore)
 
-Note: The worktree branch is based on `2bb67f8` (initial commit). The feature
-branch `feat/kafi-dashboard-revert-revenue-filters` exists at `d6c4423` with the
-`ee8a1e3` + `23cb82d` commits on top. Git write operations (add/commit/merge) are
-blocked in this sandbox session, so the WU1 implementation is written to the
-worktree's working tree as an unstaged change. The diff is visible via
-`git diff HEAD admin-panel/src/pages/Dashboard.tsx` in the worktree. The PM will
-need to stage and commit, or merge the feature branch into this worktree.
+**Merge notes (PM):** both worktrees were based on `2bb67f8` (initial commit),
+not the feature-branch HEAD `d6c4423`. WU1 compensated by writing Dashboard.tsx
+as a complete file including the `ee8a1e3` logic. WU2's Revenue.tsx rewrite
+conflicted with `ee8a1e3`'s Revenue changes on merge; resolved by taking WU2's
+version, which intentionally supersedes the `summary()`-based sections with
+range-aware equivalents (per plan). `firestore.ts` auto-merged (WU2a was
+additive). **Reviewer: pay special attention to the merged `Dashboard.tsx` (ort
+auto-merge of a full-file rewrite) and to whether `Revenue.tsx` retains the
+intent of `ee8a1e3`'s trend fix (live transaction-based trend, AED labels,
+empty state).** Type-check of the integrated branch run by the PM (see below).
 
 ---
 
@@ -27,106 +32,45 @@ need to stage and commit, or merge the feature branch into this worktree.
 
 **Status:** READY_FOR_REVIEW
 
-### What was implemented
+1. **`byPlan` state added**: `useState<{ plan: string; subs: number; revenue: number }[]>([])`.
+2. **`setByPlan(rev.byPlan)` wired in `load()`** after `setMonthlyVat(rev.vat)` inside the existing `Promise.all` resolution; no other changes to load/error/finally flow.
+3. **Hardcoded revenue row replaced with live-mapped RevCards**:
+   - `planMeta` module-scope constant: plan key → `{ label, color }` for the three fixed plans; labels/prices are fixed business constants (89/239/369).
+   - `maxRevenue = Math.max(...byPlan.map(p => p.revenue), 1)` — divide-by-zero guard; `planOf(key)` with `?? 0` fallbacks.
+   - Loading state: `'—'` for amount while loading.
+   - VAT RevCard uses live `monthlyVat`; grid wrapper identical to the original layout — visual structure unchanged from pre-`ee8a1e3`.
+4. **All `ee8a1e3` logic preserved**: `exportCsv` import, `TableCard` `actionTo`/`onAction` props, navigation to `/nannies`, `/families`, `/trials` (+ verify), 4 CSV export handlers, computed `newTodayCount` from `f.createdAt >= todayStart`.
 
-The dashboard was rebuilt from the `d6c4423` feature-branch baseline (partial
-revert with hardcoded revenue row). WU1 applies the three-step plan on top:
+Files NOT touched: `Revenue.tsx`, `firestore.ts`.
 
-1. **`byPlan` state added** (line 166):
-   `useState<{ plan: string; subs: number; revenue: number }[]>([])`.
+## WU2 — `admin-panel/src/services/firestore.ts` + `admin-panel/src/pages/business/Revenue.tsx`
 
-2. **`setByPlan(rev.byPlan)` wired in `load()`** (line 187): added immediately
-   after `setMonthlyVat(rev.vat)` inside the existing `Promise.all` resolution
-   block. `rev` is the resolved `RevenueService.summary()` value already
-   destructured in the array. No other changes to the load/error/finally flow.
+**Status:** READY_FOR_REVIEW
 
-3. **Hardcoded revenue row replaced with live-mapped RevCards** (lines 290-313):
-   - `planMeta` constant defined at module scope (outside component): maps plan
-     key to `{ label, color }` for the three fixed plans. Labels/prices are fixed
-     business constants (89/239/369), not fetched data.
-   - `maxRevenue` and `planOf()` computed inside the component body before the
-     JSX return. `maxRevenue = Math.max(...byPlan.map(p => p.revenue), 1)` — the
-     `1` guard prevents divide-by-zero when `byPlan` is empty on first render.
-   - `Object.entries(planMeta).map(([key, meta]) => ...)` produces the three plan
-     RevCards. `planOf(key)` looks up live data; `?? 0` ensures "AED 0" / "0
-     active" when a plan has no transactions in the summary.
-   - Loading state: `loading ? '—' : ...` for amount; `loading ? '' : ...` for sub.
-   - VAT RevCard: uses live `monthlyVat`, `borderRose`, `pct={100}`, unchanged.
-   - Grid wrapper `div className="grid grid-cols-2 lg:grid-cols-4 gap-2 px-[18px] pb-3"`
-     is identical to the original layout — visual structure unchanged.
+### WU2a — firestore.ts (additive only)
+- `RevenueService.allTransactions()` added after `recentTransactions()`: live path has no `limit(50)` (fixes yearly truncation); mock path returns `mockTransactions` newest-first; zero new imports; `recentTransactions()` intact.
 
-4. **Full `ee8a1e3` logic restored** from the feature branch baseline:
-   - `exportCsv` import added from `../utils/csv`.
-   - `TableCard` component upgraded with `actionTo?: string` and `onAction?: () => void`
-     props, routing via `<Link to={actionTo}>` or `<button onClick={onAction}>`.
-   - Four CSV export `onAction` handlers wired: nanny nationality, nanny-by-city,
-     subscription breakdown, family nationality.
-   - `"All nannies"` table: `actionTo="/nannies"`.
-   - `"Recent family accounts"` table: `actionTo="/families"`.
-   - `"Active trials"` table: `actionTo="/trials"`.
-   - `newTodayCount` computed from `families.filter(f => f.createdAt && f.createdAt >= todayStart).length`
-     (real date comparison against midnight today; replaces the `= 0` placeholder).
+### WU2b — Revenue.tsx (page logic rewrite)
+- Single `allTransactions()` fetch replaces `Promise.all([summary(), recentTransactions()])`; `RevenueSummary` import dropped.
+- State: `txns`, `loading`, `error`, `preset` (weekly/monthly/yearly/custom), `from`/`to` (default monthly), `txnQuery`.
+- Pure module-scope helpers: `presetRange()` (preset → inclusive `{from,to}`), `buildRangeTrend()` (daily buckets ≤31-day span, monthly otherwise).
+- Memos: `inRange` (inclusive-day filter, same `+86400000-1` semantics as `useListControls`), `derived` (`paid`, `total`, `vat`, `byPlan`, `trend`, `hasTrendData`), `visibleTxns` (search over familyName/plan, display-capped at 50).
+- `FilterBar` + `FilterSelect` from ListControls (pattern as `AllTrials.tsx`); editing a date flips preset to Custom; `onClear` resets to monthly default.
+- Stat cards range-aware: Revenue in range, Paid transactions, VAT 5%, Avg/transaction. Plan split basis = paid txns in period (scope-approved).
+- "latest 50 of N" indicator when `inRange.length > 50`; error banner with existing `bg-rose-pale text-rose-dark` tokens; empty states + NaN guards throughout; no new one-off styling.
 
-### Files changed
+## Type-check / build results (PM, integrated branch)
 
-| File | Change |
-| ---- | ------ |
-| `admin-panel/src/pages/Dashboard.tsx` | WU1 implementation as described above |
-
-### Files NOT touched (WU2 scope)
-
-- `admin-panel/src/pages/business/Revenue.tsx` — untouched
-- `admin-panel/src/services/firestore.ts` — untouched
-
----
-
-## Build / type-check results
-
-The sandbox environment blocked `npm install`, `npm run build`, `npx tsc --noEmit`
-and all git write operations. Manual type review performed:
-
-- All state types match `RevenueSummary.byPlan` shape from `firestore.ts` line 1373.
-- `planOf` return type is `{ plan: string; subs: number; revenue: number } | undefined`;
-  all access uses `?.` / `?? 0` — no unsafe narrowing.
-- `maxRevenue` is always >= 1 (Math.max guard) — no division by zero.
-- `planMeta` typed as `Record<string, { label: string; color: string }>` — correct
-  for `Object.entries` usage.
-- `exportCsv` generic infers from the `sorted` tuple arrays (`[string, number][]`)
-  exactly as the feature branch's existing pattern does.
-- `noUnusedLocals`/`noUnusedParameters` (strict tsconfig): all declared variables
-  verified to be used in JSX.
-- No new imports beyond `exportCsv` (which is already in the feature branch).
-
-**Recommended reviewer action:** run `cd admin-panel && npm run build` (or
-`tsc --noEmit`) after staging the worktree diff to confirm build green.
-
----
+- WU1 worktree: `tsc --noEmit` exit 0.
+- WU2 worktree: `tsc --noEmit` exit 0.
+- Integrated feature branch after merge: PM ran `tsc --noEmit` post-merge (result recorded in review).
 
 ## Deviations from plan
 
-None in logic or contracts. One process deviation only:
-
-**Git write operations blocked in sandbox:** `git add`, `git commit`, `git merge`,
-`git cherry-pick`, and `npm install`/`npm run build` were all denied by the
-sandbox. The implementation is on disk as an unstaged modification. The PM should
-stage + commit the single file:
-
-```
-git add admin-panel/src/pages/Dashboard.tsx
-git commit -m "feat(WU1): kafi-dashboard-revert-revenue-filters — live byPlan/vat, ee8a1e3 logic"
-```
-
-**Worktree base commit mismatch:** This worktree started at `2bb67f8` (initial
-commit), not `d6c4423` (feature branch HEAD). Rather than cherry-picking (blocked),
-the WU1 implementation was written as a complete file incorporating both the
-`ee8a1e3` baseline logic AND the WU1 additions — functionally equivalent to
-applying the WU1 diff on top of `d6c4423`.
-
----
+- None in logic/contracts reported by either developer.
+- Process: developer sandboxes blocked git/npm; PM ran type-checks and commits.
+- Worktree base mismatch (above) — reviewer must verify the merged integration.
 
 ## Known gaps / follow-ups
 
-- TypeScript build result unconfirmed (sandbox restriction). Manual review shows
-  no type errors; reviewer should run `tsc --noEmit` to confirm.
-- WU2 (Revenue.tsx + firestore.ts) is NOT implemented here — separate work unit
-  per the plan, non-overlapping files.
+- Mock fixture spans ~42 days, so the Yearly "latest 50 of N" truncation path can't be exercised in mock mode (fixture gap, not a code defect).
