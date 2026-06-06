@@ -3,7 +3,7 @@ slug: kafi-listing-filters
 project: Nannies app (Kafi admin)
 title: Separate nationality / city / status dropdown filters on nannies and families listings
 owner: project-manager
-status: READY_FOR_ARCH
+status: READY_FOR_BUILD
 updated: 2026-06-07
 ---
 

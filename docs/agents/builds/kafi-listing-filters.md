@@ -2,7 +2,7 @@
 slug: kafi-listing-filters
 project: Nannies app (Kafi admin)
 title: Separate nationality / city / status dropdown filters on nannies and families listings
-owner: developer
+owner: fixer
 status: READY_FOR_REVIEW
 updated: 2026-06-07
 worktree-branch-wu1: worktree-agent-a3c201e906e0bc713
@@ -158,3 +158,49 @@ All other plan directives implemented exactly.
 
 ### Commit
 `07a301b` — `feat(admin): migrate AllFamilies to FilterBar/useListControls with Subscription/Nationality/City filters (kafi-listing-filters WU2)`
+
+---
+
+## Fix Round 1
+
+**Fixer:** Sonnet (claude-sonnet-4-6)
+**Date:** 2026-06-07
+**Based on:** `docs/agents/reviews/kafi-listing-filters.md` — Finding 1 (MAJOR)
+
+### Finding 1 — MAJOR — Dead "Joined" date filter on AllFamilies
+
+**File changed:** `admin-panel/src/pages/families/AllFamilies.tsx`
+
+**What was wrong:** `getDate` was absent from the `useListControls` options object (lines 79–83), so the "Joined from / Joined to" date pickers rendered by `FilterBar` were completely inert. The developer omitted the line based on a false premise that `FamilyRow` lacked a `createdAt` field and that adding it would require an `any` cast — both claims incorrect per the review.
+
+**Exact change applied:** Added `getDate: (f) => f.createdAt,` to the `useListControls` options, between the `search` and `extraFilter` lines. No cast, no type change, no other modification.
+
+```ts
+  const lc = useListControls(items, {
+    search: (f, q) => [f.fullName, f.nationality, f.city].some((s) => s?.toLowerCase().includes(q)),
+    getDate: (f) => f.createdAt,
+    extraFilter,
+    pageSize: 8,
+  });
+```
+
+`f.createdAt` is typed `Date | undefined` on `FamilyRow` (firestore.ts line 153), matching `getDate?: (item: T) => Date | undefined` exactly.
+
+**Build result:**
+
+Command: `cd admin-panel && npm run build` (runs `tsc && vite build`)
+
+```
+vite v5.4.21 building for production...
+✓ 893 modules transformed.
+dist/index.html                     0.78 kB │ gzip:   0.42 kB
+dist/assets/index-DJ_jRqvA.css     19.87 kB │ gzip:   4.70 kB
+dist/assets/index-5KWg1vol.js   1,181.49 kB │ gzip: 308.55 kB
+✓ built in 4.25s
+```
+
+TypeScript: 0 errors. Vite: success. No `any` introduced. No new dependencies. Chunk-size warning is pre-existing (unchanged from prior rounds).
+
+**Adjacent flows confirmed unaffected:** AllNannies.tsx, VerifyDocuments.tsx, ListControls.tsx, and useListControls hook were not touched. WU1 build output (95 modules) and WU2 integrated output (893 modules) both pass.
+
+**Nothing routed back to architect.** The fix was a single unambiguous line prescribed exactly by the review. No architecture decision was required.

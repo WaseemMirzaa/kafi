@@ -78,6 +78,7 @@ export default function AllFamilies() {
 
   const lc = useListControls(items, {
     search: (f, q) => [f.fullName, f.nationality, f.city].some((s) => s?.toLowerCase().includes(q)),
+    getDate: (f) => f.createdAt,
     extraFilter,
     pageSize: 8,
   });
