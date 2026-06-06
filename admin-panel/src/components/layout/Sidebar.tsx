@@ -1,11 +1,12 @@
+import { useEffect, useState } from 'react';
 import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import { useAuthStore } from '../../hooks/useAuth';
+import { FamilyService, NannyService, TrialService } from '../../services/firestore';
 
 type NavItem = {
   to: string;
   label: string;
-  count?: number;
   icon: React.ReactNode;
 };
 
@@ -28,7 +29,6 @@ const nannies: NavItem[] = [
   {
     to: '/nannies',
     label: 'All nannies',
-    count: 142,
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -39,7 +39,6 @@ const nannies: NavItem[] = [
   {
     to: '/nannies/verify',
     label: 'Verify docs',
-    count: 8,
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -53,7 +52,6 @@ const families: NavItem[] = [
   {
     to: '/families',
     label: 'All families',
-    count: 87,
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -63,7 +61,6 @@ const families: NavItem[] = [
   {
     to: '/families/subscriptions',
     label: 'Subscriptions',
-    count: 54,
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <rect x="1" y="4" width="22" height="16" rx="2" />
@@ -77,7 +74,6 @@ const operations: NavItem[] = [
   {
     to: '/trials',
     label: 'Active trials',
-    count: 6,
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 12h4l2 5 4-12 2 7h6" />
@@ -122,7 +118,7 @@ const business: NavItem[] = [
   },
 ];
 
-function NavSection({ label, items }: { label: string; items: NavItem[] }) {
+function NavSection({ label, items, counts }: { label: string; items: NavItem[]; counts: Record<string, number> }) {
   return (
     <>
       <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest px-[13px] pt-2 pb-1 font-fredoka">
@@ -132,7 +128,7 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
         <NavLink
           key={item.to}
           to={item.to}
-          end={item.to === '/'}
+          end
           className={({ isActive }) =>
             clsx(
               'flex items-center gap-[7px] py-2 px-[13px] border-r-[3px] transition-all font-fredoka',
@@ -150,9 +146,9 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
               <span className={clsx('text-[10px] font-bold flex-1', isActive ? 'text-rose' : 'text-white/40')}>
                 {item.label}
               </span>
-              {item.count != null && (
+              {counts[item.to] != null && (
                 <span className="bg-rose-dark text-white text-[8px] font-bold px-[5px] py-0.5 rounded-full">
-                  {item.count}
+                  {counts[item.to]}
                 </span>
               )}
             </>
@@ -165,6 +161,34 @@ function NavSection({ label, items }: { label: string; items: NavItem[] }) {
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
+  // Live badge counts keyed by route. Badges stay hidden until loaded.
+  const [counts, setCounts] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    let cancelled = false;
+    Promise.all([
+      NannyService.list(),
+      NannyService.listPendingDocs(),
+      FamilyService.list(),
+      TrialService.listActive(),
+    ])
+      .then(([allNannies, pendingDocs, allFamilies, activeTrials]) => {
+        if (cancelled) return;
+        setCounts({
+          '/nannies': allNannies.length,
+          '/nannies/verify': pendingDocs.length,
+          '/families': allFamilies.length,
+          '/families/subscriptions': allFamilies.filter((f) => f.subscription.status === 'active').length,
+          '/trials': activeTrials.length,
+        });
+      })
+      .catch(() => {
+        // Non-critical — leave badges hidden if counts fail to load.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   return (
     <aside className="w-[182px] flex-shrink-0 bg-navy flex flex-col py-3.5 h-screen sticky top-0 overflow-hidden">
@@ -186,12 +210,12 @@ export default function Sidebar() {
       </div>
 
       <nav className="flex-1 overflow-hidden">
-        <NavSection label="Overview" items={overview} />
-        <NavSection label="Nannies" items={nannies} />
-        <NavSection label="Families" items={families} />
-        <NavSection label="Operations" items={operations} />
-        <NavSection label="Safety" items={safety} />
-        <NavSection label="Business" items={business} />
+        <NavSection label="Overview" items={overview} counts={counts} />
+        <NavSection label="Nannies" items={nannies} counts={counts} />
+        <NavSection label="Families" items={families} counts={counts} />
+        <NavSection label="Operations" items={operations} counts={counts} />
+        <NavSection label="Safety" items={safety} counts={counts} />
+        <NavSection label="Business" items={business} counts={counts} />
       </nav>
 
       <div className="px-[13px] pt-3 border-t border-white/[0.07] mt-2">

@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { FamilyService, NannyService, NannyRow, FamilyRow, RevenueService, TrialService, TrialAdminRow } from '../services/firestore';
 import { gradientFor, initials } from '../utils/avatar';
 import { useAuthStore } from '../hooks/useAuth';
+import { exportCsv } from '../utils/csv';
 
 const muted = '#8090B0';
 
@@ -100,17 +101,30 @@ function BarRow({ pct, label, color }: { pct: number; label: string; color: stri
 function TableCard({
   title,
   action,
+  actionTo,
+  onAction,
   children,
 }: {
   title: string;
   action?: string;
+  actionTo?: string;
+  onAction?: () => void;
   children: React.ReactNode;
 }) {
+  const actionCls = 'text-[9.5px] font-bold text-purple font-fredoka no-underline';
   return (
     <div className="admin-table">
       <div className="flex items-center justify-between px-[11px] py-2 border-b border-[#EBEEF8]">
         <h4 className="text-[11px] font-extrabold text-navy">{title}</h4>
-        {action && <button type="button" className="text-[9.5px] font-bold text-purple font-fredoka">{action}</button>}
+        {action && actionTo ? (
+          <Link to={actionTo} className={actionCls}>
+            {action}
+          </Link>
+        ) : action ? (
+          <button type="button" className={actionCls} onClick={onAction}>
+            {action}
+          </button>
+        ) : null}
       </div>
       {children}
     </div>
@@ -142,6 +156,7 @@ export default function Dashboard() {
   const [activeTrials, setActiveTrials] = useState<TrialAdminRow[]>([]);
   const [monthlyRevenue, setMonthlyRevenue] = useState<number>(0);
   const [monthlyVat, setMonthlyVat] = useState<number>(0);
+  const [byPlan, setByPlan] = useState<{ plan: string; subs: number; revenue: number }[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
@@ -162,6 +177,7 @@ export default function Dashboard() {
       setFamilies(fams);
       setMonthlyRevenue(rev.monthly);
       setMonthlyVat(rev.vat);
+      setByPlan(rev.byPlan);
       setActiveTrials(trials);
     } catch (e) {
       setError((e as Error).message || 'Failed to load dashboard');
@@ -179,7 +195,9 @@ export default function Dashboard() {
   const activeNannies = nannies.filter((n) => n.status === 'approved').length;
   const subscribedCount = families.filter((f) => f.subscription.status === 'active').length;
   const freeCount = families.filter((f) => f.subscription.status === 'free').length;
-  const newTodayCount = 0; // requires createdAt — not in row shape
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const newTodayCount = families.filter((f) => f.createdAt && f.createdAt >= todayStart).length;
 
   async function handleApprove(id: string) {
     setActingId(id);
@@ -258,13 +276,41 @@ export default function Dashboard() {
         </div>
       </div>
 
-      {/* Revenue row */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 px-[18px] pb-3">
-        <RevCard label="Weekly · AED 89" amount="AED 2,225" sub="25 active" pct={38} color="#FFB347" />
-        <RevCard label="Monthly · AED 239" amount="AED 7,170" sub="30 active" pct={60} color="#9B6EDB" />
-        <RevCard label="2 months · AED 369" amount="AED 3,690" sub="10 active" pct={30} color="#2E9A58" />
-        <RevCard label="VAT (5%)" amount="AED 654" sub="Due to FTA" pct={100} color="#FF8FAB" borderRose />
-      </div>
+      {/* Revenue row — live plan split from RevenueService.summary() */}
+      {(() => {
+        const planMeta: Record<string, { label: string; color: string }> = {
+          weekly: { label: 'Weekly · AED 89', color: '#FFB347' },
+          monthly: { label: 'Monthly · AED 239', color: '#9B6EDB' },
+          twoMonths: { label: '2 months · AED 369', color: '#2E9A58' },
+        };
+        const maxRevenue = Math.max(...byPlan.map((p) => p.revenue), 1);
+        const planOf = (key: string) => byPlan.find((p) => p.plan === key);
+        return (
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 px-[18px] pb-3">
+            {Object.entries(planMeta).map(([key, meta]) => {
+              const p = planOf(key);
+              return (
+                <RevCard
+                  key={key}
+                  label={meta.label}
+                  amount={loading ? '—' : `AED ${(p?.revenue ?? 0).toLocaleString()}`}
+                  sub={loading ? '' : `${p?.subs ?? 0} active`}
+                  pct={Math.round(((p?.revenue ?? 0) / maxRevenue) * 100)}
+                  color={meta.color}
+                />
+              );
+            })}
+            <RevCard
+              label="VAT (5%)"
+              amount={loading ? '—' : `AED ${monthlyVat.toLocaleString()}`}
+              sub="Due to FTA"
+              pct={100}
+              color="#FF8FAB"
+              borderRose
+            />
+          </div>
+        );
+      })()}
 
       <div className="h-px bg-[#EBEEF8] mx-[18px] mb-3" />
 
@@ -287,7 +333,7 @@ export default function Dashboard() {
             <ColStat num={loading ? '—' : String(pendingDocs.length)} label="Pending docs" change="⚠ Review" numColor="#FFB347" />
           </div>
 
-          <TableCard title="📋 Document verification queue" action={`View all (${pendingDocs.length})`}>
+          <TableCard title="📋 Document verification queue" action={`View all (${pendingDocs.length})`} actionTo="/nannies/verify">
             {pendingDocs.length === 0 && !loading ? (
               <div className="px-3 py-4 text-[10.5px] text-[#8090B0]">No nannies awaiting verification.</div>
             ) : null}
@@ -328,7 +374,7 @@ export default function Dashboard() {
             })}
           </TableCard>
 
-          <TableCard title="All nannies" action="View all">
+          <TableCard title="All nannies" action="View all" actionTo="/nannies">
             {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
             {nannies.slice(0, 5).map((n) => {
               const badgeVariant = n.status === 'approved' ? 'active' : n.status === 'pending' ? 'verify' : 'pending';
@@ -359,7 +405,21 @@ export default function Dashboard() {
             const total = nannies.length || 1;
             const colors = ['#FF8FAB', '#FFB347', '#6DBF8A', '#9B6EDB', muted];
             return (
-              <TableCard title="Nationality breakdown" action="Export CSV">
+              <TableCard
+                title="Nationality breakdown"
+                action="Export CSV"
+                onAction={() =>
+                  exportCsv(
+                    'nanny-nationality-breakdown.csv',
+                    sorted,
+                    [
+                      { header: 'Nationality', value: ([nat]) => nat },
+                      { header: 'Count', value: ([, cnt]) => String(cnt) },
+                      { header: 'Percent', value: ([, cnt]) => `${Math.round((cnt / total) * 100)}%` },
+                    ],
+                  )
+                }
+              >
                 {sorted.map(([nat, cnt], i) => (
                   <Row key={nat}>
                     <div className="flex-1 text-[10.5px] font-extrabold text-navy">{nat}</div>
@@ -380,7 +440,16 @@ export default function Dashboard() {
             const max = Math.max(...sorted.map((e) => e[1]), 1);
             const colors = ['#FF5C8A', '#9B6EDB', '#0EA5A0', muted];
             return (
-              <TableCard title="Active nannies by city" action="Export">
+              <TableCard
+                title="Active nannies by city"
+                action="Export"
+                onAction={() =>
+                  exportCsv('active-nannies-by-city.csv', sorted, [
+                    { header: 'City', value: ([city]) => city },
+                    { header: 'Active nannies', value: ([, cnt]) => String(cnt) },
+                  ])
+                }
+              >
                 {sorted.map(([city, cnt], i) => (
                   <Row key={city}>
                     <div className="flex-1 text-[10.5px] font-extrabold text-navy">{city}</div>
@@ -410,7 +479,7 @@ export default function Dashboard() {
             <ColStat num={loading ? '—' : String(newTodayCount)} label="New today" change="" numColor="#9B6EDB" />
           </div>
 
-          <TableCard title="Recent family accounts" action="View all">
+          <TableCard title="Recent family accounts" action="View all" actionTo="/families">
             {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
             {families.slice(0, 5).map((f) => {
               const isActive = f.subscription.status === 'active';
@@ -442,7 +511,25 @@ export default function Dashboard() {
             });
             const max = Math.max(...Object.values(planCounts), freeCount2, 1);
             return (
-              <TableCard title="Subscription breakdown" action="Export CSV">
+              <TableCard
+                title="Subscription breakdown"
+                action="Export CSV"
+                onAction={() =>
+                  exportCsv(
+                    'subscription-breakdown.csv',
+                    [
+                      { plan: 'Weekly', subs: planCounts.weekly ?? 0 },
+                      { plan: 'Monthly', subs: planCounts.monthly ?? 0 },
+                      { plan: '2-months', subs: planCounts.twoMonths ?? 0 },
+                      { plan: 'Not subscribed', subs: freeCount2 },
+                    ],
+                    [
+                      { header: 'Plan', value: (r) => r.plan },
+                      { header: 'Count', value: (r) => String(r.subs) },
+                    ],
+                  )
+                }
+              >
                 <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">Weekly · AED 89/wk</div><BarRow pct={Math.round(((planCounts.weekly ?? 0) / max) * 100)} label={`${planCounts.weekly ?? 0} subs`} color="#FFB347" /></Row>
                 <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">Monthly · AED 239/mo</div><BarRow pct={Math.round(((planCounts.monthly ?? 0) / max) * 100)} label={`${planCounts.monthly ?? 0} subs`} color="#9B6EDB" /></Row>
                 <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">2-months · AED 369</div><BarRow pct={Math.round(((planCounts.twoMonths ?? 0) / max) * 100)} label={`${planCounts.twoMonths ?? 0} subs`} color="#6DBF8A" /></Row>
@@ -461,7 +548,17 @@ export default function Dashboard() {
             const total2 = families.length || 1;
             const colors2 = ['#9B6EDB', '#0EA5A0', '#FF8FAB', '#FFB347'];
             return (
-              <TableCard title="Family nationality breakdown" action="Export">
+              <TableCard
+                title="Family nationality breakdown"
+                action="Export"
+                onAction={() =>
+                  exportCsv('family-nationality-breakdown.csv', sorted2, [
+                    { header: 'Nationality', value: ([nat]) => nat },
+                    { header: 'Count', value: ([, cnt]) => String(cnt) },
+                    { header: 'Percent', value: ([, cnt]) => `${Math.round((cnt / total2) * 100)}%` },
+                  ])
+                }
+              >
                 {sorted2.map(([nat, cnt], i) => (
                   <Row key={nat}>
                     <div className="flex-1 text-[10.5px] font-extrabold text-navy">{nat}</div>
@@ -473,7 +570,7 @@ export default function Dashboard() {
             );
           })()}
 
-          <TableCard title="🤝 Active trials" action="Monitor all">
+          <TableCard title="🤝 Active trials" action="Monitor all" actionTo="/trials">
             {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
             {activeTrials.map((t) => {
               const dayNum = Math.max(1, Math.ceil((Date.now() - t.startDate.getTime()) / 86400000));

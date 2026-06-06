@@ -149,6 +149,8 @@ export interface FamilyStatsRow {
 
 export interface FamilyRow {
   id: string;
+  /** When the account was created (used for "new today" stats). */
+  createdAt?: Date;
   fullName: string;
   nationality: string;
   city: string;
@@ -886,6 +888,7 @@ function parseSub(v: unknown): FamilyRow['subscription'] {
 function parseFamily(id: string, data: Record<string, unknown>): FamilyRow {
   return {
     id,
+    createdAt: toDateOrUndef(data.createdAt),
     fullName: (data.fullName as string) ?? '',
     nationality: (data.nationality as string) ?? '',
     city: (data.city as string) ?? '',
@@ -1371,7 +1374,7 @@ export interface RevenueSummary {
   monthly: number;
   vat: number;
   byPlan: { plan: string; subs: number; revenue: number }[];
-  trend: { label: string; pct: number }[];
+  trend: { label: string; amount: number; pct: number }[];
 }
 
 export interface RevenueTransaction {
@@ -1391,7 +1394,37 @@ const mockTransactions: RevenueTransaction[] = [
   { id: 'tx4', familyId: 'f4', familyName: 'Mohammed Al Rashid', plan: 'weekly', amount: 89, status: 'failed', createdAt: new Date(Date.now() - 3 * 86400000) },
   { id: 'tx5', familyId: 'f3', familyName: 'Lin Chen', plan: 'monthly', amount: 239, status: 'refunded', createdAt: new Date(Date.now() - 7 * 86400000) },
   { id: 'tx6', familyId: 'f1', familyName: 'Al Mansoori Family', plan: 'monthly', amount: 239, status: 'paid', createdAt: new Date(Date.now() - 42 * 86400000) },
+  { id: 'tx7', familyId: 'f2', familyName: 'James & Sarah K.', plan: 'twoMonths', amount: 369, status: 'paid', createdAt: new Date(Date.now() - 75 * 86400000) },
+  { id: 'tx8', familyId: 'f3', familyName: 'Lin Chen', plan: 'monthly', amount: 239, status: 'paid', createdAt: new Date(Date.now() - 100 * 86400000) },
+  { id: 'tx9', familyId: 'f4', familyName: 'Mohammed Al Rashid', plan: 'weekly', amount: 89, status: 'paid', createdAt: new Date(Date.now() - 130 * 86400000) },
+  { id: 'tx10', familyId: 'f1', familyName: 'Al Mansoori Family', plan: 'monthly', amount: 239, status: 'paid', createdAt: new Date(Date.now() - 160 * 86400000) },
 ];
+
+/** Bucket paid transactions into the last `months` calendar months (oldest →
+ *  newest) so the revenue trend chart reflects real data. `pct` is relative to
+ *  the best month so the tallest bar always fills the chart. */
+function buildTrend(
+  txns: { amount: number; status: RevenueTransaction['status']; createdAt: Date }[],
+  months = 6,
+): RevenueSummary['trend'] {
+  const now = new Date();
+  const buckets = Array.from({ length: months }, (_, i) => {
+    const d = new Date(now.getFullYear(), now.getMonth() - (months - 1 - i), 1);
+    return {
+      key: `${d.getFullYear()}-${d.getMonth()}`,
+      label: d.toLocaleDateString('en-GB', { month: 'short' }),
+      amount: 0,
+    };
+  });
+  const byKey = new Map(buckets.map((b) => [b.key, b]));
+  txns.forEach((t) => {
+    if (t.status !== 'paid') return;
+    const b = byKey.get(`${t.createdAt.getFullYear()}-${t.createdAt.getMonth()}`);
+    if (b) b.amount += t.amount;
+  });
+  const max = Math.max(...buckets.map((b) => b.amount), 1);
+  return buckets.map((b) => ({ label: b.label, amount: b.amount, pct: Math.round((b.amount / max) * 100) }));
+}
 
 export const RevenueService = {
   async recentTransactions(): Promise<RevenueTransaction[]> {
@@ -1420,17 +1453,23 @@ export const RevenueService = {
           { plan: 'monthly', subs: 30, revenue: 7170 },
           { plan: 'twoMonths', subs: 10, revenue: 3690 },
         ],
-        trend: [
-          { label: 'Jan', pct: 65 },
-          { label: 'Feb', pct: 78 },
-          { label: 'Mar', pct: 85 },
-          { label: 'Apr', pct: 72 },
-          { label: 'May', pct: 90 },
-          { label: 'Jun', pct: 100 },
-        ],
+        trend: buildTrend(mockTransactions),
       };
     }
-    const families = await FamilyService.list();
+    const now = new Date();
+    const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
+    const [families, txSnap] = await Promise.all([
+      FamilyService.list(),
+      getDocs(query(collection(db!, 'transactions'), where('createdAt', '>=', Timestamp.fromDate(trendStart)))),
+    ]);
+    const trendTxns = txSnap.docs.map((d) => {
+      const data = d.data() as Record<string, unknown>;
+      return {
+        amount: (data.amount as number) ?? 0,
+        status: (data.status as RevenueTransaction['status']) ?? 'paid',
+        createdAt: parseTimestamp(data.createdAt),
+      };
+    });
     const planPrices: Record<string, number> = { weekly: 89, monthly: 239, twoMonths: 369 };
     const byPlanMap: Record<string, { subs: number; revenue: number }> = {};
     families.forEach((f) => {
@@ -1448,14 +1487,7 @@ export const RevenueService = {
       monthly,
       vat: Math.round(monthly * 0.05),
       byPlan: Object.entries(byPlanMap).map(([plan, v]) => ({ plan, ...v })),
-      trend: [
-        { label: 'Jan', pct: 65 },
-        { label: 'Feb', pct: 78 },
-        { label: 'Mar', pct: 85 },
-        { label: 'Apr', pct: 72 },
-        { label: 'May', pct: 90 },
-        { label: 'Jun', pct: 100 },
-      ],
+      trend: buildTrend(trendTxns),
     };
   },
 };

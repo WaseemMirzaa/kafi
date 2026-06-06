@@ -100,11 +100,13 @@ export function TableCard({
   title,
   action,
   actionTo,
+  onAction,
   children,
 }: {
   title: string;
   action?: string;
   actionTo?: string;
+  onAction?: () => void;
   children: React.ReactNode;
 }) {
   return (
@@ -115,8 +117,8 @@ export function TableCard({
           <Link to={actionTo} className="text-[9.5px] font-bold text-purple font-fredoka no-underline">
             {action}
           </Link>
-        ) : action ? (
-          <button type="button" className="text-[9.5px] font-bold text-purple font-fredoka">
+        ) : action && onAction ? (
+          <button type="button" className="text-[9.5px] font-bold text-purple font-fredoka" onClick={onAction}>
             {action}
           </button>
         ) : null}
@@ -144,16 +146,6 @@ export function BarRow({ pct, label, color }: { pct: number; label: string; colo
       </div>
       <span className="text-[10px] font-bold text-navy">{label}</span>
     </div>
-  );
-}
-
-export function SearchInput({ placeholder, className = '' }: { placeholder: string; className?: string }) {
-  return (
-    <input
-      type="search"
-      placeholder={placeholder}
-      className={`admin-card text-[10px] font-semibold text-navy px-3 py-2 w-52 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30 ${className}`}
-    />
   );
 }
 

@@ -54,6 +54,9 @@ export default function Revenue() {
     );
   }
 
+  const lastThreeMonths = data.trend.slice(-3).reduce((s, m) => s + m.amount, 0);
+  const hasTrendData = data.trend.some((m) => m.amount > 0);
+
   return (
     <PageShell>
       <PageHeader
@@ -69,21 +72,36 @@ export default function Revenue() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
           <TopStat num={`AED ${data.monthly.toLocaleString()}`} label="This month" change="↑ Live" numClass="!text-[13px]" />
           <TopStat
-            num={`AED ${(data.monthly * 3).toLocaleString()}`}
-            label="Last 3 months (est.)"
-            change="↑ Estimate"
+            num={`AED ${lastThreeMonths.toLocaleString()}`}
+            label="Last 3 months"
+            change="↑ Paid transactions"
             numClass="!text-[13px]"
           />
           <TopStat num={`AED ${data.vat.toLocaleString()}`} label="VAT 5%" change="→ FTA" numClass="!text-[13px]" />
           <TopStat num={`${data.byPlan.reduce((s, p) => s + p.subs, 0)}`} label="Active subs" change="↑ Subs" />
         </div>
 
-        <TableCard title="Monthly trend">
+        <TableCard title="Monthly trend (paid transactions, last 6 months)">
           <div className="px-[11px] py-4">
-            <div className="h-40 flex items-end gap-2">
+            {!hasTrendData && (
+              <div className="text-[10px] text-[#8090B0] mb-2">No paid transactions in the last 6 months.</div>
+            )}
+            <div className="flex items-end gap-2">
               {data.trend.map((m) => (
-                <div key={m.label} className="flex-1 flex flex-col items-center gap-1">
-                  <div className="w-full rounded-t bg-gradient-to-t from-rose-dark to-rose" style={{ height: `${m.pct}%` }} />
+                <div
+                  key={m.label}
+                  className="flex-1 flex flex-col items-center gap-1"
+                  title={`${m.label}: AED ${m.amount.toLocaleString()}`}
+                >
+                  <span className="text-[8px] font-bold text-navy">
+                    {m.amount > 0 ? `AED ${m.amount.toLocaleString()}` : '—'}
+                  </span>
+                  <div className="w-full h-32 flex items-end">
+                    <div
+                      className={`w-full rounded-t ${m.amount > 0 ? 'bg-gradient-to-t from-rose-dark to-rose' : 'bg-[#F0F1FA]'}`}
+                      style={{ height: `${Math.max(2, m.pct)}%` }}
+                    />
+                  </div>
                   <span className="text-[8px] font-bold text-[#8090B0]">{m.label}</span>
                 </div>
               ))}
