@@ -3,7 +3,7 @@ slug: kafi-dashboard-revert-revenue-filters
 project: kafi-admin-panel
 title: Revert dashboard design (keep logic), add global period filters to Revenue page
 owner: project-manager
-status: READY_FOR_ARCH
+status: PR_OPEN
 updated: 2026-06-07
 ---
 

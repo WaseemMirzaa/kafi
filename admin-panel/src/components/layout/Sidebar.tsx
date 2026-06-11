@@ -3,6 +3,7 @@ import { NavLink } from 'react-router-dom';
 import clsx from 'clsx';
 import { useAuthStore } from '../../hooks/useAuth';
 import { FamilyService, NannyService, TrialService } from '../../services/firestore';
+import logoAdmin from '../../assets/logo_admin.png';
 
 type NavItem = {
   to: string;
@@ -193,17 +194,7 @@ export default function Sidebar() {
   return (
     <aside className="w-[182px] flex-shrink-0 bg-navy flex flex-col py-3.5 h-screen sticky top-0 overflow-hidden">
       <div className="flex items-center gap-1.5 px-[13px] pb-3.5 mb-2.5 border-b border-white/[0.07]">
-        <svg width="18" height="18" viewBox="0 0 34 34" aria-hidden>
-          <ellipse cx="17" cy="9" rx="6" ry="10" fill="#FF8FAB" opacity="0.8" />
-          <ellipse cx="17" cy="9" rx="6" ry="10" fill="#FF8FAB" opacity="0.7" transform="rotate(60 17 17)" />
-          <ellipse cx="17" cy="9" rx="6" ry="10" fill="#FF8FAB" opacity="0.7" transform="rotate(120 17 17)" />
-          <ellipse cx="17" cy="9" rx="6" ry="10" fill="#FF9BBB" opacity="0.8" transform="rotate(180 17 17)" />
-          <ellipse cx="17" cy="9" rx="6" ry="10" fill="#FF9BBB" opacity="0.7" transform="rotate(240 17 17)" />
-          <ellipse cx="17" cy="9" rx="6" ry="10" fill="#FF8FAB" opacity="0.7" transform="rotate(300 17 17)" />
-          <circle cx="17" cy="17" r="7" fill="rgba(255,255,255,0.12)" />
-          <circle cx="17" cy="17" r="4.5" fill="#FF8FAB" />
-        </svg>
-        <span className="font-pacifico text-[15px] text-[#FF8FAB]">Kafi</span>
+        <img src={logoAdmin} alt="Kafi" className="h-6 w-auto" />
         <span className="text-[8px] bg-rose-dark text-white px-1.5 py-0.5 rounded-full font-fredoka font-bold ml-auto">
           ADMIN
         </span>

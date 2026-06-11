@@ -18,20 +18,20 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'mock-api-key',
-    appId: '1:000000000000:android:mock',
-    messagingSenderId: '000000000000',
-    projectId: 'kafi-mock',
+    apiKey: 'AIzaSyDDR_NQKd1myC0rL_ULyQsLs6m2MKngen8',
+    appId: '1:944877885594:android:4b3730e255af20e4c52723',
+    messagingSenderId: '944877885594',
+    projectId: 'yhgc-testing',
+    storageBucket: 'yhgc-testing.firebasestorage.app',
   );
-
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'mock-api-key',
-    appId: '1:000000000000:ios:mock',
-    messagingSenderId: '000000000000',
-    projectId: 'kafi-mock',
-    iosBundleId: 'ae.kafi.app',
+    apiKey: 'AIzaSyDIK6A5CWHgngZq_joGf7HkdE2xQ_TQC4Q',
+    appId: '1:944877885594:ios:07488188f47c98bac52723',
+    messagingSenderId: '944877885594',
+    projectId: 'yhgc-testing',
+    storageBucket: 'yhgc-testing.firebasestorage.app',
+    iosBundleId: 'com.kafi.kafiApp',
   );
-
   static const FirebaseOptions macos = ios;
 
   static const FirebaseOptions web = FirebaseOptions(
