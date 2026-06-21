@@ -17,6 +17,7 @@ standalone change).
 | Slug | Project | Epic / phase | Branch | Status | Updated | Artifacts |
 | ---- | ------- | ------------ | ------ | ------ | ------- | --------- |
 | kafi-dashboard-revert-revenue-filters | Nannies app (Kafi admin) | — (standalone) | feat/kafi-dashboard-revert-revenue-filters | READY_FOR_REVIEW | 2026-06-07 | scope · plan · build |
+| mobile-auth-onboarding-backend | Kafi mobile (Flutter) | — (standalone) | claude/quirky-goldberg-7jxx5a | BUILT (partial) | 2026-06-21 | plan · build |
 
 <!--
 Task status flow:

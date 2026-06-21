@@ -3,7 +3,7 @@ slug: mobile-auth-onboarding-backend
 project: kafi_app (Flutter mobile)
 title: Backend integration — Firebase phone auth, session, and spec-complete onboarding validation (both roles)
 owner: architect
-status: PLANNING
+status: IN_PROGRESS (Phases 0–3 built; see builds/ note for deferred UI items)
 updated: 2026-06-21
 branch: claude/quirky-goldberg-7jxx5a
 ---
