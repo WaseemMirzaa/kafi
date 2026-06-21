@@ -220,4 +220,20 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.otpResendShort: 'إعادة إرسال الرمز',
     AppStrings.authAgreePrefix: 'بالمتابعة فإنك توافق على ',
     AppStrings.authAgreeAnd: ' و ',
+
+    // Nanny onboarding — required-field messages (System Spec §3.2 / §14.4)
+    AppStrings.nannyNationalityRequired: 'الرجاء اختيار جنسيتك.',
+    AppStrings.nannyVisaRequired: 'الرجاء اختيار حالة التأشيرة / الوضع القانوني.',
+    AppStrings.nannyMaritalRequired: 'الرجاء اختيار حالتك الاجتماعية.',
+    AppStrings.nannyChildrenCountRequired: 'الرجاء إدخال عدد أطفالك.',
+    AppStrings.nannyEmergencyNameRequired: 'الرجاء إدخال اسم جهة اتصال الطوارئ.',
+    AppStrings.nannyEmergencyRelRequired: 'الرجاء إدخال صلة القرابة بجهة الاتصال.',
+    AppStrings.nannyEmergencyPhoneRequired: 'الرجاء إدخال رقم هاتف طوارئ صحيح.',
+    AppStrings.nannyBioRequired: 'الرجاء كتابة نبذة قصيرة عنك.',
+
+    // Nanny onboarding — labels
+    AppStrings.nannyComfortFaith: 'هل أنت مرتاحة للعمل في منزل من ديانة مختلفة؟',
+    AppStrings.nannyReligionPrivacyNote:
+        'هذه المعلومات اختيارية وخاصة تمامًا. تساعد العائلات في إيجاد توافق ثقافي مريح.',
+    AppStrings.nannyReligiousPractices: 'الممارسات الدينية (اختياري)',
   });

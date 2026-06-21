@@ -641,4 +641,20 @@ const Map<String, String> enUs = {
   AppStrings.otpResendShort: 'Resend OTP',
   AppStrings.authAgreePrefix: "By continuing you agree to Kafi's ",
   AppStrings.authAgreeAnd: ' and ',
+
+  // Nanny onboarding — required-field messages (System Spec §3.2 / §14.4)
+  AppStrings.nannyNationalityRequired: 'Please select your nationality.',
+  AppStrings.nannyVisaRequired: 'Please select your visa / legal status.',
+  AppStrings.nannyMaritalRequired: 'Please select your marital status.',
+  AppStrings.nannyChildrenCountRequired: 'Please enter how many children you have.',
+  AppStrings.nannyEmergencyNameRequired: 'Please enter an emergency contact name.',
+  AppStrings.nannyEmergencyRelRequired: 'Please enter your relationship to the contact.',
+  AppStrings.nannyEmergencyPhoneRequired: 'Please enter a valid emergency phone number.',
+  AppStrings.nannyBioRequired: 'Please write a short bio about yourself.',
+
+  // Nanny onboarding — labels
+  AppStrings.nannyComfortFaith: 'Are you comfortable working in a home of a different faith?',
+  AppStrings.nannyReligionPrivacyNote:
+      'This information is optional and completely private. It helps families find a comfortable cultural fit.',
+  AppStrings.nannyReligiousPractices: 'Religious practices (optional)',
 };

@@ -647,4 +647,19 @@ abstract class AppStrings {
   static const otpResendShort = 'otp_resend_short';
   static const authAgreePrefix = 'auth_agree_prefix';
   static const authAgreeAnd = 'auth_agree_and';
+
+  // Nanny onboarding — required-field messages (System Spec §3.2 / §14.4)
+  static const nannyNationalityRequired = 'nanny_nationality_required';
+  static const nannyVisaRequired = 'nanny_visa_required';
+  static const nannyMaritalRequired = 'nanny_marital_required';
+  static const nannyChildrenCountRequired = 'nanny_children_count_required';
+  static const nannyEmergencyNameRequired = 'nanny_emergency_name_required';
+  static const nannyEmergencyRelRequired = 'nanny_emergency_rel_required';
+  static const nannyEmergencyPhoneRequired = 'nanny_emergency_phone_required';
+  static const nannyBioRequired = 'nanny_bio_required';
+
+  // Nanny onboarding — labels (were hardcoded)
+  static const nannyComfortFaith = 'nanny_comfort_faith';
+  static const nannyReligionPrivacyNote = 'nanny_religion_privacy_note';
+  static const nannyReligiousPractices = 'nanny_religious_practices';
 }

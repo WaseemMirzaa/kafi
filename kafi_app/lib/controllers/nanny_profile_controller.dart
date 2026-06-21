@@ -14,6 +14,7 @@ import 'package:kafi_app/models/user_model.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
+import 'package:kafi_app/utils/validators.dart';
 import 'package:uuid/uuid.dart';
 
 class NannyProfileController extends GetxController {
@@ -31,14 +32,16 @@ class NannyProfileController extends GetxController {
   final dobCtrl = TextEditingController(text: '1992-03-14');
   final Rx<DateTime?> dob = Rx<DateTime?>(DateTime(1992, 3, 14));
   final RxString nationality = 'Filipino'.obs;
-  final RxList<String> selectedLanguages = <String>['English', 'Arabic (basic)'].obs;
-  final Rx<VisaStatus?> visaStatus = Rx<VisaStatus?>(VisaStatus.residenceSponsored);
+  // Required selections start unset so a new nanny must actively choose them
+  // (previously pre-seeded with demo values that were saved verbatim).
+  final RxList<String> selectedLanguages = <String>[].obs;
+  final Rx<VisaStatus?> visaStatus = Rx<VisaStatus?>(null);
   final RxBool hasEid = false.obs;
   final Rx<bool?> willingTransferVisa = Rx<bool?>(true);
-  final RxList<Emirate> workEmirates = <Emirate>[Emirate.dubai, Emirate.abuDhabi, Emirate.sharjah, Emirate.alAin].obs;
+  final RxList<Emirate> workEmirates = <Emirate>[].obs;
   final RxBool willingRelocate = true.obs;
   final currentAreaCtrl = TextEditingController();
-  final Rx<MaritalStatus?> maritalStatus = Rx<MaritalStatus?>(MaritalStatus.single);
+  final Rx<MaritalStatus?> maritalStatus = Rx<MaritalStatus?>(null);
   final RxBool hasChildren = false.obs;
   final childrenCountCtrl = TextEditingController();
   final healthCtrl = TextEditingController();
@@ -48,6 +51,7 @@ class NannyProfileController extends GetxController {
   final RxBool comfortPets = true.obs;
   final RxBool cooks = true.obs;
   final RxBool nightShifts = false.obs;
+  final RxBool comfortDifferentFaith = true.obs;
   final religionCtrl = TextEditingController();
   final emergencyNameCtrl = TextEditingController();
   final emergencyRelCtrl = TextEditingController();
@@ -180,6 +184,7 @@ class NannyProfileController extends GetxController {
     comfortPets.value = n.comfortableWithPets;
     cooks.value = n.canCook;
     nightShifts.value = n.canDoNightShifts;
+    comfortDifferentFaith.value = n.comfortableWithDifferentFaith;
     religionCtrl.text = n.religion;
     // Emergency contact
     emergencyNameCtrl.text = n.emergencyName;
@@ -250,22 +255,39 @@ class NannyProfileController extends GetxController {
     Get.snackbar(AppStrings.successTitle.tr, AppStrings.profileUpdated.tr);
   }
 
+  /// First failing required-field message key for the personal-info step, or
+  /// null when valid. System Spec §3.2 (required fields) + §14.4 rules.
+  /// Note: `dateOfBirth` is validated leniently because the current screen has
+  /// no date picker wiring `dob.value` (tracked as a follow-up); the existing
+  /// default keeps it non-null so age≥18 passes.
+  String? _validatePersonalInfo() {
+    if (fullNameCtrl.text.trim().isEmpty) return AppStrings.nannyFullNameRequired;
+    final dobErr = Validators.dateOfBirth(dob.value);
+    if (dobErr != null) {
+      return dob.value == null ? AppStrings.nannyDobRequired : dobErr;
+    }
+    if (nationality.value.trim().isEmpty) return AppStrings.nannyNationalityRequired;
+    if (selectedLanguages.isEmpty) return AppStrings.nannyLanguagesRequired;
+    if (visaStatus.value == null) return AppStrings.nannyVisaRequired;
+    if (workEmirates.isEmpty) return AppStrings.nannyEmiratesRequired;
+    if (maritalStatus.value == null) return AppStrings.nannyMaritalRequired;
+    if (hasChildren.value && (int.tryParse(childrenCountCtrl.text) ?? 0) < 1) {
+      return AppStrings.nannyChildrenCountRequired;
+    }
+    if (emergencyNameCtrl.text.trim().isEmpty) return AppStrings.nannyEmergencyNameRequired;
+    if (emergencyRelCtrl.text.trim().isEmpty) return AppStrings.nannyEmergencyRelRequired;
+    if (Validators.contactPhone(emergencyPhoneCtrl.text) != null) {
+      return AppStrings.nannyEmergencyPhoneRequired;
+    }
+    if (bioCtrl.text.trim().isEmpty) return AppStrings.nannyBioRequired;
+    return null;
+  }
+
   Future<void> savePersonalInfoAndNext({bool advance = true}) async {
-    // Required-field validation per onboarding spec.
-    if (fullNameCtrl.text.trim().isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyFullNameRequired.tr);
-      return;
-    }
-    if (dob.value == null) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyDobRequired.tr);
-      return;
-    }
-    if (selectedLanguages.isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyLanguagesRequired.tr);
-      return;
-    }
-    if (workEmirates.isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyEmiratesRequired.tr);
+    // Required-field validation — System Spec §3.2 required fields + §14.4.
+    final err = _validatePersonalInfo();
+    if (err != null) {
+      Get.snackbar(AppStrings.errorTitle.tr, err.tr);
       return;
     }
     isLoading.value = true;
@@ -294,6 +316,7 @@ class NannyProfileController extends GetxController {
         comfortableWithPets: comfortPets.value,
         canCook: cooks.value,
         canDoNightShifts: nightShifts.value,
+        comfortableWithDifferentFaith: comfortDifferentFaith.value,
         religion: religionCtrl.text.trim(),
         emergencyName: emergencyNameCtrl.text.trim(),
         emergencyRelationship: emergencyRelCtrl.text.trim(),
