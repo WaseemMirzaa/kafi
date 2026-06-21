@@ -29,8 +29,8 @@ class NannyProfileController extends GetxController {
 
   // step 1
   final fullNameCtrl = TextEditingController();
-  final dobCtrl = TextEditingController(text: '1992-03-14');
-  final Rx<DateTime?> dob = Rx<DateTime?>(DateTime(1992, 3, 14));
+  final dobCtrl = TextEditingController();
+  final Rx<DateTime?> dob = Rx<DateTime?>(null);
   final RxString nationality = 'Filipino'.obs;
   // Required selections start unset so a new nanny must actively choose them
   // (previously pre-seeded with demo values that were saved verbatim).
@@ -41,6 +41,13 @@ class NannyProfileController extends GetxController {
   final RxList<Emirate> workEmirates = <Emirate>[].obs;
   final RxBool willingRelocate = true.obs;
   final currentAreaCtrl = TextEditingController();
+  // Work preferences (System Spec §3.2 — required)
+  final salaryMinCtrl = TextEditingController();
+  final salaryMaxCtrl = TextEditingController();
+  final Rx<JobTypePreference> jobTypePref = JobTypePreference.both.obs;
+  final Rx<AvailabilityStatus> availability = AvailabilityStatus.availableNow.obs;
+  final Rx<DateTime?> availableFrom = Rx<DateTime?>(null);
+  final availableFromCtrl = TextEditingController();
   final Rx<MaritalStatus?> maritalStatus = Rx<MaritalStatus?>(null);
   final RxBool hasChildren = false.obs;
   final childrenCountCtrl = TextEditingController();
@@ -85,6 +92,29 @@ class NannyProfileController extends GetxController {
         visa.status != DocumentStatus.missing;
   }
 
+  /// Live age computed from the picked date of birth (null until chosen).
+  int? get age {
+    final d = dob.value;
+    if (d == null) return null;
+    final now = DateTime.now();
+    var a = now.year - d.year;
+    if (now.month < d.month || (now.month == d.month && now.day < d.day)) a--;
+    return a;
+  }
+
+  void setDob(DateTime d) {
+    dob.value = d;
+    dobCtrl.text = _fmtDate(d);
+  }
+
+  void setAvailableFrom(DateTime d) {
+    availableFrom.value = d;
+    availableFromCtrl.text = _fmtDate(d);
+  }
+
+  String _fmtDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
+
   @override
   void onInit() {
     super.onInit();
@@ -97,6 +127,9 @@ class NannyProfileController extends GetxController {
     fullNameCtrl.dispose();
     dobCtrl.dispose();
     currentAreaCtrl.dispose();
+    salaryMinCtrl.dispose();
+    salaryMaxCtrl.dispose();
+    availableFromCtrl.dispose();
     childrenCountCtrl.dispose();
     healthCtrl.dispose();
     medsCtrl.dispose();
@@ -171,6 +204,13 @@ class NannyProfileController extends GetxController {
     workEmirates.value = List.of(n.workEmirates);
     willingRelocate.value = n.willingToRelocate;
     currentAreaCtrl.text = n.currentArea;
+    // Work preferences
+    salaryMinCtrl.text = n.expectedSalaryMin > 0 ? '${n.expectedSalaryMin}' : '';
+    salaryMaxCtrl.text = n.expectedSalaryMax > 0 ? '${n.expectedSalaryMax}' : '';
+    jobTypePref.value = n.jobTypePreference;
+    availability.value = n.availability;
+    availableFrom.value = n.availableFrom;
+    if (n.availableFrom != null) availableFromCtrl.text = _fmtDate(n.availableFrom!);
     // Personal
     maritalStatus.value = n.maritalStatus;
     hasChildren.value = n.hasChildren;
@@ -257,9 +297,6 @@ class NannyProfileController extends GetxController {
 
   /// First failing required-field message key for the personal-info step, or
   /// null when valid. System Spec §3.2 (required fields) + §14.4 rules.
-  /// Note: `dateOfBirth` is validated leniently because the current screen has
-  /// no date picker wiring `dob.value` (tracked as a follow-up); the existing
-  /// default keeps it non-null so age≥18 passes.
   String? _validatePersonalInfo() {
     if (fullNameCtrl.text.trim().isEmpty) return AppStrings.nannyFullNameRequired;
     final dobErr = Validators.dateOfBirth(dob.value);
@@ -270,6 +307,15 @@ class NannyProfileController extends GetxController {
     if (selectedLanguages.isEmpty) return AppStrings.nannyLanguagesRequired;
     if (visaStatus.value == null) return AppStrings.nannyVisaRequired;
     if (workEmirates.isEmpty) return AppStrings.nannyEmiratesRequired;
+    final salErr = Validators.salaryRange(
+      int.tryParse(salaryMinCtrl.text) ?? 0,
+      int.tryParse(salaryMaxCtrl.text) ?? 0,
+    );
+    if (salErr != null) return salErr;
+    if (availability.value == AvailabilityStatus.availableFrom &&
+        availableFrom.value == null) {
+      return AppStrings.nannyAvailableFromRequired;
+    }
     if (maritalStatus.value == null) return AppStrings.nannyMaritalRequired;
     if (hasChildren.value && (int.tryParse(childrenCountCtrl.text) ?? 0) < 1) {
       return AppStrings.nannyChildrenCountRequired;
@@ -306,6 +352,13 @@ class NannyProfileController extends GetxController {
         workEmirates: List.of(workEmirates),
         willingToRelocate: willingRelocate.value,
         currentArea: currentAreaCtrl.text.trim(),
+        expectedSalaryMin: int.tryParse(salaryMinCtrl.text) ?? 0,
+        expectedSalaryMax: int.tryParse(salaryMaxCtrl.text) ?? 0,
+        jobTypePreference: jobTypePref.value,
+        availability: availability.value,
+        availableFrom: availability.value == AvailabilityStatus.availableFrom
+            ? availableFrom.value
+            : null,
         maritalStatus: maritalStatus.value,
         hasChildren: hasChildren.value,
         childrenCount: int.tryParse(childrenCountCtrl.text) ?? 0,

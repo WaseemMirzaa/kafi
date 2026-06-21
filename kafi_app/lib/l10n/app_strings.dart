@@ -673,4 +673,12 @@ abstract class AppStrings {
   static const familyBenefitsRequired = 'family_benefits_required';
   static const familyTrialDaysRequired = 'family_trial_days_required';
   static const familyTrialRateRequired = 'family_trial_rate_required';
+
+  // Nanny onboarding — work preferences (System Spec §3.2)
+  static const nannySecWorkPrefs = 'nanny_sec_work_prefs';
+  static const jobBoth = 'job_both';
+  static const nannyAvailability = 'nanny_availability';
+  static const nannyAvailableFrom = 'nanny_available_from';
+  static const nannyAvailableFromDate = 'nanny_available_from_date';
+  static const nannyAvailableFromRequired = 'nanny_available_from_required';
 }

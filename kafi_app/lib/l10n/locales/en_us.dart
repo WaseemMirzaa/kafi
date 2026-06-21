@@ -668,4 +668,12 @@ const Map<String, String> enUs = {
   AppStrings.familyBenefitsRequired: 'Please select at least one benefit you offer.',
   AppStrings.familyTrialDaysRequired: 'Please choose a trial duration.',
   AppStrings.familyTrialRateRequired: 'Please set a trial daily rate.',
+
+  // Nanny onboarding — work preferences (System Spec §3.2)
+  AppStrings.nannySecWorkPrefs: 'Work preferences',
+  AppStrings.jobBoth: 'Either / both',
+  AppStrings.nannyAvailability: 'When can you start?',
+  AppStrings.nannyAvailableFrom: 'From a specific date',
+  AppStrings.nannyAvailableFromDate: 'Available from',
+  AppStrings.nannyAvailableFromRequired: 'Please choose your start date.',
 };

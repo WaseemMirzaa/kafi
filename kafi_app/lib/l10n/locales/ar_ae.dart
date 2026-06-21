@@ -247,4 +247,12 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.familyBenefitsRequired: 'الرجاء اختيار ميزة واحدة على الأقل تقدمها.',
     AppStrings.familyTrialDaysRequired: 'الرجاء اختيار مدة التجربة.',
     AppStrings.familyTrialRateRequired: 'الرجاء تحديد السعر اليومي للتجربة.',
+
+    // Nanny onboarding — work preferences (System Spec §3.2)
+    AppStrings.nannySecWorkPrefs: 'تفضيلات العمل',
+    AppStrings.jobBoth: 'كلاهما',
+    AppStrings.nannyAvailability: 'متى يمكنك البدء؟',
+    AppStrings.nannyAvailableFrom: 'من تاريخ محدد',
+    AppStrings.nannyAvailableFromDate: 'متاحة اعتباراً من',
+    AppStrings.nannyAvailableFromRequired: 'الرجاء اختيار تاريخ البدء.',
   });

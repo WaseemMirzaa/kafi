@@ -48,21 +48,30 @@ commits: f28a2ed (auth) · 394f54c (nanny) · 16cec01 (family)
   roles, schedule, duties, benefits, salary order (min ≤ max), trial
   duration > 0, trial daily rate > 0. Reasonable UAE defaults retained.
 
+### Phase 4 — DOB picker + nanny work preferences (was F1 / F2)
+- Real **date picker** on the nanny DOB field (tappable via GestureDetector +
+  AbsorbPointer; `firstDate`/`lastDate` enforce ages 18–70), wired to `dob.value`
+  with a live computed age; dropped the hardcoded `1992-03-14` default. DOB is
+  now strictly required (age ≥ 18).
+- New **Work preferences** section on the nanny info screen: expected salary
+  min/max, job-type preference (live-in / live-out / both), and availability
+  (now / from a date — with its own date picker). Persisted to the model and
+  validated (salary min ≤ max via Validators; start date required when
+  "from a date"). 6 new EN+AR l10n keys.
+
 ## Key discoveries (the production audit was stale)
 - Pickers (`image_picker`/`file_picker`) are already wired with real bytes;
   16 Android permissions present; `firebase_options.dart` present; mock OTP no
   longer rendered in the OTP UI. Those audit blockers are resolved.
-- **DOB field has no date picker** — `dob.value` was hardcoded to `1992-03-14`
-  for every nanny. Left intact (lenient validation) to avoid blocking users;
-  needs a real picker. (Follow-up F1.)
+- **DOB field had no date picker** — `dob.value` was hardcoded to `1992-03-14`
+  for every nanny. **Fixed in Phase 4** (real picker + strict age ≥ 18).
 - Nanny `willingToTransferVisa == null` legitimately means "Depends" (not unset),
   so it is intentionally not required-validated.
 
 ## Deferred (need a compile/test loop — no Flutter toolchain in this env)
-- **F1** Add a date picker that sets `dob.value` (+ enforce age ≥ 18) and drop
-  the hardcoded DOB default.
-- **F2** Add input UI for the spec-required nanny `expectedSalaryMin/Max`,
-  `availability`, `jobTypePreference` (model defaults only today), then enforce.
+- **F1 — DONE (Phase 4)** DOB date picker + strict age ≥ 18; hardcoded default cleared.
+- **F2 — DONE (Phase 4)** Nanny work-preferences UI (salary / availability /
+  job type) added and enforced.
 - **F3** Per-field **inline** error placement on the onboarding screens (current
   onboarding errors surface as a localized snackbar of the first failure).
 - **F4** Validation for the nanny experience (≥1 complete entry, §14.4 V11) and
