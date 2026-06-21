@@ -619,4 +619,32 @@ abstract class AppStrings {
   static const checkConnection = 'check_connection';
   static const sessionExpired = 'session_expired';
   static const pleaseSignInAgain = 'please_sign_in_again';
+
+  // Validation — generic (System Spec §14.4)
+  static const valRequired = 'val_required';
+  static const valDobInvalid = 'val_dob_invalid';
+  static const valAgeMin18 = 'val_age_min_18';
+  static const valPhoneInvalid = 'val_phone_invalid';
+  static const valSalaryOrder = 'val_salary_order';
+
+  // Auth errors & flow (System Spec §14.1) — live phone auth
+  static const authPhoneInvalid = 'auth_phone_invalid';
+  static const authOtpIncorrect = 'auth_otp_incorrect';
+  static const authOtpSendFailed = 'auth_otp_send_failed';
+  static const authOtpRateLimited = 'auth_otp_rate_limited';
+  static const authOtpMaxAttempts = 'auth_otp_max_attempts';
+  static const authNoAccount = 'auth_no_account';
+  static const authAccountExists = 'auth_account_exists';
+  static const authWrongRole = 'auth_wrong_role';
+  static const authQuotaExceeded = 'auth_quota_exceeded';
+  static const authWrongPassword = 'auth_wrong_password';
+  static const authReauthRequired = 'auth_reauth_required';
+  static const authCodeSent = 'auth_code_sent';
+  static const authLearnMore = 'auth_learn_more';
+  static const authUseOtpInstead = 'auth_use_otp_instead';
+  static const authQuickSafeEasy = 'auth_quick_safe_easy';
+  static const authDidntReceive = 'auth_didnt_receive';
+  static const otpResendShort = 'otp_resend_short';
+  static const authAgreePrefix = 'auth_agree_prefix';
+  static const authAgreeAnd = 'auth_agree_and';
 }

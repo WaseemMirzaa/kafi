@@ -19,7 +19,11 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
   late final AuthController controller;
   bool _showPasswordSection = false;
 
-  static const _countryOptions = ['🇦🇪 +971', '🇵🇭 +63', '🇮🇳 +91', '🇵🇰 +92', '🇧🇩 +880'];
+  // Nanny-origin country codes per System Spec §1.5.
+  static const _countryOptions = [
+    '🇦🇪 +971', '🇵🇭 +63', '🇮🇳 +91', '🇱🇰 +94', '🇳🇵 +977', '🇮🇩 +62',
+    '🇪🇹 +251', '🇰🇪 +254', '🇬🇭 +233', '🇳🇬 +234', '🇵🇰 +92', '🇧🇩 +880', '🇺🇬 +256',
+  ];
 
   @override
   void initState() {
@@ -61,7 +65,17 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
               ),
               const SizedBox(height: 8),
               Obx(() => _phoneInput()),
-              const SizedBox(height: 16),
+              Obx(
+                () => controller.phoneError.value.isEmpty
+                    ? const SizedBox(height: 16)
+                    : Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Text(
+                          controller.phoneError.value,
+                          style: KafiTheme.nunito(11, color: KafiColors.roseD, w: FontWeight.w700),
+                        ),
+                      ),
+              ),
               _otpNotice(),
               const SizedBox(height: 20),
               Obx(
@@ -228,8 +242,8 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
         text: TextSpan(
           style: KafiTheme.nunito(12, color: KafiColors.ts, w: FontWeight.w500),
           children: [
-            const TextSpan(
-              text: "Enter your number above — if you're already\nregistered, we'll send a login OTP directly. ",
+            TextSpan(
+              text: '${AppStrings.authSigninHint.tr} ',
             ),
             WidgetSpan(
               alignment: PlaceholderAlignment.baseline,
@@ -237,7 +251,7 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
               child: GestureDetector(
                 onTap: () => setState(() => _showPasswordSection = true),
                 child: Text(
-                  'Learn more',
+                  AppStrings.authLearnMore.tr,
                   style: KafiTheme.nunito(12, color: KafiColors.roseD, w: FontWeight.w800),
                 ),
               ),
@@ -289,7 +303,7 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
           children: [
             TextButton(
               onPressed: () => setState(() => _showPasswordSection = false),
-              child: Text('Use OTP instead', style: KafiTheme.nunito(10, color: KafiColors.ts)),
+              child: Text(AppStrings.authUseOtpInstead.tr, style: KafiTheme.nunito(10, color: KafiColors.ts)),
             ),
             TextButton(
               onPressed: () => Get.toNamed(Routes.passwordReset),
@@ -309,7 +323,7 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
         text: TextSpan(
           style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w500),
           children: [
-            const TextSpan(text: "By continuing you agree to Kafi's "),
+            TextSpan(text: AppStrings.authAgreePrefix.tr),
             WidgetSpan(
               alignment: PlaceholderAlignment.baseline,
               baseline: TextBaseline.alphabetic,
@@ -319,7 +333,7 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
                     style: KafiTheme.nunito(10, color: KafiColors.roseD, w: FontWeight.w700)),
               ),
             ),
-            const TextSpan(text: ' and '),
+            TextSpan(text: AppStrings.authAgreeAnd.tr),
             WidgetSpan(
               alignment: PlaceholderAlignment.baseline,
               baseline: TextBaseline.alphabetic,

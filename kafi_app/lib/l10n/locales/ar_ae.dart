@@ -192,4 +192,32 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.appDetailTrialLocation: 'الموقع',
     AppStrings.appDetailTrialTotal: 'إجمالي الأرباح',
     AppStrings.appDetailTrialNotes: 'ملاحظات الأسرة',
+
+    // Validation — generic (System Spec §14.4)
+    AppStrings.valRequired: 'هذا الحقل مطلوب',
+    AppStrings.valDobInvalid: 'تاريخ ميلاد غير صالح',
+    AppStrings.valAgeMin18: 'يجب أن يكون عمرك 18 عامًا أو أكثر لاستخدام كافي',
+    AppStrings.valPhoneInvalid: 'الرجاء إدخال رقم هاتف صحيح',
+    AppStrings.valSalaryOrder: 'يجب أن يكون الحد الأدنى للراتب أقل من الحد الأقصى',
+
+    // Auth errors & flow (System Spec §14.1)
+    AppStrings.authPhoneInvalid: 'الرجاء إدخال رقم هاتف صحيح',
+    AppStrings.authOtpIncorrect: 'رمز غير صحيح. يرجى التحقق والمحاولة مرة أخرى.',
+    AppStrings.authOtpSendFailed: 'تعذّر إرسال الرمز. تحقق من رقمك وحاول مرة أخرى.',
+    AppStrings.authOtpRateLimited: 'محاولات كثيرة. يرجى المحاولة لاحقًا.',
+    AppStrings.authOtpMaxAttempts: 'محاولات خاطئة كثيرة. يرجى المحاولة لاحقًا.',
+    AppStrings.authNoAccount: 'لا يوجد حساب بهذا الرقم',
+    AppStrings.authAccountExists: 'يوجد حساب بالفعل. سجّل الدخول بدلاً من ذلك.',
+    AppStrings.authWrongRole: 'هذا الرقم مسجّل بدور مختلف. رقم واحد = دور واحد.',
+    AppStrings.authQuotaExceeded: 'الخدمة مشغولة. يرجى المحاولة بعد قليل.',
+    AppStrings.authWrongPassword: 'كلمة المرور غير صحيحة. حاول مرة أخرى.',
+    AppStrings.authReauthRequired: 'لأمان حسابك، يرجى التحقق مرة أخرى.',
+    AppStrings.authCodeSent: 'تم إرسال رمز التحقق إلى @phone',
+    AppStrings.authLearnMore: 'اعرف المزيد',
+    AppStrings.authUseOtpInstead: 'استخدم رمز OTP بدلاً من ذلك',
+    AppStrings.authQuickSafeEasy: 'سريع وآمن وسهل.',
+    AppStrings.authDidntReceive: 'لم يصلك الرمز؟ ',
+    AppStrings.otpResendShort: 'إعادة إرسال الرمز',
+    AppStrings.authAgreePrefix: 'بالمتابعة فإنك توافق على ',
+    AppStrings.authAgreeAnd: ' و ',
   });

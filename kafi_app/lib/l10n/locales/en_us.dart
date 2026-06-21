@@ -31,7 +31,7 @@ const Map<String, String> enUs = {
       "We'll send a one-time code (OTP) to verify it's really you. No password needed to get started.",
   AppStrings.authPhoneLabel: 'Your WhatsApp / mobile number',
   AppStrings.authOtpNotice:
-      "We'll send a 4-digit OTP to this number via SMS. Standard SMS rates may apply. Make sure this number is active and reachable.",
+      "We'll send a 6-digit OTP to this number via SMS. Standard SMS rates may apply. Make sure this number is active and reachable.",
   AppStrings.authSendOtp: 'Send OTP code',
   AppStrings.authSendOtpSignIn: 'Send OTP to sign in',
   AppStrings.authAlreadyAccount: 'Already have an account?',
@@ -54,7 +54,7 @@ const Map<String, String> enUs = {
   AppStrings.familyRegSub: 'Browse verified nannies from 89 AED/week',
   AppStrings.familyPhoneLabel: 'Your mobile / WhatsApp number',
   AppStrings.familyOtpNotice:
-      "We'll send a 4-digit OTP to this number via SMS. Make sure this number is active and reachable.",
+      "We'll send a 6-digit OTP to this number via SMS. Make sure this number is active and reachable.",
   AppStrings.familySigninHint:
       "Enter your number above — if registered, you'll get a sign-in OTP instantly.",
 
@@ -63,7 +63,7 @@ const Map<String, String> enUs = {
       'Kafi: Your verification code is @code. Valid for 5 minutes. Do not share this code with anyone.',
   AppStrings.otpSmsSentTo: 'Sent to @phone · 9:41 AM',
   AppStrings.otpEnterTitle: 'Enter your OTP',
-  AppStrings.otpEnterSub: 'Enter the 4-digit code we sent to\n@phone',
+  AppStrings.otpEnterSub: 'Enter the 6-digit code we sent to\n@phone',
   AppStrings.otpExpires: 'Code expires in @time',
   AppStrings.authVerifyOtp: 'Verify & continue',
   AppStrings.authVerify: 'Verify',
@@ -613,4 +613,32 @@ const Map<String, String> enUs = {
   AppStrings.checkConnection: 'Check your connection and try again.',
   AppStrings.sessionExpired: 'Session Expired',
   AppStrings.pleaseSignInAgain: 'Please sign in again.',
+
+  // Validation — generic (System Spec §14.4)
+  AppStrings.valRequired: 'This field is required',
+  AppStrings.valDobInvalid: 'Invalid date of birth',
+  AppStrings.valAgeMin18: 'You must be 18+ to use Kafi',
+  AppStrings.valPhoneInvalid: 'Please enter a valid phone',
+  AppStrings.valSalaryOrder: 'Min salary must be less than max',
+
+  // Auth errors & flow (System Spec §14.1)
+  AppStrings.authPhoneInvalid: 'Please enter a valid phone number',
+  AppStrings.authOtpIncorrect: 'Invalid code. Please check and try again.',
+  AppStrings.authOtpSendFailed: "Couldn't send code. Check your number and try again.",
+  AppStrings.authOtpRateLimited: 'Too many attempts. Please try again later.',
+  AppStrings.authOtpMaxAttempts: 'Too many wrong attempts. Please try again later.',
+  AppStrings.authNoAccount: 'No account found with this number',
+  AppStrings.authAccountExists: 'An account already exists. Sign in instead.',
+  AppStrings.authWrongRole: 'This number is registered with a different role. One number = one role.',
+  AppStrings.authQuotaExceeded: 'Service busy. Please try again shortly.',
+  AppStrings.authWrongPassword: 'Incorrect password. Please try again.',
+  AppStrings.authReauthRequired: 'For security, please verify again.',
+  AppStrings.authCodeSent: 'Verification code sent to @phone',
+  AppStrings.authLearnMore: 'Learn more',
+  AppStrings.authUseOtpInstead: 'Use OTP instead',
+  AppStrings.authQuickSafeEasy: 'Quick, safe, and easy.',
+  AppStrings.authDidntReceive: "Didn't receive it? ",
+  AppStrings.otpResendShort: 'Resend OTP',
+  AppStrings.authAgreePrefix: "By continuing you agree to Kafi's ",
+  AppStrings.authAgreeAnd: ' and ',
 };

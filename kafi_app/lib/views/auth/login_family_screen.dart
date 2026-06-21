@@ -59,7 +59,7 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
                       ),
                       const SizedBox(height: 4),
                       Text(
-                        'Quick, safe, and easy.',
+                        AppStrings.authQuickSafeEasy.tr,
                         style: KafiTheme.nunito(10, color: const Color(0xFF7A50B0), w: FontWeight.w600),
                       ),
                       const SizedBox(height: 22),
@@ -74,15 +74,27 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
                           controller: controller.phoneController,
                           countryCode: controller.countryCode.value,
                           onCountryChanged: (c) => controller.countryCode.value = c,
+                          // Family country codes per System Spec §1.5.
                           countryOptions: const [
-                            '🇦🇪 +971',
-                            '🇬🇧 +44',
-                            '🇺🇸 +1',
-                            '🇮🇳 +91',
+                            '🇦🇪 +971', '🇸🇦 +966', '🇰🇼 +965', '🇶🇦 +974', '🇧🇭 +973',
+                            '🇴🇲 +968', '🇪🇬 +20', '🇱🇧 +961', '🇯🇴 +962', '🇲🇦 +212',
+                            '🇬🇧 +44', '🇮🇪 +353', '🇫🇷 +33', '🇩🇪 +49', '🇮🇹 +39',
+                            '🇪🇸 +34', '🇳🇱 +31', '🇨🇭 +41', '🇺🇸 +1', '🇨🇦 +1',
+                            '🇮🇳 +91', '🇵🇰 +92', '🇸🇬 +65', '🇦🇺 +61', '🇳🇿 +64',
                           ],
                         ),
                       ),
-                      const SizedBox(height: 14),
+                      Obx(
+                        () => controller.phoneError.value.isEmpty
+                            ? const SizedBox(height: 14)
+                            : Padding(
+                                padding: const EdgeInsets.symmetric(vertical: 6),
+                                child: Text(
+                                  controller.phoneError.value,
+                                  style: KafiTheme.nunito(10, color: KafiColors.pur, w: FontWeight.w700),
+                                ),
+                              ),
+                      ),
                       _otpNotice(),
                       const SizedBox(height: 14),
                       Obx(
@@ -195,7 +207,7 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
         text: TextSpan(
           style: KafiTheme.nunito(9, color: const Color(0xFF9B6EDB), w: FontWeight.w600),
           children: [
-            const TextSpan(text: "By continuing you agree to Kafi's "),
+            TextSpan(text: AppStrings.authAgreePrefix.tr),
             WidgetSpan(
               child: GestureDetector(
                 onTap: () => Get.toNamed(Routes.terms),
@@ -205,7 +217,7 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
                 ),
               ),
             ),
-            const TextSpan(text: ' and '),
+            TextSpan(text: AppStrings.authAgreeAnd.tr),
             WidgetSpan(
               child: GestureDetector(
                 onTap: () => Get.toNamed(Routes.privacy),

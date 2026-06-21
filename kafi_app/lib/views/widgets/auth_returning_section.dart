@@ -67,7 +67,7 @@ class AuthReturningSection extends GetView<AuthController> {
           ),
           TextButton(
             onPressed: () => controller.isReturning.value = false,
-            child: Text('Use OTP instead', style: KafiTheme.nunito(10, color: KafiColors.ts)),
+            child: Text(AppStrings.authUseOtpInstead.tr, style: KafiTheme.nunito(10, color: KafiColors.ts)),
           ),
         ],
       );
