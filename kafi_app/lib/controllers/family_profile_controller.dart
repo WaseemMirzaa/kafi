@@ -8,6 +8,7 @@ import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
+import 'package:kafi_app/utils/validators.dart';
 import 'package:uuid/uuid.dart';
 
 class FamilyProfileController extends GetxController {
@@ -142,13 +143,40 @@ class FamilyProfileController extends GetxController {
   /// Shared persistence used by both the onboarding form and edit screen.
   /// When [reuseExistingPost] is true and a post already exists, that post is
   /// updated in place instead of inserting a new one (avoids duplicate jobs).
-  Future<bool> _persist({bool reuseExistingPost = false}) async {
-    if (fullNameCtrl.text.trim().isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.familyNameRequired.tr);
-      return false;
+  /// First failing required-field message key for the family/job form, or null
+  /// when valid. System Spec §3.3 (family) + §3.4 (job post) + §14.4 rules.
+  String? _validateFamily() {
+    if (fullNameCtrl.text.trim().isEmpty) return AppStrings.familyNameRequired;
+    if (nationality.value.trim().isEmpty) return AppStrings.familyNationalityRequired;
+    if (city.value.trim().isEmpty) return AppStrings.familyCityRequired;
+    final childCount = int.tryParse(childrenCtrl.text) ?? 0;
+    final ages = childrenAgesCtrl.text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (childCount > 0 && ages.isEmpty) return AppStrings.familyChildrenAgesRequired;
+    if (languages.isEmpty) return AppStrings.familyLanguagesRequired;
+    if (roles.isEmpty) return AppStrings.familyRolesRequired;
+    if (scheduleCtrl.text.trim().isEmpty) return AppStrings.familyScheduleRequired;
+    if (duties.isEmpty) return AppStrings.familyDutiesRequired;
+    if (benefits.isEmpty) return AppStrings.familyBenefitsRequired;
+    final salErr = Validators.salaryRange(
+      int.tryParse(salaryMinCtrl.text) ?? 0,
+      int.tryParse(salaryMaxCtrl.text) ?? 0,
+    );
+    if (salErr != null) return salErr;
+    if (trialDays.value <= 0) return AppStrings.familyTrialDaysRequired;
+    if ((int.tryParse(trialRateCtrl.text) ?? 0) <= 0) {
+      return AppStrings.familyTrialRateRequired;
     }
-    if (city.value.trim().isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.familyCityRequired.tr);
+    return null;
+  }
+
+  Future<bool> _persist({bool reuseExistingPost = false}) async {
+    final err = _validateFamily();
+    if (err != null) {
+      Get.snackbar(AppStrings.errorTitle.tr, err.tr);
       return false;
     }
     isLoading.value = true;

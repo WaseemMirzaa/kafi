@@ -236,4 +236,15 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.nannyReligionPrivacyNote:
         'هذه المعلومات اختيارية وخاصة تمامًا. تساعد العائلات في إيجاد توافق ثقافي مريح.',
     AppStrings.nannyReligiousPractices: 'الممارسات الدينية (اختياري)',
+
+    // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
+    AppStrings.familyNationalityRequired: 'الرجاء اختيار جنسيتك.',
+    AppStrings.familyChildrenAgesRequired: 'الرجاء إدخال أعمار أطفالك.',
+    AppStrings.familyLanguagesRequired: 'الرجاء اختيار لغة منزلية واحدة على الأقل.',
+    AppStrings.familyRolesRequired: 'الرجاء اختيار دور واحد على الأقل تحتاجه.',
+    AppStrings.familyScheduleRequired: 'الرجاء وصف جدول العمل.',
+    AppStrings.familyDutiesRequired: 'الرجاء اختيار مهمة واحدة على الأقل.',
+    AppStrings.familyBenefitsRequired: 'الرجاء اختيار ميزة واحدة على الأقل تقدمها.',
+    AppStrings.familyTrialDaysRequired: 'الرجاء اختيار مدة التجربة.',
+    AppStrings.familyTrialRateRequired: 'الرجاء تحديد السعر اليومي للتجربة.',
   });

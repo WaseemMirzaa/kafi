@@ -662,4 +662,15 @@ abstract class AppStrings {
   static const nannyComfortFaith = 'nanny_comfort_faith';
   static const nannyReligionPrivacyNote = 'nanny_religion_privacy_note';
   static const nannyReligiousPractices = 'nanny_religious_practices';
+
+  // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
+  static const familyNationalityRequired = 'family_nationality_required';
+  static const familyChildrenAgesRequired = 'family_children_ages_required';
+  static const familyLanguagesRequired = 'family_languages_required';
+  static const familyRolesRequired = 'family_roles_required';
+  static const familyScheduleRequired = 'family_schedule_required';
+  static const familyDutiesRequired = 'family_duties_required';
+  static const familyBenefitsRequired = 'family_benefits_required';
+  static const familyTrialDaysRequired = 'family_trial_days_required';
+  static const familyTrialRateRequired = 'family_trial_rate_required';
 }

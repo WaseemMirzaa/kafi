@@ -657,4 +657,15 @@ const Map<String, String> enUs = {
   AppStrings.nannyReligionPrivacyNote:
       'This information is optional and completely private. It helps families find a comfortable cultural fit.',
   AppStrings.nannyReligiousPractices: 'Religious practices (optional)',
+
+  // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
+  AppStrings.familyNationalityRequired: 'Please select your nationality.',
+  AppStrings.familyChildrenAgesRequired: "Please enter your children's ages.",
+  AppStrings.familyLanguagesRequired: 'Please select at least one home language.',
+  AppStrings.familyRolesRequired: 'Please select at least one role you need.',
+  AppStrings.familyScheduleRequired: 'Please describe the working schedule.',
+  AppStrings.familyDutiesRequired: 'Please select at least one duty.',
+  AppStrings.familyBenefitsRequired: 'Please select at least one benefit you offer.',
+  AppStrings.familyTrialDaysRequired: 'Please choose a trial duration.',
+  AppStrings.familyTrialRateRequired: 'Please set a trial daily rate.',
 };
