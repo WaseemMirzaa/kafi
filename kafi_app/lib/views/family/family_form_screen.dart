@@ -148,12 +148,14 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _label('City / Emirate'),
+                  _label(AppStrings.fldCity.tr),
                   const SizedBox(height: 4),
-                  Obx(() => KafiLocationPicker(
-                        initialValue: controller.city.value,
-                        onChanged: (v) => controller.city.value = v,
-                      )),
+                  Obx(() => controller.detectingCity.value
+                      ? _detectingCity()
+                      : KafiLocationPicker(
+                          initialValue: controller.city.value,
+                          onChanged: (v) => controller.city.value = v,
+                        )),
                 ],
               ),
             ),
@@ -589,6 +591,30 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
   // ── Shared helpers ─────────────────────────────────────────────────────────
   Widget _label(String text) =>
       Text(text, style: KafiTheme.nunito(9, color: _purpleLabel, w: FontWeight.w800));
+
+  /// Placeholder shown while the city is being auto-detected from GPS.
+  Widget _detectingCity() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: KafiColors.cardBorder),
+          borderRadius: BorderRadius.circular(12),
+          color: KafiColors.inputBg,
+        ),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: KafiColors.roseD),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(AppStrings.locationDetecting.tr,
+                  style: KafiTheme.nunito(13, color: KafiColors.ts)),
+            ),
+          ],
+        ),
+      );
 
   Widget _dropdown({
     required String value,

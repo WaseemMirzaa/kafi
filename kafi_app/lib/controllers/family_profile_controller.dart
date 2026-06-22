@@ -7,6 +7,7 @@ import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/services/location_service.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/utils/validators.dart';
 import 'package:uuid/uuid.dart';
@@ -15,14 +16,16 @@ class FamilyProfileController extends GetxController {
   final IUserService _user = Get.find<IUserService>();
   final IJobService _jobs = Get.find<IJobService>();
   final AuthController _auth = Get.find<AuthController>();
+  final LocationService _location = Get.find<LocationService>();
   final _uuid = const Uuid();
 
   final Rx<FamilyModel?> family = Rx<FamilyModel?>(null);
   final RxBool isLoading = false.obs;
+  final RxBool detectingCity = false.obs;
 
   final fullNameCtrl = TextEditingController();
   final RxString nationality = 'Emirati'.obs;
-  final RxString city = 'Dubai'.obs;
+  final RxString city = ''.obs;
   final childrenCtrl = TextEditingController(text: '2');
   final childrenAgesCtrl = TextEditingController();
   final RxList<String> languages = <String>['English', 'Arabic'].obs;
@@ -62,7 +65,7 @@ class FamilyProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _hydrateFromCurrentUser();
+    _hydrateFromCurrentUser().then((_) => autoDetectCity());
   }
 
   /// Loads the signed-in family's profile + latest job post (if any) and
@@ -109,6 +112,23 @@ class FamilyProfileController extends GetxController {
       }
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// Auto-fills [city] from the device GPS location on first load, unless the
+  /// family already has a saved city. Requests location permission. No-op when
+  /// the Google Maps key is the placeholder (reverse geocoding unavailable).
+  Future<void> autoDetectCity() async {
+    if (city.value.trim().isNotEmpty) return;
+    if (!_location.hasMapsKey) return;
+    detectingCity.value = true;
+    try {
+      final detected = await _location.detectCurrentCity();
+      if (detected != null && city.value.trim().isEmpty) {
+        city.value = detected;
+      }
+    } finally {
+      detectingCity.value = false;
     }
   }
 

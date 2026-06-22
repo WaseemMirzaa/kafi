@@ -59,6 +59,20 @@ commits: f28a2ed (auth) · 394f54c (nanny) · 16cec01 (family)
   validated (salary min ≤ max via Validators; start date required when
   "from a date"). 6 new EN+AR l10n keys.
 
+### Phase 5 — City auto-detect + location picker (family form)
+- `LocationService` implemented for real (Geolocator permission + GPS +
+  `PlacesService.reverseGeocode`); `PlaceDetails` now parses city/emirate from
+  Google address components.
+- Family **"City / Emirate" auto-detects on load** (requests location
+  permission) with a "Detecting…" state; cleared the presumptive `'Dubai'`
+  default. Falls back to manual entry when no Maps key.
+- `KafiLocationPicker` now reflects externally-set values (`didUpdateWidget`)
+  and shows an explicit **"Change"** affordance. Its Uber-style map + Places
+  autocomplete + "use current location" already existed.
+- Platform location usage was already declared (Android `ACCESS_FINE/COARSE`,
+  iOS `NSLocation*`); the Google Maps key remains a placeholder in 3 files —
+  documented in `FIREBASE_SETUP.md`.
+
 ## Key discoveries (the production audit was stale)
 - Pickers (`image_picker`/`file_picker`) are already wired with real bytes;
   16 Android permissions present; `firebase_options.dart` present; mock OTP no

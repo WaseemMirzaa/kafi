@@ -255,4 +255,8 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.nannyAvailableFrom: 'من تاريخ محدد',
     AppStrings.nannyAvailableFromDate: 'متاحة اعتباراً من',
     AppStrings.nannyAvailableFromRequired: 'الرجاء اختيار تاريخ البدء.',
+
+    // Location picker
+    AppStrings.locationChange: 'تغيير',
+    AppStrings.locationDetecting: 'جارٍ تحديد موقعك…',
   });

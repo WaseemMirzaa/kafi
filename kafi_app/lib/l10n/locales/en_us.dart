@@ -676,4 +676,8 @@ const Map<String, String> enUs = {
   AppStrings.nannyAvailableFrom: 'From a specific date',
   AppStrings.nannyAvailableFromDate: 'Available from',
   AppStrings.nannyAvailableFromRequired: 'Please choose your start date.',
+
+  // Location picker
+  AppStrings.locationChange: 'Change',
+  AppStrings.locationDetecting: 'Detecting your location…',
 };

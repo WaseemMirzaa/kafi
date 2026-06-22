@@ -32,6 +32,8 @@ class PlaceDetails {
   final String formattedAddress;
   final double lat;
   final double lng;
+  final String? city;
+  final String? emirate;
 
   const PlaceDetails({
     required this.placeId,
@@ -39,6 +41,8 @@ class PlaceDetails {
     required this.formattedAddress,
     required this.lat,
     required this.lng,
+    this.city,
+    this.emirate,
   });
 }
 
@@ -111,12 +115,26 @@ class PlacesService {
     final results = data['results'] as List<dynamic>;
     if (results.isEmpty) return null;
     final r = results.first as Map<String, dynamic>;
+    final comps = r['address_components'] as List<dynamic>? ?? const [];
     return PlaceDetails(
       placeId: r['place_id'] as String? ?? '',
       name: r['formatted_address'] as String? ?? '',
       formattedAddress: r['formatted_address'] as String? ?? '',
       lat: lat,
       lng: lng,
+      city: _component(comps, 'locality') ??
+          _component(comps, 'administrative_area_level_2'),
+      emirate: _component(comps, 'administrative_area_level_1'),
     );
+  }
+
+  /// Returns the `long_name` of the first address component matching [type].
+  static String? _component(List<dynamic> comps, String type) {
+    for (final c in comps) {
+      final m = c as Map<String, dynamic>;
+      final types = (m['types'] as List?)?.cast<String>() ?? const [];
+      if (types.contains(type)) return m['long_name'] as String?;
+    }
+    return null;
   }
 }

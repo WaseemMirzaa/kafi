@@ -681,4 +681,8 @@ abstract class AppStrings {
   static const nannyAvailableFrom = 'nanny_available_from';
   static const nannyAvailableFromDate = 'nanny_available_from_date';
   static const nannyAvailableFromRequired = 'nanny_available_from_required';
+
+  // Location picker
+  static const locationChange = 'location_change';
+  static const locationDetecting = 'location_detecting';
 }

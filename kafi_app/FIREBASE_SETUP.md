@@ -52,3 +52,21 @@ fvm flutter run        # live Firebase (config files required)
   user types the 6-digit code on the OTP screen.
 - Auth errors are mapped to localized messages in `AuthController._authErrorMessage`
   per System Spec §14.1.
+
+## Google Maps / Location (city auto-detect + picker)
+
+The family "City / Emirate" field auto-detects the user's city via GPS and opens
+an Uber-style location picker (map + Places search). This needs a Google Cloud
+key with **Maps SDK (Android + iOS) + Places API + Geocoding API** enabled, set in
+THREE places (replace the `YOUR_GOOGLE_MAPS_API_KEY` placeholder in each):
+
+- `lib/utils/constants/app_constants.dart` → `googleMapsApiKey`
+- `android/app/src/main/AndroidManifest.xml` → `com.google.android.geo.API_KEY`
+- `ios/Runner/AppDelegate.swift` → `GMSServices.provideAPIKey(...)`
+
+Until a real key is set, the picker falls back to manual text entry and city
+auto-detect is skipped (no permission prompt). Location permission/usage is
+already declared on both platforms:
+- Android: `ACCESS_FINE_LOCATION`, `ACCESS_COARSE_LOCATION`
+- iOS: `NSLocationWhenInUseUsageDescription`,
+  `NSLocationAlwaysAndWhenInUseUsageDescription`
