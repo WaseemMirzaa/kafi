@@ -16,8 +16,8 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
     final editMode = Get.arguments is Map && (Get.arguments as Map)['editMode'] == true;
     return KafiStepScaffold(
       step: 5,
-      title: 'Upload documents',
-      subtitle: 'Admin verifies these before you go live 🔒',
+      title: AppStrings.docsScreenTitle.tr,
+      subtitle: AppStrings.docsScreenSubtitle.tr,
       onBack: editMode ? Get.back : null,
       footer: Obx(
         () => KafiPrimaryButton(
@@ -47,7 +47,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
               const SizedBox(width: 7),
               Expanded(
                 child: Text(
-                  'Your profile stays hidden until admin approves all mandatory documents',
+                  AppStrings.docsWarning.tr,
                   style: KafiTheme.nunito(10, color: const Color(0xFFA06010), w: FontWeight.w700),
                 ),
               ),
@@ -58,14 +58,14 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
         // Mandatory section
         _fsecHeader(
           icon: Icons.assignment_outlined,
-          label: 'MANDATORY DOCUMENTS',
+          label: AppStrings.docsMandatoryHeader.tr,
           purple: false,
         ),
         _doc(DocumentType.passport, AppStrings.docPassport.tr,
-            'Clear photo of bio page · JPG or PDF', Icons.book_outlined,
+            AppStrings.docPassportSub.tr, Icons.book_outlined,
             variant: KafiDocVariant.rose),
         _doc(DocumentType.visa, AppStrings.docVisa.tr,
-            'Current visa stamp or digital visa · JPG or PDF', Icons.credit_card_outlined,
+            AppStrings.docVisaSub.tr, Icons.credit_card_outlined,
             variant: KafiDocVariant.rose),
         _emiratesIdRow(),
         const SizedBox(height: 16),
@@ -73,14 +73,14 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
         // Optional section
         _fsecHeader(
           icon: Icons.shield_outlined,
-          label: 'OPTIONAL (BUILDS TRUST, RANKS YOU HIGHER)',
+          label: AppStrings.docsOptionalHeader.tr,
           purple: true,
         ),
         _doc(DocumentType.trainingCert, AppStrings.docTraining.tr,
-            'First Aid · CPR · Childcare · Cooking', Icons.school_outlined,
+            AppStrings.docTrainingSub.tr, Icons.school_outlined,
             variant: KafiDocVariant.purple),
         _doc(DocumentType.policeClearance, AppStrings.docPolice.tr,
-            'Highly encouraged — shows honesty', Icons.verified_user_outlined,
+            AppStrings.docPoliceSub.tr, Icons.verified_user_outlined,
             variant: KafiDocVariant.green),
       ],
     );
@@ -179,7 +179,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
                       style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
                   const SizedBox(height: 1),
                   Text(
-                    'Only required if you have one · Visit visa / new to UAE = not needed',
+                    AppStrings.docEidSub.tr,
                     style: KafiTheme.nunito(9, color: const Color(0xFFA06010), w: FontWeight.w700),
                   ),
                   const SizedBox(height: 5),
@@ -195,7 +195,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
                             color: KafiColors.grnL,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text('✓ I have EID — upload',
+                          child: Text(AppStrings.docEidHave.tr,
                               style: KafiTheme.fredoka(8.5, color: KafiColors.grnD, w: FontWeight.w700)),
                         ),
                       ),
@@ -207,7 +207,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
                             color: KafiColors.roseP,
                             borderRadius: BorderRadius.circular(6),
                           ),
-                          child: Text('🚫 No EID (visit visa)',
+                          child: Text(AppStrings.docEidNone.tr,
                               style: KafiTheme.fredoka(8.5, color: KafiColors.roseD, w: FontWeight.w700)),
                         ),
                       ),

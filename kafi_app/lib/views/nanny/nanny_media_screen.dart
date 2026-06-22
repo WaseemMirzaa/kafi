@@ -16,8 +16,8 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
     final editMode = Get.arguments is Map && (Get.arguments as Map)['editMode'] == true;
     return KafiStepScaffold(
       step: 2,
-      title: 'Your nanny profile',
-      subtitle: 'Let families see & hear you 🌸',
+      title: AppStrings.mediaTitle.tr,
+      subtitle: AppStrings.mediaSubtitle.tr,
       onBack: editMode ? Get.back : null,
       footer: Obx(
         () => KafiPrimaryButton(
@@ -31,7 +31,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
         // ── Photos section ──────────────────────────────────────
         _fsecHeader(
           icon: Icons.photo_camera_outlined,
-          label: 'Profile Photos (min 1, max 5)',
+          label: AppStrings.mediaPhotosHeader.tr,
           purple: false,
         ),
         _photoUploadArea(),
@@ -41,7 +41,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
         // ── Video section ───────────────────────────────────────
         _fsecHeader(
           icon: Icons.videocam_outlined,
-          label: 'Intro Video (max 60 seconds)',
+          label: AppStrings.mediaVideoHeader.tr,
           purple: true,
         ),
         _videoArea(),
@@ -126,12 +126,12 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Tap to add photos or videos',
+              AppStrings.mediaTapAdd.tr,
               style: KafiTheme.fredoka(12, color: KafiColors.roseD, w: FontWeight.w800),
             ),
             const SizedBox(height: 2),
             Text(
-              'No sunglasses · No heavy filters · Min 3 photos',
+              AppStrings.mediaPhotoRule.tr,
               style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600),
             ),
             const SizedBox(height: 4),
@@ -143,7 +143,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                '📈 Profiles with photos get 3× more views',
+                AppStrings.mediaPhotoViews.tr,
                 style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700),
               ),
             ),
@@ -303,9 +303,9 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Record your intro video',
+                  Text(AppStrings.mediaRecordTitle.tr,
                       style: KafiTheme.fredoka(12, color: const Color(0xFF3A1060), w: FontWeight.w800)),
-                  Text('Let families meet the real you 🌸',
+                  Text(AppStrings.mediaRecordSub.tr,
                       style: KafiTheme.nunito(9, color: KafiColors.pur, w: FontWeight.w600)),
                 ],
               ),

@@ -708,4 +708,26 @@ abstract class AppStrings {
   // Account blocked (admin)
   static const accountBlocked = 'account_blocked';
   static const accountBlockedSub = 'account_blocked_sub';
+
+  // Nanny media + docs screen labels (l10n sweep)
+  static const mediaTitle = 'media_title';
+  static const mediaSubtitle = 'media_subtitle';
+  static const mediaPhotosHeader = 'media_photos_header';
+  static const mediaVideoHeader = 'media_video_header';
+  static const mediaTapAdd = 'media_tap_add';
+  static const mediaPhotoRule = 'media_photo_rule';
+  static const mediaPhotoViews = 'media_photo_views';
+  static const mediaRecordTitle = 'media_record_title';
+  static const mediaRecordSub = 'media_record_sub';
+  static const docsScreenTitle = 'docs_screen_title';
+  static const docsScreenSubtitle = 'docs_screen_subtitle';
+  static const docsMandatoryHeader = 'docs_mandatory_header';
+  static const docsOptionalHeader = 'docs_optional_header';
+  static const docPassportSub = 'doc_passport_sub';
+  static const docVisaSub = 'doc_visa_sub';
+  static const docTrainingSub = 'doc_training_sub';
+  static const docPoliceSub = 'doc_police_sub';
+  static const docEidSub = 'doc_eid_sub';
+  static const docEidHave = 'doc_eid_have';
+  static const docEidNone = 'doc_eid_none';
 }

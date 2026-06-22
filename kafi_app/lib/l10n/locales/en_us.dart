@@ -703,4 +703,26 @@ const Map<String, String> enUs = {
   // Account blocked (admin)
   AppStrings.accountBlocked: 'Account blocked',
   AppStrings.accountBlockedSub: 'Your account has been blocked by an administrator. Please contact support.',
+
+  // Nanny media + docs screen labels (l10n sweep)
+  AppStrings.mediaTitle: 'Your nanny profile',
+  AppStrings.mediaSubtitle: 'Let families see & hear you 🌸',
+  AppStrings.mediaPhotosHeader: 'Profile Photos (min 3, max 5)',
+  AppStrings.mediaVideoHeader: 'Intro Video (max 60 seconds)',
+  AppStrings.mediaTapAdd: 'Tap to add photos or videos',
+  AppStrings.mediaPhotoRule: 'No sunglasses · No heavy filters · Min 3 photos',
+  AppStrings.mediaPhotoViews: '📈 Profiles with photos get 3× more views',
+  AppStrings.mediaRecordTitle: 'Record your intro video',
+  AppStrings.mediaRecordSub: 'Let families meet the real you 🌸',
+  AppStrings.docsScreenTitle: 'Upload documents',
+  AppStrings.docsScreenSubtitle: 'Admin verifies these before you go live 🔒',
+  AppStrings.docsMandatoryHeader: 'Mandatory documents',
+  AppStrings.docsOptionalHeader: 'Optional (builds trust, ranks you higher)',
+  AppStrings.docPassportSub: 'Clear photo of bio page · JPG or PDF',
+  AppStrings.docVisaSub: 'Current visa stamp or digital visa · JPG or PDF',
+  AppStrings.docTrainingSub: 'First Aid · CPR · Childcare · Cooking',
+  AppStrings.docPoliceSub: 'Highly encouraged — shows honesty',
+  AppStrings.docEidSub: 'Only required if you have one · Visit visa / new to UAE = not needed',
+  AppStrings.docEidHave: '✓ I have EID — upload',
+  AppStrings.docEidNone: '🚫 No EID (visit visa)',
 };

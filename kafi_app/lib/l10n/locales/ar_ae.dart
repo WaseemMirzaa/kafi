@@ -282,4 +282,26 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     // Account blocked (admin)
     AppStrings.accountBlocked: 'الحساب محظور',
     AppStrings.accountBlockedSub: 'تم حظر حسابك من قبل المسؤول. يرجى التواصل مع الدعم.',
+
+    // Nanny media + docs screen labels (l10n sweep)
+    AppStrings.mediaTitle: 'ملفك كمربية',
+    AppStrings.mediaSubtitle: 'دع العائلات تراك وتسمعك 🌸',
+    AppStrings.mediaPhotosHeader: 'صور الملف (3 على الأقل، 5 كحد أقصى)',
+    AppStrings.mediaVideoHeader: 'فيديو تعريفي (60 ثانية كحد أقصى)',
+    AppStrings.mediaTapAdd: 'اضغط لإضافة صور أو فيديو',
+    AppStrings.mediaPhotoRule: 'بدون نظارات شمسية · بدون فلاتر · 3 صور على الأقل',
+    AppStrings.mediaPhotoViews: '📈 الملفات التي تحتوي على صور تحصل على مشاهدات أكثر بثلاث مرات',
+    AppStrings.mediaRecordTitle: 'سجّل فيديو التعريف',
+    AppStrings.mediaRecordSub: 'دع العائلات تتعرف عليك حقًا 🌸',
+    AppStrings.docsScreenTitle: 'رفع المستندات',
+    AppStrings.docsScreenSubtitle: 'يتحقق المسؤول منها قبل أن تصبح مرئية 🔒',
+    AppStrings.docsMandatoryHeader: 'المستندات الإلزامية',
+    AppStrings.docsOptionalHeader: 'اختياري (يبني الثقة ويحسّن ترتيبك)',
+    AppStrings.docPassportSub: 'صورة واضحة لصفحة البيانات · JPG أو PDF',
+    AppStrings.docVisaSub: 'ختم التأشيرة الحالي أو التأشيرة الرقمية · JPG أو PDF',
+    AppStrings.docTrainingSub: 'إسعافات أولية · إنعاش قلبي · رعاية أطفال · طبخ',
+    AppStrings.docPoliceSub: 'موصى به بشدة — يدل على الأمانة',
+    AppStrings.docEidSub: 'مطلوب فقط إذا كان لديك واحدة · تأشيرة زيارة / جديد في الإمارات = غير مطلوب',
+    AppStrings.docEidHave: '✓ لدي بطاقة هوية — رفع',
+    AppStrings.docEidNone: '🚫 لا أملك هوية (تأشيرة زيارة)',
   });
