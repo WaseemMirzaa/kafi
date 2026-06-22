@@ -699,4 +699,8 @@ const Map<String, String> enUs = {
   AppStrings.fldSchedule: 'Working schedule',
   AppStrings.fldAboutFamily: 'About your family',
   AppStrings.fldHouseRules: 'House rules (optional)',
+
+  // Account blocked (admin)
+  AppStrings.accountBlocked: 'Account blocked',
+  AppStrings.accountBlockedSub: 'Your account has been blocked by an administrator. Please contact support.',
 };

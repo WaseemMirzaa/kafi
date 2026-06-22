@@ -704,4 +704,8 @@ abstract class AppStrings {
   static const fldSchedule = 'fld_schedule';
   static const fldAboutFamily = 'fld_about_family';
   static const fldHouseRules = 'fld_house_rules';
+
+  // Account blocked (admin)
+  static const accountBlocked = 'account_blocked';
+  static const accountBlockedSub = 'account_blocked_sub';
 }

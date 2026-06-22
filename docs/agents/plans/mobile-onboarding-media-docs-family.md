@@ -115,6 +115,23 @@ Backend/logic/flows to wire from mock → live and complete details:
   states, and localize remaining literals. Detailed per-screen task list to
   follow once A–C land.
 
+## Progress (this session)
+- DONE A1/A2/A3: nanny Step-1 all-required, media cover + min-3 + video + "+"
+  fix + real video_player preview, deferred document upload w/ blocking loader.
+- DONE A4 (docs reverify) + C1: edit-mode doc re-upload → `reviewing`; app-side
+  `blocked` enforcement at login (`IUserService.isUserBlocked`).
+- DONE B1/B2/B3: family edit-profile completed (schedule/about/house-rules/
+  children-ages), `JobEmploymentType` full/part-time + one-active-per-type limit
+  (reopenJob = repost), all-mandatory validation.
+- DONE C: admin go-live guide (`admin-panel/ADMIN_SETUP.md`). Admin panel needs
+  no code — it already implements block/unblock, doc review, full profile, live
+  Firebase admin auth + claims.
+- KEY INSIGHT for D: the mobile screens already call the service *interfaces*,
+  which the GetX binding swaps to Firestore impls when `useMock=false` — so
+  home/shortlist/messages are already wired to live data (like the admin panel).
+  Remaining D work is polish (empty/error/loading states, minor flow details)
+  + device verification + the l10n sweep — best done with a device/live data.
+
 ## Sequencing / commits
 1. A1+A2 (Step1 + media)  2. A3 (docs deferral)  3. A4+C1 (edit-docs reverify +
 blocked guard)  4. B1+B2+B3 (family)  5. Admin go-live doc  6. D plan expansion.

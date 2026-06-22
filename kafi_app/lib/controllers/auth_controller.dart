@@ -321,6 +321,13 @@ class AuthController extends GetxController {
   }
 
   Future<void> _navigateHome(UserModel user, {bool isNewFamilyRegistration = false}) async {
+    // Admin block enforcement — sign the user out if their doc is blocked.
+    if (await Get.find<IUserService>().isUserBlocked(user.id, isNanny: user.isNanny)) {
+      await signOut();
+      Get.offAllNamed(Routes.welcome);
+      Get.snackbar(AppStrings.accountBlocked.tr, AppStrings.accountBlockedSub.tr);
+      return;
+    }
     if (user.isNanny) {
       final nanny = await Get.find<IUserService>().getNanny(user.id);
       if (nanny?.status == NannyOnboardingStatus.approved) {

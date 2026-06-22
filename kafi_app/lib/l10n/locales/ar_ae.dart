@@ -278,4 +278,8 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.fldSchedule: 'جدول العمل',
     AppStrings.fldAboutFamily: 'عن عائلتك',
     AppStrings.fldHouseRules: 'قواعد المنزل (اختياري)',
+
+    // Account blocked (admin)
+    AppStrings.accountBlocked: 'الحساب محظور',
+    AppStrings.accountBlockedSub: 'تم حظر حسابك من قبل المسؤول. يرجى التواصل مع الدعم.',
   });
