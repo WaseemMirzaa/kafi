@@ -680,4 +680,14 @@ const Map<String, String> enUs = {
   // Location picker
   AppStrings.locationChange: 'Change',
   AppStrings.locationDetecting: 'Detecting your location…',
+
+  // Nanny media + docs (onboarding)
+  AppStrings.nannyCurrentAreaRequired: 'Please add your current area / neighbourhood.',
+  AppStrings.nannyPhotosMin3: 'Please add at least 3 photos.',
+  AppStrings.nannyVideoRequired: 'Please add a short intro video.',
+  AppStrings.mediaCover: 'Cover',
+  AppStrings.mediaIntroVideo: 'My intro video',
+  AppStrings.mediaVideoReady: 'Ready to submit',
+  AppStrings.docUploading: 'Uploading documents…',
+  AppStrings.docUploadFailed: 'Upload failed. Please check your connection and try again.',
 };

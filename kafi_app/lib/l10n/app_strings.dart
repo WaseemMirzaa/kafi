@@ -685,4 +685,14 @@ abstract class AppStrings {
   // Location picker
   static const locationChange = 'location_change';
   static const locationDetecting = 'location_detecting';
+
+  // Nanny media + docs (onboarding)
+  static const nannyCurrentAreaRequired = 'nanny_current_area_required';
+  static const nannyPhotosMin3 = 'nanny_photos_min3';
+  static const nannyVideoRequired = 'nanny_video_required';
+  static const mediaCover = 'media_cover';
+  static const mediaIntroVideo = 'media_intro_video';
+  static const mediaVideoReady = 'media_video_ready';
+  static const docUploading = 'doc_uploading';
+  static const docUploadFailed = 'doc_upload_failed';
 }

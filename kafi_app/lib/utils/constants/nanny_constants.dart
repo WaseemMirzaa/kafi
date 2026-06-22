@@ -2,7 +2,7 @@
 class NannyConstants {
   static const totalSteps = 6;
 
-  static const minPhotos = 1;
+  static const minPhotos = 3;
   static const maxPhotos = 5;
   static const maxVideoSeconds = 60;
   static const maxBioChars = 300;

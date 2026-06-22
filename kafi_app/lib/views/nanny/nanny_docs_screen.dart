@@ -138,7 +138,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
         required: t == DocumentType.passport || t == DocumentType.visa,
         status: d.status,
         variant: variant,
-        onTap: () => controller.pickAndUploadDocument(t),
+        onTap: () => controller.pickDocument(t),
       );
     });
   }
@@ -188,7 +188,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
                     runSpacing: 4,
                     children: [
                       GestureDetector(
-                        onTap: () => controller.pickAndUploadDocument(DocumentType.emiratesId),
+                        onTap: () => controller.pickDocument(DocumentType.emiratesId),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(
@@ -200,7 +200,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
                         ),
                       ),
                       GestureDetector(
-                        onTap: () {/* mark no EID */},
+                        onTap: controller.markNoEid,
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(

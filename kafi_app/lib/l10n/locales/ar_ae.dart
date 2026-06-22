@@ -259,4 +259,14 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     // Location picker
     AppStrings.locationChange: 'تغيير',
     AppStrings.locationDetecting: 'جارٍ تحديد موقعك…',
+
+    // Nanny media + docs (onboarding)
+    AppStrings.nannyCurrentAreaRequired: 'الرجاء إضافة منطقتك / الحي الحالي.',
+    AppStrings.nannyPhotosMin3: 'الرجاء إضافة 3 صور على الأقل.',
+    AppStrings.nannyVideoRequired: 'الرجاء إضافة فيديو تعريفي قصير.',
+    AppStrings.mediaCover: 'الغلاف',
+    AppStrings.mediaIntroVideo: 'الفيديو التعريفي',
+    AppStrings.mediaVideoReady: 'جاهز للإرسال',
+    AppStrings.docUploading: 'جارٍ رفع المستندات…',
+    AppStrings.docUploadFailed: 'فشل الرفع. يرجى التحقق من اتصالك والمحاولة مرة أخرى.',
   });

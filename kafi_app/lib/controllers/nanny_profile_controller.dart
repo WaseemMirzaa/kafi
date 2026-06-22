@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -68,6 +69,7 @@ class NannyProfileController extends GetxController {
   // step 2
   final RxList<String> photoUrls = <String>[].obs;
   final RxnString introVideoUrl = RxnString();
+  final RxnString introVideoName = RxnString();
 
   // step 3
   final RxList<WorkExperience> experiences = <WorkExperience>[].obs;
@@ -82,6 +84,9 @@ class NannyProfileController extends GetxController {
     for (final t in DocumentType.values)
       t: NannyDocument(type: t, status: DocumentStatus.missing),
   }.obs;
+
+  /// Documents picked but not yet uploaded — uploaded together on submit.
+  final Map<DocumentType, _StagedDoc> _stagedDocs = {};
 
   StreamSubscription<NannyModel?>? _nannyWatch;
 
@@ -307,6 +312,7 @@ class NannyProfileController extends GetxController {
     if (selectedLanguages.isEmpty) return AppStrings.nannyLanguagesRequired;
     if (visaStatus.value == null) return AppStrings.nannyVisaRequired;
     if (workEmirates.isEmpty) return AppStrings.nannyEmiratesRequired;
+    if (currentAreaCtrl.text.trim().isEmpty) return AppStrings.nannyCurrentAreaRequired;
     final salErr = Validators.salaryRange(
       int.tryParse(salaryMinCtrl.text) ?? 0,
       int.tryParse(salaryMaxCtrl.text) ?? 0,
@@ -445,6 +451,7 @@ class NannyProfileController extends GetxController {
         bytes: bytes,
         contentType: 'video/mp4',
       );
+      introVideoName.value = picked.name;
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     } finally {
@@ -458,8 +465,12 @@ class NannyProfileController extends GetxController {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyCompleteStep1.tr);
       return;
     }
-    if (photoUrls.isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyPhotosRequired.tr);
+    if (photoUrls.length < NannyConstants.minPhotos) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyPhotosMin3.tr);
+      return;
+    }
+    if (introVideoUrl.value == null || introVideoUrl.value!.isEmpty) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyVideoRequired.tr);
       return;
     }
     isLoading.value = true;
@@ -539,7 +550,9 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  Future<void> pickAndUploadDocument(DocumentType type) async {
+  /// Picks a document and stages it locally. Nothing is uploaded until the user
+  /// submits (or saves in edit mode) — see [_uploadStagedDocs].
+  Future<void> pickDocument(DocumentType type) async {
     final user = _auth.currentUser.value;
     if (user == null) return;
     if (!await Get.find<PermissionController>().ensureGallery()) {
@@ -556,48 +569,100 @@ class NannyProfileController extends GetxController {
     final bytes = file.bytes;
     if (bytes == null) return;
     final ext = (file.extension ?? 'jpg').toLowerCase();
-    isLoading.value = true;
-    try {
+    _stagedDocs[type] = _StagedDoc(
+      bytes: bytes,
+      ext: ext,
+      contentType: ext == 'pdf' ? 'application/pdf' : 'image/jpeg',
+    );
+    // Mark selected locally (drives the ✓ tile); real upload happens on submit.
+    documents[type] = documents[type]!.copyWith(
+      status: DocumentStatus.uploaded,
+      uploadedAt: DateTime.now(),
+    );
+  }
+
+  /// Nanny declares they have no Emirates ID (visit visa / new to UAE).
+  void markNoEid() {
+    hasEid.value = false;
+    _stagedDocs.remove(DocumentType.emiratesId);
+    documents[DocumentType.emiratesId] =
+        documents[DocumentType.emiratesId]!.copyWith(status: DocumentStatus.missing);
+  }
+
+  /// Uploads every staged document to Firebase Storage, setting its URL and
+  /// `reviewing` status. Throws on failure (caller shows a localized error);
+  /// already-uploaded docs are removed from the staging map so they are not
+  /// re-uploaded on a retry.
+  Future<void> _uploadStagedDocs(String userId) async {
+    for (final entry in _stagedDocs.entries.toList()) {
+      final type = entry.key;
+      final staged = entry.value;
       final url = await _storageService.uploadBytes(
-        path: 'nannies/${user.id}/docs/${type.name}.$ext',
-        bytes: bytes,
-        contentType: ext == 'pdf' ? 'application/pdf' : 'image/jpeg',
+        path: 'nannies/$userId/docs/${type.name}.${staged.ext}',
+        bytes: staged.bytes,
+        contentType: staged.contentType,
       );
       documents[type] = documents[type]!.copyWith(
         url: url,
-        status: DocumentStatus.uploaded,
+        status: DocumentStatus.reviewing,
         uploadedAt: DateTime.now(),
       );
-      if (AppConfig.useMock &&
-          _hasRequiredDocs &&
-          nanny.value?.status != NannyOnboardingStatus.pending &&
-          nanny.value?.status != NannyOnboardingStatus.approved) {
-        await submitForReview();
-      }
-    } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
-    } finally {
-      isLoading.value = false;
+      _stagedDocs.remove(type);
     }
   }
 
-  /// Edit-mode save for the Documents screen: persists the current documents
-  /// without resubmitting for review or leaving the app shell.
+  void _showBlockingLoader(String message) {
+    if (Get.isDialogOpen ?? false) return;
+    Get.dialog(
+      PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 14),
+                Text(message, style: const TextStyle(fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  void _hideBlockingLoader() {
+    if (Get.isDialogOpen ?? false) Get.back();
+  }
+
+  /// Edit-mode save for the Documents screen: uploads any newly-picked docs
+  /// (which return to `reviewing` for admin re-verification) and persists.
   Future<void> saveDocumentsAndClose() async {
     final n = nanny.value;
     if (n == null) {
       Get.back();
       return;
     }
+    _showBlockingLoader(AppStrings.docUploading.tr);
     isLoading.value = true;
     try {
+      await _uploadStagedDocs(n.id);
       final updated = n.copyWith(documents: documents.values.toList());
       await _userService.saveNanny(updated);
       nanny.value = updated;
       calculateProfileScore();
+      _hideBlockingLoader();
       _closeEdit();
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      _hideBlockingLoader();
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docUploadFailed.tr);
     } finally {
       isLoading.value = false;
     }
@@ -609,11 +674,14 @@ class NannyProfileController extends GetxController {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyRequiredDocsMissing.tr);
       return;
     }
+    final n = nanny.value;
+    if (n == null) return;
+    _showBlockingLoader(AppStrings.docUploading.tr);
     isLoading.value = true;
     try {
-      final n = nanny.value;
-      if (n == null) return;
-      final updated = n.copyWith(
+      // Upload all staged documents first, then flip the profile to pending.
+      await _uploadStagedDocs(n.id);
+      final updated = (nanny.value ?? n).copyWith(
         documents: documents.values
             .map((d) => d.status == DocumentStatus.uploaded
                 ? d.copyWith(status: DocumentStatus.reviewing)
@@ -624,13 +692,15 @@ class NannyProfileController extends GetxController {
       await _userService.saveNanny(updated);
       await _userService.submitNannyForReview(updated.id);
       nanny.value = updated;
+      _hideBlockingLoader();
       Get.snackbar(
         AppStrings.nannySubmittedTitle.tr,
         AppStrings.nannySubmittedBody.tr,
       );
       Get.offAllNamed(Routes.nannyPending);
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      _hideBlockingLoader();
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docUploadFailed.tr);
     } finally {
       isLoading.value = false;
     }
@@ -654,4 +724,11 @@ class NannyProfileController extends GetxController {
     }
     nanny.value = n.copyWith(profileScore: score.clamp(0, 100));
   }
+}
+
+class _StagedDoc {
+  _StagedDoc({required this.bytes, required this.ext, required this.contentType});
+  final Uint8List bytes;
+  final String ext;
+  final String contentType;
 }
