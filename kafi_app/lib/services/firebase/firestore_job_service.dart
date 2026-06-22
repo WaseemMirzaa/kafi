@@ -110,6 +110,9 @@ class FirestoreJobService implements IJobService {
         jobTitle: m['jobTitle'] ?? '',
         rolesNeeded: List<String>.from(m['rolesNeeded'] ?? []),
         jobType: m['jobType'] == 'liveOut' ? JobType.liveOut : JobType.liveIn,
+        employmentType: m['employmentType'] == 'partTime'
+            ? JobEmploymentType.partTime
+            : JobEmploymentType.fullTime,
         duties: List<String>.from(m['duties'] ?? []),
         benefits: List<String>.from(m['benefits'] ?? []),
         salaryMin: (m['salaryMin'] as num?)?.toInt() ?? 0,

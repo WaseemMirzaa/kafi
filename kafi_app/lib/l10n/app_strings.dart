@@ -695,4 +695,13 @@ abstract class AppStrings {
   static const mediaVideoReady = 'media_video_ready';
   static const docUploading = 'doc_uploading';
   static const docUploadFailed = 'doc_upload_failed';
+
+  // Family job — employment type + edit fields
+  static const fldEmployment = 'fld_employment';
+  static const employmentFullTime = 'employment_full_time';
+  static const employmentPartTime = 'employment_part_time';
+  static const familyJobTypeLimit = 'family_job_type_limit';
+  static const fldSchedule = 'fld_schedule';
+  static const fldAboutFamily = 'fld_about_family';
+  static const fldHouseRules = 'fld_house_rules';
 }

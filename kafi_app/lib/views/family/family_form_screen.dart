@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
+import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
@@ -441,9 +442,35 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
                 ),
               ],
             )),
+        const SizedBox(height: 8),
+        _label(AppStrings.fldEmployment.tr),
+        const SizedBox(height: 4),
+        Obx(() => Row(
+              children: [
+                Expanded(
+                  child: KafiToggleTile(
+                    label: AppStrings.employmentFullTime.tr,
+                    icon: Icons.work_outline,
+                    purple: true,
+                    selected: controller.employmentType.value == JobEmploymentType.fullTime,
+                    onTap: () => controller.employmentType.value = JobEmploymentType.fullTime,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: KafiToggleTile(
+                    label: AppStrings.employmentPartTime.tr,
+                    icon: Icons.schedule,
+                    purple: true,
+                    selected: controller.employmentType.value == JobEmploymentType.partTime,
+                    onTap: () => controller.employmentType.value = JobEmploymentType.partTime,
+                  ),
+                ),
+              ],
+            )),
         const SizedBox(height: 6),
         KafiTextField(
-          label: 'Working schedule',
+          label: AppStrings.fldSchedule.tr,
           controller: controller.scheduleCtrl,
           hint: 'e.g. Sun–Thu, 8am–6pm or 6 days/week',
           purple: true,

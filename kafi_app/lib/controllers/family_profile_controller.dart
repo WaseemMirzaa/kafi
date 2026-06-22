@@ -42,6 +42,7 @@ class FamilyProfileController extends GetxController {
 
   final RxList<String> roles = <String>['Nanny'].obs;
   final Rx<JobType> jobType = JobType.liveIn.obs;
+  final Rx<JobEmploymentType> employmentType = JobEmploymentType.fullTime.obs;
   final scheduleCtrl = TextEditingController();
   final RxList<String> duties = <String>[].obs;
   final RxList<String> benefits = <String>[].obs;
@@ -97,6 +98,7 @@ class FamilyProfileController extends GetxController {
         final p = posts.first;
         roles.value = List<String>.from(p.rolesNeeded);
         jobType.value = p.jobType;
+        employmentType.value = p.employmentType;
         scheduleCtrl.text = p.schedule;
         duties.value = List<String>.from(p.duties);
         benefits.value = List<String>.from(p.benefits);
@@ -229,10 +231,21 @@ class FamilyProfileController extends GetxController {
       await _user.saveFamily(fam);
       family.value = fam;
 
+      // One active full-time + one active part-time job per family. In edit
+      // mode reuse the existing post; on a fresh post block a duplicate of the
+      // same employment type (the old one must be closed / reposted first).
+      final existingPosts = await _jobs.getJobsByFamily(fid);
       String? existingPostId;
       if (reuseExistingPost) {
-        final posts = await _jobs.getJobsByFamily(fid);
-        if (posts.isNotEmpty) existingPostId = posts.first.id;
+        if (existingPosts.isNotEmpty) existingPostId = existingPosts.first.id;
+      } else {
+        final clash = existingPosts.any((j) =>
+            j.status == JobPostStatus.active &&
+            j.employmentType == employmentType.value);
+        if (clash) {
+          Get.snackbar(AppStrings.errorTitle.tr, AppStrings.familyJobTypeLimit.tr);
+          return false;
+        }
       }
 
       await _jobs.saveJobPost(JobPostModel(
@@ -242,6 +255,7 @@ class FamilyProfileController extends GetxController {
         city: city.value,
         rolesNeeded: List.of(roles),
         jobType: jobType.value,
+        employmentType: employmentType.value,
         schedule: scheduleCtrl.text.trim(),
         duties: List.of(duties),
         benefits: List.of(benefits),

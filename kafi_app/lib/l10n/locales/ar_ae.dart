@@ -269,4 +269,13 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.mediaVideoReady: 'جاهز للإرسال',
     AppStrings.docUploading: 'جارٍ رفع المستندات…',
     AppStrings.docUploadFailed: 'فشل الرفع. يرجى التحقق من اتصالك والمحاولة مرة أخرى.',
+
+    // Family job — employment type + edit fields
+    AppStrings.fldEmployment: 'نوع التوظيف',
+    AppStrings.employmentFullTime: 'دوام كامل',
+    AppStrings.employmentPartTime: 'دوام جزئي',
+    AppStrings.familyJobTypeLimit: 'لديك بالفعل وظيفة نشطة من هذا النوع. أغلقها أو أعد نشرها أولاً.',
+    AppStrings.fldSchedule: 'جدول العمل',
+    AppStrings.fldAboutFamily: 'عن عائلتك',
+    AppStrings.fldHouseRules: 'قواعد المنزل (اختياري)',
   });

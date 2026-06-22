@@ -690,4 +690,13 @@ const Map<String, String> enUs = {
   AppStrings.mediaVideoReady: 'Ready to submit',
   AppStrings.docUploading: 'Uploading documents…',
   AppStrings.docUploadFailed: 'Upload failed. Please check your connection and try again.',
+
+  // Family job — employment type + edit fields
+  AppStrings.fldEmployment: 'Employment type',
+  AppStrings.employmentFullTime: 'Full-time',
+  AppStrings.employmentPartTime: 'Part-time',
+  AppStrings.familyJobTypeLimit: 'You already have an active job of this type. Close or repost it first.',
+  AppStrings.fldSchedule: 'Working schedule',
+  AppStrings.fldAboutFamily: 'About your family',
+  AppStrings.fldHouseRules: 'House rules (optional)',
 };
