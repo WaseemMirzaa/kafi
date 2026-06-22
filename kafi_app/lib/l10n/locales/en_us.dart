@@ -725,4 +725,18 @@ const Map<String, String> enUs = {
   AppStrings.docEidSub: 'Only required if you have one · Visit visa / new to UAE = not needed',
   AppStrings.docEidHave: '✓ I have EID — upload',
   AppStrings.docEidNone: '🚫 No EID (visit visa)',
+
+  // Experience + references screen labels (l10n sweep)
+  AppStrings.expAddJob: 'Add another job',
+  AppStrings.expPreviousJob: 'Previous job',
+  AppStrings.refsSubtitle: 'Families can call to verify you 📞',
+  AppStrings.refsHasYes: 'Yes, I have references',
+  AppStrings.refsHasNo: 'No references yet',
+  AppStrings.refsAboutThem: 'Tell us a bit about them (no names or numbers)',
+  AppStrings.refsSectionHeader: 'References (optional, strongly encouraged)',
+  AppStrings.refsHowWork: '📞 How references work on Kafi',
+  AppStrings.refsAddAnother: 'Add another reference',
+  AppStrings.refsReferenceNum: 'Reference #@num',
+  AppStrings.refsCallable: 'Callable',
+  AppStrings.refsShareNote: 'You will share this contact directly during your interview or trial',
 };

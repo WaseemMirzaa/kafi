@@ -304,4 +304,18 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.docEidSub: 'مطلوب فقط إذا كان لديك واحدة · تأشيرة زيارة / جديد في الإمارات = غير مطلوب',
     AppStrings.docEidHave: '✓ لدي بطاقة هوية — رفع',
     AppStrings.docEidNone: '🚫 لا أملك هوية (تأشيرة زيارة)',
+
+    // Experience + references screen labels (l10n sweep)
+    AppStrings.expAddJob: 'أضف وظيفة أخرى',
+    AppStrings.expPreviousJob: 'وظيفة سابقة',
+    AppStrings.refsSubtitle: 'يمكن للعائلات الاتصال للتحقق منك 📞',
+    AppStrings.refsHasYes: 'نعم، لدي مراجع',
+    AppStrings.refsHasNo: 'لا توجد مراجع بعد',
+    AppStrings.refsAboutThem: 'أخبرنا قليلاً عنهم (بدون أسماء أو أرقام)',
+    AppStrings.refsSectionHeader: 'المراجع (اختياري، موصى به بشدة)',
+    AppStrings.refsHowWork: '📞 كيف تعمل المراجع في كافي',
+    AppStrings.refsAddAnother: 'أضف مرجعًا آخر',
+    AppStrings.refsReferenceNum: 'مرجع رقم @num',
+    AppStrings.refsCallable: 'قابل للاتصال',
+    AppStrings.refsShareNote: 'ستشارك جهة الاتصال هذه مباشرة أثناء المقابلة أو التجربة',
   });

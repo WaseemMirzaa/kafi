@@ -19,7 +19,7 @@ class NannyExpScreen extends GetView<NannyProfileController> {
     return KafiStepScaffold(
       step: 3,
       title: AppStrings.expTitle.tr,
-      subtitle: 'Show families your background',
+      subtitle: AppStrings.expSub.tr,
       onBack: editMode ? Get.back : null,
       footer: Obx(
         () => KafiPrimaryButton(
@@ -71,7 +71,7 @@ class NannyExpScreen extends GetView<NannyProfileController> {
             child: const Icon(Icons.work_outline, size: 9, color: Colors.white),
           ),
           const SizedBox(width: 5),
-          Text('WORK EXPERIENCE',
+          Text(AppStrings.expTitle.tr,
               style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800).copyWith(letterSpacing: 0.54)),
         ],
       ),
@@ -104,7 +104,7 @@ class NannyExpScreen extends GetView<NannyProfileController> {
           children: [
             const Icon(Icons.add, size: 13, color: KafiColors.roseD),
             const SizedBox(width: 5),
-            Text('Add another job', style: KafiTheme.fredoka(11, color: KafiColors.roseD, w: FontWeight.w700)),
+            Text(AppStrings.expAddJob.tr, style: KafiTheme.fredoka(11, color: KafiColors.roseD, w: FontWeight.w700)),
           ],
         ),
       ),
@@ -228,7 +228,7 @@ class _ExpCardState extends State<_ExpCard> {
               ),
               const SizedBox(width: 7),
               Expanded(
-                child: Text('Previous job', style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
+                child: Text(AppStrings.expPreviousJob.tr, style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
               ),
               GestureDetector(
                 onTap: widget.onDelete,
@@ -242,25 +242,25 @@ class _ExpCardState extends State<_ExpCard> {
             ],
           ),
           const SizedBox(height: 8),
-          _label('Job title'),
+          _label(AppStrings.expJobTitle.tr),
           const SizedBox(height: 4),
           _dropdown(_jobTitle, NannyConstants.jobTitles, (v) {
             setState(() => _jobTitle = v ?? _jobTitle);
             _emit();
           }),
-          KafiTextField(label: 'Family / Employer name', controller: _employer, hint: 'e.g. Al Mansoori Family'),
-          KafiTextField(label: 'City & Country', controller: _city, hint: 'e.g. Dubai, UAE'),
+          KafiTextField(label: AppStrings.expEmployer.tr, controller: _employer, hint: 'e.g. Al Mansoori Family'),
+          KafiTextField(label: AppStrings.expCityCountry.tr, controller: _city, hint: 'e.g. Dubai, UAE'),
           Row(
             children: [
-              Expanded(child: _dateField('From', _from, () => _pickDate(true))),
+              Expanded(child: _dateField(AppStrings.expFrom.tr, _from, () => _pickDate(true))),
               const SizedBox(width: 6),
-              Expanded(child: _dateField('To', _to, () => _pickDate(false))),
+              Expanded(child: _dateField(AppStrings.expTo.tr, _to, () => _pickDate(false))),
             ],
           ),
           const SizedBox(height: 7),
-          KafiTextField(label: 'Children cared for', controller: _children, hint: 'e.g. 2 kids, ages 1 & 4'),
-          KafiTextField(label: 'Main duties', controller: _duties, maxLines: 3, hint: 'Cooking, school pickup, homework help…'),
-          _label('Reason for leaving'),
+          KafiTextField(label: AppStrings.expChildren.tr, controller: _children, hint: 'e.g. 2 kids, ages 1 & 4'),
+          KafiTextField(label: AppStrings.expDuties.tr, controller: _duties, maxLines: 3, hint: 'Cooking, school pickup, homework help…'),
+          _label(AppStrings.expReason.tr),
           const SizedBox(height: 4),
           _dropdown(_reason, NannyConstants.reasonsLeaving, (v) {
             setState(() => _reason = v ?? _reason);

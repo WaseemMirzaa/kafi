@@ -730,4 +730,18 @@ abstract class AppStrings {
   static const docEidSub = 'doc_eid_sub';
   static const docEidHave = 'doc_eid_have';
   static const docEidNone = 'doc_eid_none';
+
+  // Experience + references screen labels (l10n sweep)
+  static const expAddJob = 'exp_add_job';
+  static const expPreviousJob = 'exp_previous_job';
+  static const refsSubtitle = 'refs_subtitle';
+  static const refsHasYes = 'refs_has_yes';
+  static const refsHasNo = 'refs_has_no';
+  static const refsAboutThem = 'refs_about_them';
+  static const refsSectionHeader = 'refs_section_header';
+  static const refsHowWork = 'refs_how_work';
+  static const refsAddAnother = 'refs_add_another';
+  static const refsReferenceNum = 'refs_reference_num';
+  static const refsCallable = 'refs_callable';
+  static const refsShareNote = 'refs_share_note';
 }
