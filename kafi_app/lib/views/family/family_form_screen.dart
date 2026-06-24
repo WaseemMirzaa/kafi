@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
+import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
@@ -148,12 +149,14 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _label('City / Emirate'),
+                  _label(AppStrings.fldCity.tr),
                   const SizedBox(height: 4),
-                  Obx(() => KafiLocationPicker(
-                        initialValue: controller.city.value,
-                        onChanged: (v) => controller.city.value = v,
-                      )),
+                  Obx(() => controller.detectingCity.value
+                      ? _detectingCity()
+                      : KafiLocationPicker(
+                          initialValue: controller.city.value,
+                          onChanged: (v) => controller.city.value = v,
+                        )),
                 ],
               ),
             ),
@@ -439,9 +442,35 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
                 ),
               ],
             )),
+        const SizedBox(height: 8),
+        _label(AppStrings.fldEmployment.tr),
+        const SizedBox(height: 4),
+        Obx(() => Row(
+              children: [
+                Expanded(
+                  child: KafiToggleTile(
+                    label: AppStrings.employmentFullTime.tr,
+                    icon: Icons.work_outline,
+                    purple: true,
+                    selected: controller.employmentType.value == JobEmploymentType.fullTime,
+                    onTap: () => controller.employmentType.value = JobEmploymentType.fullTime,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: KafiToggleTile(
+                    label: AppStrings.employmentPartTime.tr,
+                    icon: Icons.schedule,
+                    purple: true,
+                    selected: controller.employmentType.value == JobEmploymentType.partTime,
+                    onTap: () => controller.employmentType.value = JobEmploymentType.partTime,
+                  ),
+                ),
+              ],
+            )),
         const SizedBox(height: 6),
         KafiTextField(
-          label: 'Working schedule',
+          label: AppStrings.fldSchedule.tr,
           controller: controller.scheduleCtrl,
           hint: 'e.g. Sun–Thu, 8am–6pm or 6 days/week',
           purple: true,
@@ -589,6 +618,30 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
   // ── Shared helpers ─────────────────────────────────────────────────────────
   Widget _label(String text) =>
       Text(text, style: KafiTheme.nunito(9, color: _purpleLabel, w: FontWeight.w800));
+
+  /// Placeholder shown while the city is being auto-detected from GPS.
+  Widget _detectingCity() => Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          border: Border.all(color: KafiColors.cardBorder),
+          borderRadius: BorderRadius.circular(12),
+          color: KafiColors.inputBg,
+        ),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 16,
+              height: 16,
+              child: CircularProgressIndicator(strokeWidth: 2, color: KafiColors.roseD),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(AppStrings.locationDetecting.tr,
+                  style: KafiTheme.nunito(13, color: KafiColors.ts)),
+            ),
+          ],
+        ),
+      );
 
   Widget _dropdown({
     required String value,

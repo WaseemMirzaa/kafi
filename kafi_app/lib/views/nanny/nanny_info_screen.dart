@@ -37,12 +37,91 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
         _basic(),
         _visa(),
         _workLocation(),
+        _workPrefs(),
         _personal(),
         _health(),
         _comfort(),
         _religion(),
         _emergency(),
         _bio(),
+      ],
+    );
+  }
+
+  // ─── DATE PICKERS ────────────────────────────────────────────────────────
+
+  Future<void> _pickDob() async {
+    final now = DateTime.now();
+    final latest = DateTime(now.year - 18, now.month, now.day); // must be 18+
+    final current = controller.dob.value;
+    final initial = (current != null && !current.isAfter(latest))
+        ? current
+        : DateTime(now.year - 25, now.month, now.day);
+    final picked = await showDatePicker(
+      context: Get.context!,
+      initialDate: initial,
+      firstDate: DateTime(now.year - 70),
+      lastDate: latest,
+      helpText: AppStrings.fldDob.tr,
+    );
+    if (picked != null) controller.setDob(picked);
+  }
+
+  Future<void> _pickAvailableFrom() async {
+    final now = DateTime.now();
+    final current = controller.availableFrom.value;
+    final initial = (current != null && !current.isBefore(now)) ? current : now;
+    final picked = await showDatePicker(
+      context: Get.context!,
+      initialDate: initial,
+      firstDate: now,
+      lastDate: DateTime(now.year + 2, now.month, now.day),
+      helpText: AppStrings.nannyAvailableFromDate.tr,
+    );
+    if (picked != null) controller.setAvailableFrom(picked);
+  }
+
+  // ─── WORK PREFERENCES ────────────────────────────────────────────────────
+
+  Widget _workPrefs() {
+    return KafiSection(
+      title: AppStrings.nannySecWorkPrefs.tr,
+      icon: Icons.work_outline,
+      accent: KafiSectionAccent.purple,
+      children: [
+        Text(AppStrings.fldJobType.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Obx(() => Row(children: [
+          Expanded(child: KafiToggleBox(icon: '🏠', label: AppStrings.jobLiveIn.tr, selected: controller.jobTypePref.value == JobTypePreference.liveIn, variant: KafiToggleVariant.purple, onTap: () => controller.jobTypePref.value = JobTypePreference.liveIn)),
+          const SizedBox(width: 6),
+          Expanded(child: KafiToggleBox(icon: '🚪', label: AppStrings.jobLiveOut.tr, selected: controller.jobTypePref.value == JobTypePreference.liveOut, variant: KafiToggleVariant.purple, onTap: () => controller.jobTypePref.value = JobTypePreference.liveOut)),
+          const SizedBox(width: 6),
+          Expanded(child: KafiToggleBox(icon: '🔄', label: AppStrings.jobBoth.tr, selected: controller.jobTypePref.value == JobTypePreference.both, variant: KafiToggleVariant.purple, onTap: () => controller.jobTypePref.value = JobTypePreference.both)),
+        ])),
+        const SizedBox(height: 8),
+        Row(children: [
+          Expanded(child: KafiTextField(label: AppStrings.fldSalaryMin.tr, controller: controller.salaryMinCtrl, keyboardType: TextInputType.number, purple: true)),
+          const SizedBox(width: 6),
+          Expanded(child: KafiTextField(label: AppStrings.fldSalaryMax.tr, controller: controller.salaryMaxCtrl, keyboardType: TextInputType.number, purple: true)),
+        ]),
+        Text(AppStrings.nannyAvailability.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Obx(() => Row(children: [
+          Expanded(child: KafiToggleBox(icon: '✅', label: AppStrings.availableNow.tr, selected: controller.availability.value == AvailabilityStatus.availableNow, variant: KafiToggleVariant.purple, onTap: () => controller.availability.value = AvailabilityStatus.availableNow)),
+          const SizedBox(width: 6),
+          Expanded(child: KafiToggleBox(icon: '📅', label: AppStrings.nannyAvailableFrom.tr, selected: controller.availability.value == AvailabilityStatus.availableFrom, variant: KafiToggleVariant.purple, onTap: () => controller.availability.value = AvailabilityStatus.availableFrom)),
+        ])),
+        Obx(() => controller.availability.value == AvailabilityStatus.availableFrom
+            ? Padding(
+                padding: const EdgeInsets.only(top: 6),
+                child: GestureDetector(
+                  onTap: _pickAvailableFrom,
+                  child: AbsorbPointer(
+                    child: KafiTextField(label: AppStrings.nannyAvailableFromDate.tr, controller: controller.availableFromCtrl, hint: 'DD/MM/YYYY', purple: true),
+                  ),
+                ),
+              )
+            : const SizedBox.shrink()),
       ],
     );
   }
@@ -56,12 +135,19 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
       children: [
         KafiTextField(label: AppStrings.fldFullName.tr, controller: controller.fullNameCtrl, hint: 'e.g. Maria Santos Reyes'),
         Row(children: [
-          Expanded(child: KafiTextField(label: AppStrings.fldDob.tr, controller: controller.dobCtrl)),
+          Expanded(
+            child: GestureDetector(
+              onTap: _pickDob,
+              child: AbsorbPointer(
+                child: KafiTextField(label: AppStrings.fldDob.tr, controller: controller.dobCtrl, hint: 'DD/MM/YYYY'),
+              ),
+            ),
+          ),
           const SizedBox(width: 6),
           Expanded(
             child: Obx(() {
-              final age = controller.nanny.value?.age ?? 33;
-              return KafiTextField(label: AppStrings.fldAge.tr, hint: '$age years old');
+              final age = controller.age;
+              return KafiTextField(label: AppStrings.fldAge.tr, hint: age == null ? '—' : '$age years old');
             }),
           ),
         ]),
@@ -373,15 +459,15 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           text: 'Health information is kept private and only shared with families you apply to.',
         ),
         const SizedBox(height: 10),
-        Text('Any health conditions?', style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        Text(AppStrings.fldHealth.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
         _healthToggle(controller.healthCtrl, '⚕️', 'Yes — I\'ll describe', '✅', 'No health conditions'),
         const SizedBox(height: 8),
-        Text('Regular medication?', style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        Text(AppStrings.fldMeds.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
         _healthToggle(controller.medsCtrl, '💊', 'Yes — I\'ll describe', '✅', 'No medication'),
         const SizedBox(height: 8),
-        Text('Allergies?', style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        Text(AppStrings.fldAllergies.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
         _healthToggle(controller.allergiesCtrl, '🤧', 'Yes — I\'ll describe', '✅', 'No allergies'),
       ],
@@ -452,10 +538,10 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           color: KafiColors.purL,
           borderColor: KafiColors.purB,
           icon: '🔒',
-          text: 'This information is optional and completely private. It helps families find a comfortable cultural fit.',
+          text: AppStrings.nannyReligionPrivacyNote.tr,
         ),
         const SizedBox(height: 8),
-        Text('Your religion (optional)', style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        Text(AppStrings.fldReligion.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 5),
         GridView.count(
           shrinkWrap: true,
@@ -474,16 +560,16 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           ],
         ),
         const SizedBox(height: 8),
-        Text('Are you comfortable working in a home of a different faith?', style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        Text(AppStrings.nannyComfortFaith.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
-        Row(children: [
-          Expanded(child: KafiToggleBox(icon: '✅', label: 'Yes — fully comfortable', selected: true, variant: KafiToggleVariant.purple, onTap: () {})),
+        Obx(() => Row(children: [
+          Expanded(child: KafiToggleBox(icon: '✅', label: 'Yes — fully comfortable', selected: controller.comfortDifferentFaith.value, variant: KafiToggleVariant.purple, onTap: () => controller.comfortDifferentFaith.value = true)),
           const SizedBox(width: 6),
-          Expanded(child: KafiToggleBox(icon: '🤔', label: 'Prefer same faith home', selected: false, variant: KafiToggleVariant.purple, onTap: () {})),
-        ]),
+          Expanded(child: KafiToggleBox(icon: '🤔', label: 'Prefer same faith home', selected: !controller.comfortDifferentFaith.value, variant: KafiToggleVariant.purple, onTap: () => controller.comfortDifferentFaith.value = false)),
+        ])),
         const SizedBox(height: 6),
         KafiTextField(
-          label: 'Religious practices (optional)',
+          label: AppStrings.nannyReligiousPractices.tr,
           controller: controller.religionCtrl,
           maxLines: 2,
           hint: 'e.g. Prayer times, dietary restrictions, fasting periods...',

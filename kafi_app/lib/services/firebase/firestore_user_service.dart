@@ -112,4 +112,10 @@ class FirestoreUserService implements IUserService {
         (data?['freeViewsUsed'] as num?)?.toInt() ??
         0;
   }
+
+  @override
+  Future<bool> isUserBlocked(String userId, {required bool isNanny}) async {
+    final snap = await (isNanny ? _col : _families).doc(userId).get();
+    return snap.data()?['blocked'] == true;
+  }
 }

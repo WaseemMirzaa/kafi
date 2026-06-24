@@ -7,21 +7,25 @@ import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/services/location_service.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
+import 'package:kafi_app/utils/validators.dart';
 import 'package:uuid/uuid.dart';
 
 class FamilyProfileController extends GetxController {
   final IUserService _user = Get.find<IUserService>();
   final IJobService _jobs = Get.find<IJobService>();
   final AuthController _auth = Get.find<AuthController>();
+  final LocationService _location = Get.find<LocationService>();
   final _uuid = const Uuid();
 
   final Rx<FamilyModel?> family = Rx<FamilyModel?>(null);
   final RxBool isLoading = false.obs;
+  final RxBool detectingCity = false.obs;
 
   final fullNameCtrl = TextEditingController();
   final RxString nationality = 'Emirati'.obs;
-  final RxString city = 'Dubai'.obs;
+  final RxString city = ''.obs;
   final childrenCtrl = TextEditingController(text: '2');
   final childrenAgesCtrl = TextEditingController();
   final RxList<String> languages = <String>['English', 'Arabic'].obs;
@@ -38,6 +42,7 @@ class FamilyProfileController extends GetxController {
 
   final RxList<String> roles = <String>['Nanny'].obs;
   final Rx<JobType> jobType = JobType.liveIn.obs;
+  final Rx<JobEmploymentType> employmentType = JobEmploymentType.fullTime.obs;
   final scheduleCtrl = TextEditingController();
   final RxList<String> duties = <String>[].obs;
   final RxList<String> benefits = <String>[].obs;
@@ -61,7 +66,7 @@ class FamilyProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _hydrateFromCurrentUser();
+    _hydrateFromCurrentUser().then((_) => autoDetectCity());
   }
 
   /// Loads the signed-in family's profile + latest job post (if any) and
@@ -93,6 +98,7 @@ class FamilyProfileController extends GetxController {
         final p = posts.first;
         roles.value = List<String>.from(p.rolesNeeded);
         jobType.value = p.jobType;
+        employmentType.value = p.employmentType;
         scheduleCtrl.text = p.schedule;
         duties.value = List<String>.from(p.duties);
         benefits.value = List<String>.from(p.benefits);
@@ -108,6 +114,23 @@ class FamilyProfileController extends GetxController {
       }
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// Auto-fills [city] from the device GPS location on first load, unless the
+  /// family already has a saved city. Requests location permission. No-op when
+  /// the Google Maps key is the placeholder (reverse geocoding unavailable).
+  Future<void> autoDetectCity() async {
+    if (city.value.trim().isNotEmpty) return;
+    if (!_location.hasMapsKey) return;
+    detectingCity.value = true;
+    try {
+      final detected = await _location.detectCurrentCity();
+      if (detected != null && city.value.trim().isEmpty) {
+        city.value = detected;
+      }
+    } finally {
+      detectingCity.value = false;
     }
   }
 
@@ -142,13 +165,40 @@ class FamilyProfileController extends GetxController {
   /// Shared persistence used by both the onboarding form and edit screen.
   /// When [reuseExistingPost] is true and a post already exists, that post is
   /// updated in place instead of inserting a new one (avoids duplicate jobs).
-  Future<bool> _persist({bool reuseExistingPost = false}) async {
-    if (fullNameCtrl.text.trim().isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.familyNameRequired.tr);
-      return false;
+  /// First failing required-field message key for the family/job form, or null
+  /// when valid. System Spec §3.3 (family) + §3.4 (job post) + §14.4 rules.
+  String? _validateFamily() {
+    if (fullNameCtrl.text.trim().isEmpty) return AppStrings.familyNameRequired;
+    if (nationality.value.trim().isEmpty) return AppStrings.familyNationalityRequired;
+    if (city.value.trim().isEmpty) return AppStrings.familyCityRequired;
+    final childCount = int.tryParse(childrenCtrl.text) ?? 0;
+    final ages = childrenAgesCtrl.text
+        .split(',')
+        .map((e) => e.trim())
+        .where((e) => e.isNotEmpty)
+        .toList();
+    if (childCount > 0 && ages.isEmpty) return AppStrings.familyChildrenAgesRequired;
+    if (languages.isEmpty) return AppStrings.familyLanguagesRequired;
+    if (roles.isEmpty) return AppStrings.familyRolesRequired;
+    if (scheduleCtrl.text.trim().isEmpty) return AppStrings.familyScheduleRequired;
+    if (duties.isEmpty) return AppStrings.familyDutiesRequired;
+    if (benefits.isEmpty) return AppStrings.familyBenefitsRequired;
+    final salErr = Validators.salaryRange(
+      int.tryParse(salaryMinCtrl.text) ?? 0,
+      int.tryParse(salaryMaxCtrl.text) ?? 0,
+    );
+    if (salErr != null) return salErr;
+    if (trialDays.value <= 0) return AppStrings.familyTrialDaysRequired;
+    if ((int.tryParse(trialRateCtrl.text) ?? 0) <= 0) {
+      return AppStrings.familyTrialRateRequired;
     }
-    if (city.value.trim().isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.familyCityRequired.tr);
+    return null;
+  }
+
+  Future<bool> _persist({bool reuseExistingPost = false}) async {
+    final err = _validateFamily();
+    if (err != null) {
+      Get.snackbar(AppStrings.errorTitle.tr, err.tr);
       return false;
     }
     isLoading.value = true;
@@ -181,10 +231,21 @@ class FamilyProfileController extends GetxController {
       await _user.saveFamily(fam);
       family.value = fam;
 
+      // One active full-time + one active part-time job per family. In edit
+      // mode reuse the existing post; on a fresh post block a duplicate of the
+      // same employment type (the old one must be closed / reposted first).
+      final existingPosts = await _jobs.getJobsByFamily(fid);
       String? existingPostId;
       if (reuseExistingPost) {
-        final posts = await _jobs.getJobsByFamily(fid);
-        if (posts.isNotEmpty) existingPostId = posts.first.id;
+        if (existingPosts.isNotEmpty) existingPostId = existingPosts.first.id;
+      } else {
+        final clash = existingPosts.any((j) =>
+            j.status == JobPostStatus.active &&
+            j.employmentType == employmentType.value);
+        if (clash) {
+          Get.snackbar(AppStrings.errorTitle.tr, AppStrings.familyJobTypeLimit.tr);
+          return false;
+        }
       }
 
       await _jobs.saveJobPost(JobPostModel(
@@ -194,6 +255,7 @@ class FamilyProfileController extends GetxController {
         city: city.value,
         rolesNeeded: List.of(roles),
         jobType: jobType.value,
+        employmentType: employmentType.value,
         schedule: scheduleCtrl.text.trim(),
         duties: List.of(duties),
         benefits: List.of(benefits),

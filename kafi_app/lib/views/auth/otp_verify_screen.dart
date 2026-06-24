@@ -60,7 +60,18 @@ class OtpVerifyScreen extends GetView<AuthController> {
               ),
               const SizedBox(height: 28),
               _BigOtpBoxes(onChanged: (v) => controller.otpCode.value = v),
-              const SizedBox(height: 14),
+              Obx(
+                () => controller.otpError.value.isEmpty
+                    ? const SizedBox(height: 14)
+                    : Padding(
+                        padding: const EdgeInsets.only(top: 10),
+                        child: Text(
+                          controller.otpError.value,
+                          textAlign: TextAlign.center,
+                          style: KafiTheme.nunito(11, color: KafiColors.roseD, w: FontWeight.w700),
+                        ),
+                      ),
+              ),
               Obx(
                 () {
                   final label = controller.otpTimerLabel;
@@ -99,11 +110,11 @@ class OtpVerifyScreen extends GetView<AuthController> {
                 () => Wrap(
                   alignment: WrapAlignment.center,
                   children: [
-                    Text("Didn't receive it? ", style: KafiTheme.nunito(10, color: KafiColors.ts)),
+                    Text(AppStrings.authDidntReceive.tr, style: KafiTheme.nunito(10, color: KafiColors.ts)),
                     GestureDetector(
                       onTap: controller.canResendOtp ? controller.resendOtp : null,
                       child: Text(
-                        AppStrings.otpResend.tr,
+                        AppStrings.otpResendShort.tr,
                         style: KafiTheme.nunito(
                           10,
                           color: controller.canResendOtp ? KafiColors.roseD : KafiColors.ts,

@@ -31,7 +31,7 @@ const Map<String, String> enUs = {
       "We'll send a one-time code (OTP) to verify it's really you. No password needed to get started.",
   AppStrings.authPhoneLabel: 'Your WhatsApp / mobile number',
   AppStrings.authOtpNotice:
-      "We'll send a 4-digit OTP to this number via SMS. Standard SMS rates may apply. Make sure this number is active and reachable.",
+      "We'll send a 6-digit OTP to this number via SMS. Standard SMS rates may apply. Make sure this number is active and reachable.",
   AppStrings.authSendOtp: 'Send OTP code',
   AppStrings.authSendOtpSignIn: 'Send OTP to sign in',
   AppStrings.authAlreadyAccount: 'Already have an account?',
@@ -54,7 +54,7 @@ const Map<String, String> enUs = {
   AppStrings.familyRegSub: 'Browse verified nannies from 89 AED/week',
   AppStrings.familyPhoneLabel: 'Your mobile / WhatsApp number',
   AppStrings.familyOtpNotice:
-      "We'll send a 4-digit OTP to this number via SMS. Make sure this number is active and reachable.",
+      "We'll send a 6-digit OTP to this number via SMS. Make sure this number is active and reachable.",
   AppStrings.familySigninHint:
       "Enter your number above — if registered, you'll get a sign-in OTP instantly.",
 
@@ -63,7 +63,7 @@ const Map<String, String> enUs = {
       'Kafi: Your verification code is @code. Valid for 5 minutes. Do not share this code with anyone.',
   AppStrings.otpSmsSentTo: 'Sent to @phone · 9:41 AM',
   AppStrings.otpEnterTitle: 'Enter your OTP',
-  AppStrings.otpEnterSub: 'Enter the 4-digit code we sent to\n@phone',
+  AppStrings.otpEnterSub: 'Enter the 6-digit code we sent to\n@phone',
   AppStrings.otpExpires: 'Code expires in @time',
   AppStrings.authVerifyOtp: 'Verify & continue',
   AppStrings.authVerify: 'Verify',
@@ -613,4 +613,130 @@ const Map<String, String> enUs = {
   AppStrings.checkConnection: 'Check your connection and try again.',
   AppStrings.sessionExpired: 'Session Expired',
   AppStrings.pleaseSignInAgain: 'Please sign in again.',
+
+  // Validation — generic (System Spec §14.4)
+  AppStrings.valRequired: 'This field is required',
+  AppStrings.valDobInvalid: 'Invalid date of birth',
+  AppStrings.valAgeMin18: 'You must be 18+ to use Kafi',
+  AppStrings.valPhoneInvalid: 'Please enter a valid phone',
+  AppStrings.valSalaryOrder: 'Min salary must be less than max',
+
+  // Auth errors & flow (System Spec §14.1)
+  AppStrings.authPhoneInvalid: 'Please enter a valid phone number',
+  AppStrings.authOtpIncorrect: 'Invalid code. Please check and try again.',
+  AppStrings.authOtpSendFailed: "Couldn't send code. Check your number and try again.",
+  AppStrings.authOtpRateLimited: 'Too many attempts. Please try again later.',
+  AppStrings.authOtpMaxAttempts: 'Too many wrong attempts. Please try again later.',
+  AppStrings.authNoAccount: 'No account found with this number',
+  AppStrings.authAccountExists: 'An account already exists. Sign in instead.',
+  AppStrings.authWrongRole: 'This number is registered with a different role. One number = one role.',
+  AppStrings.authQuotaExceeded: 'Service busy. Please try again shortly.',
+  AppStrings.authWrongPassword: 'Incorrect password. Please try again.',
+  AppStrings.authReauthRequired: 'For security, please verify again.',
+  AppStrings.authCodeSent: 'Verification code sent to @phone',
+  AppStrings.authLearnMore: 'Learn more',
+  AppStrings.authUseOtpInstead: 'Use OTP instead',
+  AppStrings.authQuickSafeEasy: 'Quick, safe, and easy.',
+  AppStrings.authDidntReceive: "Didn't receive it? ",
+  AppStrings.otpResendShort: 'Resend OTP',
+  AppStrings.authAgreePrefix: "By continuing you agree to Kafi's ",
+  AppStrings.authAgreeAnd: ' and ',
+
+  // Nanny onboarding — required-field messages (System Spec §3.2 / §14.4)
+  AppStrings.nannyNationalityRequired: 'Please select your nationality.',
+  AppStrings.nannyVisaRequired: 'Please select your visa / legal status.',
+  AppStrings.nannyMaritalRequired: 'Please select your marital status.',
+  AppStrings.nannyChildrenCountRequired: 'Please enter how many children you have.',
+  AppStrings.nannyEmergencyNameRequired: 'Please enter an emergency contact name.',
+  AppStrings.nannyEmergencyRelRequired: 'Please enter your relationship to the contact.',
+  AppStrings.nannyEmergencyPhoneRequired: 'Please enter a valid emergency phone number.',
+  AppStrings.nannyBioRequired: 'Please write a short bio about yourself.',
+
+  // Nanny onboarding — labels
+  AppStrings.nannyComfortFaith: 'Are you comfortable working in a home of a different faith?',
+  AppStrings.nannyReligionPrivacyNote:
+      'This information is optional and completely private. It helps families find a comfortable cultural fit.',
+  AppStrings.nannyReligiousPractices: 'Religious practices (optional)',
+
+  // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
+  AppStrings.familyNationalityRequired: 'Please select your nationality.',
+  AppStrings.familyChildrenAgesRequired: "Please enter your children's ages.",
+  AppStrings.familyLanguagesRequired: 'Please select at least one home language.',
+  AppStrings.familyRolesRequired: 'Please select at least one role you need.',
+  AppStrings.familyScheduleRequired: 'Please describe the working schedule.',
+  AppStrings.familyDutiesRequired: 'Please select at least one duty.',
+  AppStrings.familyBenefitsRequired: 'Please select at least one benefit you offer.',
+  AppStrings.familyTrialDaysRequired: 'Please choose a trial duration.',
+  AppStrings.familyTrialRateRequired: 'Please set a trial daily rate.',
+
+  // Nanny onboarding — work preferences (System Spec §3.2)
+  AppStrings.nannySecWorkPrefs: 'Work preferences',
+  AppStrings.jobBoth: 'Either / both',
+  AppStrings.nannyAvailability: 'When can you start?',
+  AppStrings.nannyAvailableFrom: 'From a specific date',
+  AppStrings.nannyAvailableFromDate: 'Available from',
+  AppStrings.nannyAvailableFromRequired: 'Please choose your start date.',
+
+  // Location picker
+  AppStrings.locationChange: 'Change',
+  AppStrings.locationDetecting: 'Detecting your location…',
+
+  // Nanny media + docs (onboarding)
+  AppStrings.nannyCurrentAreaRequired: 'Please add your current area / neighbourhood.',
+  AppStrings.nannyPhotosMin3: 'Please add at least 3 photos.',
+  AppStrings.nannyVideoRequired: 'Please add a short intro video.',
+  AppStrings.mediaCover: 'Cover',
+  AppStrings.mediaIntroVideo: 'My intro video',
+  AppStrings.mediaVideoReady: 'Ready to submit',
+  AppStrings.docUploading: 'Uploading documents…',
+  AppStrings.docUploadFailed: 'Upload failed. Please check your connection and try again.',
+
+  // Family job — employment type + edit fields
+  AppStrings.fldEmployment: 'Employment type',
+  AppStrings.employmentFullTime: 'Full-time',
+  AppStrings.employmentPartTime: 'Part-time',
+  AppStrings.familyJobTypeLimit: 'You already have an active job of this type. Close or repost it first.',
+  AppStrings.fldSchedule: 'Working schedule',
+  AppStrings.fldAboutFamily: 'About your family',
+  AppStrings.fldHouseRules: 'House rules (optional)',
+
+  // Account blocked (admin)
+  AppStrings.accountBlocked: 'Account blocked',
+  AppStrings.accountBlockedSub: 'Your account has been blocked by an administrator. Please contact support.',
+
+  // Nanny media + docs screen labels (l10n sweep)
+  AppStrings.mediaTitle: 'Your nanny profile',
+  AppStrings.mediaSubtitle: 'Let families see & hear you 🌸',
+  AppStrings.mediaPhotosHeader: 'Profile Photos (min 3, max 5)',
+  AppStrings.mediaVideoHeader: 'Intro Video (max 60 seconds)',
+  AppStrings.mediaTapAdd: 'Tap to add photos or videos',
+  AppStrings.mediaPhotoRule: 'No sunglasses · No heavy filters · Min 3 photos',
+  AppStrings.mediaPhotoViews: '📈 Profiles with photos get 3× more views',
+  AppStrings.mediaRecordTitle: 'Record your intro video',
+  AppStrings.mediaRecordSub: 'Let families meet the real you 🌸',
+  AppStrings.docsScreenTitle: 'Upload documents',
+  AppStrings.docsScreenSubtitle: 'Admin verifies these before you go live 🔒',
+  AppStrings.docsMandatoryHeader: 'Mandatory documents',
+  AppStrings.docsOptionalHeader: 'Optional (builds trust, ranks you higher)',
+  AppStrings.docPassportSub: 'Clear photo of bio page · JPG or PDF',
+  AppStrings.docVisaSub: 'Current visa stamp or digital visa · JPG or PDF',
+  AppStrings.docTrainingSub: 'First Aid · CPR · Childcare · Cooking',
+  AppStrings.docPoliceSub: 'Highly encouraged — shows honesty',
+  AppStrings.docEidSub: 'Only required if you have one · Visit visa / new to UAE = not needed',
+  AppStrings.docEidHave: '✓ I have EID — upload',
+  AppStrings.docEidNone: '🚫 No EID (visit visa)',
+
+  // Experience + references screen labels (l10n sweep)
+  AppStrings.expAddJob: 'Add another job',
+  AppStrings.expPreviousJob: 'Previous job',
+  AppStrings.refsSubtitle: 'Families can call to verify you 📞',
+  AppStrings.refsHasYes: 'Yes, I have references',
+  AppStrings.refsHasNo: 'No references yet',
+  AppStrings.refsAboutThem: 'Tell us a bit about them (no names or numbers)',
+  AppStrings.refsSectionHeader: 'References (optional, strongly encouraged)',
+  AppStrings.refsHowWork: '📞 How references work on Kafi',
+  AppStrings.refsAddAnother: 'Add another reference',
+  AppStrings.refsReferenceNum: 'Reference #@num',
+  AppStrings.refsCallable: 'Callable',
+  AppStrings.refsShareNote: 'You will share this contact directly during your interview or trial',
 };

@@ -19,7 +19,7 @@ class NannyRefsScreen extends GetView<NannyProfileController> {
     return KafiStepScaffold(
       step: 4,
       title: AppStrings.refsTitle.tr,
-      subtitle: 'Families can call to verify you 📞',
+      subtitle: AppStrings.refsSubtitle.tr,
       onBack: editMode ? Get.back : null,
       footer: Obx(
         () => KafiPrimaryButton(
@@ -33,27 +33,27 @@ class NannyRefsScreen extends GetView<NannyProfileController> {
         _fsecHeader(),
         _howItWorksBanner(),
         const SizedBox(height: 12),
-        _fieldLabel('Do you have callable references?'),
+        _fieldLabel(AppStrings.refsHas.tr),
         const SizedBox(height: 5),
         Obx(() => Row(
               children: [
                 Expanded(child: _declarationTile(
                   emoji: '✅',
-                  label: 'Yes, I have references',
+                  label: AppStrings.refsHasYes.tr,
                   selected: controller.hasReferences.value,
                   onTap: () => controller.hasReferences.value = true,
                 )),
                 const SizedBox(width: 6),
                 Expanded(child: _declarationTile(
                   emoji: '❌',
-                  label: 'No references yet',
+                  label: AppStrings.refsHasNo.tr,
                   selected: !controller.hasReferences.value,
                   onTap: () => controller.hasReferences.value = false,
                 )),
               ],
             )),
         const SizedBox(height: 12),
-        Text('Tell us a bit about them (no names or numbers)',
+        Text(AppStrings.refsAboutThem.tr,
             style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w800)),
         const SizedBox(height: 6),
         Obx(() => Column(
@@ -99,7 +99,7 @@ class NannyRefsScreen extends GetView<NannyProfileController> {
           ),
           const SizedBox(width: 5),
           Expanded(
-            child: Text('REFERENCES (OPTIONAL, STRONGLY ENCOURAGED)',
+            child: Text(AppStrings.refsSectionHeader.tr,
                 style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800).copyWith(letterSpacing: 0.54)),
           ),
         ],
@@ -121,7 +121,7 @@ class NannyRefsScreen extends GetView<NannyProfileController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('📞 How references work on Kafi',
+          Text(AppStrings.refsHowWork.tr,
               style: KafiTheme.fredoka(10.5, color: KafiColors.grnD, w: FontWeight.w800)),
           const SizedBox(height: 6),
           _howStep('1', 'You declare here that you have callable references — no names or numbers on the app', isWarn: false),
@@ -215,7 +215,7 @@ class NannyRefsScreen extends GetView<NannyProfileController> {
           children: [
             const Icon(Icons.add, size: 13, color: KafiColors.roseD),
             const SizedBox(width: 5),
-            Text('Add another reference', style: KafiTheme.fredoka(11, color: KafiColors.roseD, w: FontWeight.w700)),
+            Text(AppStrings.refsAddAnother.tr, style: KafiTheme.fredoka(11, color: KafiColors.roseD, w: FontWeight.w700)),
           ],
         ),
       ),
@@ -345,7 +345,7 @@ class _RefCardState extends State<_RefCard> {
                 ),
               ),
               const SizedBox(width: 7),
-              Text('Reference #${widget.index + 1}',
+              Text(AppStrings.refsReferenceNum.trParams({'num': '${widget.index + 1}'}),
                   style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
               const Spacer(),
               Container(
@@ -356,7 +356,7 @@ class _RefCardState extends State<_RefCard> {
                   children: [
                     const Icon(Icons.check, size: 7, color: KafiColors.grnD),
                     const SizedBox(width: 3),
-                    Text('Callable', style: KafiTheme.fredoka(9, color: KafiColors.grnD, w: FontWeight.w700)),
+                    Text(AppStrings.refsCallable.tr, style: KafiTheme.fredoka(9, color: KafiColors.grnD, w: FontWeight.w700)),
                   ],
                 ),
               ),
@@ -373,7 +373,7 @@ class _RefCardState extends State<_RefCard> {
             ],
           ),
           const SizedBox(height: 8),
-          _label('Their relationship to you'),
+          _label(AppStrings.refsRel.tr),
           const SizedBox(height: 4),
           _dropdown(_relationship, NannyConstants.referenceRelations, (v) {
             setState(() => _relationship = v ?? _relationship);
@@ -387,7 +387,7 @@ class _RefCardState extends State<_RefCard> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _label('City'),
+                    _label(AppStrings.refsCity.tr),
                     const SizedBox(height: 4),
                     _dropdown(_city, _cities, (v) {
                       setState(() => _city = v ?? _city);
@@ -399,7 +399,7 @@ class _RefCardState extends State<_RefCard> {
               const SizedBox(width: 6),
               Expanded(
                 child: KafiTextField(
-                  label: 'Year(s) worked',
+                  label: AppStrings.refsYears.tr,
                   controller: _years,
                   keyboardType: TextInputType.number,
                   hint: 'e.g. 2',
@@ -408,7 +408,7 @@ class _RefCardState extends State<_RefCard> {
             ],
           ),
           KafiTextField(
-            label: 'What they can confirm',
+            label: AppStrings.refsCanConfirm.tr,
             controller: _canConfirm,
             hint: 'Newborn care, cooking, character, reliability',
           ),
@@ -420,7 +420,7 @@ class _RefCardState extends State<_RefCard> {
                 const Icon(Icons.phone_outlined, size: 10, color: KafiColors.grnD),
                 const SizedBox(width: 5),
                 Expanded(
-                  child: Text('You will share this contact directly during your interview or trial',
+                  child: Text(AppStrings.refsShareNote.tr,
                       style: KafiTheme.nunito(9, color: KafiColors.grnD, w: FontWeight.w700)),
                 ),
               ],

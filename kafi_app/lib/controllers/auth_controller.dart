@@ -1,7 +1,9 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
@@ -11,6 +13,7 @@ import 'package:kafi_app/services/interfaces/i_notification_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/auth_constants.dart';
 import 'package:kafi_app/utils/constants/mock_constants.dart';
+import 'package:kafi_app/utils/validators.dart';
 
 class AuthController extends GetxController {
   final IAuthService _authService = Get.find<IAuthService>();
@@ -23,7 +26,11 @@ class AuthController extends GetxController {
   final RxDouble passwordStrength = 0.0.obs;
   final RxInt otpSecondsLeft = AuthConstants.otpExpirySeconds.obs;
 
-  final phoneController = TextEditingController(text: '50 234 5678');
+  /// Inline field errors (already localized). Empty string = no error.
+  final RxString phoneError = ''.obs;
+  final RxString otpError = ''.obs;
+
+  final phoneController = TextEditingController();
   final passwordController = TextEditingController();
   final newPasswordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
@@ -84,6 +91,8 @@ class AuthController extends GetxController {
 
   void prepareNannyLogin() {
     isReturning.value = false;
+    phoneError.value = '';
+    otpError.value = '';
     _pendingRole = UserType.nanny;
     countryCode.value = AuthConstants.defaultCountryCode;
     _authService.setUserRole(UserType.nanny);
@@ -91,17 +100,21 @@ class AuthController extends GetxController {
 
   void prepareFamilyLogin() {
     isReturning.value = false;
+    phoneError.value = '';
+    otpError.value = '';
     _pendingRole = UserType.family;
     countryCode.value = AuthConstants.defaultCountryCode;
     _authService.setUserRole(UserType.family);
   }
 
   Future<void> sendOtpAndNavigate() async {
-    final phone = phoneController.text.replaceAll(RegExp(r'\s+'), '');
-    if (phone.isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.phoneRequired.tr);
+    final phoneErr = Validators.phone(phoneController.text);
+    if (phoneErr != null) {
+      phoneError.value = phoneErr.tr;
       return;
     }
+    phoneError.value = '';
+    final phone = phoneController.text.replaceAll(RegExp(r'\s+'), '');
     isLoading.value = true;
     bool sent = false;
     try {
@@ -110,10 +123,12 @@ class AuthController extends GetxController {
       sent = true;
       Get.snackbar(
         AppStrings.authOtpSentTitle.tr,
-        AppStrings.authOtpSentBody.trParams({'otp': MockConstants.otp}),
+        AppConfig.useMock
+            ? AppStrings.authOtpSentBody.trParams({'otp': MockConstants.otp})
+            : AppStrings.authCodeSent.trParams({'phone': formattedPhone}),
       );
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      Get.snackbar(AppStrings.errorTitle.tr, _authErrorMessage(e));
     } finally {
       isLoading.value = false;
     }
@@ -132,27 +147,36 @@ class AuthController extends GetxController {
       await _authService.sendOtp(phone, countryCode.value);
       _startOtpTimer();
       otpCode.value = '';
+      otpError.value = '';
       Get.snackbar(
         AppStrings.authOtpSentTitle.tr,
-        AppStrings.authOtpSentBody.trParams({'otp': MockConstants.otp}),
+        AppConfig.useMock
+            ? AppStrings.authOtpSentBody.trParams({'otp': MockConstants.otp})
+            : AppStrings.authCodeSent.trParams({'phone': formattedPhone}),
       );
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, _authErrorMessage(e));
     } finally {
       isLoading.value = false;
     }
   }
 
   Future<void> verifyOtpAndNavigate() async {
-    if (otpCode.value.length < AuthConstants.otpLength) return;
+    if (otpCode.value.length < AuthConstants.otpLength) {
+      otpError.value = AppStrings.authOtpIncorrect.tr;
+      return;
+    }
     if (otpSecondsLeft.value <= 0) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.otpExpiredMessage.tr);
+      otpError.value = AppStrings.otpExpiredMessage.tr;
       return;
     }
     isLoading.value = true;
     try {
       await _authService.verifyOtp(otpCode.value);
       _otpTimer?.cancel();
-    } catch (_) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.authInvalidOtp.tr);
+      otpError.value = '';
+    } catch (e) {
+      otpError.value = _authErrorMessage(e);
       return;
     } finally {
       isLoading.value = false;
@@ -180,7 +204,7 @@ class AuthController extends GetxController {
         isNewFamilyRegistration: user.isFamily,
       );
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      Get.snackbar(AppStrings.errorTitle.tr, _authErrorMessage(e));
     } finally {
       isLoading.value = false;
     }
@@ -202,7 +226,7 @@ class AuthController extends GetxController {
       currentUser.value = user;
       await _navigateHome(user, isNewFamilyRegistration: false);
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      Get.snackbar(AppStrings.errorTitle.tr, _authErrorMessage(e));
     } finally {
       isLoading.value = false;
     }
@@ -224,7 +248,7 @@ class AuthController extends GetxController {
         isNewFamilyRegistration: _pendingRole == UserType.family,
       );
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      Get.snackbar(AppStrings.errorTitle.tr, _authErrorMessage(e));
     } finally {
       isLoading.value = false;
     }
@@ -240,6 +264,50 @@ class AuthController extends GetxController {
     passwordStrength.value = score.clamp(0.0, 1.0);
   }
 
+  /// Maps auth exceptions (Firebase live + mock service) to a localized,
+  /// user-facing message per System Spec §14.1.
+  String _authErrorMessage(Object e) {
+    if (e is FirebaseAuthException) {
+      switch (e.code) {
+        case 'invalid-phone-number':
+          return AppStrings.authPhoneInvalid.tr;
+        case 'invalid-verification-code':
+          return AppStrings.authOtpIncorrect.tr;
+        case 'invalid-verification-id':
+        case 'session-expired':
+        case 'code-expired':
+          return AppStrings.otpExpiredMessage.tr;
+        case 'too-many-requests':
+          return AppStrings.authOtpRateLimited.tr;
+        case 'quota-exceeded':
+          return AppStrings.authQuotaExceeded.tr;
+        case 'user-not-found':
+          return AppStrings.authNoAccount.tr;
+        case 'email-already-in-use':
+        case 'account-exists-with-different-credential':
+          return AppStrings.authAccountExists.tr;
+        case 'wrong-password':
+        case 'invalid-credential':
+          return AppStrings.authWrongPassword.tr;
+        case 'network-request-failed':
+          return AppStrings.noInternet.tr;
+        case 'requires-recent-login':
+          return AppStrings.authReauthRequired.tr;
+        default:
+          return e.message ?? AppStrings.authOtpSendFailed.tr;
+      }
+    }
+    // Mock service throws Exception('invalid_otp' | 'verification_failed' | …).
+    final s = e.toString();
+    if (s.contains('invalid_otp')) return AppStrings.authOtpIncorrect.tr;
+    if (s.contains('no_verification_id') ||
+        s.contains('verification_failed')) {
+      return AppStrings.authOtpSendFailed.tr;
+    }
+    if (s.contains('password_too_weak')) return AppStrings.pwWeak.tr;
+    return AppStrings.authOtpSendFailed.tr;
+  }
+
   void _startOtpTimer() {
     otpSecondsLeft.value = AuthConstants.otpExpirySeconds;
     _otpTimer?.cancel();
@@ -253,6 +321,13 @@ class AuthController extends GetxController {
   }
 
   Future<void> _navigateHome(UserModel user, {bool isNewFamilyRegistration = false}) async {
+    // Admin block enforcement — sign the user out if their doc is blocked.
+    if (await Get.find<IUserService>().isUserBlocked(user.id, isNanny: user.isNanny)) {
+      await signOut();
+      Get.offAllNamed(Routes.welcome);
+      Get.snackbar(AppStrings.accountBlocked.tr, AppStrings.accountBlockedSub.tr);
+      return;
+    }
     if (user.isNanny) {
       final nanny = await Get.find<IUserService>().getNanny(user.id);
       if (nanny?.status == NannyOnboardingStatus.approved) {

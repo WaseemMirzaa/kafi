@@ -192,4 +192,130 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.appDetailTrialLocation: 'الموقع',
     AppStrings.appDetailTrialTotal: 'إجمالي الأرباح',
     AppStrings.appDetailTrialNotes: 'ملاحظات الأسرة',
+
+    // Validation — generic (System Spec §14.4)
+    AppStrings.valRequired: 'هذا الحقل مطلوب',
+    AppStrings.valDobInvalid: 'تاريخ ميلاد غير صالح',
+    AppStrings.valAgeMin18: 'يجب أن يكون عمرك 18 عامًا أو أكثر لاستخدام كافي',
+    AppStrings.valPhoneInvalid: 'الرجاء إدخال رقم هاتف صحيح',
+    AppStrings.valSalaryOrder: 'يجب أن يكون الحد الأدنى للراتب أقل من الحد الأقصى',
+
+    // Auth errors & flow (System Spec §14.1)
+    AppStrings.authPhoneInvalid: 'الرجاء إدخال رقم هاتف صحيح',
+    AppStrings.authOtpIncorrect: 'رمز غير صحيح. يرجى التحقق والمحاولة مرة أخرى.',
+    AppStrings.authOtpSendFailed: 'تعذّر إرسال الرمز. تحقق من رقمك وحاول مرة أخرى.',
+    AppStrings.authOtpRateLimited: 'محاولات كثيرة. يرجى المحاولة لاحقًا.',
+    AppStrings.authOtpMaxAttempts: 'محاولات خاطئة كثيرة. يرجى المحاولة لاحقًا.',
+    AppStrings.authNoAccount: 'لا يوجد حساب بهذا الرقم',
+    AppStrings.authAccountExists: 'يوجد حساب بالفعل. سجّل الدخول بدلاً من ذلك.',
+    AppStrings.authWrongRole: 'هذا الرقم مسجّل بدور مختلف. رقم واحد = دور واحد.',
+    AppStrings.authQuotaExceeded: 'الخدمة مشغولة. يرجى المحاولة بعد قليل.',
+    AppStrings.authWrongPassword: 'كلمة المرور غير صحيحة. حاول مرة أخرى.',
+    AppStrings.authReauthRequired: 'لأمان حسابك، يرجى التحقق مرة أخرى.',
+    AppStrings.authCodeSent: 'تم إرسال رمز التحقق إلى @phone',
+    AppStrings.authLearnMore: 'اعرف المزيد',
+    AppStrings.authUseOtpInstead: 'استخدم رمز OTP بدلاً من ذلك',
+    AppStrings.authQuickSafeEasy: 'سريع وآمن وسهل.',
+    AppStrings.authDidntReceive: 'لم يصلك الرمز؟ ',
+    AppStrings.otpResendShort: 'إعادة إرسال الرمز',
+    AppStrings.authAgreePrefix: 'بالمتابعة فإنك توافق على ',
+    AppStrings.authAgreeAnd: ' و ',
+
+    // Nanny onboarding — required-field messages (System Spec §3.2 / §14.4)
+    AppStrings.nannyNationalityRequired: 'الرجاء اختيار جنسيتك.',
+    AppStrings.nannyVisaRequired: 'الرجاء اختيار حالة التأشيرة / الوضع القانوني.',
+    AppStrings.nannyMaritalRequired: 'الرجاء اختيار حالتك الاجتماعية.',
+    AppStrings.nannyChildrenCountRequired: 'الرجاء إدخال عدد أطفالك.',
+    AppStrings.nannyEmergencyNameRequired: 'الرجاء إدخال اسم جهة اتصال الطوارئ.',
+    AppStrings.nannyEmergencyRelRequired: 'الرجاء إدخال صلة القرابة بجهة الاتصال.',
+    AppStrings.nannyEmergencyPhoneRequired: 'الرجاء إدخال رقم هاتف طوارئ صحيح.',
+    AppStrings.nannyBioRequired: 'الرجاء كتابة نبذة قصيرة عنك.',
+
+    // Nanny onboarding — labels
+    AppStrings.nannyComfortFaith: 'هل أنت مرتاحة للعمل في منزل من ديانة مختلفة؟',
+    AppStrings.nannyReligionPrivacyNote:
+        'هذه المعلومات اختيارية وخاصة تمامًا. تساعد العائلات في إيجاد توافق ثقافي مريح.',
+    AppStrings.nannyReligiousPractices: 'الممارسات الدينية (اختياري)',
+
+    // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
+    AppStrings.familyNationalityRequired: 'الرجاء اختيار جنسيتك.',
+    AppStrings.familyChildrenAgesRequired: 'الرجاء إدخال أعمار أطفالك.',
+    AppStrings.familyLanguagesRequired: 'الرجاء اختيار لغة منزلية واحدة على الأقل.',
+    AppStrings.familyRolesRequired: 'الرجاء اختيار دور واحد على الأقل تحتاجه.',
+    AppStrings.familyScheduleRequired: 'الرجاء وصف جدول العمل.',
+    AppStrings.familyDutiesRequired: 'الرجاء اختيار مهمة واحدة على الأقل.',
+    AppStrings.familyBenefitsRequired: 'الرجاء اختيار ميزة واحدة على الأقل تقدمها.',
+    AppStrings.familyTrialDaysRequired: 'الرجاء اختيار مدة التجربة.',
+    AppStrings.familyTrialRateRequired: 'الرجاء تحديد السعر اليومي للتجربة.',
+
+    // Nanny onboarding — work preferences (System Spec §3.2)
+    AppStrings.nannySecWorkPrefs: 'تفضيلات العمل',
+    AppStrings.jobBoth: 'كلاهما',
+    AppStrings.nannyAvailability: 'متى يمكنك البدء؟',
+    AppStrings.nannyAvailableFrom: 'من تاريخ محدد',
+    AppStrings.nannyAvailableFromDate: 'متاحة اعتباراً من',
+    AppStrings.nannyAvailableFromRequired: 'الرجاء اختيار تاريخ البدء.',
+
+    // Location picker
+    AppStrings.locationChange: 'تغيير',
+    AppStrings.locationDetecting: 'جارٍ تحديد موقعك…',
+
+    // Nanny media + docs (onboarding)
+    AppStrings.nannyCurrentAreaRequired: 'الرجاء إضافة منطقتك / الحي الحالي.',
+    AppStrings.nannyPhotosMin3: 'الرجاء إضافة 3 صور على الأقل.',
+    AppStrings.nannyVideoRequired: 'الرجاء إضافة فيديو تعريفي قصير.',
+    AppStrings.mediaCover: 'الغلاف',
+    AppStrings.mediaIntroVideo: 'الفيديو التعريفي',
+    AppStrings.mediaVideoReady: 'جاهز للإرسال',
+    AppStrings.docUploading: 'جارٍ رفع المستندات…',
+    AppStrings.docUploadFailed: 'فشل الرفع. يرجى التحقق من اتصالك والمحاولة مرة أخرى.',
+
+    // Family job — employment type + edit fields
+    AppStrings.fldEmployment: 'نوع التوظيف',
+    AppStrings.employmentFullTime: 'دوام كامل',
+    AppStrings.employmentPartTime: 'دوام جزئي',
+    AppStrings.familyJobTypeLimit: 'لديك بالفعل وظيفة نشطة من هذا النوع. أغلقها أو أعد نشرها أولاً.',
+    AppStrings.fldSchedule: 'جدول العمل',
+    AppStrings.fldAboutFamily: 'عن عائلتك',
+    AppStrings.fldHouseRules: 'قواعد المنزل (اختياري)',
+
+    // Account blocked (admin)
+    AppStrings.accountBlocked: 'الحساب محظور',
+    AppStrings.accountBlockedSub: 'تم حظر حسابك من قبل المسؤول. يرجى التواصل مع الدعم.',
+
+    // Nanny media + docs screen labels (l10n sweep)
+    AppStrings.mediaTitle: 'ملفك كمربية',
+    AppStrings.mediaSubtitle: 'دع العائلات تراك وتسمعك 🌸',
+    AppStrings.mediaPhotosHeader: 'صور الملف (3 على الأقل، 5 كحد أقصى)',
+    AppStrings.mediaVideoHeader: 'فيديو تعريفي (60 ثانية كحد أقصى)',
+    AppStrings.mediaTapAdd: 'اضغط لإضافة صور أو فيديو',
+    AppStrings.mediaPhotoRule: 'بدون نظارات شمسية · بدون فلاتر · 3 صور على الأقل',
+    AppStrings.mediaPhotoViews: '📈 الملفات التي تحتوي على صور تحصل على مشاهدات أكثر بثلاث مرات',
+    AppStrings.mediaRecordTitle: 'سجّل فيديو التعريف',
+    AppStrings.mediaRecordSub: 'دع العائلات تتعرف عليك حقًا 🌸',
+    AppStrings.docsScreenTitle: 'رفع المستندات',
+    AppStrings.docsScreenSubtitle: 'يتحقق المسؤول منها قبل أن تصبح مرئية 🔒',
+    AppStrings.docsMandatoryHeader: 'المستندات الإلزامية',
+    AppStrings.docsOptionalHeader: 'اختياري (يبني الثقة ويحسّن ترتيبك)',
+    AppStrings.docPassportSub: 'صورة واضحة لصفحة البيانات · JPG أو PDF',
+    AppStrings.docVisaSub: 'ختم التأشيرة الحالي أو التأشيرة الرقمية · JPG أو PDF',
+    AppStrings.docTrainingSub: 'إسعافات أولية · إنعاش قلبي · رعاية أطفال · طبخ',
+    AppStrings.docPoliceSub: 'موصى به بشدة — يدل على الأمانة',
+    AppStrings.docEidSub: 'مطلوب فقط إذا كان لديك واحدة · تأشيرة زيارة / جديد في الإمارات = غير مطلوب',
+    AppStrings.docEidHave: '✓ لدي بطاقة هوية — رفع',
+    AppStrings.docEidNone: '🚫 لا أملك هوية (تأشيرة زيارة)',
+
+    // Experience + references screen labels (l10n sweep)
+    AppStrings.expAddJob: 'أضف وظيفة أخرى',
+    AppStrings.expPreviousJob: 'وظيفة سابقة',
+    AppStrings.refsSubtitle: 'يمكن للعائلات الاتصال للتحقق منك 📞',
+    AppStrings.refsHasYes: 'نعم، لدي مراجع',
+    AppStrings.refsHasNo: 'لا توجد مراجع بعد',
+    AppStrings.refsAboutThem: 'أخبرنا قليلاً عنهم (بدون أسماء أو أرقام)',
+    AppStrings.refsSectionHeader: 'المراجع (اختياري، موصى به بشدة)',
+    AppStrings.refsHowWork: '📞 كيف تعمل المراجع في كافي',
+    AppStrings.refsAddAnother: 'أضف مرجعًا آخر',
+    AppStrings.refsReferenceNum: 'مرجع رقم @num',
+    AppStrings.refsCallable: 'قابل للاتصال',
+    AppStrings.refsShareNote: 'ستشارك جهة الاتصال هذه مباشرة أثناء المقابلة أو التجربة',
   });

@@ -64,6 +64,17 @@ class _KafiLocationPickerState extends State<KafiLocationPicker> {
     _displayValue = widget.initialValue ?? '';
   }
 
+  @override
+  void didUpdateWidget(covariant KafiLocationPicker oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Reflect externally-driven changes (e.g. GPS auto-detect updating the
+    // bound controller value), since this widget keeps its own display state.
+    final incoming = widget.initialValue ?? '';
+    if (incoming != oldWidget.initialValue && incoming != _displayValue) {
+      setState(() => _displayValue = incoming);
+    }
+  }
+
   void _open(BuildContext context) async {
     if (_usePlainInput) {
       final result = await showModalBottomSheet<String>(
@@ -115,7 +126,10 @@ class _KafiLocationPickerState extends State<KafiLocationPicker> {
                 overflow: TextOverflow.ellipsis,
               ),
             ),
-            const Icon(Icons.keyboard_arrow_down_rounded, color: KafiColors.ts, size: 20),
+            empty
+                ? const Icon(Icons.keyboard_arrow_down_rounded, color: KafiColors.ts, size: 20)
+                : Text(AppStrings.locationChange.tr,
+                    style: KafiTheme.nunito(12, color: KafiColors.roseD, w: FontWeight.w800)),
           ],
         ),
       ),

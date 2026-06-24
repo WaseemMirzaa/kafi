@@ -619,4 +619,129 @@ abstract class AppStrings {
   static const checkConnection = 'check_connection';
   static const sessionExpired = 'session_expired';
   static const pleaseSignInAgain = 'please_sign_in_again';
+
+  // Validation — generic (System Spec §14.4)
+  static const valRequired = 'val_required';
+  static const valDobInvalid = 'val_dob_invalid';
+  static const valAgeMin18 = 'val_age_min_18';
+  static const valPhoneInvalid = 'val_phone_invalid';
+  static const valSalaryOrder = 'val_salary_order';
+
+  // Auth errors & flow (System Spec §14.1) — live phone auth
+  static const authPhoneInvalid = 'auth_phone_invalid';
+  static const authOtpIncorrect = 'auth_otp_incorrect';
+  static const authOtpSendFailed = 'auth_otp_send_failed';
+  static const authOtpRateLimited = 'auth_otp_rate_limited';
+  static const authOtpMaxAttempts = 'auth_otp_max_attempts';
+  static const authNoAccount = 'auth_no_account';
+  static const authAccountExists = 'auth_account_exists';
+  static const authWrongRole = 'auth_wrong_role';
+  static const authQuotaExceeded = 'auth_quota_exceeded';
+  static const authWrongPassword = 'auth_wrong_password';
+  static const authReauthRequired = 'auth_reauth_required';
+  static const authCodeSent = 'auth_code_sent';
+  static const authLearnMore = 'auth_learn_more';
+  static const authUseOtpInstead = 'auth_use_otp_instead';
+  static const authQuickSafeEasy = 'auth_quick_safe_easy';
+  static const authDidntReceive = 'auth_didnt_receive';
+  static const otpResendShort = 'otp_resend_short';
+  static const authAgreePrefix = 'auth_agree_prefix';
+  static const authAgreeAnd = 'auth_agree_and';
+
+  // Nanny onboarding — required-field messages (System Spec §3.2 / §14.4)
+  static const nannyNationalityRequired = 'nanny_nationality_required';
+  static const nannyVisaRequired = 'nanny_visa_required';
+  static const nannyMaritalRequired = 'nanny_marital_required';
+  static const nannyChildrenCountRequired = 'nanny_children_count_required';
+  static const nannyEmergencyNameRequired = 'nanny_emergency_name_required';
+  static const nannyEmergencyRelRequired = 'nanny_emergency_rel_required';
+  static const nannyEmergencyPhoneRequired = 'nanny_emergency_phone_required';
+  static const nannyBioRequired = 'nanny_bio_required';
+
+  // Nanny onboarding — labels (were hardcoded)
+  static const nannyComfortFaith = 'nanny_comfort_faith';
+  static const nannyReligionPrivacyNote = 'nanny_religion_privacy_note';
+  static const nannyReligiousPractices = 'nanny_religious_practices';
+
+  // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
+  static const familyNationalityRequired = 'family_nationality_required';
+  static const familyChildrenAgesRequired = 'family_children_ages_required';
+  static const familyLanguagesRequired = 'family_languages_required';
+  static const familyRolesRequired = 'family_roles_required';
+  static const familyScheduleRequired = 'family_schedule_required';
+  static const familyDutiesRequired = 'family_duties_required';
+  static const familyBenefitsRequired = 'family_benefits_required';
+  static const familyTrialDaysRequired = 'family_trial_days_required';
+  static const familyTrialRateRequired = 'family_trial_rate_required';
+
+  // Nanny onboarding — work preferences (System Spec §3.2)
+  static const nannySecWorkPrefs = 'nanny_sec_work_prefs';
+  static const jobBoth = 'job_both';
+  static const nannyAvailability = 'nanny_availability';
+  static const nannyAvailableFrom = 'nanny_available_from';
+  static const nannyAvailableFromDate = 'nanny_available_from_date';
+  static const nannyAvailableFromRequired = 'nanny_available_from_required';
+
+  // Location picker
+  static const locationChange = 'location_change';
+  static const locationDetecting = 'location_detecting';
+
+  // Nanny media + docs (onboarding)
+  static const nannyCurrentAreaRequired = 'nanny_current_area_required';
+  static const nannyPhotosMin3 = 'nanny_photos_min3';
+  static const nannyVideoRequired = 'nanny_video_required';
+  static const mediaCover = 'media_cover';
+  static const mediaIntroVideo = 'media_intro_video';
+  static const mediaVideoReady = 'media_video_ready';
+  static const docUploading = 'doc_uploading';
+  static const docUploadFailed = 'doc_upload_failed';
+
+  // Family job — employment type + edit fields
+  static const fldEmployment = 'fld_employment';
+  static const employmentFullTime = 'employment_full_time';
+  static const employmentPartTime = 'employment_part_time';
+  static const familyJobTypeLimit = 'family_job_type_limit';
+  static const fldSchedule = 'fld_schedule';
+  static const fldAboutFamily = 'fld_about_family';
+  static const fldHouseRules = 'fld_house_rules';
+
+  // Account blocked (admin)
+  static const accountBlocked = 'account_blocked';
+  static const accountBlockedSub = 'account_blocked_sub';
+
+  // Nanny media + docs screen labels (l10n sweep)
+  static const mediaTitle = 'media_title';
+  static const mediaSubtitle = 'media_subtitle';
+  static const mediaPhotosHeader = 'media_photos_header';
+  static const mediaVideoHeader = 'media_video_header';
+  static const mediaTapAdd = 'media_tap_add';
+  static const mediaPhotoRule = 'media_photo_rule';
+  static const mediaPhotoViews = 'media_photo_views';
+  static const mediaRecordTitle = 'media_record_title';
+  static const mediaRecordSub = 'media_record_sub';
+  static const docsScreenTitle = 'docs_screen_title';
+  static const docsScreenSubtitle = 'docs_screen_subtitle';
+  static const docsMandatoryHeader = 'docs_mandatory_header';
+  static const docsOptionalHeader = 'docs_optional_header';
+  static const docPassportSub = 'doc_passport_sub';
+  static const docVisaSub = 'doc_visa_sub';
+  static const docTrainingSub = 'doc_training_sub';
+  static const docPoliceSub = 'doc_police_sub';
+  static const docEidSub = 'doc_eid_sub';
+  static const docEidHave = 'doc_eid_have';
+  static const docEidNone = 'doc_eid_none';
+
+  // Experience + references screen labels (l10n sweep)
+  static const expAddJob = 'exp_add_job';
+  static const expPreviousJob = 'exp_previous_job';
+  static const refsSubtitle = 'refs_subtitle';
+  static const refsHasYes = 'refs_has_yes';
+  static const refsHasNo = 'refs_has_no';
+  static const refsAboutThem = 'refs_about_them';
+  static const refsSectionHeader = 'refs_section_header';
+  static const refsHowWork = 'refs_how_work';
+  static const refsAddAnother = 'refs_add_another';
+  static const refsReferenceNum = 'refs_reference_num';
+  static const refsCallable = 'refs_callable';
+  static const refsShareNote = 'refs_share_note';
 }

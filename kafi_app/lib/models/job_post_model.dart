@@ -6,6 +6,9 @@ enum JobPostStatus { active, paused, closed, expired }
 /// Per System Spec §3.4
 enum JobDuration { permanent, contract }
 
+/// Full-time vs part-time. A family may keep one active job of each at a time.
+enum JobEmploymentType { fullTime, partTime }
+
 /// Complete JobPost model per System Spec §3.4
 class JobPostModel {
   const JobPostModel({
@@ -23,6 +26,7 @@ class JobPostModel {
     this.startDate,
     this.startImmediate = true,
     this.duration = JobDuration.permanent,
+    this.employmentType = JobEmploymentType.fullTime,
     this.contractMonths,
     this.experienceYears = 0,
     this.languagesRequired = const [],
@@ -59,6 +63,7 @@ class JobPostModel {
   final DateTime? startDate;
   final bool startImmediate;
   final JobDuration duration;
+  final JobEmploymentType employmentType;
   final int? contractMonths;
   final int experienceYears;
   final List<String> languagesRequired;
@@ -93,6 +98,7 @@ class JobPostModel {
     DateTime? startDate,
     bool? startImmediate,
     JobDuration? duration,
+    JobEmploymentType? employmentType,
     int? contractMonths,
     int? experienceYears,
     List<String>? languagesRequired,
@@ -129,6 +135,7 @@ class JobPostModel {
         startDate: startDate ?? this.startDate,
         startImmediate: startImmediate ?? this.startImmediate,
         duration: duration ?? this.duration,
+        employmentType: employmentType ?? this.employmentType,
         contractMonths: contractMonths ?? this.contractMonths,
         experienceYears: experienceYears ?? this.experienceYears,
         languagesRequired: languagesRequired ?? this.languagesRequired,
@@ -166,6 +173,7 @@ class JobPostModel {
         'startDate': startDate?.toIso8601String(),
         'startImmediate': startImmediate,
         'duration': duration.name,
+        'employmentType': employmentType.name,
         'contractMonths': contractMonths,
         'experienceYears': experienceYears,
         'languagesRequired': languagesRequired,

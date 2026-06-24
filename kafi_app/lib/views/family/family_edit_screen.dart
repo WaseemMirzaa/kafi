@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
+import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
@@ -150,6 +151,25 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
                   .toList(),
             ),
           ),
+          const SizedBox(height: 6),
+          KafiTextField(
+            label: AppStrings.fldChildrenAges.tr,
+            controller: controller.childrenAgesCtrl,
+            hint: 'e.g. 2 & 5',
+            purple: true,
+          ),
+          KafiTextField(
+            label: AppStrings.fldAboutFamily.tr,
+            controller: controller.aboutFamilyCtrl,
+            maxLines: 3,
+            purple: true,
+          ),
+          KafiTextField(
+            label: AppStrings.fldHouseRules.tr,
+            controller: controller.houseRulesCtrl,
+            maxLines: 2,
+            purple: true,
+          ),
         ],
       );
 
@@ -203,6 +223,41 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
                 ),
               ],
             ),
+          ),
+          const SizedBox(height: 8),
+          Text(AppStrings.fldEmployment.tr,
+              style: KafiTheme.nunito(9, color: const Color(0xFF5A2090), w: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Obx(
+            () => Row(
+              children: [
+                Expanded(
+                  child: KafiToggleTile(
+                    label: AppStrings.employmentFullTime.tr,
+                    icon: Icons.work_outline,
+                    purple: true,
+                    selected: controller.employmentType.value == JobEmploymentType.fullTime,
+                    onTap: () => controller.employmentType.value = JobEmploymentType.fullTime,
+                  ),
+                ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: KafiToggleTile(
+                    label: AppStrings.employmentPartTime.tr,
+                    icon: Icons.schedule,
+                    purple: true,
+                    selected: controller.employmentType.value == JobEmploymentType.partTime,
+                    onTap: () => controller.employmentType.value = JobEmploymentType.partTime,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 6),
+          KafiTextField(
+            label: AppStrings.fldSchedule.tr,
+            controller: controller.scheduleCtrl,
+            purple: true,
           ),
         ],
       );

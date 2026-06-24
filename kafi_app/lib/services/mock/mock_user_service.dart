@@ -27,6 +27,9 @@ class MockUserService implements IUserService {
   }
 
   @override
+  Future<bool> isUserBlocked(String userId, {required bool isNanny}) async => false;
+
+  @override
   Future<NannyModel?> getNanny(String id) async {
     await Future<void>.delayed(AppConfig.mockDelay);
     return _nannies[id];

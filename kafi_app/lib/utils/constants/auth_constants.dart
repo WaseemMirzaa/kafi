@@ -1,6 +1,7 @@
 /// Auth flow limits and timings (System spec §1.5 & §Authentication).
 class AuthConstants {
-  static const otpLength = 4;
+  // Firebase phone-auth SMS codes are 6 digits.
+  static const otpLength = 6;
   static const otpExpirySeconds = 300;
   static const otpResendCooldownSeconds = 60;
   static const minPasswordLength = 8;

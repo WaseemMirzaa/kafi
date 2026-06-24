@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
@@ -14,6 +15,7 @@ import 'package:kafi_app/models/user_model.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
+import 'package:kafi_app/utils/validators.dart';
 import 'package:uuid/uuid.dart';
 
 class NannyProfileController extends GetxController {
@@ -28,17 +30,26 @@ class NannyProfileController extends GetxController {
 
   // step 1
   final fullNameCtrl = TextEditingController();
-  final dobCtrl = TextEditingController(text: '1992-03-14');
-  final Rx<DateTime?> dob = Rx<DateTime?>(DateTime(1992, 3, 14));
+  final dobCtrl = TextEditingController();
+  final Rx<DateTime?> dob = Rx<DateTime?>(null);
   final RxString nationality = 'Filipino'.obs;
-  final RxList<String> selectedLanguages = <String>['English', 'Arabic (basic)'].obs;
-  final Rx<VisaStatus?> visaStatus = Rx<VisaStatus?>(VisaStatus.residenceSponsored);
+  // Required selections start unset so a new nanny must actively choose them
+  // (previously pre-seeded with demo values that were saved verbatim).
+  final RxList<String> selectedLanguages = <String>[].obs;
+  final Rx<VisaStatus?> visaStatus = Rx<VisaStatus?>(null);
   final RxBool hasEid = false.obs;
   final Rx<bool?> willingTransferVisa = Rx<bool?>(true);
-  final RxList<Emirate> workEmirates = <Emirate>[Emirate.dubai, Emirate.abuDhabi, Emirate.sharjah, Emirate.alAin].obs;
+  final RxList<Emirate> workEmirates = <Emirate>[].obs;
   final RxBool willingRelocate = true.obs;
   final currentAreaCtrl = TextEditingController();
-  final Rx<MaritalStatus?> maritalStatus = Rx<MaritalStatus?>(MaritalStatus.single);
+  // Work preferences (System Spec §3.2 — required)
+  final salaryMinCtrl = TextEditingController();
+  final salaryMaxCtrl = TextEditingController();
+  final Rx<JobTypePreference> jobTypePref = JobTypePreference.both.obs;
+  final Rx<AvailabilityStatus> availability = AvailabilityStatus.availableNow.obs;
+  final Rx<DateTime?> availableFrom = Rx<DateTime?>(null);
+  final availableFromCtrl = TextEditingController();
+  final Rx<MaritalStatus?> maritalStatus = Rx<MaritalStatus?>(null);
   final RxBool hasChildren = false.obs;
   final childrenCountCtrl = TextEditingController();
   final healthCtrl = TextEditingController();
@@ -48,6 +59,7 @@ class NannyProfileController extends GetxController {
   final RxBool comfortPets = true.obs;
   final RxBool cooks = true.obs;
   final RxBool nightShifts = false.obs;
+  final RxBool comfortDifferentFaith = true.obs;
   final religionCtrl = TextEditingController();
   final emergencyNameCtrl = TextEditingController();
   final emergencyRelCtrl = TextEditingController();
@@ -57,6 +69,7 @@ class NannyProfileController extends GetxController {
   // step 2
   final RxList<String> photoUrls = <String>[].obs;
   final RxnString introVideoUrl = RxnString();
+  final RxnString introVideoName = RxnString();
 
   // step 3
   final RxList<WorkExperience> experiences = <WorkExperience>[].obs;
@@ -72,6 +85,9 @@ class NannyProfileController extends GetxController {
       t: NannyDocument(type: t, status: DocumentStatus.missing),
   }.obs;
 
+  /// Documents picked but not yet uploaded — uploaded together on submit.
+  final Map<DocumentType, _StagedDoc> _stagedDocs = {};
+
   StreamSubscription<NannyModel?>? _nannyWatch;
 
   bool get _hasRequiredDocs {
@@ -80,6 +96,29 @@ class NannyProfileController extends GetxController {
     return passport.status != DocumentStatus.missing &&
         visa.status != DocumentStatus.missing;
   }
+
+  /// Live age computed from the picked date of birth (null until chosen).
+  int? get age {
+    final d = dob.value;
+    if (d == null) return null;
+    final now = DateTime.now();
+    var a = now.year - d.year;
+    if (now.month < d.month || (now.month == d.month && now.day < d.day)) a--;
+    return a;
+  }
+
+  void setDob(DateTime d) {
+    dob.value = d;
+    dobCtrl.text = _fmtDate(d);
+  }
+
+  void setAvailableFrom(DateTime d) {
+    availableFrom.value = d;
+    availableFromCtrl.text = _fmtDate(d);
+  }
+
+  String _fmtDate(DateTime d) =>
+      '${d.day.toString().padLeft(2, '0')}/${d.month.toString().padLeft(2, '0')}/${d.year}';
 
   @override
   void onInit() {
@@ -93,6 +132,9 @@ class NannyProfileController extends GetxController {
     fullNameCtrl.dispose();
     dobCtrl.dispose();
     currentAreaCtrl.dispose();
+    salaryMinCtrl.dispose();
+    salaryMaxCtrl.dispose();
+    availableFromCtrl.dispose();
     childrenCountCtrl.dispose();
     healthCtrl.dispose();
     medsCtrl.dispose();
@@ -167,6 +209,13 @@ class NannyProfileController extends GetxController {
     workEmirates.value = List.of(n.workEmirates);
     willingRelocate.value = n.willingToRelocate;
     currentAreaCtrl.text = n.currentArea;
+    // Work preferences
+    salaryMinCtrl.text = n.expectedSalaryMin > 0 ? '${n.expectedSalaryMin}' : '';
+    salaryMaxCtrl.text = n.expectedSalaryMax > 0 ? '${n.expectedSalaryMax}' : '';
+    jobTypePref.value = n.jobTypePreference;
+    availability.value = n.availability;
+    availableFrom.value = n.availableFrom;
+    if (n.availableFrom != null) availableFromCtrl.text = _fmtDate(n.availableFrom!);
     // Personal
     maritalStatus.value = n.maritalStatus;
     hasChildren.value = n.hasChildren;
@@ -180,6 +229,7 @@ class NannyProfileController extends GetxController {
     comfortPets.value = n.comfortableWithPets;
     cooks.value = n.canCook;
     nightShifts.value = n.canDoNightShifts;
+    comfortDifferentFaith.value = n.comfortableWithDifferentFaith;
     religionCtrl.text = n.religion;
     // Emergency contact
     emergencyNameCtrl.text = n.emergencyName;
@@ -250,22 +300,46 @@ class NannyProfileController extends GetxController {
     Get.snackbar(AppStrings.successTitle.tr, AppStrings.profileUpdated.tr);
   }
 
+  /// First failing required-field message key for the personal-info step, or
+  /// null when valid. System Spec §3.2 (required fields) + §14.4 rules.
+  String? _validatePersonalInfo() {
+    if (fullNameCtrl.text.trim().isEmpty) return AppStrings.nannyFullNameRequired;
+    final dobErr = Validators.dateOfBirth(dob.value);
+    if (dobErr != null) {
+      return dob.value == null ? AppStrings.nannyDobRequired : dobErr;
+    }
+    if (nationality.value.trim().isEmpty) return AppStrings.nannyNationalityRequired;
+    if (selectedLanguages.isEmpty) return AppStrings.nannyLanguagesRequired;
+    if (visaStatus.value == null) return AppStrings.nannyVisaRequired;
+    if (workEmirates.isEmpty) return AppStrings.nannyEmiratesRequired;
+    if (currentAreaCtrl.text.trim().isEmpty) return AppStrings.nannyCurrentAreaRequired;
+    final salErr = Validators.salaryRange(
+      int.tryParse(salaryMinCtrl.text) ?? 0,
+      int.tryParse(salaryMaxCtrl.text) ?? 0,
+    );
+    if (salErr != null) return salErr;
+    if (availability.value == AvailabilityStatus.availableFrom &&
+        availableFrom.value == null) {
+      return AppStrings.nannyAvailableFromRequired;
+    }
+    if (maritalStatus.value == null) return AppStrings.nannyMaritalRequired;
+    if (hasChildren.value && (int.tryParse(childrenCountCtrl.text) ?? 0) < 1) {
+      return AppStrings.nannyChildrenCountRequired;
+    }
+    if (emergencyNameCtrl.text.trim().isEmpty) return AppStrings.nannyEmergencyNameRequired;
+    if (emergencyRelCtrl.text.trim().isEmpty) return AppStrings.nannyEmergencyRelRequired;
+    if (Validators.contactPhone(emergencyPhoneCtrl.text) != null) {
+      return AppStrings.nannyEmergencyPhoneRequired;
+    }
+    if (bioCtrl.text.trim().isEmpty) return AppStrings.nannyBioRequired;
+    return null;
+  }
+
   Future<void> savePersonalInfoAndNext({bool advance = true}) async {
-    // Required-field validation per onboarding spec.
-    if (fullNameCtrl.text.trim().isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyFullNameRequired.tr);
-      return;
-    }
-    if (dob.value == null) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyDobRequired.tr);
-      return;
-    }
-    if (selectedLanguages.isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyLanguagesRequired.tr);
-      return;
-    }
-    if (workEmirates.isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyEmiratesRequired.tr);
+    // Required-field validation — System Spec §3.2 required fields + §14.4.
+    final err = _validatePersonalInfo();
+    if (err != null) {
+      Get.snackbar(AppStrings.errorTitle.tr, err.tr);
       return;
     }
     isLoading.value = true;
@@ -284,6 +358,13 @@ class NannyProfileController extends GetxController {
         workEmirates: List.of(workEmirates),
         willingToRelocate: willingRelocate.value,
         currentArea: currentAreaCtrl.text.trim(),
+        expectedSalaryMin: int.tryParse(salaryMinCtrl.text) ?? 0,
+        expectedSalaryMax: int.tryParse(salaryMaxCtrl.text) ?? 0,
+        jobTypePreference: jobTypePref.value,
+        availability: availability.value,
+        availableFrom: availability.value == AvailabilityStatus.availableFrom
+            ? availableFrom.value
+            : null,
         maritalStatus: maritalStatus.value,
         hasChildren: hasChildren.value,
         childrenCount: int.tryParse(childrenCountCtrl.text) ?? 0,
@@ -294,6 +375,7 @@ class NannyProfileController extends GetxController {
         comfortableWithPets: comfortPets.value,
         canCook: cooks.value,
         canDoNightShifts: nightShifts.value,
+        comfortableWithDifferentFaith: comfortDifferentFaith.value,
         religion: religionCtrl.text.trim(),
         emergencyName: emergencyNameCtrl.text.trim(),
         emergencyRelationship: emergencyRelCtrl.text.trim(),
@@ -369,6 +451,7 @@ class NannyProfileController extends GetxController {
         bytes: bytes,
         contentType: 'video/mp4',
       );
+      introVideoName.value = picked.name;
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     } finally {
@@ -382,8 +465,12 @@ class NannyProfileController extends GetxController {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyCompleteStep1.tr);
       return;
     }
-    if (photoUrls.isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyPhotosRequired.tr);
+    if (photoUrls.length < NannyConstants.minPhotos) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyPhotosMin3.tr);
+      return;
+    }
+    if (introVideoUrl.value == null || introVideoUrl.value!.isEmpty) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyVideoRequired.tr);
       return;
     }
     isLoading.value = true;
@@ -463,7 +550,9 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  Future<void> pickAndUploadDocument(DocumentType type) async {
+  /// Picks a document and stages it locally. Nothing is uploaded until the user
+  /// submits (or saves in edit mode) — see [_uploadStagedDocs].
+  Future<void> pickDocument(DocumentType type) async {
     final user = _auth.currentUser.value;
     if (user == null) return;
     if (!await Get.find<PermissionController>().ensureGallery()) {
@@ -480,48 +569,100 @@ class NannyProfileController extends GetxController {
     final bytes = file.bytes;
     if (bytes == null) return;
     final ext = (file.extension ?? 'jpg').toLowerCase();
-    isLoading.value = true;
-    try {
+    _stagedDocs[type] = _StagedDoc(
+      bytes: bytes,
+      ext: ext,
+      contentType: ext == 'pdf' ? 'application/pdf' : 'image/jpeg',
+    );
+    // Mark selected locally (drives the ✓ tile); real upload happens on submit.
+    documents[type] = documents[type]!.copyWith(
+      status: DocumentStatus.uploaded,
+      uploadedAt: DateTime.now(),
+    );
+  }
+
+  /// Nanny declares they have no Emirates ID (visit visa / new to UAE).
+  void markNoEid() {
+    hasEid.value = false;
+    _stagedDocs.remove(DocumentType.emiratesId);
+    documents[DocumentType.emiratesId] =
+        documents[DocumentType.emiratesId]!.copyWith(status: DocumentStatus.missing);
+  }
+
+  /// Uploads every staged document to Firebase Storage, setting its URL and
+  /// `reviewing` status. Throws on failure (caller shows a localized error);
+  /// already-uploaded docs are removed from the staging map so they are not
+  /// re-uploaded on a retry.
+  Future<void> _uploadStagedDocs(String userId) async {
+    for (final entry in _stagedDocs.entries.toList()) {
+      final type = entry.key;
+      final staged = entry.value;
       final url = await _storageService.uploadBytes(
-        path: 'nannies/${user.id}/docs/${type.name}.$ext',
-        bytes: bytes,
-        contentType: ext == 'pdf' ? 'application/pdf' : 'image/jpeg',
+        path: 'nannies/$userId/docs/${type.name}.${staged.ext}',
+        bytes: staged.bytes,
+        contentType: staged.contentType,
       );
       documents[type] = documents[type]!.copyWith(
         url: url,
-        status: DocumentStatus.uploaded,
+        status: DocumentStatus.reviewing,
         uploadedAt: DateTime.now(),
       );
-      if (AppConfig.useMock &&
-          _hasRequiredDocs &&
-          nanny.value?.status != NannyOnboardingStatus.pending &&
-          nanny.value?.status != NannyOnboardingStatus.approved) {
-        await submitForReview();
-      }
-    } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
-    } finally {
-      isLoading.value = false;
+      _stagedDocs.remove(type);
     }
   }
 
-  /// Edit-mode save for the Documents screen: persists the current documents
-  /// without resubmitting for review or leaving the app shell.
+  void _showBlockingLoader(String message) {
+    if (Get.isDialogOpen ?? false) return;
+    Get.dialog(
+      PopScope(
+        canPop: false,
+        child: Center(
+          child: Container(
+            padding: const EdgeInsets.all(22),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const CircularProgressIndicator(),
+                const SizedBox(height: 14),
+                Text(message, style: const TextStyle(fontWeight: FontWeight.w700)),
+              ],
+            ),
+          ),
+        ),
+      ),
+      barrierDismissible: false,
+    );
+  }
+
+  void _hideBlockingLoader() {
+    if (Get.isDialogOpen ?? false) Get.back();
+  }
+
+  /// Edit-mode save for the Documents screen: uploads any newly-picked docs
+  /// (which return to `reviewing` for admin re-verification) and persists.
   Future<void> saveDocumentsAndClose() async {
     final n = nanny.value;
     if (n == null) {
       Get.back();
       return;
     }
+    _showBlockingLoader(AppStrings.docUploading.tr);
     isLoading.value = true;
     try {
+      await _uploadStagedDocs(n.id);
       final updated = n.copyWith(documents: documents.values.toList());
       await _userService.saveNanny(updated);
       nanny.value = updated;
       calculateProfileScore();
+      _hideBlockingLoader();
       _closeEdit();
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      _hideBlockingLoader();
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docUploadFailed.tr);
     } finally {
       isLoading.value = false;
     }
@@ -533,11 +674,14 @@ class NannyProfileController extends GetxController {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyRequiredDocsMissing.tr);
       return;
     }
+    final n = nanny.value;
+    if (n == null) return;
+    _showBlockingLoader(AppStrings.docUploading.tr);
     isLoading.value = true;
     try {
-      final n = nanny.value;
-      if (n == null) return;
-      final updated = n.copyWith(
+      // Upload all staged documents first, then flip the profile to pending.
+      await _uploadStagedDocs(n.id);
+      final updated = (nanny.value ?? n).copyWith(
         documents: documents.values
             .map((d) => d.status == DocumentStatus.uploaded
                 ? d.copyWith(status: DocumentStatus.reviewing)
@@ -548,13 +692,15 @@ class NannyProfileController extends GetxController {
       await _userService.saveNanny(updated);
       await _userService.submitNannyForReview(updated.id);
       nanny.value = updated;
+      _hideBlockingLoader();
       Get.snackbar(
         AppStrings.nannySubmittedTitle.tr,
         AppStrings.nannySubmittedBody.tr,
       );
       Get.offAllNamed(Routes.nannyPending);
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      _hideBlockingLoader();
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docUploadFailed.tr);
     } finally {
       isLoading.value = false;
     }
@@ -578,4 +724,11 @@ class NannyProfileController extends GetxController {
     }
     nanny.value = n.copyWith(profileScore: score.clamp(0, 100));
   }
+}
+
+class _StagedDoc {
+  _StagedDoc({required this.bytes, required this.ext, required this.contentType});
+  final Uint8List bytes;
+  final String ext;
+  final String contentType;
 }

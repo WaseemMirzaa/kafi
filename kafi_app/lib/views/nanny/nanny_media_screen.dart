@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:video_player/video_player.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
@@ -15,8 +16,8 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
     final editMode = Get.arguments is Map && (Get.arguments as Map)['editMode'] == true;
     return KafiStepScaffold(
       step: 2,
-      title: 'Your nanny profile',
-      subtitle: 'Let families see & hear you 🌸',
+      title: AppStrings.mediaTitle.tr,
+      subtitle: AppStrings.mediaSubtitle.tr,
       onBack: editMode ? Get.back : null,
       footer: Obx(
         () => KafiPrimaryButton(
@@ -30,7 +31,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
         // ── Photos section ──────────────────────────────────────
         _fsecHeader(
           icon: Icons.photo_camera_outlined,
-          label: 'Profile Photos (min 1, max 5)',
+          label: AppStrings.mediaPhotosHeader.tr,
           purple: false,
         ),
         _photoUploadArea(),
@@ -40,7 +41,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
         // ── Video section ───────────────────────────────────────
         _fsecHeader(
           icon: Icons.videocam_outlined,
-          label: 'Intro Video (max 60 seconds)',
+          label: AppStrings.mediaVideoHeader.tr,
           purple: true,
         ),
         _videoArea(),
@@ -88,8 +89,15 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
     );
   }
 
-  // ── Photo upload tap area ───────────────────────────────────────
+  // ── Photo upload tap area / cover ───────────────────────────────
   Widget _photoUploadArea() {
+    return Obx(() {
+      final photos = controller.photoUrls;
+      return photos.isEmpty ? _photoPrompt() : _coverCard(photos.first);
+    });
+  }
+
+  Widget _photoPrompt() {
     return GestureDetector(
       onTap: controller.pickAndUploadPhoto,
       child: Container(
@@ -118,12 +126,12 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
             ),
             const SizedBox(height: 6),
             Text(
-              'Tap to add photos',
+              AppStrings.mediaTapAdd.tr,
               style: KafiTheme.fredoka(12, color: KafiColors.roseD, w: FontWeight.w800),
             ),
             const SizedBox(height: 2),
             Text(
-              'No sunglasses · No heavy filters',
+              AppStrings.mediaPhotoRule.tr,
               style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600),
             ),
             const SizedBox(height: 4),
@@ -135,7 +143,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                '📈 Profiles with photos get 3× more views',
+                AppStrings.mediaPhotoViews.tr,
                 style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700),
               ),
             ),
@@ -144,6 +152,55 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
       ),
     );
   }
+
+  // ── Cover card: first photo fills the pink container ────────────
+  Widget _coverCard(String url) {
+    return GestureDetector(
+      onTap: controller.pickAndUploadPhoto,
+      child: Container(
+        width: double.infinity,
+        height: 150,
+        margin: const EdgeInsets.only(bottom: 9),
+        decoration: BoxDecoration(
+          color: KafiColors.roseP,
+          border: Border.all(color: KafiColors.roseL, width: 2),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              (url.startsWith('http') || url.startsWith('data:'))
+                  ? Image.network(url, fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _coverPlaceholder())
+                  : _coverPlaceholder(),
+              Positioned(
+                left: 8,
+                top: 8,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: KafiColors.roseD,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text('⭐ ${AppStrings.mediaCover.tr}',
+                      style: KafiTheme.nunito(9, color: Colors.white, w: FontWeight.w800)),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _coverPlaceholder() => Container(
+        color: KafiColors.roseP,
+        child: const Center(
+          child: Icon(Icons.person_outline, color: KafiColors.roseD, size: 40),
+        ),
+      );
 
   // ── Photo thumbnails row ────────────────────────────────────────
   Widget _photoRow() {
@@ -184,7 +241,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
             return Padding(
               padding: const EdgeInsets.only(right: 6),
               child: GestureDetector(
-                onTap: i == 0 && photos.isEmpty ? controller.pickAndUploadPhoto : null,
+                onTap: controller.pickAndUploadPhoto,
                 child: Container(
                   width: 46,
                   height: 46,
@@ -246,9 +303,9 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
               Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Record your intro video',
+                  Text(AppStrings.mediaRecordTitle.tr,
                       style: KafiTheme.fredoka(12, color: const Color(0xFF3A1060), w: FontWeight.w800)),
-                  Text('Let families meet the real you 🌸',
+                  Text(AppStrings.mediaRecordSub.tr,
                       style: KafiTheme.nunito(9, color: KafiColors.pur, w: FontWeight.w600)),
                 ],
               ),
@@ -289,7 +346,14 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
           Obx(() => controller.introVideoUrl.value != null
               ? Column(
                   children: [
-                    _videoPreviewRow(),
+                    _IntroVideoPreview(
+                      url: controller.introVideoUrl.value!,
+                      name: controller.introVideoName.value,
+                      onRemove: () {
+                        controller.introVideoUrl.value = null;
+                        controller.introVideoName.value = null;
+                      },
+                    ),
                     const SizedBox(height: 8),
                   ],
                 )
@@ -375,68 +439,6 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
     );
   }
 
-  Widget _videoPreviewRow() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [KafiColors.pur, Color(0xFFC084FC)],
-        ),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 26,
-            height: 26,
-            decoration: const BoxDecoration(
-              color: Colors.white24,
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.play_arrow, color: Colors.white, size: 14),
-          ),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('My intro video',
-                    style: KafiTheme.nunito(10, color: Colors.white, w: FontWeight.w800)),
-                Text('⏱ 0:47 / 1:00 · Ready to submit',
-                    style: KafiTheme.nunito(9, color: Colors.white70, w: FontWeight.w600)),
-                const SizedBox(height: 4),
-                ClipRRect(
-                  borderRadius: BorderRadius.circular(2),
-                  child: LinearProgressIndicator(
-                    value: 0.47,
-                    minHeight: 3,
-                    backgroundColor: Colors.white24,
-                    valueColor: const AlwaysStoppedAnimation<Color>(Color(0xB3FFFFFF)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: 7),
-          GestureDetector(
-            onTap: () => controller.introVideoUrl.value = null,
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: const BoxDecoration(
-                color: Colors.white24,
-                shape: BoxShape.circle,
-              ),
-              child: const Icon(Icons.close, color: Colors.white, size: 9),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _photoThumb(String url) {
     final child = (url.startsWith('data:') || url.startsWith('http'))
         ? Image.network(url,
@@ -461,4 +463,151 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
         ),
         child: const Icon(Icons.person_outline, color: Colors.white, size: 22),
       );
+}
+
+/// Real intro-video preview backed by `video_player`: play/pause, a scrubbable
+/// seekbar, live position/duration, and a remove control. Degrades to a static
+/// "ready" row if the video fails to initialise.
+class _IntroVideoPreview extends StatefulWidget {
+  const _IntroVideoPreview({required this.url, this.name, required this.onRemove});
+
+  final String url;
+  final String? name;
+  final VoidCallback onRemove;
+
+  @override
+  State<_IntroVideoPreview> createState() => _IntroVideoPreviewState();
+}
+
+class _IntroVideoPreviewState extends State<_IntroVideoPreview> {
+  VideoPlayerController? _ctrl;
+  bool _ready = false;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _init();
+  }
+
+  Future<void> _init() async {
+    try {
+      final c = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      _ctrl = c;
+      await c.initialize();
+      c.addListener(_onTick);
+      if (mounted) setState(() => _ready = true);
+    } catch (_) {
+      if (mounted) setState(() => _failed = true);
+    }
+  }
+
+  void _onTick() {
+    if (mounted) setState(() {});
+  }
+
+  @override
+  void dispose() {
+    _ctrl?.removeListener(_onTick);
+    _ctrl?.dispose();
+    super.dispose();
+  }
+
+  String _fmt(Duration d) =>
+      '${d.inMinutes}:${(d.inSeconds % 60).toString().padLeft(2, '0')}';
+
+  void _toggle() {
+    final c = _ctrl;
+    if (c == null || !_ready) return;
+    setState(() => c.value.isPlaying ? c.pause() : c.play());
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final c = _ctrl;
+    final pos = c?.value.position ?? Duration.zero;
+    final dur = c?.value.duration ?? Duration.zero;
+    final playing = c?.value.isPlaying ?? false;
+    final name = (widget.name != null && widget.name!.isNotEmpty)
+        ? widget.name!
+        : AppStrings.mediaIntroVideo.tr;
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [KafiColors.pur, Color(0xFFC084FC)],
+        ),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          GestureDetector(
+            onTap: _toggle,
+            child: Container(
+              width: 26,
+              height: 26,
+              decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+              child: Icon(
+                _failed ? Icons.error_outline : (playing ? Icons.pause : Icons.play_arrow),
+                color: Colors.white,
+                size: 14,
+              ),
+            ),
+          ),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(name,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KafiTheme.nunito(10, color: Colors.white, w: FontWeight.w800)),
+                Text(
+                  _ready
+                      ? '⏱ ${_fmt(pos)} / ${_fmt(dur)} · ${AppStrings.mediaVideoReady.tr}'
+                      : AppStrings.mediaVideoReady.tr,
+                  style: KafiTheme.nunito(9, color: Colors.white70, w: FontWeight.w600),
+                ),
+                const SizedBox(height: 4),
+                (_ready && c != null)
+                    ? SizedBox(
+                        height: 6,
+                        child: VideoProgressIndicator(
+                          c,
+                          allowScrubbing: true,
+                          colors: const VideoProgressColors(
+                            playedColor: Color(0xB3FFFFFF),
+                            bufferedColor: Colors.white24,
+                            backgroundColor: Colors.white24,
+                          ),
+                        ),
+                      )
+                    : ClipRRect(
+                        borderRadius: BorderRadius.circular(2),
+                        child: const LinearProgressIndicator(
+                          minHeight: 3,
+                          backgroundColor: Colors.white24,
+                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xB3FFFFFF)),
+                        ),
+                      ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 7),
+          GestureDetector(
+            onTap: widget.onRemove,
+            child: Container(
+              width: 20,
+              height: 20,
+              decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+              child: const Icon(Icons.close, color: Colors.white, size: 9),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
 }

@@ -86,6 +86,10 @@ class MockAuthService implements IAuthService {
       hasPassword: true,
       fullName: role == UserType.nanny ? 'Maria Santos' : 'Al Rashid Family',
     );
+    // Persist so a password-login session survives an app restart (matches the
+    // OTP-signup path which also writes to SharedPreferences).
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyUser, '${_memoryUser!.id}|$phone|${role.index}|1');
     return _memoryUser;
   }
 
