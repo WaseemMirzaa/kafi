@@ -67,20 +67,32 @@ class FirebaseAuthService implements IAuthService {
       if (hasPasswordExisting == null) 'hasPassword': false,
     }, SetOptions(merge: true));
 
+    await _ensureProfileSkeleton(user.uid);
+  }
+
+  /// Creates the role-specific profile skeleton **only if it does not already
+  /// exist**. Re-running registration (e.g. a returning user who signs in via
+  /// OTP, or a re-tap of "verify") must never reset an approved nanny back to
+  /// `draft` or wipe a family's subscription/usage counters.
+  Future<void> _ensureProfileSkeleton(String uid) async {
     if (_pendingRole == UserType.family) {
-      await FirebaseFirestore.instance.collection('families').doc(user.uid).set({
-        'userId': user.uid,
-        'id': user.uid,
+      final ref = FirebaseFirestore.instance.collection('families').doc(uid);
+      if ((await ref.get()).exists) return;
+      await ref.set({
+        'userId': uid,
+        'id': uid,
         'freeContactsUsed': 0,
         'viewedProfiles': <String>[],
         'subscription': {'status': 'free'},
-      }, SetOptions(merge: true));
+      });
     } else {
-      await FirebaseFirestore.instance.collection('nannies').doc(user.uid).set({
-        'userId': user.uid,
-        'id': user.uid,
+      final ref = FirebaseFirestore.instance.collection('nannies').doc(uid);
+      if ((await ref.get()).exists) return;
+      await ref.set({
+        'userId': uid,
+        'id': uid,
         'status': NannyOnboardingStatus.draft.name,
-      }, SetOptions(merge: true));
+      });
     }
   }
 
@@ -100,29 +112,14 @@ class FirebaseAuthService implements IAuthService {
       }
     }
 
-    final roleName = _pendingRole.name;
     await _users.doc(user.uid).set({
       'phone': phone,
-      'type': roleName,
+      'type': _pendingRole.name,
       'hasPassword': true,
       'email': email,
     }, SetOptions(merge: true));
 
-    if (_pendingRole == UserType.family) {
-      await FirebaseFirestore.instance.collection('families').doc(user.uid).set({
-        'userId': user.uid,
-        'id': user.uid,
-        'freeContactsUsed': 0,
-        'viewedProfiles': <String>[],
-        'subscription': {'status': 'free'},
-      }, SetOptions(merge: true));
-    } else {
-      await FirebaseFirestore.instance.collection('nannies').doc(user.uid).set({
-        'userId': user.uid,
-        'id': user.uid,
-        'status': NannyOnboardingStatus.draft.name,
-      }, SetOptions(merge: true));
-    }
+    await _ensureProfileSkeleton(user.uid);
   }
 
   @override
