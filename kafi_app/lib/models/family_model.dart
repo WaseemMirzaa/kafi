@@ -94,14 +94,28 @@ class FamilySubscription {
             (e) => e.name == m['status'],
             orElse: () => SubscriptionStatus.free),
         plan: m['plan'],
-        startDate: m['startDate'] != null ? DateTime.tryParse(m['startDate']) : null,
-        endDate: m['endDate'] != null ? DateTime.tryParse(m['endDate']) : null,
+        startDate: _date(m['startDate']),
+        endDate: _date(m['endDate']),
         autoRenew: m['autoRenew'] ?? false,
         revenueCatId: m['revenueCatId'],
         hasEverSubscribed: m['hasEverSubscribed'] ?? false,
-        expiredAt: m['expiredAt'] != null ? DateTime.tryParse(m['expiredAt']) : null,
-        lastRenewalAt: m['lastRenewalAt'] != null ? DateTime.tryParse(m['lastRenewalAt']) : null,
+        expiredAt: _date(m['expiredAt']),
+        lastRenewalAt: _date(m['lastRenewalAt']),
       );
+
+  /// Accepts ISO strings, `DateTime`, or a Firestore `Timestamp` (duck-typed
+  /// `.toDate()`). Subscription dates are written as Timestamps by the
+  /// subscription service / webhook / admin, but as ISO strings by `toMap()`.
+  static DateTime? _date(dynamic v) {
+    if (v == null) return null;
+    if (v is DateTime) return v;
+    if (v is String) return DateTime.tryParse(v);
+    try {
+      return (v as dynamic).toDate() as DateTime?;
+    } catch (_) {
+      return null;
+    }
+  }
 }
 
 /// Per System Spec §3.3
@@ -127,6 +141,14 @@ class FamilyStats {
         'trialsCount': trialsCount,
         'hiresCount': hiresCount,
       };
+
+  factory FamilyStats.fromMap(Map<String, dynamic>? m) => FamilyStats(
+        jobPostsCount: (m?['jobPostsCount'] as num?)?.toInt() ?? 0,
+        activeJobPosts: (m?['activeJobPosts'] as num?)?.toInt() ?? 0,
+        totalApplicationsReceived: (m?['totalApplicationsReceived'] as num?)?.toInt() ?? 0,
+        trialsCount: (m?['trialsCount'] as num?)?.toInt() ?? 0,
+        hiresCount: (m?['hiresCount'] as num?)?.toInt() ?? 0,
+      );
 }
 
 /// Complete Family model per System Spec §3.3

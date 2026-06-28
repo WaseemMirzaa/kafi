@@ -47,7 +47,11 @@ class FirestoreTrialService implements ITrialService {
 
   @override
   Future<void> sendOffer(TrialModel trial) async {
-    await _trials.doc(trial.id).set(trial.toMap());
+    // Persist startDate as a Timestamp so the scheduled "trial starts tomorrow"
+    // reminder (a Timestamp range query in functions) can actually match it.
+    final data = trial.toMap();
+    data['startDate'] = Timestamp.fromDate(trial.startDate);
+    await _trials.doc(trial.id).set(data);
   }
 
   @override
