@@ -30,19 +30,32 @@ class FirestoreUserService implements IUserService {
       hasPets: m['hasPets'] ?? false,
       petTypes: List<String>.from(m['petTypes'] ?? []),
       religion: (m['religion'] as String?) ?? '',
+      nannyReligionPreference: NannyReligionPreference.values.firstWhere(
+          (e) => e.name == m['nannyReligionPreference'],
+          orElse: () => NannyReligionPreference.noPreference),
       houseRules: m['houseRules'] as String?,
       aboutFamily: m['aboutFamily'] as String?,
+      profilePhoto: m['profilePhoto'] as String?,
+      specialNeedsDetails: m['specialNeedsDetails'] as String?,
       subscription: subMap != null
           ? FamilySubscription.fromMap(subMap)
           : const FamilySubscription(),
       freeContactsUsed: (m['freeContactsUsed'] as num?)?.toInt() ?? 0,
       viewedProfiles: List<String>.from(m['viewedProfiles'] ?? []),
+      activeTrialNannyIds: List<String>.from(m['activeTrialNannyIds'] ?? []),
+      stats: FamilyStats.fromMap(m['stats'] as Map<String, dynamic>?),
     );
   }
 
   @override
-  Future<void> saveFamily(FamilyModel family) =>
-      _families.doc(family.id).set(family.toMap(), SetOptions(merge: true));
+  Future<void> saveFamily(FamilyModel family) {
+    // A profile save must not clobber the subscription sub-map: the family
+    // controller rebuilds FamilyModel with a default 'free' subscription, so
+    // merge-writing it would reset a paid family. Subscription is owned by the
+    // subscription service / RevenueCat webhook.
+    final data = family.toMap()..remove('subscription');
+    return _families.doc(family.id).set(data, SetOptions(merge: true));
+  }
 
   @override
   Future<NannyModel?> getNanny(String id) async {

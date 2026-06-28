@@ -64,7 +64,20 @@ class FirestoreJobService implements IJobService {
 
   @override
   Future<void> saveJobPost(JobPostModel post) async {
-    await _jobs.doc(post.id).set(post.toMap(), SetOptions(merge: true));
+    final ref = _jobs.doc(post.id);
+    final exists = (await ref.get()).exists;
+    // Manage timestamps server-side (the model serializes these as null).
+    final data = post.toMap()
+      ..remove('createdAt')
+      ..remove('expiresAt')
+      ..remove('updatedAt');
+    data['updatedAt'] = FieldValue.serverTimestamp();
+    if (!exists) {
+      data['createdAt'] = FieldValue.serverTimestamp();
+      data['expiresAt'] =
+          Timestamp.fromDate(DateTime.now().add(const Duration(days: 7)));
+    }
+    await ref.set(data, SetOptions(merge: true));
   }
 
   @override
@@ -104,22 +117,58 @@ class FirestoreJobService implements IJobService {
         id: id,
         familyId: m['familyId'] ?? '',
         familyName: m['familyName'] ?? '',
-        status: JobPostStatus.values.firstWhere(
-            (e) => e.name == m['status'],
-            orElse: () => JobPostStatus.active),
+        status: _enumByName(JobPostStatus.values, m['status'], JobPostStatus.active),
+        createdAt: _date(m['createdAt']),
+        updatedAt: _date(m['updatedAt']),
+        expiresAt: _date(m['expiresAt']),
         jobTitle: m['jobTitle'] ?? '',
-        rolesNeeded: List<String>.from(m['rolesNeeded'] ?? []),
-        jobType: m['jobType'] == 'liveOut' ? JobType.liveOut : JobType.liveIn,
-        employmentType: m['employmentType'] == 'partTime'
-            ? JobEmploymentType.partTime
-            : JobEmploymentType.fullTime,
-        duties: List<String>.from(m['duties'] ?? []),
-        benefits: List<String>.from(m['benefits'] ?? []),
+        rolesNeeded: List<String>.from(m['rolesNeeded'] ?? const []),
+        jobType: _enumByName(JobType.values, m['jobType'], JobType.liveIn),
+        employmentType: _enumByName(
+            JobEmploymentType.values, m['employmentType'], JobEmploymentType.fullTime),
+        schedule: m['schedule'] ?? '',
+        startDate: _date(m['startDate']),
+        startImmediate: m['startImmediate'] ?? true,
+        duration: _enumByName(JobDuration.values, m['duration'], JobDuration.permanent),
+        contractMonths: (m['contractMonths'] as num?)?.toInt(),
+        experienceYears: (m['experienceYears'] as num?)?.toInt() ?? 0,
+        languagesRequired: List<String>.from(m['languagesRequired'] ?? const []),
+        languagesPreferred: List<String>.from(m['languagesPreferred'] ?? const []),
+        skillsRequired: List<String>.from(m['skillsRequired'] ?? const []),
+        nationalityPreference: List<String>.from(m['nationalityPreference'] ?? const []),
+        religionPreference: _religionPref(m['religionPreference']),
+        duties: List<String>.from(m['duties'] ?? const []),
         salaryMin: (m['salaryMin'] as num?)?.toInt() ?? 0,
         salaryMax: (m['salaryMax'] as num?)?.toInt() ?? 0,
-        languagesRequired: List<String>.from(m['languagesRequired'] ?? []),
+        currency: m['currency'] ?? 'AED',
+        benefits: List<String>.from(m['benefits'] ?? const []),
+        visaSponsorship: _enumByName(
+            VisaSponsorship.values, m['visaSponsorship'], VisaSponsorship.full),
+        trialDurationDays: (m['trialDurationDays'] as num?)?.toInt() ?? 0,
+        trialDailyRate: (m['trialDailyRate'] as num?)?.toInt() ?? 0,
+        additionalNotes: m['additionalNotes'] as String?,
+        viewsCount: (m['viewsCount'] as num?)?.toInt() ?? 0,
+        applicationsCount: (m['applicationsCount'] as num?)?.toInt() ?? 0,
         city: m['city'] ?? '',
-        createdAt: (m['createdAt'] as Timestamp?)?.toDate(),
-        expiresAt: (m['expiresAt'] as Timestamp?)?.toDate(),
+        commitmentAgreed: m['commitmentAgreed'] ?? false,
       );
+
+  static DateTime? _date(dynamic v) {
+    if (v == null) return null;
+    if (v is Timestamp) return v.toDate();
+    if (v is DateTime) return v;
+    if (v is String) return DateTime.tryParse(v);
+    return null;
+  }
+
+  static T _enumByName<T extends Enum>(List<T> values, Object? name, T fallback) =>
+      values.firstWhere((e) => e.name == name, orElse: () => fallback);
+
+  static NannyReligionPreference? _religionPref(Object? name) {
+    if (name == null) return null;
+    for (final e in NannyReligionPreference.values) {
+      if (e.name == name) return e;
+    }
+    return null;
+  }
 }

@@ -85,7 +85,14 @@ class AuthController extends GetxController {
     final user = await _authService.getCurrentUser();
     if (user != null) {
       currentUser.value = user;
-      await _navigateHome(user);
+      // A user who verified OTP but abandoned the create-password step is
+      // resumed straight back to it — Spec §6.1/§6.2 require a password before
+      // the profile can be used.
+      if (!user.hasPassword) {
+        Get.offAllNamed(Routes.createPassword);
+      } else {
+        await _navigateHome(user);
+      }
     }
   }
 
@@ -173,36 +180,32 @@ class AuthController extends GetxController {
     isLoading.value = true;
     try {
       await _authService.verifyOtp(otpCode.value);
-      _otpTimer?.cancel();
-      otpError.value = '';
     } catch (e) {
       otpError.value = _authErrorMessage(e);
-      return;
-    } finally {
       isLoading.value = false;
+      return;
     }
-    // Phone-only signup: both returning and new users skip the create-password
-    // screen and go straight to their home/onboarding after OTP.
-    await completeSignupAfterOtp(skipPassword: true);
-  }
-
-  /// After OTP: phone-only signup (no create-password screen).
-  Future<void> completeSignupAfterOtp({bool skipPassword = false}) async {
-    isLoading.value = true;
+    _otpTimer?.cancel();
+    otpError.value = '';
+    // Persist phone + role and create the profile skeleton immediately. This is
+    // an idempotent merge that never resets an existing profile, so even if the
+    // user abandons the create-password step their role is already recorded and
+    // a resumed session continues correctly.
     try {
-      if (skipPassword) {
-        await _authService.finalizePhoneRegistration();
-      }
+      await _authService.finalizePhoneRegistration();
       final user = await _authService.getCurrentUser();
       if (user == null) {
         Get.snackbar(AppStrings.errorTitle.tr, AppStrings.authSessionLost.tr);
         return;
       }
       currentUser.value = user;
-      await _navigateHome(
-        user,
-        isNewFamilyRegistration: user.isFamily,
-      );
+      if (user.hasPassword) {
+        // Returning user who verified via OTP — straight to home/onboarding.
+        await _navigateHome(user, isNewFamilyRegistration: false);
+      } else {
+        // New user — must set a password before continuing (Spec §6.1/§6.2).
+        await Get.toNamed(Routes.createPassword);
+      }
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, _authErrorMessage(e));
     } finally {

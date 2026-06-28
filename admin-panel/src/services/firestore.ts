@@ -1077,12 +1077,12 @@ function parseJobPost(id: string, data: Record<string, unknown>): JobPostRow {
 export const JobPostService = {
   async listByFamily(familyId: string): Promise<JobPostRow[]> {
     if (useMock()) return mockJobPosts.filter((j) => j.familyId === familyId);
-    const snap = await getDocs(query(collection(db!, 'jobPosts'), where('familyId', '==', familyId), limit(100)));
+    const snap = await getDocs(query(collection(db!, 'jobs'), where('familyId', '==', familyId), limit(100)));
     return snap.docs.map((d) => parseJobPost(d.id, d.data() as Record<string, unknown>));
   },
   async get(id: string): Promise<JobPostRow | null> {
     if (useMock()) return mockJobPosts.find((j) => j.id === id) ?? null;
-    const snap = await getDoc(doc(db!, 'jobPosts', id));
+    const snap = await getDoc(doc(db!, 'jobs', id));
     return snap.exists() ? parseJobPost(snap.id, snap.data() as Record<string, unknown>) : null;
   },
 };

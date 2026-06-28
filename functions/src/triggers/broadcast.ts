@@ -46,9 +46,9 @@ export const onBroadcastCreated = onDocumentCreated(
     } else {
       let usersQuery: FirebaseFirestore.Query = db.collection('users');
       if (audience === 'nannies') {
-        usersQuery = usersQuery.where('userType', '==', 'nanny');
+        usersQuery = usersQuery.where('type', '==', 'nanny');
       } else if (audience === 'families') {
-        usersQuery = usersQuery.where('userType', '==', 'family');
+        usersQuery = usersQuery.where('type', '==', 'family');
       }
       const snap = await usersQuery.get();
       snap.forEach((d) => {
