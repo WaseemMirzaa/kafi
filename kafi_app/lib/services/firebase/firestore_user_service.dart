@@ -71,9 +71,14 @@ class FirestoreUserService implements IUserService {
 
   @override
   Future<void> submitNannyForReview(String id) async {
+    // Resubmitting after a rejection must clear the admin's previous verdict so
+    // the nanny isn't shown a stale reason once they're back in the queue. The
+    // fields are deleted (not nulled) since the app never writes them otherwise.
     await _col.doc(id).update({
       'status': NannyOnboardingStatus.pending.name,
       'submittedAt': FieldValue.serverTimestamp(),
+      'rejectionReason': FieldValue.delete(),
+      'rejectedAt': FieldValue.delete(),
     });
   }
 

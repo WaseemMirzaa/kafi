@@ -6,7 +6,7 @@ import {
   onTrialOffered,
   onTrialResponse,
 } from './triggers/trial';
-import { onDocumentReviewed, onNannySubmitted } from './triggers/nanny';
+import { onDocumentReviewed } from './triggers/nanny';
 import {
   subscriptionExpiredEnforcer,
   subscriptionExpiringReminder,
@@ -25,7 +25,6 @@ export {
   onTrialResponse,
   onTrialEnded,
   onDocumentReviewed,
-  onNannySubmitted,
   subscriptionExpiredEnforcer,
   subscriptionExpiringReminder,
   trialStartingReminder,

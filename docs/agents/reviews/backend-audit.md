@@ -46,9 +46,14 @@ live mode (`useMock=false`). ✅ = fixed in this branch; ☐ = still open.
   reads) and uses a deterministic doc id (idempotent add/remove).
 - ☐ **#10 Chat/trial pushes show no sender name** — functions read `users.fullName`
   (absent); name lives on `families`/`nannies`. Read the profile doc.
-- ☐ **#11 Rejected nanny is a dead end** — no `rejected` branch in the watch/login;
-  `NannyModel` lacks `rejectionReason`/`introVideoStatus`. Also the "profile submitted"
-  push is dead (onCreate vs the draft→pending update).
+- ✅ **#11 Rejected nanny is a dead end** — `NannyModel` now parses
+  `rejectionReason`/`rejectedAt`/`introVideoStatus`/`introVideoRejectionReason`
+  (admin-owned, read-only — not in `toMap`). The pending screen renders a rejected
+  state (reason card + per-doc reasons + intro-video verdict + **Resubmit**), the
+  watch reacts to live rejection, login routes rejected nannies to the pending
+  screen, and `submitNannyForReview` clears the reason on resubmit. The dead
+  "profile submitted" push moved from `onCreate` to the draft→pending transition
+  in `onDocumentReviewed` (`onNannySubmitted` removed).
 - ☐ **#13 No one-application-per-job guard** — `apply()` never checks existing apps.
 - ☐ **#15 Free contact reveal enforced only by UI routing** — `contactsHidden` is false
   for free users; gate in the controller/rules too.
