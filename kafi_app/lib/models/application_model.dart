@@ -35,6 +35,12 @@ class ApplicationModel {
   final DateTime? respondedAt;
   final DateTime? withdrawnAt;
 
+  /// Denormalized display names written at apply time so the admin console and
+  /// the family "Applicants" list can render without N extra lookups.
+  final String? nannyName;
+  final String? jobTitle;
+  final String? familyName;
+
   const ApplicationModel({
     required this.id,
     required this.jobPostId,
@@ -47,6 +53,9 @@ class ApplicationModel {
     this.viewedAt,
     this.respondedAt,
     this.withdrawnAt,
+    this.nannyName,
+    this.jobTitle,
+    this.familyName,
   });
 
   ApplicationModel copyWith({
@@ -67,6 +76,9 @@ class ApplicationModel {
         viewedAt: viewedAt ?? this.viewedAt,
         respondedAt: respondedAt ?? this.respondedAt,
         withdrawnAt: withdrawnAt ?? this.withdrawnAt,
+        nannyName: nannyName,
+        jobTitle: jobTitle,
+        familyName: familyName,
       );
 
   Map<String, dynamic> toMap() => {
@@ -81,6 +93,9 @@ class ApplicationModel {
         'viewedAt': viewedAt?.toIso8601String(),
         'respondedAt': respondedAt?.toIso8601String(),
         'withdrawnAt': withdrawnAt?.toIso8601String(),
+        'nannyName': nannyName,
+        'jobTitle': jobTitle,
+        'familyName': familyName,
       };
 
   factory ApplicationModel.fromMap(Map<String, dynamic> m) => ApplicationModel(
@@ -98,5 +113,8 @@ class ApplicationModel {
         viewedAt: _parseDate(m['viewedAt']),
         respondedAt: _parseDate(m['respondedAt']),
         withdrawnAt: _parseDate(m['withdrawnAt']),
+        nannyName: m['nannyName']?.toString(),
+        jobTitle: m['jobTitle']?.toString(),
+        familyName: m['familyName']?.toString(),
       );
 }

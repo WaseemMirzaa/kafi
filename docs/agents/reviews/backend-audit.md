@@ -54,7 +54,11 @@ live mode (`useMock=false`). ✅ = fixed in this branch; ☐ = still open.
   screen, and `submitNannyForReview` clears the reason on resubmit. The dead
   "profile submitted" push moved from `onCreate` to the draft→pending transition
   in `onDocumentReviewed` (`onNannySubmitted` removed).
-- ☐ **#13 No one-application-per-job guard** — `apply()` never checks existing apps.
+- ✅ **#13 No one-application-per-job guard** — `apply()` now uses a deterministic
+  doc id `${jobId}_${nannyId}`: a re-apply hits the same doc and is blocked unless
+  the prior one was withdrawn (Spec §14 J3), with a controller fast-path pre-check.
+  Also denormalizes `nannyName`/`jobTitle`/`familyName` onto the application doc so
+  the admin console & family "Applicants" list aren't blank. Mock mirrors the guard.
 - ☐ **#15 Free contact reveal enforced only by UI routing** — `contactsHidden` is false
   for free users; gate in the controller/rules too.
 - ☐ **#16 Active subs never expire client-side** (relies on the hourly enforcer) and chat

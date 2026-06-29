@@ -364,6 +364,7 @@ abstract class AppStrings {
   static const trialOfferAckLabel = 'trial_offer_ack_label';
   static const trialAlreadyActive = 'trial_already_active';
   static const trialActiveNoApply = 'trial_active_no_apply';
+  static const applyAlreadyApplied = 'apply_already_applied';
   static const trialCounterOffer = 'trial_counter_offer';
   static const trialStatusAccepted = 'trial_status_accepted';
   static const trialStatusActive = 'trial_status_active';

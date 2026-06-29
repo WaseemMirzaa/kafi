@@ -38,17 +38,25 @@ class MockApplicationService implements IApplicationService {
     String? coverMessage,
   }) async {
     await Future.delayed(const Duration(milliseconds: 500));
+    // One application per (job, nanny) unless the prior one was withdrawn
+    // (Spec §14 J3) — mirrors the live deterministic-id guard.
+    final already = _applications.any((a) =>
+        a.jobPostId == jobId &&
+        mockNannyIdMatches(nannyId, a.nannyId) &&
+        a.status != ApplicationStatus.withdrawn);
+    if (already) throw Exception('already_applied');
     final job = await Get.find<IJobService>().getJob(jobId);
-    final familyId = job?.familyId ?? '';
     final app = ApplicationModel(
       id: _uuid.v4(),
       jobPostId: jobId,
       nannyId: nannyId,
-      familyId: familyId,
+      familyId: job?.familyId ?? '',
       status: ApplicationStatus.pending,
       matchScore: 85,
       coverMessage: coverMessage,
       createdAt: DateTime.now(),
+      jobTitle: job?.jobTitle,
+      familyName: job?.familyName,
     );
     _applications.add(app);
     return app;

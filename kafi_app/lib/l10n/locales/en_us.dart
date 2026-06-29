@@ -493,6 +493,7 @@ const Map<String, String> enUs = {
   AppStrings.trialOfferAckLabel: 'I understand payment is handled directly between family and nanny.',
   AppStrings.trialAlreadyActive: 'A trial offer is already active or pending with this nanny.',
   AppStrings.trialActiveNoApply: 'Finish your current trial before applying to new jobs.',
+  AppStrings.applyAlreadyApplied: "You've already applied to this job.",
   AppStrings.trialCounterOffer: 'Counter offer: AED @rate/day',
   AppStrings.trialStatusAccepted: 'Accepted',
   AppStrings.trialStatusActive: 'Active',

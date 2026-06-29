@@ -58,12 +58,23 @@ class ApplicationController extends GetxController {
         Get.snackbar(AppStrings.errorTitle.tr, AppStrings.authSessionLost.tr);
         return false;
       }
+      // Guard against a duplicate application (Spec §14 J3). Fast-path on the
+      // already-loaded list; the service enforces it authoritatively too.
+      final alreadyApplied = myApplications.any(
+          (a) => a.jobPostId == jobId && a.status != ApplicationStatus.withdrawn);
+      if (alreadyApplied) {
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.applyAlreadyApplied.tr);
+        return false;
+      }
       await _appService.apply(nannyId: nannyId, jobId: jobId, coverMessage: coverMessage);
       await loadApplications();
       // Success feedback is surfaced by the caller as a popup (see SmartMatchScreen).
       return true;
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      final msg = e.toString().contains('already_applied')
+          ? AppStrings.applyAlreadyApplied.tr
+          : e.toString();
+      Get.snackbar(AppStrings.errorTitle.tr, msg);
       return false;
     } finally {
       isLoading.value = false;
