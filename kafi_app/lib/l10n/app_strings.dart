@@ -365,6 +365,22 @@ abstract class AppStrings {
   static const trialAlreadyActive = 'trial_already_active';
   static const trialActiveNoApply = 'trial_active_no_apply';
   static const applyAlreadyApplied = 'apply_already_applied';
+
+  // Family "Applicants" view (Spec §6.x — family receives applications)
+  static const familyApplicants = 'family_applicants';
+  static const familyApplicantsSub = 'family_applicants_sub';
+  static const familyApplicantsEmpty = 'family_applicants_empty';
+  static const familyApplicantsEmptySub = 'family_applicants_empty_sub';
+  static const applicantShortlist = 'applicant_shortlist';
+  static const applicantDecline = 'applicant_decline';
+  // Application status labels (shared)
+  static const appStatusPending = 'app_status_pending';
+  static const appStatusViewed = 'app_status_viewed';
+  static const appStatusShortlisted = 'app_status_shortlisted';
+  static const appStatusTrialOffered = 'app_status_trial_offered';
+  static const appStatusDeclined = 'app_status_declined';
+  static const appStatusWithdrawn = 'app_status_withdrawn';
+  static const appStatusHired = 'app_status_hired';
   static const trialCounterOffer = 'trial_counter_offer';
   static const trialStatusAccepted = 'trial_status_accepted';
   static const trialStatusActive = 'trial_status_active';

@@ -10,6 +10,7 @@ import 'package:kafi_app/views/auth/otp_verify_screen.dart';
 import 'package:kafi_app/views/auth/welcome_screen.dart';
 import 'package:kafi_app/views/family/family_shell_screen.dart';
 import 'package:kafi_app/views/family/compare_screen.dart';
+import 'package:kafi_app/views/family/family_applicants_screen.dart';
 import 'package:kafi_app/views/family/family_edit_screen.dart';
 import 'package:kafi_app/views/family/family_form_screen.dart';
 import 'package:kafi_app/views/family/notifications_screen.dart';
@@ -58,6 +59,7 @@ abstract class Routes {
 
   static const familyForm = '/family-form';
   static const familyEdit = '/family-edit';
+  static const familyApplicants = '/family-applicants';
   static const browse = '/browse';
   static const profileLocked = '/profile-locked';
   static const profileRelocked = '/profile-relocked';
@@ -100,6 +102,7 @@ class AppRoutes {
     GetPage(name: Routes.nannyEditProfile, page: () => const NannyEditProfileScreen(), binding: NannyBinding()),
     GetPage(name: Routes.familyForm, page: () => const FamilyFormScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.familyEdit, page: () => const FamilyEditScreen(), binding: FamilyBinding()),
+    GetPage(name: Routes.familyApplicants, page: () => const FamilyApplicantsScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.browse, page: () => const FamilyShellScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.profileLocked, page: () => const ProfileLockedScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.profileRelocked, page: () => const ProfileRelockedScreen(), binding: FamilyBinding()),

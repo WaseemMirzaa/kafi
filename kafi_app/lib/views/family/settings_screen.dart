@@ -41,6 +41,8 @@ class SettingsScreen extends GetView<SettingsController> {
             _actionTile(Icons.work_outline, 'My applications', () => Get.toNamed(Routes.nannyApplications)),
             const SizedBox(height: 8),
           ] else if (Get.find<AuthController>().currentUser.value?.isFamily == true) ...[
+            _actionTile(Icons.people_alt_outlined, AppStrings.familyApplicants.tr,
+                () => Get.toNamed(Routes.familyApplicants)),
             _actionTile(Icons.edit_outlined, AppStrings.familyEditTitle.tr,
                 () => Get.toNamed(Routes.familyEdit)),
             _actionTile(Icons.workspace_premium_outlined, AppStrings.settingsSubscription.tr,

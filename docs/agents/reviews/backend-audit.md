@@ -32,8 +32,11 @@ live mode (`useMock=false`). ✅ = fixed in this branch; ☐ = still open.
 - ☐ **#2 Push deep-links don't navigate.** App routes off `data['route']` (mock-only);
   functions send `data:{type, trialId/threadId/applicationId}`. Fix the payload or the
   handler mapping. (`notification_controller.dart` / `functions/.../*.ts`)
-- ☐ **#5 Family can't see received applications** — `ApplicationController.receivedApplications`
-  is rendered by no screen. Needs a family "Applicants" view.
+- ✅ **#5 Family can't see received applications** — new `FamilyApplicantsScreen`
+  (route `/family-applicants`, entry point in the family Profile/Settings tab)
+  renders `ApplicationController.receivedApplications` with denormalized nanny/job
+  names, localized status badges, cover message, and shortlist/decline/mark-viewed
+  actions (pull-to-refresh). Status labels localized (EN+AR).
 - ☐ **#6 Application never reaches `trialOffered`/`hired`** — `offerTrial()` has no callers;
   hire writes only the trial doc. Wire `offerTrial`/set `ApplicationStatus.hired`.
 - ☐ **#7 In-app `subscribe()` grants `active` with no payment** (monetization bypass).
