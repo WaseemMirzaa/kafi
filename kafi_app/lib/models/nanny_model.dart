@@ -6,6 +6,10 @@ enum MaritalStatus { married, single, divorced, widowed }
 
 enum NannyOnboardingStatus { draft, pending, approved, rejected }
 
+/// Admin's separate review track for the intro video (System Spec §6.1).
+/// Written by the admin panel as `introVideoStatus` on the nanny doc.
+enum IntroVideoStatus { pending, approved, rejected }
+
 /// Per System Spec §3.2
 enum AvailabilityStatus { availableNow, availableFrom, onTrial }
 
@@ -208,6 +212,10 @@ class NannyModel {
     this.references = const [],
     this.documents = const [],
     this.status = NannyOnboardingStatus.draft,
+    this.rejectionReason,
+    this.rejectedAt,
+    this.introVideoStatus,
+    this.introVideoRejectionReason,
     this.isVerified = false,
     this.verifiedAt,
     this.profileScore = 0,
@@ -264,6 +272,18 @@ class NannyModel {
   final List<ReferenceContact> references;
   final List<NannyDocument> documents;
   final NannyOnboardingStatus status;
+
+  /// Admin-owned review feedback (read-only on the app side; written by the
+  /// admin panel via `NannyService.reject`). Deliberately NOT serialized by
+  /// [toMap] so a profile save can never overwrite the admin's decision —
+  /// it is cleared server-side by `submitNannyForReview` on resubmit.
+  final String? rejectionReason;
+  final DateTime? rejectedAt;
+
+  /// Admin's separate intro-video review verdict + reason (admin-owned).
+  final IntroVideoStatus? introVideoStatus;
+  final String? introVideoRejectionReason;
+
   final bool isVerified;
   final DateTime? verifiedAt;
   final int profileScore;
@@ -329,6 +349,10 @@ class NannyModel {
     List<ReferenceContact>? references,
     List<NannyDocument>? documents,
     NannyOnboardingStatus? status,
+    String? rejectionReason,
+    DateTime? rejectedAt,
+    IntroVideoStatus? introVideoStatus,
+    String? introVideoRejectionReason,
     bool? isVerified,
     DateTime? verifiedAt,
     int? profileScore,
@@ -385,6 +409,11 @@ class NannyModel {
         references: references ?? this.references,
         documents: documents ?? this.documents,
         status: status ?? this.status,
+        rejectionReason: rejectionReason ?? this.rejectionReason,
+        rejectedAt: rejectedAt ?? this.rejectedAt,
+        introVideoStatus: introVideoStatus ?? this.introVideoStatus,
+        introVideoRejectionReason:
+            introVideoRejectionReason ?? this.introVideoRejectionReason,
         isVerified: isVerified ?? this.isVerified,
         verifiedAt: verifiedAt ?? this.verifiedAt,
         profileScore: profileScore ?? this.profileScore,

@@ -89,6 +89,7 @@ class NannyProfileController extends GetxController {
   final Map<DocumentType, _StagedDoc> _stagedDocs = {};
 
   StreamSubscription<NannyModel?>? _nannyWatch;
+  NannyOnboardingStatus? _lastWatchedStatus;
 
   bool get _hasRequiredDocs {
     final passport = documents[DocumentType.passport]!;
@@ -173,6 +174,8 @@ class NannyProfileController extends GetxController {
     _nannyWatch?.cancel();
     _nannyWatch = _userService.watchNanny(user.id).listen((n) {
       if (n == null) return;
+      final prev = _lastWatchedStatus;
+      _lastWatchedStatus = n.status;
       nanny.value = n;
       for (final d in n.documents) {
         documents[d.type] = d;
@@ -187,6 +190,21 @@ class NannyProfileController extends GetxController {
             AppStrings.nannyApprovedBody.tr,
           );
         }
+      } else if (n.status == NannyOnboardingStatus.rejected &&
+          prev != null &&
+          prev != NannyOnboardingStatus.rejected) {
+        // Live admin rejection — surface the reason and make sure we're on the
+        // pending screen, which renders the rejection + resubmit (Spec §6.1).
+        // The watch keeps running so a later re-approval still transitions.
+        if (Get.currentRoute != Routes.nannyPending) {
+          Get.offAllNamed(Routes.nannyPending);
+        }
+        Get.snackbar(
+          AppStrings.nannyRejectedTitle.tr,
+          (n.rejectionReason?.isNotEmpty ?? false)
+              ? n.rejectionReason!
+              : AppStrings.nannyRejectedBody.tr,
+        );
       }
     });
   }

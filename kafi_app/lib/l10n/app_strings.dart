@@ -215,11 +215,22 @@ abstract class AppStrings {
   static const docUploaded = 'doc_uploaded';
   static const docMissing = 'doc_missing';
   static const docReviewing = 'doc_reviewing';
+  static const docApproved = 'doc_approved';
+  static const docRejected = 'doc_rejected';
 
   // Step 6 — pending
   static const pendingTitle = 'pending_title';
   static const pendingSub = 'pending_sub';
   static const pendingWhile = 'pending_while';
+  static const nannyDocStatusTitle = 'nanny_doc_status_title';
+  static const nannyIntroVideo = 'nanny_intro_video';
+  static const nannyUpdateDocuments = 'nanny_update_documents';
+  // Rejection flow (Spec §6.1)
+  static const nannyRejectedTitle = 'nanny_rejected_title';
+  static const nannyRejectedSub = 'nanny_rejected_sub';
+  static const nannyRejectedBody = 'nanny_rejected_body';
+  static const nannyRejectedReasonLabel = 'nanny_rejected_reason_label';
+  static const nannyResubmit = 'nanny_resubmit';
 
   // Dashboard
   static const dashStats = 'dash_stats';

@@ -335,7 +335,11 @@ class AuthController extends GetxController {
       final nanny = await Get.find<IUserService>().getNanny(user.id);
       if (nanny?.status == NannyOnboardingStatus.approved) {
         Get.offAllNamed(Routes.nannyHome);
-      } else if (nanny?.status == NannyOnboardingStatus.pending) {
+      } else if (nanny?.status == NannyOnboardingStatus.pending ||
+          nanny?.status == NannyOnboardingStatus.rejected) {
+        // Rejected nannies land on the pending screen too — it renders the
+        // rejection reason and a resubmit action (Spec §6.1), instead of
+        // silently dumping them back at onboarding step 1.
         Get.offAllNamed(Routes.nannyPending);
       } else {
         Get.offAllNamed(Routes.nannyInfo);

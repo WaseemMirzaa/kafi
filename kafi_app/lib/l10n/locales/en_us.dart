@@ -217,10 +217,21 @@ const Map<String, String> enUs = {
   AppStrings.docUploaded: 'Uploaded',
   AppStrings.docMissing: 'Missing',
   AppStrings.docReviewing: 'Reviewing',
+  AppStrings.docApproved: 'Approved',
+  AppStrings.docRejected: 'Rejected',
 
   AppStrings.pendingTitle: 'Profile submitted! 🌸',
   AppStrings.pendingSub: 'Admin is reviewing your profile.\nUsually 1–24 hours.',
   AppStrings.pendingWhile: 'While you wait, keep your phone reachable for verification calls.',
+  AppStrings.nannyDocStatusTitle: 'Document Status',
+  AppStrings.nannyIntroVideo: 'Intro Video',
+  AppStrings.nannyUpdateDocuments: '📁 Update documents',
+  AppStrings.nannyRejectedTitle: 'Action needed 💛',
+  AppStrings.nannyRejectedSub:
+      'Please review the feedback below, fix what\'s needed, and resubmit your profile.',
+  AppStrings.nannyRejectedBody: 'Please review the feedback and resubmit.',
+  AppStrings.nannyRejectedReasonLabel: "Admin's note",
+  AppStrings.nannyResubmit: 'Resubmit for review',
 
   AppStrings.dashStats: 'Your stats',
   AppStrings.dashShortlists: 'Shortlists',

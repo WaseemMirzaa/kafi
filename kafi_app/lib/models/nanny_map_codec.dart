@@ -125,6 +125,10 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
           const [],
       status: _enumByName(NannyOnboardingStatus.values, m['status']) ??
           NannyOnboardingStatus.draft,
+      rejectionReason: m['rejectionReason'] as String?,
+      rejectedAt: _parseDate(m['rejectedAt']),
+      introVideoStatus: _enumByName(IntroVideoStatus.values, m['introVideoStatus']),
+      introVideoRejectionReason: m['introVideoRejectionReason'] as String?,
       isVerified: m['isVerified'] == true,
       verifiedAt: _parseDate(m['verifiedAt']),
       profileScore: (m['profileScore'] as num?)?.toInt() ?? 0,

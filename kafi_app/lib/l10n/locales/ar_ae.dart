@@ -64,6 +64,19 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.pwResetSuccess: 'تمت إعادة تعيين كلمة المرور',
     AppStrings.pwResetSuccessMessage: 'تم تحديث كلمة المرور. الرجاء تسجيل الدخول.',
 
+    // Nanny review status / rejection
+    AppStrings.docApproved: 'مقبول',
+    AppStrings.docRejected: 'مرفوض',
+    AppStrings.nannyDocStatusTitle: 'حالة المستندات',
+    AppStrings.nannyIntroVideo: 'فيديو التعريف',
+    AppStrings.nannyUpdateDocuments: '📁 تحديث المستندات',
+    AppStrings.nannyRejectedTitle: 'مطلوب إجراء 💛',
+    AppStrings.nannyRejectedSub:
+        'يرجى مراجعة الملاحظات أدناه وتصحيح ما يلزم ثم إعادة إرسال ملفك.',
+    AppStrings.nannyRejectedBody: 'يرجى مراجعة الملاحظات وإعادة الإرسال.',
+    AppStrings.nannyRejectedReasonLabel: 'ملاحظة المشرف',
+    AppStrings.nannyResubmit: 'إعادة الإرسال للمراجعة',
+
     // Browse / family
     AppStrings.browse: 'تصفح',
     AppStrings.browseGoodMorning: 'صباح الخير',

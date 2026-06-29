@@ -1,4 +1,4 @@
-import { onDocumentUpdated, onDocumentCreated } from 'firebase-functions/v2/firestore';
+import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { sendNotification, getUser } from '../utils/notifications';
 
 interface NannyDoc {
@@ -56,17 +56,28 @@ export const onDocumentReviewed = onDocumentUpdated(
       });
     }
 
-    // 2. Overall onboarding status push (pending → approved / rejected).
-    if (before.status !== after.status && (after.status === 'approved' || after.status === 'rejected')) {
+    // 2. Overall onboarding status push. The nanny doc is CREATED as `draft`
+    // and only flips to `pending` on submit (an UPDATE), so the "submitted"
+    // push must live here on the status transition — an onCreate trigger never
+    // sees `pending`.
+    if (
+      before.status !== after.status &&
+      (after.status === 'pending' || after.status === 'approved' || after.status === 'rejected')
+    ) {
       const payload =
         after.status === 'approved'
           ? {
               title: '🎉 Profile approved!',
               body: 'Your profile is now visible to families.',
             }
-          : {
+          : after.status === 'rejected'
+          ? {
               title: '❌ Profile rejected',
               body: after.rejectionReason || 'Please review the feedback and re-submit.',
+            }
+          : {
+              title: '📋 Profile submitted',
+              body: 'Admin is reviewing your profile (1–24 hours).',
             };
       await sendNotification(user.fcmTokens, {
         ...payload,
@@ -75,18 +86,3 @@ export const onDocumentReviewed = onDocumentUpdated(
     }
   },
 );
-
-export const onNannySubmitted = onDocumentCreated('nannies/{nannyId}', async (event) => {
-  const nanny = event.data?.data();
-  // Flutter writes `status: NannyOnboardingStatus.pending.name === 'pending'`.
-  if (!nanny || nanny.status !== 'pending') return;
-
-  const user = await getUser(event.params.nannyId);
-  if (!user.fcmTokens?.length) return;
-
-  await sendNotification(user.fcmTokens, {
-    title: '📋 Profile submitted',
-    body: 'Admin is reviewing your profile (1-24 hours)',
-    data: { type: 'profile_submitted' },
-  });
-});
