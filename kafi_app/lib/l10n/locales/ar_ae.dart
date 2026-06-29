@@ -79,6 +79,19 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
 
     // Applications
     AppStrings.applyAlreadyApplied: 'لقد تقدمت لهذه الوظيفة بالفعل.',
+    AppStrings.familyApplicants: 'المتقدمات',
+    AppStrings.familyApplicantsSub: 'المربيات اللاتي تقدمن لوظائفك',
+    AppStrings.familyApplicantsEmpty: 'لا يوجد متقدمات بعد',
+    AppStrings.familyApplicantsEmptySub: 'عندما تتقدم المربيات لوظائفك ستظهر هنا.',
+    AppStrings.applicantShortlist: 'القائمة المختصرة',
+    AppStrings.applicantDecline: 'رفض',
+    AppStrings.appStatusPending: 'جديد',
+    AppStrings.appStatusViewed: 'تمت المشاهدة',
+    AppStrings.appStatusShortlisted: 'في القائمة المختصرة',
+    AppStrings.appStatusTrialOffered: 'تم عرض تجربة',
+    AppStrings.appStatusDeclined: 'مرفوض',
+    AppStrings.appStatusWithdrawn: 'مسحوب',
+    AppStrings.appStatusHired: 'تم التوظيف 🎉',
 
     // Browse / family
     AppStrings.browse: 'تصفح',
