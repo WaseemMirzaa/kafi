@@ -1,11 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/services/interfaces/i_application_service.dart';
-import 'package:uuid/uuid.dart';
 
 class FirestoreApplicationService implements IApplicationService {
   final _apps = FirebaseFirestore.instance.collection('applications');
-  final _uuid = const Uuid();
 
   @override
   Future<List<ApplicationModel>> getApplicationsForNanny(String nannyId) async {
@@ -40,21 +38,39 @@ class FirestoreApplicationService implements IApplicationService {
     required String jobId,
     String? coverMessage,
   }) async {
-    final jobSnap = await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
-    final familyId = jobSnap.data()?['familyId'] ?? '';
+    // Deterministic id = one application per (job, nanny). A re-apply lands on
+    // the same doc and is blocked unless the previous one was withdrawn
+    // (Spec §14 J3). This also keeps apply idempotent against retries.
+    final id = '${jobId}_$nannyId';
+    final ref = _apps.doc(id);
+    final existing = await ref.get();
+    if (existing.exists &&
+        existing.data()?['status'] != ApplicationStatus.withdrawn.name) {
+      throw Exception('already_applied');
+    }
+
+    final jobSnap =
+        await FirebaseFirestore.instance.collection('jobs').doc(jobId).get();
+    final jobData = jobSnap.data();
+    final nannySnap =
+        await FirebaseFirestore.instance.collection('nannies').doc(nannyId).get();
 
     final app = ApplicationModel(
-      id: _uuid.v4(),
+      id: id,
       jobPostId: jobId,
       nannyId: nannyId,
-      familyId: familyId,
+      familyId: (jobData?['familyId'] as String?) ?? '',
       status: ApplicationStatus.pending,
       matchScore: 80,
       coverMessage: coverMessage,
       createdAt: DateTime.now(),
+      // Denormalized so admin/family lists render without extra lookups.
+      nannyName: nannySnap.data()?['fullName'] as String?,
+      jobTitle: jobData?['jobTitle'] as String?,
+      familyName: jobData?['familyName'] as String?,
     );
 
-    await _apps.doc(app.id).set(app.toMap());
+    await ref.set(app.toMap());
     return app;
   }
 

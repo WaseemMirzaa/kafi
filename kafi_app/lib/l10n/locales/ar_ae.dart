@@ -77,6 +77,9 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.nannyRejectedReasonLabel: 'ملاحظة المشرف',
     AppStrings.nannyResubmit: 'إعادة الإرسال للمراجعة',
 
+    // Applications
+    AppStrings.applyAlreadyApplied: 'لقد تقدمت لهذه الوظيفة بالفعل.',
+
     // Browse / family
     AppStrings.browse: 'تصفح',
     AppStrings.browseGoodMorning: 'صباح الخير',
