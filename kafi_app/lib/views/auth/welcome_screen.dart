@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_logo.dart';
 

@@ -6,6 +6,15 @@ interface NotificationPayload {
   data?: Record<string, string>;
 }
 
+/// A Firestore document that (may) carry cached FCM tokens. The named
+/// `fcmTokens` field lets trigger call sites do `user.fcmTokens?.length` and
+/// pass `user.fcmTokens` straight to `sendNotification`; the index signature
+/// keeps every other document field accessible.
+export interface TokenBearer {
+  fcmTokens?: string[];
+  [key: string]: unknown;
+}
+
 /// Sends a multicast push and prunes dead tokens.
 ///
 /// Flutter writes FCM tokens to `users/{uid}.fcmTokens` (see
@@ -56,14 +65,14 @@ export async function sendNotification(
 }
 
 /// Returns the user document (where FCM tokens live).
-export async function getUser(userId: string): Promise<Record<string, unknown>> {
+export async function getUser(userId: string): Promise<TokenBearer> {
   const snap = await admin.firestore().collection('users').doc(userId).get();
-  return (snap.data() as Record<string, unknown>) ?? {};
+  return (snap.data() as TokenBearer) ?? {};
 }
 
 /// Returns the nanny profile + FCM tokens (merged from `users/{uid}` since
 /// the nanny doc itself does not carry tokens).
-export async function getNanny(nannyId: string): Promise<Record<string, unknown>> {
+export async function getNanny(nannyId: string): Promise<TokenBearer> {
   const [n, u] = await Promise.all([
     admin.firestore().collection('nannies').doc(nannyId).get(),
     admin.firestore().collection('users').doc(nannyId).get(),
@@ -75,7 +84,7 @@ export async function getNanny(nannyId: string): Promise<Record<string, unknown>
 }
 
 /// Returns the family profile + FCM tokens (merged from `users/{uid}`).
-export async function getFamily(familyId: string): Promise<Record<string, unknown>> {
+export async function getFamily(familyId: string): Promise<TokenBearer> {
   const [f, u] = await Promise.all([
     admin.firestore().collection('families').doc(familyId).get(),
     admin.firestore().collection('users').doc(familyId).get(),

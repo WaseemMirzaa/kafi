@@ -73,7 +73,7 @@ class DisputeModel {
       };
 
   factory DisputeModel.fromMap(String id, Map<String, dynamic> m) {
-    DateTime _parseDate(dynamic v) {
+    DateTime parseDate(dynamic v) {
       if (v is Timestamp) return v.toDate();
       if (v is String) return DateTime.tryParse(v) ?? DateTime.now();
       return DateTime.now();
@@ -88,7 +88,7 @@ class DisputeModel {
       status: DisputeStatusX.fromString(m['status']?.toString() ?? ''),
       relatedTrialId: m['relatedTrialId']?.toString(),
       resolution: m['resolution']?.toString(),
-      createdAt: _parseDate(m['createdAt']),
+      createdAt: parseDate(m['createdAt']),
     );
   }
 }

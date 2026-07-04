@@ -4,7 +4,6 @@ import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/models/trial_model.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_app_bar.dart';
 import 'package:kafi_app/views/widgets/kafi_input.dart';
