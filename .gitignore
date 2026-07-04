@@ -75,3 +75,6 @@ functions/lib/
 .fvm/versions/
 .fvm/release
 .fvm/version
+
+# Deploy service account materialized by scripts/materialize-secrets.sh (never commit)
+scripts/service-account.json
