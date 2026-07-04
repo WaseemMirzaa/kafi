@@ -47,6 +47,7 @@ jobs:
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FIREBASE_SA_JSON_B64: ${{ secrets.FIREBASE_SA_JSON_B64 }}
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
           VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
@@ -57,7 +58,8 @@ jobs:
         run: |
           echo "Secret visibility for this run (values hidden):"
           present=0; missing=0
-          for name in FIREBASE_PROJECT_ID FIREBASE_SA_JSON_B64 \
+          # Deploy auth needs EITHER FIREBASE_SA_JSON_B64 OR FIREBASE_TOKEN.
+          for name in FIREBASE_PROJECT_ID FIREBASE_SA_JSON_B64 FIREBASE_TOKEN \
                       VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN \
                       VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_STORAGE_BUCKET \
                       VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID \
@@ -69,6 +71,9 @@ jobs:
             fi
           done
           echo "summary: $present present, $missing missing"
+          if [ -z "${FIREBASE_SA_JSON_B64:-}" ] && [ -z "${FIREBASE_TOKEN:-}" ]; then
+            echo "::warning title=No deploy credential::Neither FIREBASE_SA_JSON_B64 nor FIREBASE_TOKEN is set — the deploy step will fail to authenticate. Add one of them to the FIREBASE_PROJECT_ID environment."
+          fi
           if [ -z "${FIREBASE_PROJECT_ID:-}" ]; then
             echo "::warning title=Deploy skipped::FIREBASE_PROJECT_ID is not visible to Actions. Add the deploy secrets under Settings → Secrets and variables → Actions → Secrets (repository level — NOT the Variables tab, and NOT scoped to an Environment unless the job declares it)."
             echo "skip=true" >> "$GITHUB_OUTPUT"
@@ -117,10 +122,22 @@ jobs:
       - name: Deploy to Firebase Hosting + rules
         if: steps.guard.outputs.skip != 'true'
         env:
-          GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/scripts/service-account.json
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          # firebase-tools auto-detects FIREBASE_TOKEN when no service account is
+          # present, so you can authenticate with EITHER credential.
+          FIREBASE_TOKEN: ${{ secrets.FIREBASE_TOKEN }}
         run: |
           npm i -g firebase-tools
+          SA="${{ github.workspace }}/scripts/service-account.json"
+          if [ -f "$SA" ]; then
+            export GOOGLE_APPLICATION_CREDENTIALS="$SA"
+            echo "Deploy auth: service account (FIREBASE_SA_JSON_B64)."
+          elif [ -n "${FIREBASE_TOKEN:-}" ]; then
+            echo "Deploy auth: FIREBASE_TOKEN (firebase login:ci)."
+          else
+            echo "::error title=No deploy credential::Add EITHER FIREBASE_SA_JSON_B64 (base64 of a service-account key) OR FIREBASE_TOKEN (from 'firebase login:ci') to the FIREBASE_PROJECT_ID environment."
+            exit 1
+          fi
           firebase deploy \
             --only hosting,firestore:rules,firestore:indexes,storage \
             --project "$FIREBASE_PROJECT_ID" \
