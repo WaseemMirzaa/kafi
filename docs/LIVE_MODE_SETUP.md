@@ -235,8 +235,60 @@ Nothing else is required to walk both apps in live mode.
 
 ---
 
-## 7. Security notes
-- Keep all files in §1 out of git (already `.gitignore`d — verify).
+## 7. CI/CD — GitHub Actions (build, test, deploy)
+
+Two workflows are committed under `.github/workflows/`:
+
+- **`ci.yml`** — runs on every PR: `flutter analyze` + `flutter test`, admin
+  `lint` + `build`, functions `build`. **No secrets** used.
+- **`deploy.yml`** — runs on push to `main` (or manual dispatch): runs CI as a
+  gate, then materializes config **from Actions secrets**, builds the Flutter web
+  app + admin panel against **live** Firebase, and deploys both to **Firebase
+  Hosting** (plus Firestore/Storage rules).
+
+### 7.1 Where secrets live
+Add these under **GitHub → repo → Settings → Secrets and variables → Actions**
+(encrypted; **never** commit them):
+
+| Secret | What |
+| --- | --- |
+| `FIREBASE_PROJECT_ID` | your Firebase project id |
+| `FIREBASE_SA_JSON_B64` | `base64 -w0` of a **deploy service-account** JSON (IAM role: *Firebase Hosting Admin* + *Cloud Datastore Index Admin* or *Editor*) |
+| `VITE_FIREBASE_API_KEY` … `VITE_FIREBASE_APP_ID` | the 6 Firebase **Web** config values — drive both the Flutter web `firebase_options.dart` and the admin `.env` |
+| `GOOGLE_MAPS_API_KEY` | Maps JS/Places/Geocoding key (optional) |
+
+> The Web config values (`apiKey`, etc.) are embedded in the client bundle by
+> design and are not high-value secrets, but keeping them in Actions secrets lets
+> you point CI at staging vs prod without code changes. The **service account** IS
+> high-value — treat it like a password.
+
+### 7.2 Two Firebase Hosting sites
+`firebase.json` deploys two hosting sites — create both in the console
+(Hosting → *Add another site*):
+
+| Site id | Serves | From |
+| --- | --- | --- |
+| `kafi-app` | the Flutter mobile web app | `kafi_app/build/web` |
+| `kafi-admin` | the admin dashboard | `admin-panel/dist` |
+
+(Rename the `site` values in `firebase.json` if you use different ids.)
+
+### 7.3 How I test the deployed build
+Once `deploy.yml` publishes to Hosting, I point Playwright/Chromium at the two
+live URLs (`https://kafi-app.web.app`, `https://kafi-admin.web.app`), log in with
+the **test phone number + fixed OTP** and the **admin account**, and walk every
+flow against real Firestore/Auth/Storage. (Browser egress to Google/Firebase
+endpoints is routed through the environment proxy — see the network-policy note.)
+Alternatively I can build + serve + drive the web app **inside this environment**
+using the same secrets set as env vars (no deploy needed).
+
+---
+
+## 8. Security notes
+- Keep all files in §1 out of git (already `.gitignore`d — verify; the deploy
+  service account writes to `scripts/service-account.json`, which is ignored).
+- Put credentials in **Actions secrets** (CI) or the **environment's env vars**
+  (for me) — **never** in the repo, a branch, or a PR. Git history is permanent.
 - Use a **separate** Firebase project for staging vs production.
 - The Maps key should be **restricted** (by package/bundle/HTTP referrer + the 5 APIs above).
-- Rotate the RevenueCat secret and Firebase CI token if they ever land in a log.
+- Rotate the RevenueCat secret, Firebase CI token, and any service account if they ever land in a log.

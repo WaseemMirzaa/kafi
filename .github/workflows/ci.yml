@@ -1,0 +1,60 @@
+name: CI
+
+# Runs on every PR, and is reusable (called by deploy.yml as its gate before a
+# live deploy). No secrets are used or required here.
+on:
+  pull_request:
+  workflow_call:
+
+jobs:
+  flutter:
+    name: Flutter — analyze + test
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kafi_app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          # Pin to the project's Flutter version for reproducible builds.
+          flutter-version: '3.35.7'
+          channel: stable
+          cache: true
+      - run: flutter pub get
+      - run: flutter analyze
+      - run: flutter test
+
+  admin:
+    name: Admin panel — lint + build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: admin-panel
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: admin-panel/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      # Build check only — uses mock config (no secrets), just proves it compiles.
+      - run: npm run build
+
+  functions:
+    name: Cloud Functions — build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: functions
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: functions/package-lock.json
+      - run: npm ci
+      - run: npm run build
