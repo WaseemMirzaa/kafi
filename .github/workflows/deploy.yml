@@ -35,15 +35,40 @@ jobs:
       - uses: actions/checkout@v4
 
       # Cleanly skip (green, not red) until the deploy secrets are configured.
+      # Prints a presence report (booleans only — never the values) so a skipped
+      # deploy tells you exactly which secrets Actions can and cannot see.
       - name: Guard — only deploy when secrets are set
         id: guard
         env:
-          PID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+          FIREBASE_SA_JSON_B64: ${{ secrets.FIREBASE_SA_JSON_B64 }}
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: |
-          if [ -z "$PID" ]; then
-            echo "No deploy secrets configured yet — skipping deploy."
+          echo "Secret visibility for this run (values hidden):"
+          present=0; missing=0
+          for name in FIREBASE_PROJECT_ID FIREBASE_SA_JSON_B64 \
+                      VITE_FIREBASE_API_KEY VITE_FIREBASE_AUTH_DOMAIN \
+                      VITE_FIREBASE_PROJECT_ID VITE_FIREBASE_STORAGE_BUCKET \
+                      VITE_FIREBASE_MESSAGING_SENDER_ID VITE_FIREBASE_APP_ID \
+                      GOOGLE_MAPS_API_KEY; do
+            if [ -n "${!name:-}" ]; then
+              echo "  ✓ $name present"; present=$((present+1))
+            else
+              echo "  ✗ $name MISSING"; missing=$((missing+1))
+            fi
+          done
+          echo "summary: $present present, $missing missing"
+          if [ -z "${FIREBASE_PROJECT_ID:-}" ]; then
+            echo "::warning title=Deploy skipped::FIREBASE_PROJECT_ID is not visible to Actions. Add the deploy secrets under Settings → Secrets and variables → Actions → Secrets (repository level — NOT the Variables tab, and NOT scoped to an Environment unless the job declares it)."
             echo "skip=true" >> "$GITHUB_OUTPUT"
           else
+            echo "FIREBASE_PROJECT_ID visible — proceeding with build + deploy."
             echo "skip=false" >> "$GITHUB_OUTPUT"
           fi
 
