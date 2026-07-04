@@ -9,7 +9,6 @@ import 'package:kafi_app/views/family/browse_screen.dart';
 import 'package:kafi_app/views/family/chat_screen.dart';
 import 'package:kafi_app/views/family/settings_screen.dart';
 import 'package:kafi_app/views/family/shortlist_screen.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_bottom_nav.dart';
 

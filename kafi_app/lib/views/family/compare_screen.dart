@@ -5,7 +5,6 @@ import 'package:kafi_app/data/mock/mock_nannies.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_app_bar.dart';

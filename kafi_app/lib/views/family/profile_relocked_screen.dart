@@ -8,7 +8,6 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/utils/nanny_card_resolver.dart';
 import 'package:kafi_app/views/family/profile_hero.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 

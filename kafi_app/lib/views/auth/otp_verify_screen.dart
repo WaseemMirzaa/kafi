@@ -49,7 +49,7 @@ class OtpVerifyScreen extends GetView<AuthController> {
                   text: TextSpan(
                     style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600),
                     children: [
-                      TextSpan(text: '${AppStrings.otpEnterSub.tr.split(controller.formattedPhone).first}'),
+                      TextSpan(text: AppStrings.otpEnterSub.tr.split(controller.formattedPhone).first),
                       TextSpan(
                         text: controller.formattedPhone,
                         style: KafiTheme.nunito(11, color: KafiColors.roseD, w: FontWeight.w800),
@@ -79,7 +79,7 @@ class OtpVerifyScreen extends GetView<AuthController> {
                     text: TextSpan(
                       style: KafiTheme.nunito(10.5, color: KafiColors.ts),
                       children: [
-                        TextSpan(text: '${AppStrings.otpExpires.tr.split(label).first}'),
+                        TextSpan(text: AppStrings.otpExpires.tr.split(label).first),
                         TextSpan(
                           text: label,
                           style: KafiTheme.nunito(10.5, color: KafiColors.roseD, w: FontWeight.w800),

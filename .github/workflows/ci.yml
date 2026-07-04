@@ -26,7 +26,7 @@ jobs:
       - run: flutter test
 
   admin:
-    name: Admin panel — lint + build
+    name: Admin panel — build (tsc + vite)
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -39,8 +39,9 @@ jobs:
           cache: npm
           cache-dependency-path: admin-panel/package-lock.json
       - run: npm ci
-      - run: npm run lint
-      # Build check only — uses mock config (no secrets), just proves it compiles.
+      # `npm run build` is `tsc && vite build` — full type-check + bundle, using
+      # mock config (no secrets). That is the real gate here. (There is no ESLint
+      # flat config / TS parser wired up, so `npm run lint` is a no-op we skip.)
       - run: npm run build
 
   functions:

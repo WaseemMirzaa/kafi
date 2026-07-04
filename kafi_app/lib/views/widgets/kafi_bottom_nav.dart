@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 class KafiBottomNavItem {

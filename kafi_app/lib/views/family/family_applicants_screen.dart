@@ -4,7 +4,6 @@ import 'package:kafi_app/controllers/application_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 /// Family "Applicants" inbox — the nannies who applied to this family's jobs

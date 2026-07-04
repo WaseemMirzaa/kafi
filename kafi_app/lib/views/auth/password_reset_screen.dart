@@ -5,7 +5,6 @@ import 'package:kafi_app/views/widgets/kafi_app_bar.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/services/interfaces/i_auth_service.dart';
 import 'package:kafi_app/utils/constants/auth_constants.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_password_strength.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
@@ -25,7 +24,7 @@ class _PasswordResetScreenState extends State<PasswordResetScreen> {
 
   int _step = 0;
   bool _loading = false;
-  String _countryCode = '+971';
+  final String _countryCode = '+971';
 
   @override
   void dispose() {
