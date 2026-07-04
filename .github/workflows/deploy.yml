@@ -31,6 +31,11 @@ jobs:
     name: Build + deploy hosting
     needs: test
     runs-on: ubuntu-latest
+    # The deploy secrets live in the "FIREBASE_PROJECT_ID" GitHub Environment
+    # (Settings → Environments). A job only receives an environment's secrets
+    # when it declares that environment here — without this, secrets.* resolves
+    # empty and the guard below skips the deploy.
+    environment: FIREBASE_PROJECT_ID
     steps:
       - uses: actions/checkout@v4
 
