@@ -19,6 +19,53 @@ There are three deployables:
 
 ---
 
+## 0. Quickstart — let Claude test everything in live mode
+
+Do these in order. Steps 1–5 are yours (one-time, in the Firebase/Google consoles);
+step 6 is what you paste into the environment so I can build/run/test live.
+
+1. **Create a Firebase project** (e.g. `kafi-prod`) and register a **Web** app, an
+   **Android** app, and an **iOS** app (§2).
+2. **Authentication → Sign-in method → Phone**: enable it, then add a **test phone
+   number with a fixed code** (e.g. `+971500000001` → `123456`). This lets me log in with
+   no real SIM. (Android also needs SHA-1/256; iOS needs an APNs key — only for device builds.)
+3. **Firestore** → create the database; **Storage** → enable. Then from the repo root run
+   `firebase deploy --only firestore:rules,firestore:indexes,storage` (or give me a
+   `FIREBASE_TOKEN` and I'll deploy).
+4. **Admin user**: create one email/password user in Firebase Auth, then run
+   `admin-panel/scripts/set-admin-claims.ts` with a service-account JSON to grant it
+   `admin: true` (§4.2).
+5. **Copy your Web app config** (Project settings → Your apps → SDK setup) — you'll paste
+   those 6 values below. Create a **Google Maps** API key with Maps JS + Places + Geocoding.
+6. **In the environment settings → Environment variables**, add:
+   ```
+   VITE_FIREBASE_API_KEY=…
+   VITE_FIREBASE_AUTH_DOMAIN=<project>.firebaseapp.com
+   VITE_FIREBASE_PROJECT_ID=…
+   VITE_FIREBASE_STORAGE_BUCKET=<project>.appspot.com
+   VITE_FIREBASE_MESSAGING_SENDER_ID=…
+   VITE_FIREBASE_APP_ID=…
+   GOOGLE_MAPS_API_KEY=…
+   TEST_PHONE=+971500000001         # the number from step 2 (so I know which to use)
+   TEST_OTP=123456
+   ADMIN_EMAIL=admin@yourdomain.com # from step 4
+   ADMIN_PASSWORD=…
+   # optional, only if testing purchases:
+   REVENUECAT_WEBHOOK_SECRET=…
+   FIREBASE_TOKEN=…                 # `firebase login:ci`, lets me deploy rules/functions
+   ```
+   Then set **`scripts/materialize-secrets.sh` as the environment's setup script** (it turns
+   those vars into `admin-panel/.env`, injects the Maps key, and — with the 6 web values —
+   I regenerate `firebase_options.dart` via `flutterfire configure`).
+
+Once step 6 is saved, tell me and I'll: materialize the config, run the admin panel and the
+mobile app (web) against live Firebase, log in with the test number/admin account, and walk
+every screen end-to-end (real Firestore/Auth/Storage), then update the gallery with live shots.
+
+The rest of this document is the full reference behind each step.
+
+---
+
 ## 1. Secret inventory (what to gather)
 
 Everything you need, in one table. "Type" tells you how it's injected (see §6).
