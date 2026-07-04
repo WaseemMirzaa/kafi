@@ -15,13 +15,13 @@
   ],
   "hosting": [
     {
-      "site": "kafi-admin",
+      "site": "kafi-admin-9f3ba",
       "public": "admin-panel/dist",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [{ "source": "**", "destination": "/index.html" }]
     },
     {
-      "site": "kafi-app",
+      "site": "kafi-app-8acbe",
       "public": "kafi_app/build/web",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
       "rewrites": [{ "source": "**", "destination": "/index.html" }]
