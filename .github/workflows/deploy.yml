@@ -34,7 +34,21 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Cleanly skip (green, not red) until the deploy secrets are configured.
+      - name: Guard — only deploy when secrets are set
+        id: guard
+        env:
+          PID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          if [ -z "$PID" ]; then
+            echo "No deploy secrets configured yet — skipping deploy."
+            echo "skip=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "skip=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Materialize live config from secrets
+        if: steps.guard.outputs.skip != 'true'
         env:
           VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
           VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
@@ -52,6 +66,7 @@ jobs:
           channel: stable
           cache: true
       - name: Build Flutter web (live)
+        if: steps.guard.outputs.skip != 'true'
         working-directory: kafi_app
         run: |
           flutter pub get
@@ -63,12 +78,14 @@ jobs:
           cache: npm
           cache-dependency-path: admin-panel/package-lock.json
       - name: Build admin panel (live)
+        if: steps.guard.outputs.skip != 'true'
         working-directory: admin-panel
         run: |
           npm ci
           npm run build
 
       - name: Deploy to Firebase Hosting + rules
+        if: steps.guard.outputs.skip != 'true'
         env:
           GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/scripts/service-account.json
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
