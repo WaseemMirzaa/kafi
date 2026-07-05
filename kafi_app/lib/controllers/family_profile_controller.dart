@@ -167,7 +167,7 @@ class FamilyProfileController extends GetxController {
   /// updated in place instead of inserting a new one (avoids duplicate jobs).
   /// First failing required-field message key for the family/job form, or null
   /// when valid. System Spec §3.3 (family) + §3.4 (job post) + §14.4 rules.
-  String? _validateFamily() {
+  String? validateFamily() {
     if (fullNameCtrl.text.trim().isEmpty) return AppStrings.familyNameRequired;
     if (nationality.value.trim().isEmpty) return AppStrings.familyNationalityRequired;
     if (city.value.trim().isEmpty) return AppStrings.familyCityRequired;
@@ -196,7 +196,7 @@ class FamilyProfileController extends GetxController {
   }
 
   Future<bool> _persist({bool reuseExistingPost = false}) async {
-    final err = _validateFamily();
+    final err = validateFamily();
     if (err != null) {
       Get.snackbar(AppStrings.errorTitle.tr, err.tr);
       return false;

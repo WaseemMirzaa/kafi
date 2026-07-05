@@ -91,7 +91,7 @@ class NannyProfileController extends GetxController {
   StreamSubscription<NannyModel?>? _nannyWatch;
   NannyOnboardingStatus? _lastWatchedStatus;
 
-  bool get _hasRequiredDocs {
+  bool get hasRequiredDocs {
     final passport = documents[DocumentType.passport]!;
     final visa = documents[DocumentType.visa]!;
     return passport.status != DocumentStatus.missing &&
@@ -320,7 +320,7 @@ class NannyProfileController extends GetxController {
 
   /// First failing required-field message key for the personal-info step, or
   /// null when valid. System Spec §3.2 (required fields) + §14.4 rules.
-  String? _validatePersonalInfo() {
+  String? validatePersonalInfo() {
     if (fullNameCtrl.text.trim().isEmpty) return AppStrings.nannyFullNameRequired;
     final dobErr = Validators.dateOfBirth(dob.value);
     if (dobErr != null) {
@@ -355,7 +355,7 @@ class NannyProfileController extends GetxController {
 
   Future<void> savePersonalInfoAndNext({bool advance = true}) async {
     // Required-field validation — System Spec §3.2 required fields + §14.4.
-    final err = _validatePersonalInfo();
+    final err = validatePersonalInfo();
     if (err != null) {
       Get.snackbar(AppStrings.errorTitle.tr, err.tr);
       return;
@@ -477,20 +477,25 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  Future<void> saveMediaAndNext({bool advance = true}) async {
-    final n = nanny.value;
-    if (n == null) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyCompleteStep1.tr);
-      return;
-    }
-    if (photoUrls.length < NannyConstants.minPhotos) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyPhotosMin3.tr);
-      return;
-    }
+  /// First failing required-field message key for the photos/video step, or
+  /// null when valid (System Spec §3.2: personal info saved first, >=3 photos,
+  /// and an intro video).
+  String? validateMedia() {
+    if (nanny.value == null) return AppStrings.nannyCompleteStep1;
+    if (photoUrls.length < NannyConstants.minPhotos) return AppStrings.nannyPhotosMin3;
     if (introVideoUrl.value == null || introVideoUrl.value!.isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyVideoRequired.tr);
+      return AppStrings.nannyVideoRequired;
+    }
+    return null;
+  }
+
+  Future<void> saveMediaAndNext({bool advance = true}) async {
+    final err = validateMedia();
+    if (err != null) {
+      Get.snackbar(AppStrings.errorTitle.tr, err.tr);
       return;
     }
+    final n = nanny.value!;
     isLoading.value = true;
     try {
       final updated = n.copyWith(
@@ -688,7 +693,7 @@ class NannyProfileController extends GetxController {
 
   Future<void> submitForReview() async {
     // Required-docs guard — passport + visa must be uploaded.
-    if (!_hasRequiredDocs) {
+    if (!hasRequiredDocs) {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyRequiredDocsMissing.tr);
       return;
     }
