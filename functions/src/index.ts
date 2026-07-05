@@ -15,6 +15,7 @@ import {
 import { revenueCatWebhook } from './triggers/webhook';
 import { onBroadcastCreated } from './triggers/broadcast';
 import { onUserDeleted } from './triggers/delete';
+import { translateNanny, translateFamily, translateJob } from './triggers/translate';
 
 admin.initializeApp();
 
@@ -31,4 +32,7 @@ export {
   revenueCatWebhook,
   onBroadcastCreated,
   onUserDeleted,
+  translateNanny,
+  translateFamily,
+  translateJob,
 };

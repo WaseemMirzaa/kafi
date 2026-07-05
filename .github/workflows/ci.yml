@@ -45,7 +45,7 @@ jobs:
       - run: npm run build
 
   functions:
-    name: Cloud Functions — build
+    name: Cloud Functions — build + test
     runs-on: ubuntu-latest
     defaults:
       run:
@@ -59,3 +59,6 @@ jobs:
           cache-dependency-path: functions/package-lock.json
       - run: npm ci
       - run: npm run build
+      # Unit tests for pure logic (e.g. the translation diff / loop guard).
+      # Run after build — the tests import the compiled output in lib/.
+      - run: npm test

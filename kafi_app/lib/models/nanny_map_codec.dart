@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kafi_app/models/nanny_model.dart';
+import 'package:kafi_app/utils/localized_text.dart';
 
 DateTime? _parseDate(dynamic v) {
   if (v == null) return null;
@@ -133,4 +134,5 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
       verifiedAt: _parseDate(m['verifiedAt']),
       profileScore: (m['profileScore'] as num?)?.toInt() ?? 0,
       stats: _statsFromMap(m['stats'] as Map<String, dynamic>?),
+      i18n: i18nMapsFrom(m, const ['bio', 'healthConditions', 'religiousNotes']),
     );
