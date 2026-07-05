@@ -1,0 +1,69 @@
+name: Build APK
+
+# Manually build an installable Android APK against LIVE Firebase and upload it
+# as a downloadable artifact — for testing the app on a real device without a
+# local Android SDK.
+#
+# One-time setup: add the Firebase Android config as a repository secret
+#   Settings → Secrets and variables → Actions → New repository secret
+#   Name:  GOOGLE_SERVICES_JSON_B64
+#   Value: base64 of android/app/google-services.json
+#          Linux:  base64 -w0 google-services.json
+#          macOS:  base64 -i google-services.json
+# Nothing secret is committed — the file is materialized only on the runner.
+on:
+  workflow_dispatch:
+    inputs:
+      mode:
+        description: 'Build type'
+        type: choice
+        options: [release, debug]
+        default: release
+
+jobs:
+  build:
+    name: Flutter — build APK (live Firebase)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: kafi_app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          # Match CI's pinned Flutter version for reproducible builds.
+          flutter-version: '3.35.7'
+          channel: stable
+          cache: true
+
+      - name: Materialize google-services.json from secret
+        env:
+          GS_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
+        run: |
+          if [ -z "${GS_B64:-}" ]; then
+            echo "::error::Secret GOOGLE_SERVICES_JSON_B64 is not set."
+            echo "::error::Add it under Settings → Secrets and variables → Actions:"
+            echo "::error::  base64 -w0 google-services.json   (macOS: base64 -i google-services.json)"
+            exit 1
+          fi
+          echo "$GS_B64" | base64 -d > android/app/google-services.json
+          echo "Wrote android/app/google-services.json ($(wc -c < android/app/google-services.json) bytes)"
+
+      - run: flutter pub get
+
+      - name: Build APK (${{ inputs.mode }})
+        run: flutter build apk --${{ inputs.mode }}
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: kafi-${{ inputs.mode }}-apk
+          path: kafi_app/build/app/outputs/flutter-apk/app-${{ inputs.mode }}.apk
+          if-no-files-found: error
+          retention-days: 14
