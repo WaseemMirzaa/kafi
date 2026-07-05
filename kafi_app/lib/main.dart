@@ -1,4 +1,5 @@
 import 'package:firebase_core/firebase_core.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kafi_app/firebase_options.dart';
@@ -15,7 +16,15 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(KafiTheme.darkStatusBar);
   if (!AppConfig.useMock) {
     try {
-      await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      // On Android the native google-services.json (git-ignored; see
+      // FIREBASE_SETUP.md / BUILD_APK.md) is the source of truth, so initialize
+      // without explicit options — keeps real credentials out of tracked source.
+      // Other platforms use the generated firebase_options.dart.
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        await Firebase.initializeApp();
+      } else {
+        await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+      }
     } catch (e, st) {
       debugPrint('Firebase init failed (add firebase_options / google-services): $e\n$st');
     }

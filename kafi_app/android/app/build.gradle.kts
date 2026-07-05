@@ -5,6 +5,14 @@ plugins {
     id("dev.flutter.flutter-gradle-plugin")
 }
 
+// Wire live Firebase (Auth/Firestore/Storage/FCM) from the native config, but
+// only when it's present — so a mock/offline build needs no Firebase secrets.
+// google-services.json is git-ignored; download it from the Firebase console
+// (Android app: com.kafi.kafi_app) into this directory. See ../../BUILD_APK.md.
+if (file("google-services.json").exists()) {
+    apply(plugin = "com.google.gms.google-services")
+}
+
 android {
     namespace = "com.kafi.kafi_app"
     compileSdk = flutter.compileSdkVersion
