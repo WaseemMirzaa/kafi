@@ -1,3 +1,5 @@
+import 'package:kafi_app/utils/localized_text.dart';
+
 enum VisaStatus { visit, residenceSponsored, ownResidence, cancelled, outsideUae }
 
 enum Emirate { dubai, abuDhabi, sharjah, ajman, rak, fujairah, uaq, alAin }
@@ -220,6 +222,7 @@ class NannyModel {
     this.verifiedAt,
     this.profileScore = 0,
     this.stats = const NannyStats(),
+    this.i18n = const {},
   });
 
   final String id;
@@ -289,6 +292,11 @@ class NannyModel {
   final int profileScore;
   final NannyStats stats;
 
+  /// Per-field translations for free-text fields, e.g.
+  /// `{'bio': {'en': …, 'ar': …}}`. Populated from the `<field>_i18n` keys by
+  /// the `translate*` Cloud Functions; server-owned, so [toMap] never writes it.
+  final Map<String, Map<String, String>> i18n;
+
   int? get age {
     if (dateOfBirth == null) return null;
     final now = DateTime.now();
@@ -299,6 +307,17 @@ class NannyModel {
     }
     return a;
   }
+
+  /// Bio in the app's current language (falls back to the original text).
+  String localizedBio([String? lang]) => localize(bio, i18n['bio'], lang);
+
+  /// Health conditions in the app's current language (falls back to original).
+  String localizedHealthConditions([String? lang]) =>
+      localize(healthConditions, i18n['healthConditions'], lang);
+
+  /// Religious notes in the app's current language (falls back to original).
+  String localizedReligiousNotes([String? lang]) =>
+      localize(religiousNotes, i18n['religiousNotes'], lang);
 
   NannyModel copyWith({
     String? fullName,
@@ -357,6 +376,7 @@ class NannyModel {
     DateTime? verifiedAt,
     int? profileScore,
     NannyStats? stats,
+    Map<String, Map<String, String>>? i18n,
   }) =>
       NannyModel(
         id: id,
@@ -418,6 +438,7 @@ class NannyModel {
         verifiedAt: verifiedAt ?? this.verifiedAt,
         profileScore: profileScore ?? this.profileScore,
         stats: stats ?? this.stats,
+        i18n: i18n ?? this.i18n,
       );
 
   Map<String, dynamic> toMap() => {
