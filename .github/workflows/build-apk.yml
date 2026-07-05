@@ -1,16 +1,13 @@
 name: Build APK
 
 # Manually build an installable Android APK against LIVE Firebase and upload it
-# as a downloadable artifact — for testing the app on a real device without a
-# local Android SDK.
+# as a downloadable artifact — for testing on a real device without a local
+# Android SDK.
 #
-# One-time setup: add the Firebase Android config as a repository secret
-#   Settings → Secrets and variables → Actions → New repository secret
-#   Name:  GOOGLE_SERVICES_JSON_B64
-#   Value: base64 of android/app/google-services.json
-#          Linux:  base64 -w0 google-services.json
-#          macOS:  base64 -i google-services.json
-# Nothing secret is committed — the file is materialized only on the runner.
+# No extra setup: this reuses the SAME Firebase secrets the web deploy uses
+# (the VITE_FIREBASE_* values in the "FIREBASE_PROJECT_ID" GitHub Environment).
+# scripts/materialize-secrets.sh generates firebase_options.dart on the runner,
+# where the Android app config mirrors the web app config. Nothing is committed.
 on:
   workflow_dispatch:
     inputs:
@@ -24,11 +21,20 @@ jobs:
   build:
     name: Flutter — build APK (live Firebase)
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: kafi_app
+    # Same environment as deploy.yml, so the VITE_FIREBASE_* secrets resolve.
+    environment: FIREBASE_PROJECT_ID
     steps:
       - uses: actions/checkout@v4
+
+      - name: Guard — Firebase web config is visible
+        env:
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+        run: |
+          if [ -z "${VITE_FIREBASE_API_KEY:-}" ]; then
+            echo "::error title=Missing Firebase config::VITE_FIREBASE_API_KEY (and the other VITE_FIREBASE_* secrets used by the web deploy) must be set in the FIREBASE_PROJECT_ID environment — Settings → Environments → FIREBASE_PROJECT_ID."
+            exit 1
+          fi
+          echo "Firebase web config visible — building the Android APK with the same credentials."
 
       - uses: actions/setup-java@v4
         with:
@@ -42,23 +48,22 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Materialize google-services.json from secret
+      - name: Materialize live Firebase config from the web secrets
         env:
-          GS_B64: ${{ secrets.GOOGLE_SERVICES_JSON_B64 }}
-        run: |
-          if [ -z "${GS_B64:-}" ]; then
-            echo "::error::Secret GOOGLE_SERVICES_JSON_B64 is not set."
-            echo "::error::Add it under Settings → Secrets and variables → Actions:"
-            echo "::error::  base64 -w0 google-services.json   (macOS: base64 -i google-services.json)"
-            exit 1
-          fi
-          echo "$GS_B64" | base64 -d > android/app/google-services.json
-          echo "Wrote android/app/google-services.json ($(wc -c < android/app/google-services.json) bytes)"
-
-      - run: flutter pub get
+          VITE_FIREBASE_API_KEY: ${{ secrets.VITE_FIREBASE_API_KEY }}
+          VITE_FIREBASE_AUTH_DOMAIN: ${{ secrets.VITE_FIREBASE_AUTH_DOMAIN }}
+          VITE_FIREBASE_PROJECT_ID: ${{ secrets.VITE_FIREBASE_PROJECT_ID }}
+          VITE_FIREBASE_STORAGE_BUCKET: ${{ secrets.VITE_FIREBASE_STORAGE_BUCKET }}
+          VITE_FIREBASE_MESSAGING_SENDER_ID: ${{ secrets.VITE_FIREBASE_MESSAGING_SENDER_ID }}
+          VITE_FIREBASE_APP_ID: ${{ secrets.VITE_FIREBASE_APP_ID }}
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: bash scripts/materialize-secrets.sh
 
       - name: Build APK (${{ inputs.mode }})
-        run: flutter build apk --${{ inputs.mode }}
+        working-directory: kafi_app
+        run: |
+          flutter pub get
+          flutter build apk --${{ inputs.mode }}
 
       - name: Upload APK artifact
         uses: actions/upload-artifact@v4
