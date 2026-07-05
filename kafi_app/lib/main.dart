@@ -1,5 +1,4 @@
 import 'package:firebase_core/firebase_core.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kafi_app/firebase_options.dart';
@@ -16,13 +15,13 @@ Future<void> main() async {
   SystemChrome.setSystemUIOverlayStyle(KafiTheme.darkStatusBar);
   if (!AppConfig.useMock) {
     try {
-      // On Android the native google-services.json (git-ignored; see
-      // FIREBASE_SETUP.md / BUILD_APK.md) is the source of truth, so initialize
-      // without explicit options — keeps real credentials out of tracked source.
-      // Other platforms use the generated firebase_options.dart.
-      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
-        await Firebase.initializeApp();
-      } else {
+      // Live Firebase. If a native google-services.json (via the google-services
+      // Gradle plugin) has already auto-initialized the default app, reuse it;
+      // otherwise initialize from firebase_options.dart. In CI that file is
+      // generated on the runner by scripts/materialize-secrets.sh from the
+      // VITE_FIREBASE_* web secrets — Android reuses the web app config. See
+      // BUILD_APK.md.
+      if (Firebase.apps.isEmpty) {
         await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
       }
     } catch (e, st) {
