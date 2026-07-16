@@ -46,12 +46,19 @@ class NotificationController extends GetxController {
   }
 
   Future<void> initFCM() async {
-    final granted = await _notifService.requestPermission();
-    if (!granted) return;
-    await _notifService.initialize();
-    final token = await _notifService.getToken();
-    if (token != null) {
-      await registerToken(token);
+    // FCM setup is best-effort: on web (no service worker / VAPID key) or when
+    // the user denies permission it must degrade gracefully, never throw an
+    // uncaught error that surfaces in the console or blocks the app.
+    try {
+      final granted = await _notifService.requestPermission();
+      if (!granted) return;
+      await _notifService.initialize();
+      final token = await _notifService.getToken();
+      if (token != null) {
+        await registerToken(token);
+      }
+    } catch (e) {
+      Get.log('initFCM failed (non-fatal): $e');
     }
   }
 

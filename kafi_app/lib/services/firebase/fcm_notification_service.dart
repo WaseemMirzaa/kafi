@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/notification_controller.dart';
 import 'package:kafi_app/views/shared/kafi_colors.dart';
@@ -13,11 +14,19 @@ class FcmNotificationService implements INotificationService {
 
   @override
   Future<void> initialize() async {
-    await _messaging.setForegroundNotificationPresentationOptions(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+    // On web, FCM needs a service worker (web/firebase-messaging-sw.js) and a
+    // VAPID key to obtain a token; neither is configured, so token retrieval
+    // is intentionally skipped there. The listeners below are still safe to
+    // register. Any platform quirk must not crash startup — hence the guard.
+    try {
+      await _messaging.setForegroundNotificationPresentationOptions(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+    } catch (e) {
+      debugPrint('FCM setForegroundNotificationPresentationOptions skipped: $e');
+    }
 
     // Foreground messages — refresh inbox so badge/list updates without a
     // restart, and surface deep-link data into NotificationController.
@@ -88,17 +97,31 @@ class FcmNotificationService implements INotificationService {
 
   @override
   Future<bool> requestPermission() async {
-    final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-    return settings.authorizationStatus == AuthorizationStatus.authorized;
+    try {
+      final settings = await _messaging.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
+      return settings.authorizationStatus == AuthorizationStatus.authorized;
+    } catch (e) {
+      debugPrint('FCM requestPermission failed (non-fatal): $e');
+      return false;
+    }
   }
 
   @override
   Future<String?> getToken() async {
-    return await _messaging.getToken();
+    // Web token retrieval requires a VAPID key + service worker that this app
+    // does not ship; calling getToken() there throws. Skip on web and fail
+    // soft everywhere else so a missing/rotated token never crashes the app.
+    if (kIsWeb) return null;
+    try {
+      return await _messaging.getToken();
+    } catch (e) {
+      debugPrint('FCM getToken failed (non-fatal): $e');
+      return null;
+    }
   }
 
   @override

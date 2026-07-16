@@ -115,7 +115,10 @@ jobs:
         working-directory: kafi_app
         run: |
           flutter pub get
-          flutter build web --release
+          # --source-maps emits main.dart.js.map so obfuscated release stack
+          # traces resolve to real Dart frames in the browser console — needed
+          # to diagnose runtime errors on the deployed site.
+          flutter build web --release --source-maps
 
       # Build the release APK and stage it inside the web build output so it
       # deploys with Hosting as a public, direct download at /kafi.apk.
