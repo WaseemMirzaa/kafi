@@ -22,6 +22,11 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+    inputs:
+      rebuild_apk:
+        description: 'Rebuild the Android APK from source (default: reuse the currently published kafi.apk)'
+        type: boolean
+        default: false
 
 concurrency:
   group: deploy-${{ github.ref }}
@@ -41,7 +46,11 @@ jobs:
     # empty and the guard below skips the deploy.
     environment: FIREBASE_PROJECT_ID
     steps:
+      # fetch-depth: 2 so the APK step can diff HEAD^..HEAD to decide whether
+      # the app itself changed (and thus needs a fresh APK build).
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       # Cleanly skip (green, not red) until the deploy secrets are configured.
       # Prints a presence report (booleans only — never the values) so a skipped
@@ -99,11 +108,15 @@ jobs:
           FIREBASE_SA_JSON_B64: ${{ secrets.FIREBASE_SA_JSON_B64 }}
         run: bash scripts/materialize-secrets.sh
 
-      # Java is required for the Gradle/Android APK build below.
+      # Java is required for the Gradle/Android APK build below. cache: gradle
+      # persists ~/.gradle across runs so a real APK rebuild is fast (the cold
+      # first build downloads Gradle + the Android toolchain; warm builds skip
+      # most of it), keeping it well clear of any runner-reclaim window.
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
           java-version: '17'
+          cache: gradle
 
       - uses: subosito/flutter-action@v2
         with:
@@ -120,16 +133,47 @@ jobs:
           # to diagnose runtime errors on the deployed site.
           flutter build web --release --source-maps
 
-      # Build the release APK and stage it inside the web build output so it
-      # deploys with Hosting as a public, direct download at /kafi.apk.
+      # Stage kafi.apk inside the web build output so it deploys with Hosting as
+      # a public, direct download at /kafi.apk. Rebuilding the APK is a slow
+      # (~15 min) Gradle build, so we only do it when the app itself changed
+      # (pubspec.yaml version/deps) or when explicitly requested via
+      # workflow_dispatch. Otherwise we carry the already-published APK forward
+      # by fetching it from the live site — Firebase Hosting deploys are atomic
+      # (they replace the whole site), so the file must be present each deploy.
       # Uses the SAME firebase_options.dart the web build uses (android = web).
-      - name: Build Android APK (live) + stage for Hosting
+      - name: Stage APK for Hosting (rebuild only when the app changed)
         if: steps.guard.outputs.skip != 'true'
         working-directory: kafi_app
+        env:
+          LIVE_APK_URL: https://kafi-app-8acbe.web.app/kafi.apk
+          REBUILD_REQUESTED: ${{ github.event_name == 'workflow_dispatch' && inputs.rebuild_apk }}
         run: |
-          flutter build apk --release
-          cp build/app/outputs/flutter-apk/app-release.apk build/web/kafi.apk
-          echo "Staged kafi.apk → build/web/kafi.apk ($(du -h build/web/kafi.apk | cut -f1))"
+          set -euo pipefail
+          mkdir -p build/web
+          rebuild=false
+          if [ "${REBUILD_REQUESTED}" = "true" ]; then
+            echo "APK rebuild requested via workflow_dispatch."
+            rebuild=true
+          elif git diff --name-only HEAD^ HEAD 2>/dev/null | grep -qx 'kafi_app/pubspec.yaml'; then
+            echo "kafi_app/pubspec.yaml changed — rebuilding the APK."
+            rebuild=true
+          fi
+
+          if [ "$rebuild" = "false" ]; then
+            echo "Reusing the currently published APK from ${LIVE_APK_URL}"
+            if curl -fsSL --retry 3 "${LIVE_APK_URL}" -o build/web/kafi.apk; then
+              echo "Carried forward existing kafi.apk ($(du -h build/web/kafi.apk | cut -f1))"
+            else
+              echo "::notice::No published APK to reuse yet — building a fresh one."
+              rebuild=true
+            fi
+          fi
+
+          if [ "$rebuild" = "true" ]; then
+            flutter build apk --release
+            cp build/app/outputs/flutter-apk/app-release.apk build/web/kafi.apk
+            echo "Built + staged kafi.apk ($(du -h build/web/kafi.apk | cut -f1))"
+          fi
 
       - uses: actions/setup-node@v4
         with:
