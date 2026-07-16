@@ -3,17 +3,34 @@
 Produces an APK that runs against **live Firebase** so you can test the full
 nanny + family journeys on a real device.
 
-## Recommended: build in CI (no local Android SDK)
+## Public direct download (auto-published on every deploy)
+
+Every push to `main` runs the **Deploy (live)** workflow
+(`.github/workflows/deploy.yml`), which builds the release APK and publishes it to
+the app's Firebase Hosting site as a **public, direct download** — no GitHub login,
+no expiring artifact:
+
+> **https://kafi-app-8acbe.web.app/kafi.apk**
+
+The link is stable (always the latest `main` build) and served with an
+`application/vnd.android.package-archive` content type + `attachment` disposition,
+so opening it on an Android device downloads and offers to install the APK. Share
+this URL with testers. It goes live the first time a `main` deploy runs with the
+Firebase secrets configured; until then the guard step skips the deploy (green).
+
+## Alternative: one-off build in CI (downloadable artifact)
 
 The **Build APK** GitHub Actions workflow (`.github/workflows/build-apk.yml`)
-compiles the APK on GitHub's runners and uploads it as a downloadable artifact.
-It reuses the **same Firebase secrets as the web deploy** — the `VITE_FIREBASE_*`
-values in the `FIREBASE_PROJECT_ID` GitHub Environment — so there is **nothing new
-to configure** once the deploy secrets are set.
+compiles the APK on GitHub's runners and uploads it as a downloadable artifact —
+handy for `debug` builds or building a specific branch without deploying. It reuses
+the **same Firebase secrets as the web deploy** — the `VITE_FIREBASE_*` values in
+the `FIREBASE_PROJECT_ID` GitHub Environment — so there is **nothing new to
+configure** once the deploy secrets are set.
 
 1. **Actions → “Build APK” → Run workflow** (choose `release` or `debug`).
 2. When it finishes, download the `kafi-release-apk` artifact from the run and
-   install the `.apk` on a device.
+   install the `.apk` on a device. (Artifacts require a GitHub login and expire
+   after 14 days — use the public link above for sharing.)
 
 On the runner, `scripts/materialize-secrets.sh` generates `firebase_options.dart`
 from those secrets, where the **Android app config mirrors the web app config**

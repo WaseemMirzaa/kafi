@@ -1,8 +1,12 @@
 name: Deploy (live)
 
 # Builds the Flutter web app + admin panel against LIVE Firebase and deploys
-# both to Firebase Hosting. All credentials come from encrypted GitHub Actions
-# secrets (Settings → Secrets and variables → Actions) — never from the repo.
+# both to Firebase Hosting. It also builds the release Android APK and publishes
+# it to the app's Hosting site as a public, direct download at
+#   https://kafi-app-8acbe.web.app/kafi.apk
+# so testers can install without a GitHub login or an expiring Actions artifact.
+# All credentials come from encrypted GitHub Actions secrets (Settings → Secrets
+# and variables → Actions) — never from the repo.
 #
 # Required secrets:
 #   FIREBASE_PROJECT_ID          your Firebase project id
@@ -95,6 +99,12 @@ jobs:
           FIREBASE_SA_JSON_B64: ${{ secrets.FIREBASE_SA_JSON_B64 }}
         run: bash scripts/materialize-secrets.sh
 
+      # Java is required for the Gradle/Android APK build below.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
       - uses: subosito/flutter-action@v2
         with:
           flutter-version: '3.35.7'
@@ -106,6 +116,17 @@ jobs:
         run: |
           flutter pub get
           flutter build web --release
+
+      # Build the release APK and stage it inside the web build output so it
+      # deploys with Hosting as a public, direct download at /kafi.apk.
+      # Uses the SAME firebase_options.dart the web build uses (android = web).
+      - name: Build Android APK (live) + stage for Hosting
+        if: steps.guard.outputs.skip != 'true'
+        working-directory: kafi_app
+        run: |
+          flutter build apk --release
+          cp build/app/outputs/flutter-apk/app-release.apk build/web/kafi.apk
+          echo "Staged kafi.apk → build/web/kafi.apk ($(du -h build/web/kafi.apk | cut -f1))"
 
       - uses: actions/setup-node@v4
         with:

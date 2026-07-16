@@ -24,6 +24,16 @@
       "site": "kafi-app-8acbe",
       "public": "kafi_app/build/web",
       "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+      "headers": [
+        {
+          "source": "/kafi.apk",
+          "headers": [
+            { "key": "Content-Type", "value": "application/vnd.android.package-archive" },
+            { "key": "Content-Disposition", "value": "attachment; filename=\"kafi.apk\"" },
+            { "key": "Cache-Control", "value": "no-cache, max-age=0" }
+          ]
+        }
+      ],
       "rewrites": [{ "source": "**", "destination": "/index.html" }]
     }
   ],
