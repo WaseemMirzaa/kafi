@@ -3,6 +3,7 @@ import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/nanny_map_codec.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/utils/localized_text.dart';
 
 /// Firestore implementation — collection structure per Technical Architecture §6.1.
 class FirestoreUserService implements IUserService {
@@ -44,6 +45,7 @@ class FirestoreUserService implements IUserService {
       viewedProfiles: List<String>.from(m['viewedProfiles'] ?? []),
       activeTrialNannyIds: List<String>.from(m['activeTrialNannyIds'] ?? []),
       stats: FamilyStats.fromMap(m['stats'] as Map<String, dynamic>?),
+      i18n: i18nMapsFrom(m, const ['aboutFamily', 'houseRules']),
     );
   }
 

@@ -1,3 +1,5 @@
+import 'package:kafi_app/utils/localized_text.dart';
+
 enum JobType { liveIn, liveOut }
 
 enum VisaSponsorship { full, shared, residenceOnly, none }
@@ -177,6 +179,7 @@ class FamilyModel {
     this.viewedProfiles = const [],
     this.activeTrialNannyIds = const [],
     this.stats = const FamilyStats(),
+    this.i18n = const {},
   });
 
   final String id;
@@ -205,6 +208,10 @@ class FamilyModel {
   final List<String> activeTrialNannyIds;
   final FamilyStats stats;
 
+  /// Per-field translations for free-text fields (server-owned; see
+  /// docs/TRANSLATIONS.md). Never written by [toMap].
+  final Map<String, Map<String, String>> i18n;
+
   bool get isSubscribed =>
       subscription.status == SubscriptionStatus.active ||
       subscription.status == SubscriptionStatus.cancelled;
@@ -214,6 +221,14 @@ class FamilyModel {
       subscription.status == SubscriptionStatus.paymentFailed;
 
   bool hasActiveTrialWith(String nannyId) => activeTrialNannyIds.contains(nannyId);
+
+  /// "About the family" in the app's current language (falls back to original).
+  String localizedAboutFamily([String? lang]) =>
+      localize(aboutFamily, i18n['aboutFamily'], lang);
+
+  /// House rules in the app's current language (falls back to original).
+  String localizedHouseRules([String? lang]) =>
+      localize(houseRules, i18n['houseRules'], lang);
 
   FamilyModel copyWith({
     String? fullName,
@@ -237,6 +252,7 @@ class FamilyModel {
     List<String>? viewedProfiles,
     List<String>? activeTrialNannyIds,
     FamilyStats? stats,
+    Map<String, Map<String, String>>? i18n,
   }) =>
       FamilyModel(
         id: id,
@@ -262,6 +278,7 @@ class FamilyModel {
         viewedProfiles: viewedProfiles ?? this.viewedProfiles,
         activeTrialNannyIds: activeTrialNannyIds ?? this.activeTrialNannyIds,
         stats: stats ?? this.stats,
+        i18n: i18n ?? this.i18n,
       );
 
   Map<String, dynamic> toMap() => {
