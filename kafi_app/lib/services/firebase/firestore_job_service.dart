@@ -5,6 +5,7 @@ import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/match_service.dart';
+import 'package:kafi_app/utils/localized_text.dart';
 
 class FirestoreJobService implements IJobService {
   final _jobs = FirebaseFirestore.instance.collection('jobs');
@@ -151,6 +152,7 @@ class FirestoreJobService implements IJobService {
         applicationsCount: (m['applicationsCount'] as num?)?.toInt() ?? 0,
         city: m['city'] ?? '',
         commitmentAgreed: m['commitmentAgreed'] ?? false,
+        i18n: i18nMapsFrom(m, const ['jobTitle', 'schedule', 'additionalNotes']),
       );
 
   static DateTime? _date(dynamic v) {

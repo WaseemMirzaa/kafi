@@ -81,10 +81,12 @@ only by the translate functions), exactly like the admin review fields.
 ## Rollout status
 
 - ✅ Server: all fields above are translated on write (nannies/families/jobs).
-- ✅ Client: `localize()` helper + `NannyModel` (`bio` / `healthConditions` /
-  `religiousNotes`) parse + getters.
-- 🔧 Follow-up: add the same parse + `localizedX()` getters to `FamilyModel`
-  (`aboutFamily`, `houseRules`) and `JobPostModel` (`jobTitle`, `schedule`,
-  `additionalNotes`), and switch the display widgets to the `localizedX()`
-  getters as those detail views are built. (No family-facing bio view reads
-  `nanny.bio` today, so there is no display site to switch yet.)
+- ✅ Client: `localize()` helper + parse + `localizedX()` getters on all three
+  models:
+  - `NannyModel` — `bio`, `healthConditions`, `religiousNotes`
+  - `FamilyModel` — `aboutFamily`, `houseRules`
+  - `JobPostModel` — `jobTitle`, `schedule`, `additionalNotes`
+- 🔧 Follow-up: switch the display widgets to the `localizedX()` getters as those
+  detail views are built. Today no view renders these free-text fields directly
+  (families browse nannies via `NannyCardModel` cards), so there is no display
+  site to switch yet.

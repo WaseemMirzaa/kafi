@@ -1,4 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:kafi_app/models/family_model.dart';
+import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/models/nanny_map_codec.dart';
 import 'package:kafi_app/utils/localized_text.dart';
 
@@ -80,6 +82,69 @@ void main() {
       final edited = n.copyWith(fullName: 'Maria');
       expect(edited.fullName, 'Maria');
       expect(edited.localizedBio('ar'), 'تحب الأطفال');
+    });
+  });
+
+  group('FamilyModel translation-awareness', () {
+    test('localizes aboutFamily / houseRules, falling back to original', () {
+      const f = FamilyModel(
+        id: 'f1',
+        userId: 'f1',
+        aboutFamily: 'We are a warm family',
+        houseRules: 'No smoking',
+        i18n: {
+          'aboutFamily': {'en': 'We are a warm family', 'ar': 'نحن عائلة دافئة'},
+        },
+      );
+      expect(f.localizedAboutFamily('ar'), 'نحن عائلة دافئة');
+      expect(f.localizedAboutFamily('en'), 'We are a warm family');
+      expect(f.localizedHouseRules('ar'), 'No smoking'); // no ar → original
+      expect(f.copyWith(fullName: 'X').localizedAboutFamily('ar'), 'نحن عائلة دافئة');
+    });
+    test('toMap never serializes the translation maps', () {
+      const f = FamilyModel(
+        id: 'f1',
+        userId: 'f1',
+        aboutFamily: 'Hi',
+        i18n: {
+          'aboutFamily': {'en': 'Hi', 'ar': 'مرحبا'},
+        },
+      );
+      final map = f.toMap();
+      expect(map.containsKey('aboutFamily_i18n'), isFalse);
+      expect(map.containsKey('i18n'), isFalse);
+    });
+  });
+
+  group('JobPostModel translation-awareness', () {
+    test('localizes jobTitle / schedule / additionalNotes with fallback', () {
+      const j = JobPostModel(
+        id: 'j1',
+        familyId: 'f1',
+        jobTitle: 'Live-in Nanny',
+        schedule: 'Mon-Fri',
+        additionalNotes: 'Must love pets',
+        i18n: {
+          'jobTitle': {'en': 'Live-in Nanny', 'ar': 'مربية مقيمة'},
+        },
+      );
+      expect(j.localizedJobTitle('ar'), 'مربية مقيمة');
+      expect(j.localizedSchedule('ar'), 'Mon-Fri'); // no ar → original
+      expect(j.localizedAdditionalNotes('ar'), 'Must love pets');
+      expect(j.copyWith(city: 'Dubai').localizedJobTitle('ar'), 'مربية مقيمة');
+    });
+    test('toMap never serializes the translation maps', () {
+      const j = JobPostModel(
+        id: 'j1',
+        familyId: 'f1',
+        jobTitle: 'Nanny',
+        i18n: {
+          'jobTitle': {'en': 'Nanny', 'ar': 'مربية'},
+        },
+      );
+      final map = j.toMap();
+      expect(map.containsKey('jobTitle_i18n'), isFalse);
+      expect(map.containsKey('i18n'), isFalse);
     });
   });
 }

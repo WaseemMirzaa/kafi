@@ -1,4 +1,5 @@
 import 'package:kafi_app/models/family_model.dart';
+import 'package:kafi_app/utils/localized_text.dart';
 
 /// Per System Spec §3.4
 enum JobPostStatus { active, paused, closed, expired }
@@ -47,6 +48,7 @@ class JobPostModel {
     this.applicationsCount = 0,
     this.city = '',
     this.commitmentAgreed = false,
+    this.i18n = const {},
   });
 
   final String id;
@@ -85,6 +87,22 @@ class JobPostModel {
   final String city;
   final bool commitmentAgreed;
 
+  /// Per-field translations for free-text fields (server-owned; see
+  /// docs/TRANSLATIONS.md). Never written by [toMap].
+  final Map<String, Map<String, String>> i18n;
+
+  /// Job title in the app's current language (falls back to original).
+  String localizedJobTitle([String? lang]) =>
+      localize(jobTitle, i18n['jobTitle'], lang);
+
+  /// Schedule in the app's current language (falls back to original).
+  String localizedSchedule([String? lang]) =>
+      localize(schedule, i18n['schedule'], lang);
+
+  /// Additional notes in the app's current language (falls back to original).
+  String localizedAdditionalNotes([String? lang]) =>
+      localize(additionalNotes, i18n['additionalNotes'], lang);
+
   JobPostModel copyWith({
     String? familyName,
     JobPostStatus? status,
@@ -119,6 +137,7 @@ class JobPostModel {
     int? applicationsCount,
     String? city,
     bool? commitmentAgreed,
+    Map<String, Map<String, String>>? i18n,
   }) =>
       JobPostModel(
         id: id,
@@ -156,6 +175,7 @@ class JobPostModel {
         applicationsCount: applicationsCount ?? this.applicationsCount,
         city: city ?? this.city,
         commitmentAgreed: commitmentAgreed ?? this.commitmentAgreed,
+        i18n: i18n ?? this.i18n,
       );
 
   Map<String, dynamic> toMap() => {
