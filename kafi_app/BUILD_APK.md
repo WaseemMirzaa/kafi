@@ -12,11 +12,20 @@ no expiring artifact:
 
 > **https://kafi-app-8acbe.web.app/kafi.apk**
 
-The link is stable (always the latest `main` build) and served with an
-`application/vnd.android.package-archive` content type + `attachment` disposition,
-so opening it on an Android device downloads and offers to install the APK. Share
-this URL with testers. It goes live the first time a `main` deploy runs with the
-Firebase secrets configured; until then the guard step skips the deploy (green).
+The link is stable and served with an `application/vnd.android.package-archive`
+content type + `attachment` disposition, so opening it on an Android device
+downloads and offers to install the APK. Share this URL with testers. It goes
+live the first time a `main` deploy runs with the Firebase secrets configured;
+until then the guard step skips the deploy (green).
+
+**When the APK is rebuilt.** Rebuilding the APK is a slow (~15 min) Gradle build,
+so the deploy only does it when the app itself changed — i.e. when
+`kafi_app/pubspec.yaml` changes — or when you tick **Rebuild the Android APK**
+under **Actions → Deploy (live) → Run workflow**. Every other deploy (web/admin
+tweaks, docs) carries the already-published `kafi.apk` forward by fetching it from
+the live site, so routine deploys stay fast and don't depend on the long Android
+build. To force a fresh APK without a `pubspec.yaml` change, run the workflow
+manually with that box checked.
 
 ## Alternative: one-off build in CI (downloadable artifact)
 
