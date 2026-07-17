@@ -5,14 +5,16 @@ import {
   onAuthStateChanged,
   User as FbUser,
 } from 'firebase/auth';
+import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { AppConfig } from '../config/app';
-import { auth } from '../config/firebase';
+import { auth, db } from '../config/firebase';
 
 interface AdminUser {
   uid: string;
   email: string;
   displayName: string;
   isAdmin: boolean;
+  role?: string;
 }
 
 interface AuthState {
@@ -38,12 +40,36 @@ function readCached(): AdminUser | null {
 
 async function toAdminUser(fb: FbUser): Promise<AdminUser> {
   const token = await fb.getIdTokenResult(true);
-  const isAdmin = token.claims.admin === true;
+  let isAdmin = token.claims.admin === true;
+  let role = typeof token.claims.role === 'string' ? (token.claims.role as string) : undefined;
+
+  // Firestore is the source of truth for admin accounts: an `admins/{uid}`
+  // record must exist. The custom claim is still what Firestore/Storage rules
+  // check for writes, so a real admin has both (seeded by scripts/create-admin).
+  if (db) {
+    try {
+      const ref = doc(db, 'admins', fb.uid);
+      const snap = await getDoc(ref);
+      if (snap.exists()) {
+        isAdmin = true;
+        role = (snap.data().role as string) ?? role;
+        // Best-effort last-login audit stamp; never blocks login.
+        void updateDoc(ref, { lastLoginAt: serverTimestamp() }).catch(() => {});
+      } else {
+        // No admin record → not an admin, regardless of a stale claim.
+        isAdmin = false;
+      }
+    } catch {
+      // Firestore unreachable — fall back to the custom-claim result.
+    }
+  }
+
   return {
     uid: fb.uid,
     email: fb.email ?? '',
     displayName: fb.displayName ?? fb.email ?? 'Admin',
     isAdmin,
+    role,
   };
 }
 

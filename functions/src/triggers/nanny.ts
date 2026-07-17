@@ -29,7 +29,8 @@ export const onDocumentReviewed = onDocumentUpdated(
 
     const changed = afterDocs.filter((d) => d.type && d.status && prevByType.get(d.type) !== d.status);
 
-    if (changed.length === 0 && before.status === after.status) return;
+    const blockedChanged = (before.blocked === true) !== (after.blocked === true);
+    if (changed.length === 0 && before.status === after.status && !blockedChanged) return;
 
     // Only notify when the user has FCM tokens. Tokens live on the user doc.
     const user = await getUser(event.params.nannyId);
@@ -82,6 +83,25 @@ export const onDocumentReviewed = onDocumentUpdated(
       await sendNotification(user.fcmTokens, {
         ...payload,
         data: { type: `profile_${after.status}` },
+      });
+    }
+
+    // 3. Block / unblock push. The mobile app also enforces the block live via
+    // its `blocked` watcher, but this tells the nanny why.
+    if (blockedChanged) {
+      const payload =
+        after.blocked === true
+          ? {
+              title: '🚫 Account disabled',
+              body: 'Your Kafi account has been disabled by an administrator. Please contact support.',
+            }
+          : {
+              title: '✅ Account restored',
+              body: 'Your Kafi account has been re-enabled. Welcome back!',
+            };
+      await sendNotification(user.fcmTokens, {
+        ...payload,
+        data: { type: after.blocked === true ? 'account_blocked' : 'account_unblocked' },
       });
     }
   },

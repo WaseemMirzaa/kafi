@@ -14,6 +14,7 @@ import { NannyService, NannyRow } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
 import { useAuthStore } from '../../hooks/useAuth';
 import { NannyProfileView } from '../../components/nanny/NannyProfileView';
+import { DocThumb } from '../../components/nanny/DocFilePreview';
 import { FilterBar, FilterSelect, Pagination } from '../../components/ui/ListControls';
 import { useListControls } from '../../hooks/useListControls';
 
@@ -297,20 +298,7 @@ export default function VerifyDocuments() {
                               key={doc.type}
                               className="flex items-center gap-3 rounded-lg border border-[#EBEEF8] p-2"
                             >
-                              {doc.url ? (
-                                <a href={doc.url} target="_blank" rel="noreferrer" className="flex-shrink-0">
-                                  <img
-                                    src={doc.url}
-                                    alt={docLabel[doc.type] ?? doc.type}
-                                    className="w-16 h-12 object-cover rounded-md bg-[#F4F5FC]"
-                                    loading="lazy"
-                                  />
-                                </a>
-                              ) : (
-                                <div className="w-16 h-12 rounded-md bg-[#F4F5FC] flex items-center justify-center text-[8px] font-bold text-[#A0ADC8] flex-shrink-0">
-                                  None
-                                </div>
-                              )}
+                              <DocThumb url={doc.url} label={docLabel[doc.type] ?? doc.type} />
                               <div className="flex-1 min-w-0">
                                 <div className="text-[10.5px] font-extrabold text-navy">
                                   {docLabel[doc.type] ?? doc.type}

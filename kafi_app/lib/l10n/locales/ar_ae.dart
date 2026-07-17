@@ -315,6 +315,10 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     // Account blocked (admin)
     AppStrings.accountBlocked: 'الحساب محظور',
     AppStrings.accountBlockedSub: 'تم حظر حسابك من قبل المسؤول. يرجى التواصل مع الدعم.',
+    AppStrings.blockedTitle: 'الحساب معطّل',
+    AppStrings.blockedBody: 'لا يمكنك استخدام هذا الحساب حاليًا. لقد تم تعطيله من قبل مسؤول كافي.',
+    AppStrings.blockedContact: 'إذا كنت تعتقد أن هذا خطأ، يرجى التواصل مع فريق إدارة كافي للمساعدة.',
+    AppStrings.blockedLogout: 'تسجيل الخروج',
 
     // Nanny media + docs screen labels (l10n sweep)
     AppStrings.mediaTitle: 'ملفك كمربية',

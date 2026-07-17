@@ -20,10 +20,12 @@ service firebase.storage {
       allow read: if true;
       allow write: if (isUser(uid) || isAdmin()) && isVideo() && under(25);
     }
-    // Sensitive documents (passport, visa, EID, police, training)
+    // Sensitive documents (passport, visa, EID, police, training).
+    // Documents may be images, PDFs, videos or other formats (KYC uploads),
+    // so the content type is unrestricted — only owner/admin + size are gated.
     match /nannies/{uid}/documents/{file} {
       allow read: if isUser(uid) || isAdmin();
-      allow write: if (isUser(uid) || isAdmin()) && (isImage() || isPdf()) && under(10);
+      allow write: if (isUser(uid) || isAdmin()) && under(25);
     }
     // Family avatar
     match /families/{uid}/avatar/{file} {

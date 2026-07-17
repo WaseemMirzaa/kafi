@@ -22,15 +22,25 @@ VITE_FIREBASE_APP_ID=...
 - `npm run dev` defaults to **mock** unless `VITE_USE_MOCK=false`.
 - `vite build` (production) defaults to **live** automatically (`useMock = !DEV`).
 
-## 2. Seed an admin (Firebase Auth + custom claim)
+## 2. Seed an admin (credentials in Firestore + custom claim)
 
-Admin login uses Firebase Auth and requires an `admin: true` custom claim
-(checked in `src/hooks/useAuth.ts`).
+Admin accounts are authorized against the Firestore **`admins/{uid}`** record
+(`src/hooks/useAuth.ts` reads it and rejects anyone without one). The password
+lives in Firebase Auth; the admin record (email, role, permissions) lives in
+Firestore. The `admin: true` custom claim is also set because the
+Firestore/Storage rules require it for approve/reject/block writes.
 
-1. Create the admin user in Firebase Auth (email/password).
-2. Run `scripts/set-admin-claims.ts` with service-account credentials — it sets
-   the `admin` claim and creates `admins/{uid}` (role + permissions).
-3. The admin signs out/in once so the new claim takes effect.
+Create everything in one step (creates the Auth account **and** the Firestore
+record + claim), with service-account credentials:
+
+```
+GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
+  npx ts-node scripts/create-admin.ts admin@kafi.ae 'StrongPassword123!' 'Kafi Admin'
+```
+
+Then sign in to the panel with that email/password. (`scripts/set-admin-claims.ts`
+still exists for granting admin to an already-created Auth user.) After the first
+run the user may need to sign out/in once so the claim propagates.
 
 ## 3. Deploy rules/indexes
 
@@ -40,11 +50,14 @@ firebase deploy --only firestore:rules,firestore:indexes,storage
 
 ## 4. Features already wired for live
 
-- **Verify documents** — approve/reject per document; the mobile app reflects it
-  live via `watchNanny` (pending → approved/rejected screen).
+- **Verify documents** — approve/reject per document and approve the whole
+  profile; the mobile app reflects it live via `watchNanny`. Documents render
+  by format: images inline, videos in a `<video>` player, PDFs in a viewer, and
+  other formats as a download card (`components/nanny/DocFilePreview.tsx`).
 - **Block / unblock** nannies + families — writes `blocked` on the doc. The
-  mobile app now **enforces** this: a blocked user is signed out at login with a
-  localized "account blocked" message (`IUserService.isUserBlocked`).
+  mobile app **enforces** this live: a blocked user is routed to a logout-only
+  "account disabled — contact admin" screen (via `IUserService.watchBlocked`),
+  both at startup and mid-session, and gets an FCM "account disabled" push.
 - Full nanny profile (all fields), intro-video review, subscription override,
   free-contact reset, broadcasts, disputes, revenue dashboards.
 

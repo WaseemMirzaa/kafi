@@ -1,5 +1,6 @@
 import { NannyRow } from '../../services/firestore';
 import { Field, FieldGrid, StatusBadge } from '../ui/AdminUI';
+import { DocViewer } from './DocFilePreview';
 import {
   visaStatusLabel,
   availabilityLabel,
@@ -46,31 +47,20 @@ function docVariant(status: string): string {
   return 'verify';
 }
 
-/** Read-only document grid with image thumbnails. */
+/** Read-only document grid — renders images, videos, PDFs and other formats. */
 export function DocumentsGrid({ nanny }: { nanny: NannyRow }) {
   const docs = nanny.documents ?? [];
   if (docs.length === 0) {
     return <div className="text-[10px] text-[#8090B0] mt-2">No documents uploaded.</div>;
   }
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
+    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
       {docs.map((doc, i) => (
         <div key={doc.type + i} className="rounded-lg border border-[#EBEEF8] overflow-hidden">
-          {doc.url ? (
-            <a href={doc.url} target="_blank" rel="noreferrer" className="block">
-              <img
-                src={doc.url}
-                alt={docLabel[doc.type] ?? doc.type}
-                className="w-full h-24 object-cover bg-[#F4F5FC]"
-                loading="lazy"
-              />
-            </a>
-          ) : (
-            <div className="w-full h-24 flex items-center justify-center bg-[#F4F5FC] text-[9px] font-bold text-[#A0ADC8]">
-              Not uploaded
-            </div>
-          )}
-          <div className="flex items-center justify-between gap-1 px-2 py-1.5">
+          <div className="p-2">
+            <DocViewer url={doc.url} label={docLabel[doc.type] ?? doc.type} />
+          </div>
+          <div className="flex items-center justify-between gap-1 px-2 py-1.5 border-t border-[#EBEEF8]">
             <div className="text-[9px] font-extrabold text-navy truncate">{docLabel[doc.type] ?? doc.type}</div>
             <StatusBadge variant={docVariant(doc.status)}>{doc.status}</StatusBadge>
           </div>
@@ -251,14 +241,27 @@ export function NannyProfileView({
 
       {nanny.introVideoUrl && (
         <Section title="Intro video">
-          <a
-            href={nanny.introVideoUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-block mt-2 text-[9px] font-bold text-purple font-fredoka rounded-md border border-[#EBEEF8] px-2 py-1"
-          >
-            Watch intro video ↗{nanny.introVideoStatus ? ` (${nanny.introVideoStatus})` : ''}
-          </a>
+          <video
+            src={nanny.introVideoUrl}
+            controls
+            preload="metadata"
+            className="w-full max-h-72 rounded-lg bg-black mt-2"
+          />
+          <div className="mt-1 flex items-center gap-2">
+            {nanny.introVideoStatus && (
+              <StatusBadge variant={docVariant(nanny.introVideoStatus)}>
+                {nanny.introVideoStatus}
+              </StatusBadge>
+            )}
+            <a
+              href={nanny.introVideoUrl}
+              target="_blank"
+              rel="noreferrer"
+              className="text-[9px] font-bold text-purple font-fredoka"
+            >
+              Open video ↗
+            </a>
+          </div>
         </Section>
       )}
 

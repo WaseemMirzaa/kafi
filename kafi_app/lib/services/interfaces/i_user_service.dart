@@ -17,4 +17,8 @@ abstract class IUserService {
 
   /// Whether an admin has blocked this user (nanny or family) in Firestore.
   Future<bool> isUserBlocked(String userId, {required bool isNanny});
+
+  /// Live stream of the admin `blocked` flag on the user's role doc, so the
+  /// app can react the moment an admin blocks/unblocks the account.
+  Stream<bool> watchBlocked(String userId, {required bool isNanny});
 }
