@@ -646,6 +646,8 @@ const Map<String, String> enUs = {
   AppStrings.valAgeMin18: 'You must be 18+ to use Kafi',
   AppStrings.valPhoneInvalid: 'Please enter a valid phone',
   AppStrings.valSalaryOrder: 'Min salary must be less than max',
+  AppStrings.valSalaryTooHigh: 'Please enter a realistic monthly salary (max AED 100,000)',
+  AppStrings.valExpDatesInvalid: 'Work experience "from" date must be on or before the "to" date',
 
   // Auth errors & flow (System Spec §14.1)
   AppStrings.authPhoneInvalid: 'Please enter a valid phone number',
@@ -716,6 +718,8 @@ const Map<String, String> enUs = {
   AppStrings.mediaVideoReady: 'Ready to submit',
   AppStrings.docUploading: 'Uploading documents…',
   AppStrings.docUploadFailed: 'Upload failed. Please check your connection and try again.',
+  AppStrings.docPickFailed: "Couldn't open that file. Please pick a PDF or image (JPG/PNG).",
+  AppStrings.docTooLarge: 'That file is too large. Please choose a file under 10 MB.',
 
   // Family job — employment type + edit fields
   AppStrings.fldEmployment: 'Employment type',

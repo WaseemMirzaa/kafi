@@ -182,15 +182,33 @@ class _ExpCardState extends State<_ExpCard> {
   }
 
   Future<void> _pickDate(bool isFrom) async {
-    final initial = isFrom ? _from : _to;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // A job can't start or end in the future, and "from" can't be after "to".
+    //   • From: [2005 .. min(To, today)]
+    //   • To:   [From .. today]
+    final DateTime first = isFrom ? DateTime(2005) : _from;
+    final DateTime last = isFrom ? (_to.isBefore(today) ? _to : today) : today;
+    var initial = isFrom ? _from : _to;
+    if (initial.isBefore(first)) initial = first;
+    if (initial.isAfter(last)) initial = last;
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(2005),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: first,
+      lastDate: last,
+      helpText: isFrom ? AppStrings.expFrom.tr : AppStrings.expTo.tr,
     );
     if (picked != null) {
-      setState(() => isFrom ? _from = picked : _to = picked);
+      setState(() {
+        if (isFrom) {
+          _from = picked;
+          // Keep the range valid if the new start is after the current end.
+          if (_to.isBefore(_from)) _to = _from;
+        } else {
+          _to = picked;
+        }
+      });
       _emit();
     }
   }

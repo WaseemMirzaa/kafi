@@ -5,6 +5,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_step_scaffold.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
@@ -274,11 +275,6 @@ class _RefCard extends StatefulWidget {
 }
 
 class _RefCardState extends State<_RefCard> {
-  static const _cities = [
-    'Dubai', 'Abu Dhabi', 'Sharjah', 'Ajman', 'Ras Al Khaimah',
-    'Umm Al Quwain', 'Fujairah', 'Al Ain', 'Outside UAE',
-  ];
-
   late final TextEditingController _years;
   late final TextEditingController _canConfirm;
   late String _relationship;
@@ -293,7 +289,7 @@ class _RefCardState extends State<_RefCard> {
     _relationship = NannyConstants.referenceRelations.contains(r.relationship)
         ? r.relationship
         : NannyConstants.referenceRelations.first;
-    _city = _cities.contains(r.city) ? r.city : _cities.first;
+    _city = r.city;
     for (final c in [_years, _canConfirm]) {
       c.addListener(_emit);
     }
@@ -389,10 +385,15 @@ class _RefCardState extends State<_RefCard> {
                   children: [
                     _label(AppStrings.refsCity.tr),
                     const SizedBox(height: 4),
-                    _dropdown(_city, _cities, (v) {
-                      setState(() => _city = v ?? _city);
-                      _emit();
-                    }),
+                    // Uber-style location picker for the reference's city.
+                    KafiLocationPicker(
+                      label: AppStrings.refsCity.tr,
+                      initialValue: _city,
+                      onChanged: (v) {
+                        setState(() => _city = v);
+                        _emit();
+                      },
+                    ),
                   ],
                 ),
               ),

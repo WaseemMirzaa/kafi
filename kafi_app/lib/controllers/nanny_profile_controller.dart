@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:file_picker/file_picker.dart';
@@ -496,7 +497,8 @@ class NannyProfileController extends GetxController {
       }
       final bytes = await picked.readAsBytes();
       introVideoUrl.value = await _storageService.uploadBytes(
-        path: 'nannies/${user.id}/video.mp4',
+        // Must match storage.rules `/nannies/{uid}/videos/{file}`.
+        path: 'nannies/${user.id}/videos/video.mp4',
         bytes: bytes,
         contentType: 'video/mp4',
       );
@@ -557,6 +559,15 @@ class NannyProfileController extends GetxController {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyCompleteStep1.tr);
       return;
     }
+    // Guard against invalid date ranges (belt-and-suspenders — the picker also
+    // prevents selecting a "from" after "to").
+    for (final e in experiences) {
+      final dateErr = Validators.experienceDates(e.fromDate, e.toDate);
+      if (dateErr != null) {
+        Get.snackbar(AppStrings.errorTitle.tr, dateErr.tr);
+        return;
+      }
+    }
     isLoading.value = true;
     try {
       final updated = n.copyWith(experiences: List.of(experiences));
@@ -604,24 +615,53 @@ class NannyProfileController extends GetxController {
     }
   }
 
+  /// Max size for a nanny document, aligned with storage.rules `under(10)` so
+  /// oversized files are rejected client-side with a friendly message instead
+  /// of failing the upload against Storage security rules.
+  static const int _maxDocBytes = 10 * 1024 * 1024;
+
   /// Picks a document and stages it locally. Nothing is uploaded until the user
   /// submits (or saves in edit mode) — see [_uploadStagedDocs].
   Future<void> pickDocument(DocumentType type) async {
     final user = _auth.currentUser.value;
     if (user == null) return;
-    if (!await Get.find<PermissionController>().ensureGallery()) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.permissionGalleryDenied.tr);
+    // Documents are chosen through the system file picker (Storage Access
+    // Framework on Android / UIDocumentPicker on iOS), which grants one-shot
+    // access to the picked file. That needs NO photo-library permission, so we
+    // must not gate on it — doing so previously blocked PDF uploads outright on
+    // Android 13+ where the photos permission does not apply to documents.
+    FilePickerResult? result;
+    try {
+      result = await FilePicker.platform.pickFiles(
+        type: FileType.custom,
+        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        withData: true,
+      );
+    } catch (_) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docPickFailed.tr);
       return;
     }
-    final result = await FilePicker.platform.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
-      withData: true,
-    );
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
-    final bytes = file.bytes;
-    if (bytes == null) return;
+    // `withData: true` usually populates bytes, but large files on some
+    // platforms are exposed only via a path. Fall back to reading the file so a
+    // valid pick never silently no-ops.
+    Uint8List? bytes = file.bytes;
+    if (bytes == null && file.path != null) {
+      try {
+        bytes = await File(file.path!).readAsBytes();
+      } catch (_) {
+        // handled by the null check below
+      }
+    }
+    if (bytes == null) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docPickFailed.tr);
+      return;
+    }
+    if (bytes.length > _maxDocBytes) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docTooLarge.tr);
+      return;
+    }
     final ext = (file.extension ?? 'jpg').toLowerCase();
     _stagedDocs[type] = _StagedDoc(
       bytes: bytes,
@@ -652,7 +692,9 @@ class NannyProfileController extends GetxController {
       final type = entry.key;
       final staged = entry.value;
       final url = await _storageService.uploadBytes(
-        path: 'nannies/$userId/docs/${type.name}.${staged.ext}',
+        // Must match storage.rules `/nannies/{uid}/documents/{file}` — the old
+        // `docs/` prefix matched no rule and was rejected by Storage.
+        path: 'nannies/$userId/documents/${type.name}.${staged.ext}',
         bytes: staged.bytes,
         contentType: staged.contentType,
       );

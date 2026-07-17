@@ -11,6 +11,7 @@ import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
 import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
+import 'package:kafi_app/views/widgets/kafi_searchable_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_section.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
 
@@ -136,10 +137,14 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
         ),
         _label('Your nationality'),
         const SizedBox(height: 4),
-        Obx(() => _dropdown(
+        Obx(() => KafiSearchablePicker(
               value: controller.nationality.value,
-              items: NannyConstants.nationalities,
-              onChanged: (v) => controller.nationality.value = v ?? controller.nationality.value,
+              options: NannyConstants.nationalities,
+              title: 'Your nationality',
+              hint: 'Your nationality',
+              icon: Icons.flag_outlined,
+              purple: true,
+              onSelected: (v) => controller.nationality.value = v,
             )),
         const SizedBox(height: 8),
         Row(
@@ -643,30 +648,6 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
         ),
       );
 
-  Widget _dropdown({
-    required String value,
-    required List<String> items,
-    required ValueChanged<String?> onChanged,
-  }) {
-    final safe = items.contains(value) ? value : (items.isNotEmpty ? items.first : null);
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10),
-      decoration: BoxDecoration(
-        color: KafiColors.inputBgP,
-        border: Border.all(color: KafiColors.purB, width: 1.5),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: DropdownButtonHideUnderline(
-        child: DropdownButton<String>(
-          isExpanded: true,
-          value: safe,
-          style: KafiTheme.nunito(11, color: KafiColors.td),
-          items: items.map((n) => DropdownMenuItem(value: n, child: Text(n))).toList(),
-          onChanged: onChanged,
-        ),
-      ),
-    );
-  }
 
   Widget _dropdownInt({
     required int value,
