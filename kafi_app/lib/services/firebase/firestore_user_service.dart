@@ -138,4 +138,11 @@ class FirestoreUserService implements IUserService {
     final snap = await (isNanny ? _col : _families).doc(userId).get();
     return snap.data()?['blocked'] == true;
   }
+
+  @override
+  Stream<bool> watchBlocked(String userId, {required bool isNanny}) =>
+      (isNanny ? _col : _families)
+          .doc(userId)
+          .snapshots()
+          .map((s) => s.data()?['blocked'] == true);
 }

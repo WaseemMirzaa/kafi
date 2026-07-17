@@ -51,7 +51,19 @@ service cloud.firestore {
         || isAdmin()
         || (existing().status == 'approved' && existing().isVerified == true);
       allow create: if isUser(nannyId);
-      allow update: if isUser(nannyId) || isAdmin();
+      // A nanny may edit her own profile, but the admin-owned verdict fields
+      // (blocked, isVerified, and a status of approved/rejected) can only be
+      // written by an admin — otherwise a nanny could self-approve or
+      // self-unblock. `.get(...)` defaults keep normal client writes (which
+      // round-trip these fields unchanged) working.
+      allow update: if isAdmin() || (
+        isUser(nannyId)
+        && incoming().get('blocked', false) == existing().get('blocked', false)
+        && incoming().get('isVerified', false) == existing().get('isVerified', false)
+        && (incoming().get('status', 'draft') == existing().get('status', 'draft')
+            || incoming().get('status', 'draft') == 'draft'
+            || incoming().get('status', 'draft') == 'pending')
+      );
       allow delete: if isAdmin();
 
       match /documents/{docId} {
@@ -64,10 +76,11 @@ service cloud.firestore {
     match /families/{familyId} {
       allow read: if isUser(familyId) || isAdmin();
       allow create: if isUser(familyId);
-      // Family may edit profile fields but not subscription/freeContactsUsed/activeTrialNannyIds — admin/server only.
+      // Family may edit profile fields but not subscription/freeContactsUsed/
+      // activeTrialNannyIds or the admin block flag — admin/server only.
       allow update: if (isUser(familyId)
                       && !(incoming().diff(existing()).affectedKeys()
-                          .hasAny(['subscription', 'freeContactsUsed', 'activeTrialNannyIds', 'viewedProfiles'])))
+                          .hasAny(['subscription', 'freeContactsUsed', 'activeTrialNannyIds', 'viewedProfiles', 'blocked', 'blockedAt'])))
                    || isAdmin();
       allow delete: if isAdmin();
     }

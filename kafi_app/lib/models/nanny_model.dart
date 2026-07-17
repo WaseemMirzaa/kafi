@@ -308,6 +308,34 @@ class NannyModel {
     return a;
   }
 
+  // ── Onboarding completeness (used for startup routing) ────────────────────
+  // These mirror the required fields validated on each onboarding step so a
+  // returning nanny is resumed at the first step she has not finished.
+
+  /// Step 1 — personal info: the identity + work basics are filled in.
+  bool get hasPersonalInfo =>
+      fullName.trim().isNotEmpty &&
+      dateOfBirth != null &&
+      visaStatus != null &&
+      workEmirates.isNotEmpty &&
+      currentArea.trim().isNotEmpty &&
+      bio.trim().isNotEmpty;
+
+  /// Step 2 — media: at least 3 photos and an intro video (System Spec §3.2).
+  bool get hasMedia =>
+      photoUrls.length >= 3 && (introVideoUrl?.isNotEmpty ?? false);
+
+  /// Step 5 — required documents: passport + visa have been uploaded.
+  bool get hasRequiredDocuments {
+    bool present(DocumentType t) => documents.any(
+        (d) => d.type == t && d.status != DocumentStatus.missing);
+    return present(DocumentType.passport) && present(DocumentType.visa);
+  }
+
+  /// True once every required onboarding step is finished (ready to submit).
+  bool get onboardingComplete =>
+      hasPersonalInfo && hasMedia && hasRequiredDocuments;
+
   /// Bio in the app's current language (falls back to the original text).
   String localizedBio([String? lang]) => localize(bio, i18n['bio'], lang);
 

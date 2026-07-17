@@ -740,6 +740,10 @@ abstract class AppStrings {
   // Account blocked (admin)
   static const accountBlocked = 'account_blocked';
   static const accountBlockedSub = 'account_blocked_sub';
+  static const blockedTitle = 'blocked_title';
+  static const blockedBody = 'blocked_body';
+  static const blockedContact = 'blocked_contact';
+  static const blockedLogout = 'blocked_logout';
 
   // Nanny media + docs screen labels (l10n sweep)
   static const mediaTitle = 'media_title';

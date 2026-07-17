@@ -32,6 +32,7 @@ class AuthController extends GetxController {
   final phoneController = TextEditingController();
 
   Timer? _otpTimer;
+  StreamSubscription<bool>? _blockSub;
 
   String get formattedPhone =>
       '${countryCode.value} ${phoneController.text.trim()}';
@@ -43,24 +44,25 @@ class AuthController extends GetxController {
   }
 
   @override
-  void onInit() {
-    super.onInit();
-    _restoreSession();
-  }
-
-  @override
   void onClose() {
     _otpTimer?.cancel();
+    _blockSub?.cancel();
     phoneController.dispose();
     super.onClose();
   }
 
-  Future<void> _restoreSession() async {
+  /// Startup decision, driven by the splash screen. Sends the user to the right
+  /// place before any other screen is shown: no session → welcome; blocked →
+  /// blocked screen; otherwise home / pending-approval / the next unfinished
+  /// onboarding step.
+  Future<void> bootstrapStartup() async {
     final user = await _authService.getCurrentUser();
-    if (user != null) {
-      currentUser.value = user;
-      await _navigateHome(user);
+    if (user == null) {
+      Get.offAllNamed(Routes.welcome);
+      return;
     }
+    currentUser.value = user;
+    await _routeForUser(user);
   }
 
   void prepareNannyLogin() {
@@ -162,9 +164,10 @@ class AuthController extends GetxController {
       }
       currentUser.value = user;
       // Phone OTP is the whole credential — no password step. New and returning
-      // users both land on home/onboarding via `_navigateHome`, which routes a
-      // family with no job posts to the post-a-job form.
-      await _navigateHome(user);
+      // users both land on home/onboarding via `_routeForUser`, which routes a
+      // family with no job posts to the post-a-job form and a nanny to her
+      // pending / approved / next-unfinished-onboarding screen.
+      await _routeForUser(user);
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, _authErrorMessage(e));
     } finally {
@@ -228,37 +231,66 @@ class AuthController extends GetxController {
     });
   }
 
-  Future<void> _navigateHome(UserModel user, {bool isNewFamilyRegistration = false}) async {
-    // Admin block enforcement — sign the user out if their doc is blocked.
-    if (await Get.find<IUserService>().isUserBlocked(user.id, isNanny: user.isNanny)) {
-      await signOut();
-      Get.offAllNamed(Routes.welcome);
-      Get.snackbar(AppStrings.accountBlocked.tr, AppStrings.accountBlockedSub.tr);
+  /// Routes a signed-in user to the correct place based on block state and
+  /// onboarding/approval progress, and starts the live block watcher.
+  Future<void> _routeForUser(UserModel user) async {
+    final userService = Get.find<IUserService>();
+    // Admin block enforcement — a blocked account can only reach the blocked
+    // screen (logout-only). We keep watching so an unblock lets them back in.
+    if (await userService.isUserBlocked(user.id, isNanny: user.isNanny)) {
+      _startBlockWatch(user);
+      Get.offAllNamed(Routes.blocked);
       return;
     }
     if (user.isNanny) {
-      final nanny = await Get.find<IUserService>().getNanny(user.id);
-      if (nanny?.status == NannyOnboardingStatus.approved) {
-        Get.offAllNamed(Routes.nannyHome);
-      } else if (nanny?.status == NannyOnboardingStatus.pending ||
-          nanny?.status == NannyOnboardingStatus.rejected) {
-        // Rejected nannies land on the pending screen too — it renders the
-        // rejection reason and a resubmit action (Spec §6.1), instead of
-        // silently dumping them back at onboarding step 1.
-        Get.offAllNamed(Routes.nannyPending);
-      } else {
-        Get.offAllNamed(Routes.nannyInfo);
-      }
+      final nanny = await userService.getNanny(user.id);
+      Get.offAllNamed(_nannyStartRoute(nanny));
     } else {
       // A family reaches the home screen only after posting at least one job.
       // A fresh registration, or any family that has not yet posted a job
       // (e.g. abandoned the form and relaunched), is sent to the post-a-job
       // form. Once ≥1 job exists, subsequent sign-ins land on browse/home.
-      final hasPostedJob = isNewFamilyRegistration
-          ? false
-          : (await Get.find<IJobService>().getJobsByFamily(user.id)).isNotEmpty;
+      final hasPostedJob =
+          (await Get.find<IJobService>().getJobsByFamily(user.id)).isNotEmpty;
       Get.offAllNamed(hasPostedJob ? Routes.browse : Routes.familyForm);
     }
+    _startBlockWatch(user);
+  }
+
+  /// The screen a nanny should resume on: approved → home; pending/rejected →
+  /// pending (renders the rejection reason + resubmit); draft → the first
+  /// onboarding step whose required data is still missing.
+  String _nannyStartRoute(NannyModel? nanny) {
+    if (nanny == null) return Routes.nannyInfo;
+    return switch (nanny.status) {
+      NannyOnboardingStatus.approved => Routes.nannyHome,
+      NannyOnboardingStatus.pending ||
+      NannyOnboardingStatus.rejected =>
+        Routes.nannyPending,
+      // Draft — resume at the first onboarding step still missing data.
+      // Personal info + media done → documents (upload the rest and submit).
+      NannyOnboardingStatus.draft => !nanny.hasPersonalInfo
+          ? Routes.nannyInfo
+          : !nanny.hasMedia
+              ? Routes.nannyMedia
+              : Routes.nannyDocs,
+    };
+  }
+
+  /// Live watch of the admin `blocked` flag so a mid-session block/unblock is
+  /// enforced immediately, not only at the next launch.
+  void _startBlockWatch(UserModel user) {
+    _blockSub?.cancel();
+    _blockSub = Get.find<IUserService>()
+        .watchBlocked(user.id, isNanny: user.isNanny)
+        .listen((blocked) {
+      if (blocked) {
+        if (Get.currentRoute != Routes.blocked) Get.offAllNamed(Routes.blocked);
+      } else if (Get.currentRoute == Routes.blocked) {
+        // Unblocked while sitting on the blocked screen — send them back in.
+        _routeForUser(user);
+      }
+    });
   }
 
   Future<void> signOut() async {
@@ -272,6 +304,8 @@ class AuthController extends GetxController {
     await _authService.logout();
     currentUser.value = null;
     _otpTimer?.cancel();
+    _blockSub?.cancel();
+    _blockSub = null;
   }
 
   Future<void> deleteAccount(String reason) async {

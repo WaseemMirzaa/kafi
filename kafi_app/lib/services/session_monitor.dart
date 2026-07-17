@@ -53,8 +53,12 @@ class SessionMonitor extends GetxService {
     }
   }
 
+  /// Routes where "no signed-in user" is expected and must NOT be treated as a
+  /// dropped session (startup gate, pre-auth welcome, and the blocked screen).
+  static const _noUserRoutes = {Routes.splash, Routes.welcome, Routes.blocked};
+
   void _onAuthStateChanged(User? user) {
-    if (user == null && Get.currentRoute != Routes.welcome) {
+    if (user == null && !_noUserRoutes.contains(Get.currentRoute)) {
       _handleSessionExpired();
     } else if (user != null) {
       touch();

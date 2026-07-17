@@ -615,10 +615,41 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  /// Max size for a nanny document, aligned with storage.rules `under(10)` so
+  /// Max size for a nanny document, aligned with storage.rules `under(25)` so
   /// oversized files are rejected client-side with a friendly message instead
-  /// of failing the upload against Storage security rules.
-  static const int _maxDocBytes = 10 * 1024 * 1024;
+  /// of failing the upload against Storage security rules. Documents may be
+  /// images, PDFs, videos or other formats — hence the larger cap.
+  static const int _maxDocBytes = 25 * 1024 * 1024;
+
+  /// Best-effort content type from a file extension so uploaded documents carry
+  /// a correct MIME type (drives the admin panel's image/video/PDF preview).
+  static String _docContentType(String ext) {
+    switch (ext) {
+      case 'jpg':
+      case 'jpeg':
+        return 'image/jpeg';
+      case 'png':
+        return 'image/png';
+      case 'webp':
+        return 'image/webp';
+      case 'heic':
+        return 'image/heic';
+      case 'gif':
+        return 'image/gif';
+      case 'pdf':
+        return 'application/pdf';
+      case 'mp4':
+        return 'video/mp4';
+      case 'mov':
+        return 'video/quicktime';
+      case 'doc':
+        return 'application/msword';
+      case 'docx':
+        return 'application/vnd.openxmlformats-officedocument.wordprocessingml.document';
+      default:
+        return 'application/octet-stream';
+    }
+  }
 
   /// Picks a document and stages it locally. Nothing is uploaded until the user
   /// submits (or saves in edit mode) — see [_uploadStagedDocs].
@@ -632,9 +663,10 @@ class NannyProfileController extends GetxController {
     // Android 13+ where the photos permission does not apply to documents.
     FilePickerResult? result;
     try {
+      // Accept any document format — pictures, PDFs, videos or other files —
+      // per the admin verification requirements.
       result = await FilePicker.platform.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['pdf', 'jpg', 'jpeg', 'png'],
+        type: FileType.any,
         withData: true,
       );
     } catch (_) {
@@ -666,7 +698,7 @@ class NannyProfileController extends GetxController {
     _stagedDocs[type] = _StagedDoc(
       bytes: bytes,
       ext: ext,
-      contentType: ext == 'pdf' ? 'application/pdf' : 'image/jpeg',
+      contentType: _docContentType(ext),
     );
     // Mark selected locally (drives the ✓ tile); real upload happens on submit.
     documents[type] = documents[type]!.copyWith(

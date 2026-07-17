@@ -22,6 +22,8 @@ import 'package:kafi_app/views/family/trial_offer_screen.dart';
 import 'package:kafi_app/views/family/trial_screen.dart';
 import 'package:kafi_app/views/family/video_player_screen.dart';
 import 'package:kafi_app/views/legal/legal_screen.dart';
+import 'package:kafi_app/views/shared/blocked_screen.dart';
+import 'package:kafi_app/views/shared/splash_screen.dart';
 import 'package:kafi_app/views/nanny/job_detail_screen.dart';
 import 'package:kafi_app/views/nanny/application_detail_screen.dart';
 import 'package:kafi_app/views/nanny/my_applications_screen.dart';
@@ -36,7 +38,9 @@ import 'package:kafi_app/views/nanny/nanny_refs_screen.dart';
 import 'package:kafi_app/views/shared/delete_account_screen.dart';
 
 abstract class Routes {
-  static const welcome = '/';
+  static const splash = '/';
+  static const welcome = '/welcome';
+  static const blocked = '/blocked';
   static const loginNanny = '/login-nanny';
   static const loginFamily = '/login-family';
   static const otpVerify = '/otp-verify';
@@ -79,7 +83,9 @@ abstract class Routes {
 
 class AppRoutes {
   static final routes = <GetPage>[
+    GetPage(name: Routes.splash, page: () => const SplashScreen()),
     GetPage(name: Routes.welcome, page: () => const WelcomeScreen()),
+    GetPage(name: Routes.blocked, page: () => const BlockedScreen()),
     GetPage(name: Routes.loginNanny, page: () => const LoginNannyScreen(), binding: AuthBinding()),
     GetPage(name: Routes.loginFamily, page: () => const LoginFamilyScreen(), binding: AuthBinding()),
     GetPage(name: Routes.otpVerify, page: () => const OtpVerifyScreen(), binding: AuthBinding()),

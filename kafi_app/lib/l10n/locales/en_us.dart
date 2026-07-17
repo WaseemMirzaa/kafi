@@ -733,6 +733,10 @@ const Map<String, String> enUs = {
   // Account blocked (admin)
   AppStrings.accountBlocked: 'Account blocked',
   AppStrings.accountBlockedSub: 'Your account has been blocked by an administrator. Please contact support.',
+  AppStrings.blockedTitle: 'Account disabled',
+  AppStrings.blockedBody: "You can't use this account right now. It has been disabled by a Kafi administrator.",
+  AppStrings.blockedContact: 'If you think this is a mistake, please contact the Kafi admin team for help.',
+  AppStrings.blockedLogout: 'Log out',
 
   // Nanny media + docs screen labels (l10n sweep)
   AppStrings.mediaTitle: 'Your nanny profile',

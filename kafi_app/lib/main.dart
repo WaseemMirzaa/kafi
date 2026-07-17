@@ -50,7 +50,7 @@ class KafiApp extends StatelessWidget {
         Locale('ar', 'AE'),
       ],
       initialBinding: InitialBinding(),
-      initialRoute: Routes.welcome,
+      initialRoute: Routes.splash,
       getPages: AppRoutes.routes,
     );
   }
