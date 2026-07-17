@@ -83,7 +83,7 @@ class _KafiLocationPickerState extends State<KafiLocationPicker> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => _useFallbackPicker
-          ? _MockUberLocationSheet(initial: _displayValue)
+          ? _FallbackLocationSheet(initial: _displayValue)
           : const _LocationPickerSheet(),
     );
     if (result != null && result.displayName.trim().isNotEmpty) {
@@ -128,24 +128,25 @@ class _KafiLocationPickerState extends State<KafiLocationPicker> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Mock Uber-style sheet — searchable UAE areas (no Google Maps API key)
+// Fallback Uber-style sheet — searchable UAE areas + real-GPS nearest-area
+// (used only when no Google Maps API key is configured)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _MockUberLocationSheet extends StatefulWidget {
-  const _MockUberLocationSheet({this.initial = ''});
+class _FallbackLocationSheet extends StatefulWidget {
+  const _FallbackLocationSheet({this.initial = ''});
   final String initial;
 
   @override
-  State<_MockUberLocationSheet> createState() => _MockUberLocationSheetState();
+  State<_FallbackLocationSheet> createState() => _FallbackLocationSheetState();
 }
 
-class _MockUberLocationSheetState extends State<_MockUberLocationSheet> {
+class _FallbackLocationSheetState extends State<_FallbackLocationSheet> {
   final _searchCtrl = TextEditingController();
   final _focusNode = FocusNode();
   String? _selectedName;
   String? _selectedSubtitle;
   bool _locating = false;
-  List<(String, String)> _filtered = LocationConstants.uaeAreas;
+  List<UaeArea> _filtered = LocationConstants.uaeAreas;
 
   @override
   void initState() {
@@ -173,7 +174,8 @@ class _MockUberLocationSheetState extends State<_MockUberLocationSheet> {
       } else {
         _filtered = LocationConstants.uaeAreas
             .where((a) =>
-                a.$1.toLowerCase().contains(q) || a.$2.toLowerCase().contains(q))
+                a.name.toLowerCase().contains(q) ||
+                a.emirate.toLowerCase().contains(q))
             .toList();
       }
     });
@@ -192,23 +194,70 @@ class _MockUberLocationSheetState extends State<_MockUberLocationSheet> {
   Future<void> _useCurrentLocation() async {
     setState(() => _locating = true);
     try {
-      String name = LocationConstants.mockCurrentArea;
+      String? name;
+      String? subtitle;
+
+      // 1) Full reverse-geocode when a Maps/Geocoding key is configured.
       if (Get.isRegistered<LocationService>()) {
         final detected = await Get.find<LocationService>().detectCurrentCity();
         if (detected != null && detected.trim().isNotEmpty) {
           name = detected.trim();
         }
       }
-      String subtitle = 'UAE';
-      for (final a in LocationConstants.uaeAreas) {
-        if (a.$1.toLowerCase() == name.toLowerCase()) {
-          subtitle = a.$2;
-          break;
+
+      // 2) Otherwise resolve REAL device GPS to the nearest known area. This
+      // needs no API key, so "use my current location" is never a hardcoded
+      // guess.
+      if (name == null) {
+        final pos = await _currentPosition();
+        if (pos != null) {
+          final nearest =
+              LocationConstants.nearestArea(pos.latitude, pos.longitude);
+          if (nearest != null) {
+            name = nearest.name;
+            subtitle = nearest.emirate;
+          }
         }
       }
+
+      if (name == null || name.isEmpty) {
+        if (mounted) {
+          Get.snackbar(
+            AppStrings.errorTitle.tr,
+            AppStrings.locationPermissionDenied.tr,
+            snackPosition: SnackPosition.BOTTOM,
+          );
+        }
+        return;
+      }
+
+      // Fill in the emirate subtitle from the curated list when only a name is
+      // known (Google reverse-geocode path).
+      subtitle ??= LocationConstants.emirateFor(name) ?? 'UAE';
       _select(name, subtitle);
     } finally {
       if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  /// Real device position via geolocator, requesting permission once. Returns
+  /// null when location services are off or permission is denied.
+  Future<Position?> _currentPosition() async {
+    try {
+      if (!await Geolocator.isLocationServiceEnabled()) return null;
+      var permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+      }
+      if (permission == LocationPermission.denied ||
+          permission == LocationPermission.deniedForever) {
+        return null;
+      }
+      return await Geolocator.getCurrentPosition(
+        locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+      );
+    } catch (_) {
+      return null;
     }
   }
 
@@ -387,7 +436,7 @@ class _MockUberLocationSheetState extends State<_MockUberLocationSheet> {
       separatorBuilder: (_, __) => const Divider(height: 1, indent: 64),
       itemBuilder: (_, i) {
         final a = _filtered[i];
-        final selected = _selectedName == a.$1;
+        final selected = _selectedName == a.name;
         return ListTile(
           leading: Container(
             width: 38,
@@ -399,10 +448,10 @@ class _MockUberLocationSheetState extends State<_MockUberLocationSheet> {
             child: Icon(Icons.location_on_outlined,
                 color: selected ? KafiColors.roseD : KafiColors.navy, size: 20),
           ),
-          title: Text(a.$1,
+          title: Text(a.name,
               style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w600)),
-          subtitle: Text(a.$2, style: KafiTheme.nunito(11, color: KafiColors.ts)),
-          onTap: () => _select(a.$1, a.$2),
+          subtitle: Text(a.emirate, style: KafiTheme.nunito(11, color: KafiColors.ts)),
+          onTap: () => _select(a.name, a.emirate),
         );
       },
     );

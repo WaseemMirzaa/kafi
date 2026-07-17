@@ -2,8 +2,6 @@ import 'package:get/get.dart';
 import 'package:kafi_app/bindings/auth_binding.dart';
 import 'package:kafi_app/bindings/family_binding.dart';
 import 'package:kafi_app/bindings/nanny_binding.dart';
-import 'package:kafi_app/views/auth/create_password_screen.dart';
-import 'package:kafi_app/views/auth/password_reset_screen.dart';
 import 'package:kafi_app/views/auth/login_family_screen.dart';
 import 'package:kafi_app/views/auth/login_nanny_screen.dart';
 import 'package:kafi_app/views/auth/otp_verify_screen.dart';
@@ -42,7 +40,6 @@ abstract class Routes {
   static const loginNanny = '/login-nanny';
   static const loginFamily = '/login-family';
   static const otpVerify = '/otp-verify';
-  static const createPassword = '/create-password';
 
   static const nannyInfo = '/nanny-info';
   static const nannyMedia = '/nanny-media';
@@ -73,7 +70,6 @@ abstract class Routes {
   static const compare = '/compare';
   static const settings = '/settings';
   static const notifications = '/notifications';
-  static const passwordReset = '/password-reset';
   static const deleteAccount = '/delete-account';
 
   static const videoPlayer = '/video-player';
@@ -87,7 +83,6 @@ class AppRoutes {
     GetPage(name: Routes.loginNanny, page: () => const LoginNannyScreen(), binding: AuthBinding()),
     GetPage(name: Routes.loginFamily, page: () => const LoginFamilyScreen(), binding: AuthBinding()),
     GetPage(name: Routes.otpVerify, page: () => const OtpVerifyScreen(), binding: AuthBinding()),
-    GetPage(name: Routes.createPassword, page: () => const CreatePasswordScreen(), binding: AuthBinding()),
     GetPage(name: Routes.nannyInfo, page: () => const NannyInfoScreen(), binding: NannyBinding()),
     GetPage(name: Routes.nannyMedia, page: () => const NannyMediaScreen(), binding: NannyBinding()),
     GetPage(name: Routes.nannyExp, page: () => const NannyExpScreen(), binding: NannyBinding()),
@@ -120,7 +115,6 @@ class AppRoutes {
     GetPage(name: Routes.terms, page: () => const LegalScreen.terms()),
     GetPage(name: Routes.privacy, page: () => const LegalScreen.privacy()),
     GetPage(name: Routes.deleteAccount, page: () => const DeleteAccountScreen(), binding: AuthBinding()),
-    GetPage(name: Routes.passwordReset, page: () => const PasswordResetScreen()),
     GetPage(name: Routes.compare, page: () => const CompareScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.videoPlayer, page: () => const VideoPlayerScreen()),
   ];

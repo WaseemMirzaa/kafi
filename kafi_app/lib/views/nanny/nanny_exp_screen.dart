@@ -5,6 +5,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_step_scaffold.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
@@ -249,7 +250,17 @@ class _ExpCardState extends State<_ExpCard> {
             _emit();
           }),
           KafiTextField(label: AppStrings.expEmployer.tr, controller: _employer, hint: 'e.g. Al Mansoori Family'),
-          KafiTextField(label: AppStrings.expCityCountry.tr, controller: _city, hint: 'e.g. Dubai, UAE'),
+          _label(AppStrings.expCityCountry.tr),
+          const SizedBox(height: 4),
+          // Uber-style location picker keeps job-history locations consistent
+          // with the rest of the app. Writing to `_city` fires its listener
+          // (`_emit`), so the parent experience list updates automatically.
+          KafiLocationPicker(
+            label: AppStrings.expCityCountry.tr,
+            initialValue: _city.text,
+            onChanged: (v) => _city.text = v,
+          ),
+          const SizedBox(height: 7),
           Row(
             children: [
               Expanded(child: _dateField(AppStrings.expFrom.tr, _from, () => _pickDate(true))),

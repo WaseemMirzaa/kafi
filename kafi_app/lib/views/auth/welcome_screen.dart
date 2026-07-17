@@ -94,7 +94,6 @@ class WelcomeScreen extends StatelessWidget {
                       TextButton(
                         onPressed: () {
                           Get.find<AuthController>().prepareNannyLogin();
-                          Get.find<AuthController>().isReturning.value = true;
                           Get.toNamed(Routes.loginNanny);
                         },
                         child: Text(
@@ -106,7 +105,6 @@ class WelcomeScreen extends StatelessWidget {
                       TextButton(
                         onPressed: () {
                           Get.find<AuthController>().prepareFamilyLogin();
-                          Get.find<AuthController>().isReturning.value = true;
                           Get.toNamed(Routes.loginFamily);
                         },
                         child: Text(
