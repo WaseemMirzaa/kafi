@@ -1,8 +1,9 @@
-import 'dart:convert';
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
+import 'package:path_provider/path_provider.dart';
 
 class MockStorageService implements IStorageService {
   @override
@@ -13,12 +14,15 @@ class MockStorageService implements IStorageService {
   }) async {
     await Future<void>.delayed(AppConfig.mockDelay);
 
-    // Return a real data URI so uploaded images/files actually render in the UI.
-    // Only encode non-trivial payloads (dummy 1-byte calls stay as mock URLs).
+    // Persist real bytes to a temp file so Image.file / VideoPlayer can preview
+    // them. Data-URIs break Image.network and video_player on device/simulator.
     if (bytes.length > 1) {
-      final mime = _resolveMime(contentType, path);
-      final b64 = base64Encode(bytes);
-      return 'data:$mime;base64,$b64';
+      final dir = await getTemporaryDirectory();
+      final safe = path.replaceAll(RegExp(r'[^a-zA-Z0-9._-]'), '_');
+      final file = File('${dir.path}/$safe');
+      await file.parent.create(recursive: true);
+      await file.writeAsBytes(bytes, flush: true);
+      return file.path;
     }
 
     return 'https://mock.kafi/storage/$path';
@@ -27,23 +31,9 @@ class MockStorageService implements IStorageService {
   @override
   Future<void> deleteFile(String path) async {
     await Future<void>.delayed(AppConfig.mockDelay);
-  }
-
-  String _resolveMime(String? contentType, String path) {
-    if (contentType != null && contentType.isNotEmpty) return contentType;
-    final ext = path.split('.').last.toLowerCase();
-    switch (ext) {
-      case 'jpg':
-      case 'jpeg':
-        return 'image/jpeg';
-      case 'png':
-        return 'image/png';
-      case 'mp4':
-        return 'video/mp4';
-      case 'pdf':
-        return 'application/pdf';
-      default:
-        return 'application/octet-stream';
+    final file = File(path);
+    if (await file.exists()) {
+      await file.delete();
     }
   }
 }

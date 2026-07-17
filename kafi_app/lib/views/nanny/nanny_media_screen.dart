@@ -1,10 +1,14 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:video_player/video_player.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_media_image.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_step_scaffold.dart';
 
@@ -99,7 +103,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
 
   Widget _photoPrompt() {
     return GestureDetector(
-      onTap: controller.pickAndUploadPhoto,
+      onTap: _choosePhotoSource,
       child: Container(
         width: double.infinity,
         margin: const EdgeInsets.only(bottom: 9),
@@ -156,7 +160,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
   // ── Cover card: first photo fills the pink container ────────────
   Widget _coverCard(String url) {
     return GestureDetector(
-      onTap: controller.pickAndUploadPhoto,
+      onTap: _choosePhotoSource,
       child: Container(
         width: double.infinity,
         height: 150,
@@ -171,10 +175,11 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              (url.startsWith('http') || url.startsWith('data:'))
-                  ? Image.network(url, fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => _coverPlaceholder())
-                  : _coverPlaceholder(),
+              KafiMediaImage(
+                url: url,
+                fit: BoxFit.cover,
+                errorBuilder: (_, __, ___) => _coverPlaceholder(),
+              ),
               Positioned(
                 left: 8,
                 top: 8,
@@ -241,7 +246,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
             return Padding(
               padding: const EdgeInsets.only(right: 6),
               child: GestureDetector(
-                onTap: controller.pickAndUploadPhoto,
+                onTap: _choosePhotoSource,
                 child: Container(
                   width: 46,
                   height: 46,
@@ -347,6 +352,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
               ? Column(
                   children: [
                     _IntroVideoPreview(
+                      key: ValueKey(controller.introVideoUrl.value),
                       url: controller.introVideoUrl.value!,
                       name: controller.introVideoName.value,
                       onRemove: () {
@@ -361,7 +367,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
 
           // Record button
           GestureDetector(
-            onTap: controller.pickAndUploadVideo,
+            onTap: _chooseVideoSource,
             child: Container(
               width: double.infinity,
               padding: const EdgeInsets.symmetric(vertical: 9),
@@ -440,14 +446,15 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
   }
 
   Widget _photoThumb(String url) {
-    final child = (url.startsWith('data:') || url.startsWith('http'))
-        ? Image.network(url,
-            width: 46, height: 46, fit: BoxFit.cover,
-            errorBuilder: (_, __, ___) => _thumbPlaceholder())
-        : _thumbPlaceholder();
     return ClipRRect(
       borderRadius: BorderRadius.circular(11),
-      child: child,
+      child: KafiMediaImage(
+        url: url,
+        width: 46,
+        height: 46,
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => _thumbPlaceholder(),
+      ),
     );
   }
 
@@ -463,13 +470,128 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
         ),
         child: const Icon(Icons.person_outline, color: Colors.white, size: 22),
       );
+
+  void _choosePhotoSource() {
+    _showSourceSheet(
+      title: AppStrings.mediaChoosePhotoSource.tr,
+      cameraLabel: AppStrings.mediaTakePhoto.tr,
+      onCamera: () => controller.pickAndUploadPhoto(source: ImageSource.camera),
+      onGallery: () => controller.pickAndUploadPhoto(source: ImageSource.gallery),
+    );
+  }
+
+  void _chooseVideoSource() {
+    _showSourceSheet(
+      title: AppStrings.mediaChooseVideoSource.tr,
+      cameraLabel: AppStrings.mediaRecordVideo.tr,
+      onCamera: () => controller.pickAndUploadVideo(source: ImageSource.camera),
+      onGallery: () => controller.pickAndUploadVideo(source: ImageSource.gallery),
+    );
+  }
+
+  void _showSourceSheet({
+    required String title,
+    required String cameraLabel,
+    required Future<void> Function() onCamera,
+    required Future<void> Function() onGallery,
+  }) {
+    Get.bottomSheet<void>(
+      SafeArea(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: KafiColors.ts.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(title, style: KafiTheme.fredoka(18, color: KafiColors.td)),
+              const SizedBox(height: 10),
+              _sourceTile(
+                icon: Icons.photo_camera_outlined,
+                label: cameraLabel,
+                onTap: onCamera,
+              ),
+              const SizedBox(height: 8),
+              _sourceTile(
+                icon: Icons.photo_library_outlined,
+                label: AppStrings.mediaChooseGallery.tr,
+                onTap: onGallery,
+              ),
+            ],
+          ),
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+  }
+
+  Widget _sourceTile({
+    required IconData icon,
+    required String label,
+    required Future<void> Function() onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () async {
+        Get.back();
+        // Let the sheet finish closing before showing a native permission UI.
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        await onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: KafiColors.roseP,
+          border: Border.all(color: KafiColors.roseL),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: KafiColors.roseD, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: KafiTheme.nunito(
+                  14,
+                  color: KafiColors.td,
+                  w: FontWeight.w700,
+                ),
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: KafiColors.ts),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 /// Real intro-video preview backed by `video_player`: play/pause, a scrubbable
 /// seekbar, live position/duration, and a remove control. Degrades to a static
 /// "ready" row if the video fails to initialise.
 class _IntroVideoPreview extends StatefulWidget {
-  const _IntroVideoPreview({required this.url, this.name, required this.onRemove});
+  const _IntroVideoPreview({
+    super.key,
+    required this.url,
+    this.name,
+    required this.onRemove,
+  });
 
   final String url;
   final String? name;
@@ -492,7 +614,14 @@ class _IntroVideoPreviewState extends State<_IntroVideoPreview> {
 
   Future<void> _init() async {
     try {
-      final c = VideoPlayerController.networkUrl(Uri.parse(widget.url));
+      final url = widget.url;
+      final VideoPlayerController c;
+      if (url.startsWith('http://') || url.startsWith('https://')) {
+        c = VideoPlayerController.networkUrl(Uri.parse(url));
+      } else {
+        // Mock uploads (and camera/gallery picks) resolve to a local file path.
+        c = VideoPlayerController.file(File(url));
+      }
       _ctrl = c;
       await c.initialize();
       c.addListener(_onTick);
@@ -531,83 +660,126 @@ class _IntroVideoPreviewState extends State<_IntroVideoPreview> {
     final name = (widget.name != null && widget.name!.isNotEmpty)
         ? widget.name!
         : AppStrings.mediaIntroVideo.tr;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [KafiColors.pur, Color(0xFFC084FC)],
-        ),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          GestureDetector(
-            onTap: _toggle,
-            child: Container(
-              width: 26,
-              height: 26,
-              decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
-              child: Icon(
-                _failed ? Icons.error_outline : (playing ? Icons.pause : Icons.play_arrow),
-                color: Colors.white,
-                size: 14,
+    return Column(
+      children: [
+        if (_ready && c != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: AspectRatio(
+              aspectRatio: c.value.aspectRatio == 0 ? 16 / 9 : c.value.aspectRatio,
+              child: Stack(
+                alignment: Alignment.center,
+                children: [
+                  VideoPlayer(c),
+                  GestureDetector(
+                    onTap: _toggle,
+                    child: Container(
+                      width: 44,
+                      height: 44,
+                      decoration: const BoxDecoration(
+                        color: Colors.black45,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Icon(
+                        playing ? Icons.pause : Icons.play_arrow,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ),
-          const SizedBox(width: 7),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KafiTheme.nunito(10, color: Colors.white, w: FontWeight.w800)),
-                Text(
-                  _ready
-                      ? '⏱ ${_fmt(pos)} / ${_fmt(dur)} · ${AppStrings.mediaVideoReady.tr}'
-                      : AppStrings.mediaVideoReady.tr,
-                  style: KafiTheme.nunito(9, color: Colors.white70, w: FontWeight.w600),
+        if (_ready && c != null) const SizedBox(height: 8),
+        Container(
+          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [KafiColors.pur, Color(0xFFC084FC)],
+            ),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Row(
+            children: [
+              GestureDetector(
+                onTap: _toggle,
+                child: Container(
+                  width: 26,
+                  height: 26,
+                  decoration:
+                      const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+                  child: Icon(
+                    _failed
+                        ? Icons.error_outline
+                        : (playing ? Icons.pause : Icons.play_arrow),
+                    color: Colors.white,
+                    size: 14,
+                  ),
                 ),
-                const SizedBox(height: 4),
-                (_ready && c != null)
-                    ? SizedBox(
-                        height: 6,
-                        child: VideoProgressIndicator(
-                          c,
-                          allowScrubbing: true,
-                          colors: const VideoProgressColors(
-                            playedColor: Color(0xB3FFFFFF),
-                            bufferedColor: Colors.white24,
-                            backgroundColor: Colors.white24,
+              ),
+              const SizedBox(width: 7),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KafiTheme.nunito(10,
+                            color: Colors.white, w: FontWeight.w800)),
+                    Text(
+                      _failed
+                          ? AppStrings.mediaVideoReady.tr
+                          : _ready
+                              ? '⏱ ${_fmt(pos)} / ${_fmt(dur)} · ${AppStrings.mediaVideoReady.tr}'
+                              : AppStrings.mediaVideoReady.tr,
+                      style: KafiTheme.nunito(9,
+                          color: Colors.white70, w: FontWeight.w600),
+                    ),
+                    const SizedBox(height: 4),
+                    (_ready && c != null)
+                        ? SizedBox(
+                            height: 6,
+                            child: VideoProgressIndicator(
+                              c,
+                              allowScrubbing: true,
+                              colors: const VideoProgressColors(
+                                playedColor: Color(0xB3FFFFFF),
+                                bufferedColor: Colors.white24,
+                                backgroundColor: Colors.white24,
+                              ),
+                            ),
+                          )
+                        : ClipRRect(
+                            borderRadius: BorderRadius.circular(2),
+                            child: const LinearProgressIndicator(
+                              minHeight: 3,
+                              backgroundColor: Colors.white24,
+                              valueColor:
+                                  AlwaysStoppedAnimation<Color>(Color(0xB3FFFFFF)),
+                            ),
                           ),
-                        ),
-                      )
-                    : ClipRRect(
-                        borderRadius: BorderRadius.circular(2),
-                        child: const LinearProgressIndicator(
-                          minHeight: 3,
-                          backgroundColor: Colors.white24,
-                          valueColor: AlwaysStoppedAnimation<Color>(Color(0xB3FFFFFF)),
-                        ),
-                      ),
-              ],
-            ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 7),
+              GestureDetector(
+                onTap: widget.onRemove,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  decoration:
+                      const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
+                  child: const Icon(Icons.close, color: Colors.white, size: 9),
+                ),
+              ),
+            ],
           ),
-          const SizedBox(width: 7),
-          GestureDetector(
-            onTap: widget.onRemove,
-            child: Container(
-              width: 20,
-              height: 20,
-              decoration: const BoxDecoration(color: Colors.white24, shape: BoxShape.circle),
-              child: const Icon(Icons.close, color: Colors.white, size: 9),
-            ),
-          ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

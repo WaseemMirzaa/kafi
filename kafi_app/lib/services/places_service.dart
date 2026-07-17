@@ -34,6 +34,7 @@ class PlaceDetails {
   final double lng;
   final String? city;
   final String? emirate;
+  final String? neighbourhood;
 
   const PlaceDetails({
     required this.placeId,
@@ -43,7 +44,20 @@ class PlaceDetails {
     required this.lng,
     this.city,
     this.emirate,
+    this.neighbourhood,
   });
+
+  /// Short area label for form fields (neighbourhood → city → name).
+  String get shortLabel {
+    final n = neighbourhood?.trim();
+    if (n != null && n.isNotEmpty) return n;
+    final c = city?.trim();
+    if (c != null && c.isNotEmpty) return c;
+    final e = emirate?.trim();
+    if (e != null && e.isNotEmpty) return e;
+    if (name.trim().isNotEmpty) return name.trim();
+    return formattedAddress;
+  }
 }
 
 class PlacesService {
@@ -122,6 +136,9 @@ class PlacesService {
       formattedAddress: r['formatted_address'] as String? ?? '',
       lat: lat,
       lng: lng,
+      neighbourhood: _component(comps, 'neighborhood') ??
+          _component(comps, 'sublocality_level_1') ??
+          _component(comps, 'sublocality'),
       city: _component(comps, 'locality') ??
           _component(comps, 'administrative_area_level_2'),
       emirate: _component(comps, 'administrative_area_level_1'),

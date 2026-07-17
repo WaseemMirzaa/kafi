@@ -11,8 +11,22 @@ class PermissionService {
   Future<bool> checkCamera() async =>
       (await Permission.camera.status).isGranted;
 
-  Future<bool> checkGallery() async =>
-      (await _galleryPermission().status).isGranted;
+  Future<bool> checkGallery() async {
+    if (Platform.isAndroid) {
+      // READ_MEDIA_* on Android 13+, READ_EXTERNAL_STORAGE on Android 12−.
+      return _hasPhotoAccess(await Permission.photos.status) ||
+          (await Permission.storage.status).isGranted;
+    }
+    return _hasPhotoAccess(await Permission.photos.status);
+  }
+
+  Future<bool> checkVideoGallery() async {
+    if (Platform.isAndroid) {
+      return _hasPhotoAccess(await Permission.videos.status) ||
+          (await Permission.storage.status).isGranted;
+    }
+    return _hasPhotoAccess(await Permission.photos.status);
+  }
 
   Future<bool> checkMicrophone() async =>
       (await Permission.microphone.status).isGranted;
@@ -40,11 +54,41 @@ class PermissionService {
   }
 
   Future<bool> requestGallery() async {
-    final status = await _galleryPermission().request();
+    PermissionStatus status;
+    if (Platform.isAndroid) {
+      status = await Permission.photos.request();
+      if (!_hasPhotoAccess(status)) {
+        final legacyStatus = await Permission.storage.request();
+        if (legacyStatus.isGranted) return true;
+        if (legacyStatus.isPermanentlyDenied) status = legacyStatus;
+      }
+    } else {
+      status = await Permission.photos.request();
+    }
     if (status.isPermanentlyDenied) {
       await _showSettingsDialog(AppStrings.permissionGalleryDenied.tr);
     }
-    return status.isGranted;
+    // iOS 14+ "Selected Photos" is sufficient for image_picker and must not
+    // be treated as a denied permission.
+    return _hasPhotoAccess(status);
+  }
+
+  Future<bool> requestVideoGallery() async {
+    PermissionStatus status;
+    if (Platform.isAndroid) {
+      status = await Permission.videos.request();
+      if (!_hasPhotoAccess(status)) {
+        final legacyStatus = await Permission.storage.request();
+        if (legacyStatus.isGranted) return true;
+        if (legacyStatus.isPermanentlyDenied) status = legacyStatus;
+      }
+    } else {
+      status = await Permission.photos.request();
+    }
+    if (status.isPermanentlyDenied) {
+      await _showSettingsDialog(AppStrings.permissionGalleryDenied.tr);
+    }
+    return _hasPhotoAccess(status);
   }
 
   Future<bool> requestMicrophone() async {
@@ -105,9 +149,6 @@ class PermissionService {
     );
   }
 
-  /// Android 13+ uses READ_MEDIA_IMAGES; older uses READ_EXTERNAL_STORAGE.
-  Permission _galleryPermission() {
-    if (Platform.isAndroid) return Permission.photos;
-    return Permission.photos; // iOS: PHPhotoLibrary
-  }
+  bool _hasPhotoAccess(PermissionStatus status) =>
+      status.isGranted || status.isLimited;
 }

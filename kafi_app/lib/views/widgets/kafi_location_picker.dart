@@ -4,10 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
-import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/services/location_service.dart';
 import 'package:kafi_app/services/places_service.dart';
 import 'package:kafi_app/utils/constants/app_constants.dart';
+import 'package:kafi_app/utils/constants/location_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 /// A selected location value.
@@ -32,8 +33,9 @@ class KafiLocation {
 // Public trigger widget
 // ─────────────────────────────────────────────────────────────────────────────
 
-/// Tappable field that opens either a plain text sheet (mock / no API key) or
-/// the full Uber-style Google Maps picker (live mode with a valid API key).
+/// Tappable field that opens the Uber-style Google Maps picker when a valid
+/// Maps/Places API key is configured. Falls back to a curated UAE list only
+/// when the key is still the placeholder (independent of Firebase mock mode).
 class KafiLocationPicker extends StatefulWidget {
   const KafiLocationPicker({
     super.key,
@@ -53,10 +55,10 @@ class KafiLocationPicker extends StatefulWidget {
 class _KafiLocationPickerState extends State<KafiLocationPicker> {
   String _displayValue = '';
 
-  /// Use plain text input when in mock mode or when no valid API key is set.
-  static bool get _usePlainInput =>
-      AppConfig.useMock ||
-      AppConstants.googleMapsApiKey == 'YOUR_GOOGLE_MAPS_API_KEY';
+  /// Fallback sheet only when Maps/Places cannot run — not tied to Firebase mock.
+  static bool get _useFallbackPicker =>
+      AppConstants.googleMapsApiKey == 'YOUR_GOOGLE_MAPS_API_KEY' ||
+      AppConstants.googleMapsApiKey.trim().isEmpty;
 
   @override
   void initState() {
@@ -76,29 +78,17 @@ class _KafiLocationPickerState extends State<KafiLocationPicker> {
   }
 
   void _open(BuildContext context) async {
-    if (_usePlainInput) {
-      final result = await showModalBottomSheet<String>(
-        context: context,
-        isScrollControlled: true,
-        backgroundColor: Colors.transparent,
-        builder: (_) => _PlainLocationSheet(initial: _displayValue),
-      );
-      if (result != null && result.trim().isNotEmpty) {
-        setState(() => _displayValue = result.trim());
-        widget.onChanged(result.trim());
-      }
-      return;
-    }
-
     final result = await showModalBottomSheet<KafiLocation>(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (_) => const _LocationPickerSheet(),
+      builder: (_) => _useFallbackPicker
+          ? _MockUberLocationSheet(initial: _displayValue)
+          : const _LocationPickerSheet(),
     );
-    if (result != null) {
-      setState(() => _displayValue = result.displayName);
-      widget.onChanged(result.displayName);
+    if (result != null && result.displayName.trim().isNotEmpty) {
+      setState(() => _displayValue = result.displayName.trim());
+      widget.onChanged(result.displayName.trim());
     }
   }
 
@@ -138,124 +128,377 @@ class _KafiLocationPickerState extends State<KafiLocationPicker> {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Plain text sheet — used in mock mode / no API key
+// Mock Uber-style sheet — searchable UAE areas (no Google Maps API key)
 // ─────────────────────────────────────────────────────────────────────────────
 
-class _PlainLocationSheet extends StatefulWidget {
-  const _PlainLocationSheet({this.initial = ''});
+class _MockUberLocationSheet extends StatefulWidget {
+  const _MockUberLocationSheet({this.initial = ''});
   final String initial;
 
   @override
-  State<_PlainLocationSheet> createState() => _PlainLocationSheetState();
+  State<_MockUberLocationSheet> createState() => _MockUberLocationSheetState();
 }
 
-class _PlainLocationSheetState extends State<_PlainLocationSheet> {
-  late final TextEditingController _ctrl;
+class _MockUberLocationSheetState extends State<_MockUberLocationSheet> {
+  final _searchCtrl = TextEditingController();
+  final _focusNode = FocusNode();
+  String? _selectedName;
+  String? _selectedSubtitle;
+  bool _locating = false;
+  List<(String, String)> _filtered = LocationConstants.uaeAreas;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = TextEditingController(text: widget.initial);
+    if (widget.initial.trim().isNotEmpty) {
+      _searchCtrl.text = widget.initial.trim();
+      _selectedName = widget.initial.trim();
+      _filter(widget.initial.trim());
+    }
+    _focusNode.requestFocus();
   }
 
   @override
   void dispose() {
-    _ctrl.dispose();
+    _searchCtrl.dispose();
+    _focusNode.dispose();
     super.dispose();
+  }
+
+  void _filter(String query) {
+    final q = query.trim().toLowerCase();
+    setState(() {
+      if (q.isEmpty) {
+        _filtered = LocationConstants.uaeAreas;
+      } else {
+        _filtered = LocationConstants.uaeAreas
+            .where((a) =>
+                a.$1.toLowerCase().contains(q) || a.$2.toLowerCase().contains(q))
+            .toList();
+      }
+    });
+  }
+
+  void _select(String name, String subtitle) {
+    _focusNode.unfocus();
+    setState(() {
+      _selectedName = name;
+      _selectedSubtitle = subtitle;
+      _searchCtrl.text = name;
+      _filtered = [];
+    });
+  }
+
+  Future<void> _useCurrentLocation() async {
+    setState(() => _locating = true);
+    try {
+      String name = LocationConstants.mockCurrentArea;
+      if (Get.isRegistered<LocationService>()) {
+        final detected = await Get.find<LocationService>().detectCurrentCity();
+        if (detected != null && detected.trim().isNotEmpty) {
+          name = detected.trim();
+        }
+      }
+      String subtitle = 'UAE';
+      for (final a in LocationConstants.uaeAreas) {
+        if (a.$1.toLowerCase() == name.toLowerCase()) {
+          subtitle = a.$2;
+          break;
+        }
+      }
+      _select(name, subtitle);
+    } finally {
+      if (mounted) setState(() => _locating = false);
+    }
+  }
+
+  void _confirm() {
+    final name = (_selectedName ?? _searchCtrl.text).trim();
+    if (name.isEmpty) return;
+    Navigator.pop(
+      context,
+      KafiLocation(
+        displayName: name,
+        fullAddress: _selectedSubtitle != null ? '$name, ${_selectedSubtitle!}' : name,
+      ),
+    );
   }
 
   @override
   Widget build(BuildContext context) {
-    final bottom = MediaQuery.of(context).viewInsets.bottom;
-    return Container(
-      padding: EdgeInsets.fromLTRB(16, 20, 16, 20 + bottom),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+    final bottomPad = MediaQuery.of(context).viewInsets.bottom;
+    final hasSelection =
+        (_selectedName ?? _searchCtrl.text).trim().isNotEmpty;
+    return DraggableScrollableSheet(
+      expand: false,
+      initialChildSize: 0.92,
+      maxChildSize: 0.95,
+      minChildSize: 0.5,
+      builder: (_, scrollCtrl) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          children: [
+            _handle(),
+            _header(),
+            _searchBar(),
+            _currentLocationTile(),
+            const Divider(height: 1),
+            Expanded(child: _body(scrollCtrl)),
+            if (hasSelection) _confirmBar(bottomPad),
+          ],
+        ),
       ),
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
+    );
+  }
+
+  Widget _handle() => Padding(
+        padding: const EdgeInsets.only(top: 10, bottom: 4),
+        child: Center(
+          child: Container(
+            width: 36,
+            height: 4,
+            decoration: BoxDecoration(
+              color: KafiColors.ts.withValues(alpha: 0.4),
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+        ),
+      );
+
+  Widget _header() => Padding(
+        padding: const EdgeInsets.fromLTRB(16, 0, 8, 8),
+        child: Row(
+          children: [
+            Expanded(
+              child: Text(AppStrings.locationPickerTitle.tr,
+                  style: KafiTheme.fredoka(18, color: KafiColors.td)),
+            ),
+            IconButton(
+              icon: const Icon(Icons.close, color: KafiColors.ts),
+              onPressed: () => Navigator.pop(context),
+            ),
+          ],
+        ),
+      );
+
+  Widget _searchBar() => Padding(
+        padding: const EdgeInsets.fromLTRB(12, 0, 12, 8),
+        child: Container(
+          decoration: BoxDecoration(
+            color: KafiColors.inputBg,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: KafiColors.cardBorder),
+            boxShadow: [
+              BoxShadow(
+                color: KafiColors.roseD.withValues(alpha: 0.07),
+                blurRadius: 8,
+                offset: const Offset(0, 2),
+              ),
+            ],
+          ),
+          child: Row(
+            children: [
+              const Padding(
+                padding: EdgeInsets.symmetric(horizontal: 12),
+                child: Icon(Icons.search, color: KafiColors.roseD, size: 20),
+              ),
+              Expanded(
+                child: TextField(
+                  controller: _searchCtrl,
+                  focusNode: _focusNode,
+                  onChanged: (v) {
+                    _selectedName = null;
+                    _selectedSubtitle = null;
+                    _filter(v);
+                  },
+                  style: KafiTheme.nunito(14, color: KafiColors.td),
+                  decoration: InputDecoration(
+                    border: InputBorder.none,
+                    hintText: AppStrings.locationSearchHint.tr,
+                    hintStyle: KafiTheme.nunito(14, color: KafiColors.ts),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+              if (_searchCtrl.text.isNotEmpty)
+                IconButton(
+                  icon: const Icon(Icons.clear, color: KafiColors.ts, size: 18),
+                  onPressed: () {
+                    _searchCtrl.clear();
+                    setState(() {
+                      _selectedName = null;
+                      _selectedSubtitle = null;
+                      _filtered = LocationConstants.uaeAreas;
+                    });
+                  },
+                ),
+            ],
+          ),
+        ),
+      );
+
+  Widget _currentLocationTile() => ListTile(
+        leading: Container(
+          width: 38,
+          height: 38,
+          decoration: BoxDecoration(
+            color: KafiColors.roseP,
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: _locating
+              ? const Padding(
+                  padding: EdgeInsets.all(9),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: KafiColors.roseD),
+                )
+              : const Icon(Icons.my_location_rounded,
+                  color: KafiColors.roseD, size: 20),
+        ),
+        title: Text(AppStrings.locationUseCurrentLocation.tr,
+            style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w600)),
+        subtitle: Text(AppStrings.locationGPSSubtitle.tr,
+            style: KafiTheme.nunito(11, color: KafiColors.ts)),
+        onTap: _locating ? null : _useCurrentLocation,
+      );
+
+  Widget _body(ScrollController ctrl) {
+    if (_selectedName != null && _filtered.isEmpty) {
+      return _selectedPreview();
+    }
+    if (_filtered.isEmpty) {
+      return ListView(
+        controller: ctrl,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 24),
         children: [
           Center(
+            child: Text(AppStrings.locationSearchPrompt.tr,
+                style: KafiTheme.fredoka(16, color: KafiColors.td),
+                textAlign: TextAlign.center),
+          ),
+        ],
+      );
+    }
+    return ListView.separated(
+      controller: ctrl,
+      itemCount: _filtered.length,
+      separatorBuilder: (_, __) => const Divider(height: 1, indent: 64),
+      itemBuilder: (_, i) {
+        final a = _filtered[i];
+        final selected = _selectedName == a.$1;
+        return ListTile(
+          leading: Container(
+            width: 38,
+            height: 38,
+            decoration: BoxDecoration(
+              color: selected ? KafiColors.roseP : KafiColors.navyS,
+              borderRadius: BorderRadius.circular(10),
+            ),
+            child: Icon(Icons.location_on_outlined,
+                color: selected ? KafiColors.roseD : KafiColors.navy, size: 20),
+          ),
+          title: Text(a.$1,
+              style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w600)),
+          subtitle: Text(a.$2, style: KafiTheme.nunito(11, color: KafiColors.ts)),
+          onTap: () => _select(a.$1, a.$2),
+        );
+      },
+    );
+  }
+
+  Widget _selectedPreview() {
+    final name = _selectedName!;
+    final sub = _selectedSubtitle ?? '';
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        children: [
+          Expanded(
             child: Container(
-              width: 36,
-              height: 4,
+              width: double.infinity,
               decoration: BoxDecoration(
-                color: KafiColors.ts.withValues(alpha: 0.4),
-                borderRadius: BorderRadius.circular(2),
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    KafiColors.roseP,
+                    KafiColors.purL.withValues(alpha: 0.6),
+                  ],
+                ),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: KafiColors.cardBorder),
               ),
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            AppStrings.locationPickerTitle.tr,
-            style: KafiTheme.fredoka(18, color: KafiColors.td),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            AppStrings.locationManualHint.tr,
-            style: KafiTheme.nunito(11, color: KafiColors.ts),
-          ),
-          const SizedBox(height: 14),
-          TextField(
-            controller: _ctrl,
-            autofocus: true,
-            style: KafiTheme.nunito(14, color: KafiColors.td),
-            decoration: InputDecoration(
-              hintText: AppStrings.locationSearchHint.tr,
-              hintStyle: KafiTheme.nunito(14, color: KafiColors.ts),
-              prefixIcon: const Icon(Icons.location_on_outlined, color: KafiColors.roseD, size: 20),
-              filled: true,
-              fillColor: KafiColors.inputBg,
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: KafiColors.cardBorder),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Container(
+                    width: 56,
+                    height: 56,
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [KafiColors.roseD, KafiColors.pur],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Icon(Icons.place_rounded,
+                        color: Colors.white, size: 28),
+                  ),
+                  const SizedBox(height: 14),
+                  Text(name,
+                      style: KafiTheme.fredoka(18, color: KafiColors.td),
+                      textAlign: TextAlign.center),
+                  if (sub.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Text(sub,
+                        style: KafiTheme.nunito(13, color: KafiColors.ts),
+                        textAlign: TextAlign.center),
+                  ],
+                ],
               ),
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: KafiColors.cardBorder),
-              ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide(color: KafiColors.roseD, width: 1.5),
-              ),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 14),
-            ),
-            onSubmitted: (v) {
-              if (v.trim().isNotEmpty) Navigator.pop(context, v.trim());
-            },
-          ),
-          const SizedBox(height: 12),
-          SizedBox(
-            width: double.infinity,
-            height: 50,
-            child: ElevatedButton.icon(
-              style: ElevatedButton.styleFrom(
-                backgroundColor: KafiColors.roseD,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
-                elevation: 0,
-              ),
-              icon: const Icon(Icons.check_rounded, size: 18),
-              label: Text(
-                AppStrings.locationConfirm.tr,
-                style: KafiTheme.nunito(15, color: Colors.white, w: FontWeight.w700),
-              ),
-              onPressed: () {
-                final v = _ctrl.text.trim();
-                if (v.isNotEmpty) Navigator.pop(context, v);
-              },
             ),
           ),
         ],
       ),
     );
   }
+
+  Widget _confirmBar(double bottomPad) => Container(
+        padding: EdgeInsets.fromLTRB(16, 12, 16, 16 + bottomPad),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.06),
+              blurRadius: 8,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: SizedBox(
+          width: double.infinity,
+          height: 50,
+          child: ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: KafiColors.roseD,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(14)),
+              elevation: 0,
+            ),
+            icon: const Icon(Icons.check_rounded, size: 18),
+            label: Text(AppStrings.locationConfirm.tr,
+                style: KafiTheme.nunito(15,
+                    color: Colors.white, w: FontWeight.w700)),
+            onPressed: _confirm,
+          ),
+        ),
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Full Google Maps sheet — live mode only
+// Full Google Maps sheet — requires a valid Maps/Places API key
 // ─────────────────────────────────────────────────────────────────────────────
 
 class _LocationPickerSheet extends StatefulWidget {
@@ -266,6 +509,11 @@ class _LocationPickerSheet extends StatefulWidget {
 }
 
 class _LocationPickerSheetState extends State<_LocationPickerSheet> {
+  static final _uaeCenter = LatLng(
+    AppConstants.placesBiasLat,
+    AppConstants.placesBiasLng,
+  );
+
   final _searchCtrl = TextEditingController();
   final _focusNode = FocusNode();
   final _placesService = PlacesService();
@@ -274,19 +522,24 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   PlaceDetails? _selectedPlace;
   bool _searching = false;
   bool _locating = false;
-  bool _mapReady = false;
+  bool _resolvingPin = false;
+  bool _programmaticMove = false;
   Timer? _debounce;
+  Timer? _cameraDebounce;
   GoogleMapController? _mapCtrl;
+  LatLng _cameraTarget = _uaeCenter;
 
   @override
   void initState() {
     super.initState();
-    _focusNode.requestFocus();
+    // Real GPS + reverse geocode as soon as the sheet opens.
+    WidgetsBinding.instance.addPostFrameCallback((_) => _useCurrentLocation());
   }
 
   @override
   void dispose() {
     _debounce?.cancel();
+    _cameraDebounce?.cancel();
     _searchCtrl.dispose();
     _focusNode.dispose();
     _mapCtrl?.dispose();
@@ -312,9 +565,9 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     final details = await _placesService.getDetails(p.placeId);
     if (!mounted) return;
     if (details != null) {
-      _searchCtrl.text = p.mainText;
-      setState(() { _selectedPlace = details; _searching = false; _mapReady = false; });
-      _animateTo(details.lat, details.lng);
+      _applyPlace(details, displayOverride: p.mainText);
+      await _animateTo(details.lat, details.lng);
+      setState(() => _searching = false);
     } else {
       setState(() => _searching = false);
     }
@@ -323,12 +576,12 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
   Future<void> _useCurrentLocation() async {
     setState(() => _locating = true);
     try {
-      bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
+      final serviceEnabled = await Geolocator.isLocationServiceEnabled();
       if (!serviceEnabled) {
         _showError(AppStrings.locationServiceDisabled.tr);
         return;
       }
-      LocationPermission permission = await Geolocator.checkPermission();
+      var permission = await Geolocator.checkPermission();
       if (permission == LocationPermission.denied) {
         permission = await Geolocator.requestPermission();
         if (permission == LocationPermission.denied) {
@@ -343,24 +596,65 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
       final pos = await Geolocator.getCurrentPosition(
         locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
       );
-      final details = await _placesService.reverseGeocode(pos.latitude, pos.longitude);
+      final details =
+          await _placesService.reverseGeocode(pos.latitude, pos.longitude);
       if (!mounted) return;
       if (details != null) {
-        _searchCtrl.text = details.formattedAddress;
-        setState(() { _selectedPlace = details; _mapReady = false; });
-        _animateTo(details.lat, details.lng);
+        _applyPlace(details);
+        await _animateTo(details.lat, details.lng);
+      } else {
+        _showError(AppStrings.locationPermissionDenied.tr);
       }
     } finally {
       if (mounted) setState(() => _locating = false);
     }
   }
 
-  void _animateTo(double lat, double lng) {
-    _mapCtrl?.animateCamera(
+  void _applyPlace(PlaceDetails details, {String? displayOverride}) {
+    final label = displayOverride?.trim().isNotEmpty == true
+        ? displayOverride!.trim()
+        : details.shortLabel;
+    _searchCtrl.text = label;
+    setState(() {
+      _selectedPlace = details;
+      _cameraTarget = LatLng(details.lat, details.lng);
+    });
+  }
+
+  Future<void> _animateTo(double lat, double lng) async {
+    _programmaticMove = true;
+    _cameraTarget = LatLng(lat, lng);
+    await _mapCtrl?.animateCamera(
       CameraUpdate.newCameraPosition(
-        CameraPosition(target: LatLng(lat, lng), zoom: 15),
+        CameraPosition(target: _cameraTarget, zoom: 16),
       ),
     );
+    // Allow camera-idle reverse-geocode again after the animation settles.
+    Future<void>.delayed(const Duration(milliseconds: 500), () {
+      _programmaticMove = false;
+    });
+  }
+
+  void _onCameraMove(CameraPosition position) {
+    _cameraTarget = position.target;
+  }
+
+  void _onCameraIdle() {
+    if (_programmaticMove || _predictions.isNotEmpty) return;
+    _cameraDebounce?.cancel();
+    _cameraDebounce = Timer(const Duration(milliseconds: 450), () async {
+      setState(() => _resolvingPin = true);
+      try {
+        final details = await _placesService.reverseGeocode(
+          _cameraTarget.latitude,
+          _cameraTarget.longitude,
+        );
+        if (!mounted || details == null) return;
+        _applyPlace(details);
+      } finally {
+        if (mounted) setState(() => _resolvingPin = false);
+      }
+    });
   }
 
   void _showError(String msg) {
@@ -375,7 +669,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
     Navigator.pop(
       context,
       KafiLocation(
-        displayName: _searchCtrl.text.isNotEmpty ? _searchCtrl.text : place.name,
+        displayName: _searchCtrl.text.isNotEmpty ? _searchCtrl.text : place.shortLabel,
         fullAddress: place.formattedAddress,
         lat: place.lat,
         lng: place.lng,
@@ -406,9 +700,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
             Expanded(
               child: _predictions.isNotEmpty
                   ? _predictionsList(scrollCtrl)
-                  : _selectedPlace != null
-                      ? _mapView()
-                      : _emptyState(scrollCtrl),
+                  : _mapWithPin(),
             ),
             if (_selectedPlace != null) _confirmBar(bottomPad),
           ],
@@ -482,7 +774,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                   ),
                 ),
               ),
-              if (_searching)
+              if (_searching || _resolvingPin)
                 const Padding(
                   padding: EdgeInsets.symmetric(horizontal: 12),
                   child: SizedBox(
@@ -499,7 +791,11 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                   icon: const Icon(Icons.clear, color: KafiColors.ts, size: 18),
                   onPressed: () {
                     _searchCtrl.clear();
-                    setState(() { _predictions = []; _selectedPlace = null; });
+                    setState(() {
+                      _predictions = [];
+                      _selectedPlace = null;
+                    });
+                    _focusNode.requestFocus();
                   },
                 ),
             ],
@@ -518,9 +814,11 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
           child: _locating
               ? const Padding(
                   padding: EdgeInsets.all(9),
-                  child: CircularProgressIndicator(strokeWidth: 2, color: KafiColors.roseD),
+                  child: CircularProgressIndicator(
+                      strokeWidth: 2, color: KafiColors.roseD),
                 )
-              : const Icon(Icons.my_location_rounded, color: KafiColors.roseD, size: 20),
+              : const Icon(Icons.my_location_rounded,
+                  color: KafiColors.roseD, size: 20),
         ),
         title: Text(AppStrings.locationUseCurrentLocation.tr,
             style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w600)),
@@ -559,43 +857,53 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         },
       );
 
-  Widget _mapView() {
-    final place = _selectedPlace!;
+  /// Always-on Google Map with a fixed center pin (Uber-style). Drag the map
+  /// to pick; camera-idle reverse-geocodes the pin into the search field.
+  Widget _mapWithPin() {
     return Stack(
+      alignment: Alignment.center,
       children: [
         GoogleMap(
-          initialCameraPosition: CameraPosition(
-            target: LatLng(place.lat, place.lng),
-            zoom: 15,
-          ),
-          onMapCreated: (c) {
-            _mapCtrl = c;
-            setState(() => _mapReady = true);
-          },
-          markers: {
-            Marker(
-              markerId: const MarkerId('selected'),
-              position: LatLng(place.lat, place.lng),
-              infoWindow: InfoWindow(title: _searchCtrl.text),
-            ),
-          },
+          initialCameraPosition: CameraPosition(target: _cameraTarget, zoom: 14),
+          onMapCreated: (c) => _mapCtrl = c,
+          onCameraMove: _onCameraMove,
+          onCameraIdle: _onCameraIdle,
+          myLocationEnabled: true,
           myLocationButtonEnabled: false,
           zoomControlsEnabled: false,
+          compassEnabled: false,
+          mapToolbarEnabled: false,
           mapType: MapType.normal,
         ),
+        // Fixed pin — the map moves under it.
+        const IgnorePointer(
+          child: Padding(
+            padding: EdgeInsets.only(bottom: 36),
+            child: Icon(Icons.location_on, color: KafiColors.roseD, size: 48),
+          ),
+        ),
+        if (_selectedPlace != null)
+          Positioned(
+            left: 12,
+            right: 12,
+            bottom: 12,
+            child: _addressCard(_selectedPlace!),
+          ),
         Positioned(
-          left: 12,
           right: 12,
-          bottom: 12,
-          child: AnimatedSlide(
-            offset: _mapReady ? Offset.zero : const Offset(0, 0.3),
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-            child: AnimatedOpacity(
-              opacity: _mapReady ? 1 : 0,
-              duration: const Duration(milliseconds: 300),
-              child: _addressCard(place),
-            ),
+          bottom: _selectedPlace != null ? 96 : 12,
+          child: FloatingActionButton.small(
+            heroTag: 'loc_gps',
+            backgroundColor: Colors.white,
+            onPressed: _locating ? null : _useCurrentLocation,
+            child: _locating
+                ? const SizedBox(
+                    width: 18,
+                    height: 18,
+                    child: CircularProgressIndicator(
+                        strokeWidth: 2, color: KafiColors.roseD),
+                  )
+                : const Icon(Icons.my_location, color: KafiColors.roseD),
           ),
         ),
       ],
@@ -635,7 +943,7 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(_searchCtrl.text,
+                  Text(_searchCtrl.text.isNotEmpty ? _searchCtrl.text : place.shortLabel,
                       style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w700),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis),
@@ -648,37 +956,6 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
             ),
           ],
         ),
-      );
-
-  Widget _emptyState(ScrollController ctrl) => ListView(
-        controller: ctrl,
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        children: [
-          Center(
-            child: Column(
-              children: [
-                const SizedBox(height: 24),
-                Container(
-                  width: 72,
-                  height: 72,
-                  decoration: BoxDecoration(
-                    color: KafiColors.roseP,
-                    borderRadius: BorderRadius.circular(24),
-                  ),
-                  child: const Icon(Icons.search_rounded, color: KafiColors.roseD, size: 36),
-                ),
-                const SizedBox(height: 14),
-                Text(AppStrings.locationSearchPrompt.tr,
-                    style: KafiTheme.fredoka(16, color: KafiColors.td),
-                    textAlign: TextAlign.center),
-                const SizedBox(height: 6),
-                Text(AppStrings.locationSearchSubPrompt.tr,
-                    style: KafiTheme.nunito(12, color: KafiColors.ts),
-                    textAlign: TextAlign.center),
-              ],
-            ),
-          ),
-        ],
       );
 
   Widget _confirmBar(double bottomPad) => Container(

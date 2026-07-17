@@ -3077,3 +3077,10 @@ Profile screens → phone blurred, Call/WA buttons removed
 
 *Document Version: 1.6*
 *Last Updated: May 19, 2026*
+
+| 2026-07-17 | About You Uber location picker (mock) | Done | `kafi_location_picker.dart`: mock/no-key branch now opens `_MockUberLocationSheet` (same UX shell as live Places sheet) instead of `_PlainLocationSheet`; returns `KafiLocation` so About You `currentAreaCtrl` is filled with the display name. New `lib/utils/constants/location_constants.dart` (`uaeAreas`, `mockCurrentArea`). Live `_LocationPickerSheet` unchanged. |
+| 2026-07-17 | Native media and location permissions | Done | Android manifest includes optional camera/microphone features, image/video capture queries, granular image/video media permissions, Android 14 selected-media permission, legacy storage fallback, and fine/coarse location. iOS Info.plist usage descriptions cover camera, microphone, Photos, and when-in-use location; Podfile enables corresponding `permission_handler` macros. `PermissionService` handles iOS limited Photos and Android legacy/granular media. Nanny media actions now select camera/gallery and request only the relevant permission set. |
+
+| 2026-07-17 | Media screen photo/video preview | Done | `MockStorageService` writes temp files instead of data URIs. New `kafi_media_image.dart`. `nanny_media_screen` cover/thumbs use `KafiMediaImage`; `_IntroVideoPreview` uses `VideoPlayerController.file` for local paths + visible player. `NannyProfileController` mock picks store `picked.path` directly. |
+
+| 2026-07-17 | Real GPS + Maps location picker | Done | `KafiLocationPicker` gates on API key only (not `AppConfig.useMock`). `_LocationPickerSheet` always shows `GoogleMap` + fixed pin, auto GPS, camera-idle reverse geocode. `PlaceDetails.shortLabel` / neighbourhood. Still requires key in `app_constants.dart`, AndroidManifest, AppDelegate. |

@@ -1,12 +1,12 @@
 /// App environment — toggle [useMock] per Technical Architecture §5.1
 ///
-/// [useMock] is `false` so the app runs against live Firebase (Auth + Firestore +
-/// Storage + FCM). This requires the platform Firebase config files to be present:
+/// [useMock] is `true` for offline/mock local runs (no Firebase config required).
+/// Set to `false` only when platform Firebase config files are present:
 ///   • android/app/google-services.json
 ///   • ios/Runner/GoogleService-Info.plist
-/// See kafi_app/FIREBASE_SETUP.md. Flip back to `true` for offline/mock dev.
+/// See kafi_app/FIREBASE_SETUP.md.
 class AppConfig {
-  static const bool useMock = false;
+  static const bool useMock = true;
   static const String environment = 'prod';
   static const bool enableLogs = true;
 

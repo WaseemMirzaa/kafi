@@ -744,6 +744,11 @@ abstract class AppStrings {
   static const mediaVideoHeader = 'media_video_header';
   static const mediaTapAdd = 'media_tap_add';
   static const mediaPhotoRule = 'media_photo_rule';
+  static const mediaChoosePhotoSource = 'media_choose_photo_source';
+  static const mediaChooseVideoSource = 'media_choose_video_source';
+  static const mediaTakePhoto = 'media_take_photo';
+  static const mediaChooseGallery = 'media_choose_gallery';
+  static const mediaRecordVideo = 'media_record_video';
   static const mediaPhotoViews = 'media_photo_views';
   static const mediaRecordTitle = 'media_record_title';
   static const mediaRecordSub = 'media_record_sub';

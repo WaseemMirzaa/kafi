@@ -2550,3 +2550,6 @@ First Launch
 *Last Updated: May 19, 2026*
 *Errors: 27 categories, 250+ scenarios documented*
 *Comparison Status: Verified against HTML mockup (kafi-platform-v8-final.html)*
+| 2026-07-17 | Native media and location permissions | Done | Photo capture requires Camera; photo gallery requires Images/Photos; video capture requires Camera + Microphone; video gallery requires Videos/Photos; location picker requires when-in-use location. Android 12− storage fallback, Android 13+ granular image/video access, Android 14 selected-media access, and iOS limited Photos access are supported. |
+
+| 2026-07-17 | Media screen photo/video preview | Done | Nanny media step (§3.2) now correctly previews selected photos (cover + thumbs) and intro video after pick/record in mock and live modes. |

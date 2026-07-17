@@ -415,23 +415,39 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  Future<void> pickAndUploadPhoto() async {
+  Future<void> pickAndUploadPhoto({ImageSource source = ImageSource.gallery}) async {
     if (photoUrls.length >= NannyConstants.maxPhotos) return;
     final user = _auth.currentUser.value;
     if (user == null) return;
-    if (!await Get.find<PermissionController>().ensureGallery()) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.permissionGalleryDenied.tr);
+    final permissions = Get.find<PermissionController>();
+    final allowed = source == ImageSource.camera
+        ? await permissions.requestCamera()
+        : await permissions.ensureGallery();
+    if (!allowed) {
+      Get.snackbar(
+        AppStrings.errorTitle.tr,
+        (source == ImageSource.camera
+                ? AppStrings.permissionCameraDenied
+                : AppStrings.permissionGalleryDenied)
+            .tr,
+      );
       return;
     }
     final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
+      source: source,
       imageQuality: 85,
       maxWidth: 1200,
     );
     if (picked == null) return;
-    final bytes = await picked.readAsBytes();
     isLoading.value = true;
     try {
+      // Mock mode: keep the local file path so Image.file / VideoPlayer can
+      // preview immediately (data: URIs and huge in-memory copies break UI).
+      if (AppConfig.useMock) {
+        photoUrls.add(picked.path);
+        return;
+      }
+      final bytes = await picked.readAsBytes();
       final url = await _storageService.uploadBytes(
         path: 'nannies/${user.id}/photos/${_uuid.v4()}.jpg',
         bytes: bytes,
@@ -449,21 +465,36 @@ class NannyProfileController extends GetxController {
     if (index < photoUrls.length) photoUrls.removeAt(index);
   }
 
-  Future<void> pickAndUploadVideo() async {
+  Future<void> pickAndUploadVideo({ImageSource source = ImageSource.gallery}) async {
     final user = _auth.currentUser.value;
     if (user == null) return;
-    if (!await Get.find<PermissionController>().ensureGallery()) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.permissionGalleryDenied.tr);
+    final permissions = Get.find<PermissionController>();
+    final allowed = source == ImageSource.camera
+        ? await permissions.ensureCameraAndMic()
+        : await permissions.ensureVideoGallery();
+    if (!allowed) {
+      Get.snackbar(
+        AppStrings.errorTitle.tr,
+        (source == ImageSource.camera
+                ? AppStrings.permissionCameraDenied
+                : AppStrings.permissionGalleryDenied)
+            .tr,
+      );
       return;
     }
     final picked = await ImagePicker().pickVideo(
-      source: ImageSource.gallery,
+      source: source,
       maxDuration: Duration(seconds: NannyConstants.maxVideoSeconds),
     );
     if (picked == null) return;
-    final bytes = await picked.readAsBytes();
     isLoading.value = true;
     try {
+      if (AppConfig.useMock) {
+        introVideoUrl.value = picked.path;
+        introVideoName.value = picked.name;
+        return;
+      }
+      final bytes = await picked.readAsBytes();
       introVideoUrl.value = await _storageService.uploadBytes(
         path: 'nannies/${user.id}/video.mp4',
         bytes: bytes,

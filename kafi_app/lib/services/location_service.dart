@@ -48,7 +48,10 @@ class LocationService {
     if (pos == null) return null;
     final details = await _places.reverseGeocode(pos.latitude, pos.longitude);
     if (details == null) return null;
-    final label = details.emirate ?? details.city ?? details.formattedAddress;
+    final label = details.neighbourhood ??
+        details.city ??
+        details.emirate ??
+        details.formattedAddress;
     return label.trim().isEmpty ? null : label.trim();
   }
 }

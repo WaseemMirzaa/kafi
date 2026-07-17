@@ -9,6 +9,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/models/user_model.dart';
 import 'package:kafi_app/services/interfaces/i_auth_service.dart';
+import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_notification_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/auth_constants.dart';
@@ -204,6 +205,10 @@ class AuthController extends GetxController {
         await _navigateHome(user, isNewFamilyRegistration: false);
       } else {
         // New user — must set a password before continuing (Spec §6.1/§6.2).
+        // Clear loading BEFORE opening create-password. Awaiting Get.toNamed
+        // would keep isLoading=true for the whole time that screen is open,
+        // which freezes the Save button spinner.
+        isLoading.value = false;
         await Get.toNamed(Routes.createPassword);
       }
     } catch (e) {
@@ -344,10 +349,15 @@ class AuthController extends GetxController {
       } else {
         Get.offAllNamed(Routes.nannyInfo);
       }
-    } else if (isNewFamilyRegistration) {
-      Get.offAllNamed(Routes.familyForm);
     } else {
-      Get.offAllNamed(Routes.browse);
+      // A family reaches the home screen only after posting at least one job.
+      // A fresh registration, or any family that has not yet posted a job
+      // (e.g. abandoned the form and relaunched), is sent to the post-a-job
+      // form. Once ≥1 job exists, subsequent sign-ins land on browse/home.
+      final hasPostedJob = isNewFamilyRegistration
+          ? false
+          : (await Get.find<IJobService>().getJobsByFamily(user.id)).isNotEmpty;
+      Get.offAllNamed(hasPostedJob ? Routes.browse : Routes.familyForm);
     }
   }
 

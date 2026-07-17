@@ -64,11 +64,18 @@ class PermissionController extends GetxController {
 
   Future<bool> ensureCameraAndMic() async {
     final cam = await requestCamera();
+    if (!cam) return false;
     final mic = await requestMicrophone();
-    return cam && mic;
+    return mic;
   }
 
   Future<bool> ensureGallery() async => requestGallery();
+
+  Future<bool> ensureVideoGallery() async {
+    final granted = await _permService.requestVideoGallery();
+    hasGalleryPermission.value = granted;
+    return granted;
+  }
 
   Future<void> openAppSettings() async {
     await _permService.openSettings();
