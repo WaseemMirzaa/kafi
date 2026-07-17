@@ -6,7 +6,6 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_logo.dart';
 import 'package:kafi_app/views/widgets/kafi_phone_input.dart';
-import 'package:kafi_app/views/widgets/auth_returning_section.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
 class LoginFamilyScreen extends StatefulWidget {
@@ -108,7 +107,7 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
                       const SizedBox(height: 14),
                       _divider(AppStrings.authAlreadyAccount.tr),
                       const SizedBox(height: 10),
-                      const AuthReturningSection(buttonVariant: KafiButtonVariant.purple),
+                      _returningHint(),
                       const SizedBox(height: 14),
                       _termsRow(),
                       const SizedBox(height: 30),
@@ -196,6 +195,19 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
         ),
         Expanded(child: Container(height: 1, color: KafiColors.purB)),
       ],
+    );
+  }
+
+  /// Returning users sign in the same way — enter the number above and verify
+  /// the OTP. Firebase phone auth signs them back into the same account, so no
+  /// password is needed.
+  Widget _returningHint() {
+    return Center(
+      child: Text(
+        AppStrings.authSigninHint.tr,
+        textAlign: TextAlign.center,
+        style: KafiTheme.nunito(10, color: const Color(0xFF7A50B0), w: FontWeight.w600),
+      ),
     );
   }
 

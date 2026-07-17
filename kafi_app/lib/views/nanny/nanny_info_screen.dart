@@ -9,6 +9,7 @@ import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
 import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
+import 'package:kafi_app/views/widgets/kafi_searchable_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_section.dart';
 import 'package:kafi_app/views/widgets/kafi_step_scaffold.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
@@ -156,24 +157,14 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
             Text(AppStrings.fldNationality.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
             const SizedBox(height: 3),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 10),
-              decoration: BoxDecoration(
-                color: KafiColors.inputBg,
-                border: Border.all(color: KafiColors.cardBorder, width: 1.5),
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: DropdownButtonHideUnderline(
-                child: DropdownButton<String>(
-                  isExpanded: true,
-                  value: controller.nationality.value,
-                  style: KafiTheme.nunito(11, color: KafiColors.td),
-                  items: NannyConstants.nationalities
-                      .map((n) => DropdownMenuItem(value: n, child: Text(n)))
-                      .toList(),
-                  onChanged: (v) => controller.nationality.value = v ?? controller.nationality.value,
-                ),
-              ),
+            // Uber-style searchable picker instead of a long dropdown.
+            KafiSearchablePicker(
+              value: controller.nationality.value,
+              options: NannyConstants.nationalities,
+              title: AppStrings.fldNationality.tr,
+              hint: AppStrings.fldNationality.tr,
+              icon: Icons.flag_outlined,
+              onSelected: (v) => controller.nationality.value = v,
             ),
           ]),
         )),

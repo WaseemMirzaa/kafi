@@ -6,7 +6,7 @@
 ///   • ios/Runner/GoogleService-Info.plist
 /// See kafi_app/FIREBASE_SETUP.md.
 class AppConfig {
-  static const bool useMock = true;
+  static const bool useMock = false;
   static const String environment = 'prod';
   static const bool enableLogs = true;
 

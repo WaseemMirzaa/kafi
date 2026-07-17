@@ -16,7 +16,6 @@ class LoginNannyScreen extends StatefulWidget {
 
 class _LoginNannyScreenState extends State<LoginNannyScreen> {
   late final AuthController controller;
-  bool _showPasswordSection = false;
 
   // Nanny-origin country codes per System Spec §1.5.
   static const _countryOptions = [
@@ -88,8 +87,7 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
               const SizedBox(height: 24),
               _divider(AppStrings.authAlreadyAccount.tr),
               const SizedBox(height: 14),
-              if (!_showPasswordSection) _returningInfo(),
-              if (_showPasswordSection) _passwordSection(),
+              _returningInfo(),
               const SizedBox(height: 20),
               _termsRow(),
               const SizedBox(height: 32),
@@ -234,84 +232,16 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
     );
   }
 
+  /// Returning users sign in the same way — enter the number above and verify
+  /// the OTP. Firebase phone auth signs them back into the same account, so no
+  /// password is needed.
   Widget _returningInfo() {
     return Center(
-      child: RichText(
+      child: Text(
+        AppStrings.authSigninHint.tr,
         textAlign: TextAlign.center,
-        text: TextSpan(
-          style: KafiTheme.nunito(12, color: KafiColors.ts, w: FontWeight.w500),
-          children: [
-            TextSpan(
-              text: '${AppStrings.authSigninHint.tr} ',
-            ),
-            WidgetSpan(
-              alignment: PlaceholderAlignment.baseline,
-              baseline: TextBaseline.alphabetic,
-              child: GestureDetector(
-                onTap: () => setState(() => _showPasswordSection = true),
-                child: Text(
-                  AppStrings.authLearnMore.tr,
-                  style: KafiTheme.nunito(12, color: KafiColors.roseD, w: FontWeight.w800),
-                ),
-              ),
-            ),
-          ],
-        ),
+        style: KafiTheme.nunito(12, color: KafiColors.ts, w: FontWeight.w500),
       ),
-    );
-  }
-
-  Widget _passwordSection() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        Text(AppStrings.authSignInTitle.tr,
-            style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w900)),
-        const SizedBox(height: 4),
-        Text(AppStrings.authSignInSub.tr, style: KafiTheme.nunito(10, color: KafiColors.ts)),
-        const SizedBox(height: 12),
-        Text(AppStrings.authPasswordLabel.tr,
-            style: KafiTheme.nunito(11, color: KafiColors.tm, w: FontWeight.w800)),
-        const SizedBox(height: 6),
-        Container(
-          decoration: BoxDecoration(
-            color: Colors.white,
-            border: Border.all(color: KafiColors.cardBorder, width: 1.5),
-            borderRadius: BorderRadius.circular(14),
-          ),
-          child: TextField(
-            controller: controller.passwordController,
-            obscureText: true,
-            style: KafiTheme.nunito(13, color: KafiColors.td),
-            decoration: const InputDecoration(
-              contentPadding: EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              border: InputBorder.none,
-            ),
-          ),
-        ),
-        const SizedBox(height: 12),
-        Obx(
-          () => KafiPrimaryButton(
-            label: AppStrings.authSignInPassword.tr,
-            loading: controller.isLoading.value,
-            onPressed: controller.loginWithPassword,
-          ),
-        ),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            TextButton(
-              onPressed: () => setState(() => _showPasswordSection = false),
-              child: Text(AppStrings.authUseOtpInstead.tr, style: KafiTheme.nunito(10, color: KafiColors.ts)),
-            ),
-            TextButton(
-              onPressed: () => Get.toNamed(Routes.passwordReset),
-              child: Text(AppStrings.authForgotPassword.tr,
-                  style: KafiTheme.nunito(10, color: KafiColors.roseD)),
-            ),
-          ],
-        ),
-      ],
     );
   }
 

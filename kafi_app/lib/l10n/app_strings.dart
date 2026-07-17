@@ -654,6 +654,8 @@ abstract class AppStrings {
   static const valAgeMin18 = 'val_age_min_18';
   static const valPhoneInvalid = 'val_phone_invalid';
   static const valSalaryOrder = 'val_salary_order';
+  static const valSalaryTooHigh = 'val_salary_too_high';
+  static const valExpDatesInvalid = 'val_exp_dates_invalid';
 
   // Auth errors & flow (System Spec §14.1) — live phone auth
   static const authPhoneInvalid = 'auth_phone_invalid';
@@ -723,6 +725,8 @@ abstract class AppStrings {
   static const mediaVideoReady = 'media_video_ready';
   static const docUploading = 'doc_uploading';
   static const docUploadFailed = 'doc_upload_failed';
+  static const docPickFailed = 'doc_pick_failed';
+  static const docTooLarge = 'doc_too_large';
 
   // Family job — employment type + edit fields
   static const fldEmployment = 'fld_employment';

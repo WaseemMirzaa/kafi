@@ -111,13 +111,6 @@ class SettingsScreen extends GetView<SettingsController> {
             const SizedBox(height: 24),
           ],
           _sectionHeader(AppStrings.settingsAccount.tr),
-          // Change/reset password is hidden in the profile tab.
-          if (!embedInShell)
-            _actionTile(
-              Icons.lock_outline,
-              AppStrings.settingsChangePassword.tr,
-              () => Get.toNamed(Routes.passwordReset),
-            ),
           // Restore purchases is family-only (nannies have no paid subscription).
           if (!_isNanny)
             _actionTile(

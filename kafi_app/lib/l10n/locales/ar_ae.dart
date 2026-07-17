@@ -228,6 +228,8 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.valAgeMin18: 'يجب أن يكون عمرك 18 عامًا أو أكثر لاستخدام كافي',
     AppStrings.valPhoneInvalid: 'الرجاء إدخال رقم هاتف صحيح',
     AppStrings.valSalaryOrder: 'يجب أن يكون الحد الأدنى للراتب أقل من الحد الأقصى',
+    AppStrings.valSalaryTooHigh: 'يرجى إدخال راتب شهري واقعي (بحد أقصى 100,000 درهم)',
+    AppStrings.valExpDatesInvalid: 'يجب أن يكون تاريخ بداية الخبرة قبل تاريخ النهاية أو مساويًا له',
 
     // Auth errors & flow (System Spec §14.1)
     AppStrings.authPhoneInvalid: 'الرجاء إدخال رقم هاتف صحيح',
@@ -298,6 +300,8 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.mediaVideoReady: 'جاهز للإرسال',
     AppStrings.docUploading: 'جارٍ رفع المستندات…',
     AppStrings.docUploadFailed: 'فشل الرفع. يرجى التحقق من اتصالك والمحاولة مرة أخرى.',
+    AppStrings.docPickFailed: 'تعذّر فتح هذا الملف. يرجى اختيار ملف PDF أو صورة (JPG/PNG).',
+    AppStrings.docTooLarge: 'حجم الملف كبير جدًا. يرجى اختيار ملف أقل من 10 ميغابايت.',
 
     // Family job — employment type + edit fields
     AppStrings.fldEmployment: 'نوع التوظيف',

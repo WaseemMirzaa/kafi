@@ -50,10 +50,22 @@ class Validators {
     return null;
   }
 
-  /// Salary range: both positive and min ≤ max. (§14.4 V8)
+  /// Upper sanity ceiling for a monthly salary (AED). Guards against typos like
+  /// an extra trailing zero without rejecting genuine high-end offers.
+  static const int maxMonthlySalary = 100000;
+
+  /// Salary range: both positive, min ≤ max, and within a sane ceiling.
+  /// (§14.4 V8)
   static String? salaryRange(int min, int max) {
     if (min <= 0 || max <= 0) return AppStrings.valRequired;
     if (min > max) return AppStrings.valSalaryOrder;
+    if (max > maxMonthlySalary) return AppStrings.valSalaryTooHigh;
+    return null;
+  }
+
+  /// Work-experience date range: `from` must be on or before `to`. (§14.4)
+  static String? experienceDates(DateTime from, DateTime to) {
+    if (from.isAfter(to)) return AppStrings.valExpDatesInvalid;
     return null;
   }
 

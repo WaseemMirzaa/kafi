@@ -5,6 +5,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_step_scaffold.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
@@ -181,15 +182,33 @@ class _ExpCardState extends State<_ExpCard> {
   }
 
   Future<void> _pickDate(bool isFrom) async {
-    final initial = isFrom ? _from : _to;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    // A job can't start or end in the future, and "from" can't be after "to".
+    //   • From: [2005 .. min(To, today)]
+    //   • To:   [From .. today]
+    final DateTime first = isFrom ? DateTime(2005) : _from;
+    final DateTime last = isFrom ? (_to.isBefore(today) ? _to : today) : today;
+    var initial = isFrom ? _from : _to;
+    if (initial.isBefore(first)) initial = first;
+    if (initial.isAfter(last)) initial = last;
     final picked = await showDatePicker(
       context: context,
       initialDate: initial,
-      firstDate: DateTime(2005),
-      lastDate: DateTime.now().add(const Duration(days: 365)),
+      firstDate: first,
+      lastDate: last,
+      helpText: isFrom ? AppStrings.expFrom.tr : AppStrings.expTo.tr,
     );
     if (picked != null) {
-      setState(() => isFrom ? _from = picked : _to = picked);
+      setState(() {
+        if (isFrom) {
+          _from = picked;
+          // Keep the range valid if the new start is after the current end.
+          if (_to.isBefore(_from)) _to = _from;
+        } else {
+          _to = picked;
+        }
+      });
       _emit();
     }
   }
@@ -249,7 +268,17 @@ class _ExpCardState extends State<_ExpCard> {
             _emit();
           }),
           KafiTextField(label: AppStrings.expEmployer.tr, controller: _employer, hint: 'e.g. Al Mansoori Family'),
-          KafiTextField(label: AppStrings.expCityCountry.tr, controller: _city, hint: 'e.g. Dubai, UAE'),
+          _label(AppStrings.expCityCountry.tr),
+          const SizedBox(height: 4),
+          // Uber-style location picker keeps job-history locations consistent
+          // with the rest of the app. Writing to `_city` fires its listener
+          // (`_emit`), so the parent experience list updates automatically.
+          KafiLocationPicker(
+            label: AppStrings.expCityCountry.tr,
+            initialValue: _city.text,
+            onChanged: (v) => _city.text = v,
+          ),
+          const SizedBox(height: 7),
           Row(
             children: [
               Expanded(child: _dateField(AppStrings.expFrom.tr, _from, () => _pickDate(true))),
