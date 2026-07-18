@@ -27,12 +27,20 @@ class MockChatService implements IChatService {
   }
 
   @override
+  Stream<List<ChatThread>> watchThreads(String userId) =>
+      Stream.fromFuture(listThreads(userId));
+
+  @override
   Future<List<ChatMessage>> loadMessages(String threadId) async {
     await Future<void>.delayed(AppConfig.mockDelay);
     return List<ChatMessage>.from(
       _byThread[threadId] ?? const [],
     );
   }
+
+  @override
+  Stream<List<ChatMessage>> watchMessages(String threadId) =>
+      Stream.fromFuture(loadMessages(threadId));
 
   @override
   Future<void> sendMessage(String threadId, ChatMessage message) async {

@@ -4,7 +4,15 @@ abstract class IChatService {
   /// [userId] — family or nanny account id (threads matched on either side).
   Future<List<ChatThread>> listThreads(String userId);
 
+  /// Live stream of [userId]'s threads, newest-activity first. Emits on every
+  /// change (new message, unread count, trial link) so the list stays current.
+  Stream<List<ChatThread>> watchThreads(String userId);
+
   Future<List<ChatMessage>> loadMessages(String threadId);
+
+  /// Live stream of the messages in [threadId], oldest→newest. Firestore's
+  /// latency compensation echoes the sender's own messages instantly.
+  Stream<List<ChatMessage>> watchMessages(String threadId);
 
   Future<void> sendMessage(String threadId, ChatMessage message);
 

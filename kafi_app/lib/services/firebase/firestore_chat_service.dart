@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
@@ -22,6 +24,44 @@ class FirestoreChatService implements IChatService {
     final list = byId.values.toList()
       ..sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
     return list;
+  }
+
+  @override
+  Stream<List<ChatThread>> watchThreads(String userId) {
+    // A user's threads match on EITHER familyId or nannyId, so we merge two
+    // snapshot streams: each query keeps its own slice and we re-emit the sorted
+    // union whenever either side changes.
+    final controller = StreamController<List<ChatThread>>();
+    var asFamily = <ChatThread>[];
+    var asNanny = <ChatThread>[];
+
+    void emit() {
+      final byId = <String, ChatThread>{};
+      for (final t in asFamily) {
+        byId[t.id] = t;
+      }
+      for (final t in asNanny) {
+        byId[t.id] = t;
+      }
+      final list = byId.values.toList()
+        ..sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
+      if (!controller.isClosed) controller.add(list);
+    }
+
+    final subFamily = _threads.where('familyId', isEqualTo: userId).snapshots().listen((s) {
+      asFamily = s.docs.map(_threadFromDoc).toList();
+      emit();
+    }, onError: controller.addError);
+    final subNanny = _threads.where('nannyId', isEqualTo: userId).snapshots().listen((s) {
+      asNanny = s.docs.map(_threadFromDoc).toList();
+      emit();
+    }, onError: controller.addError);
+
+    controller.onCancel = () async {
+      await subFamily.cancel();
+      await subNanny.cancel();
+    };
+    return controller.stream;
   }
 
   ChatThread _threadFromDoc(QueryDocumentSnapshot<Map<String, dynamic>> d) =>
@@ -55,46 +95,53 @@ class FirestoreChatService implements IChatService {
     );
   }
 
+  Query<Map<String, dynamic>> _messagesQuery(String threadId) => _threads
+      .doc(threadId)
+      .collection('messages')
+      .orderBy('createdAt', descending: false)
+      .limit(100);
+
+  ChatMessage _messageFromDoc(
+      String threadId, QueryDocumentSnapshot<Map<String, dynamic>> d) {
+    final m = d.data();
+    final rawAtt = m['attachments'];
+    final attachments = rawAtt is List
+        ? rawAtt
+            .whereType<Map>()
+            .map(
+              (a) => Attachment(
+                type: (a['type'] ?? 'image').toString(),
+                url: (a['url'] ?? '').toString(),
+                name: (a['name'] ?? 'file').toString(),
+              ),
+            )
+            .toList()
+        : <Attachment>[];
+    return ChatMessage(
+      id: d.id,
+      threadId: threadId,
+      senderId: m['senderId'] ?? '',
+      senderType: m['senderType'] ?? 'family',
+      content: m['content'] ?? '',
+      createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      type: MessageType.values
+          .firstWhere((e) => e.name == m['type'], orElse: () => MessageType.text),
+      readAt: (m['readAt'] as Timestamp?)?.toDate(),
+      trialOfferId: m['trialOfferId'] as String?,
+      attachments: attachments,
+    );
+  }
+
   @override
   Future<List<ChatMessage>> loadMessages(String threadId) async {
-    final snap = await _threads
-        .doc(threadId)
-        .collection('messages')
-        .orderBy('createdAt', descending: false)
-        .limit(100)
-        .get();
-
-    return snap.docs.map((d) {
-      final m = d.data();
-      final rawAtt = m['attachments'];
-      final attachments = rawAtt is List
-          ? rawAtt
-              .whereType<Map>()
-              .map(
-                (a) => Attachment(
-                  type: (a['type'] ?? 'image').toString(),
-                  url: (a['url'] ?? '').toString(),
-                  name: (a['name'] ?? 'file').toString(),
-                ),
-              )
-              .toList()
-          : <Attachment>[];
-      return ChatMessage(
-        id: d.id,
-        threadId: threadId,
-        senderId: m['senderId'] ?? '',
-        senderType: m['senderType'] ?? 'family',
-        content: m['content'] ?? '',
-        createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
-        type: MessageType.values.firstWhere(
-            (e) => e.name == m['type'],
-            orElse: () => MessageType.text),
-        readAt: (m['readAt'] as Timestamp?)?.toDate(),
-        trialOfferId: m['trialOfferId'] as String?,
-        attachments: attachments,
-      );
-    }).toList();
+    final snap = await _messagesQuery(threadId).get();
+    return snap.docs.map((d) => _messageFromDoc(threadId, d)).toList();
   }
+
+  @override
+  Stream<List<ChatMessage>> watchMessages(String threadId) => _messagesQuery(threadId)
+      .snapshots()
+      .map((s) => s.docs.map((d) => _messageFromDoc(threadId, d)).toList());
 
   @override
   Future<void> sendMessage(String threadId, ChatMessage message) async {
