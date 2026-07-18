@@ -46,24 +46,20 @@ class FirestoreShortlistService implements IShortlistService {
 
     await ref.set(item.toMap());
 
-    // Increment the field the nanny dashboard actually reads (stats.shortlists),
-    // not the top-level `shortlists` that nothing reads.
-    await _nannies.doc(nannyId).update({
-      'stats.shortlists': FieldValue.increment(1),
-    });
-
+    // The nanny dashboard's `stats.shortlists` is maintained server-side by the
+    // onShortlistCreated Cloud Function — the security rules (correctly) forbid
+    // a family from writing another user's nanny doc, so it cannot be done here.
     return item;
   }
 
   @override
   Future<void> remove({required String familyId, required String nannyId}) async {
+    // Deleting the shortlist doc is enough — the onShortlistDeleted Cloud
+    // Function decrements the nanny's server-owned stats.shortlists.
     // Prefer the deterministic id; fall back to a query for legacy docs.
     final detRef = _shortlists.doc('${familyId}_$nannyId');
     if ((await detRef.get()).exists) {
       await detRef.delete();
-      await _nannies.doc(nannyId).update({
-        'stats.shortlists': FieldValue.increment(-1),
-      });
       return;
     }
     final snap = await _shortlists
@@ -73,9 +69,6 @@ class FirestoreShortlistService implements IShortlistService {
         .get();
     if (snap.docs.isNotEmpty) {
       await _shortlists.doc(snap.docs.first.id).delete();
-      await _nannies.doc(nannyId).update({
-        'stats.shortlists': FieldValue.increment(-1),
-      });
     }
   }
 
