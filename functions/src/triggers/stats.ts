@@ -36,3 +36,40 @@ export const onShortlistDeleted = onDocumentDeleted('shortlists/{shortlistId}', 
     tx.set(ref, { stats: { shortlists: flooredCount(current, -1) } }, { merge: true });
   });
 });
+
+/// A family records a profile view by creating `profileViews/{familyId}_{nannyId}`
+/// (deterministic id → one event per pair). The family can't write its own
+/// `viewedProfiles`/`freeContactsUsed` or the nanny's stats (security rules), so
+/// this trigger owns both: it burns a free contact only the FIRST time a family
+/// views a given nanny, and bumps the nanny's server-owned profileViews stat.
+export const onProfileViewed = onDocumentCreated('profileViews/{viewId}', async (event) => {
+  const view = event.data?.data();
+  const familyId = view?.familyId as string | undefined;
+  const nannyId = view?.nannyId as string | undefined;
+  if (!familyId || !nannyId) return;
+  const db = admin.firestore();
+
+  // Family free-contact accounting — only new views count.
+  let isNew = false;
+  await db.runTransaction(async (tx) => {
+    const ref = db.collection('families').doc(familyId);
+    const snap = await tx.get(ref);
+    const viewed: string[] = Array.isArray(snap.data()?.viewedProfiles)
+      ? (snap.data()!.viewedProfiles as string[])
+      : [];
+    if (viewed.includes(nannyId)) return;
+    isNew = true;
+    viewed.push(nannyId);
+    tx.set(
+      ref,
+      { viewedProfiles: viewed, freeContactsUsed: admin.firestore.FieldValue.increment(1) },
+      { merge: true },
+    );
+  });
+
+  if (!isNew) return;
+  await db
+    .collection('nannies')
+    .doc(nannyId)
+    .set({ stats: { profileViews: admin.firestore.FieldValue.increment(1) } }, { merge: true });
+});

@@ -130,7 +130,10 @@ class SubscriptionController extends GetxController {
     if (freeViewsRemaining <= 0) return false;
     await _subs.recordView(id, nannyId);
     viewedNannyIds.add(nannyId);
-    freeViewsUsed.value = await _subs.freeViewsUsed(id);
+    // Count locally from the deduped set — the onProfileViewed function updates
+    // the server's freeContactsUsed asynchronously, so re-reading it here would
+    // lag and let the gate over-grant. refreshAndEnforce() re-syncs from server.
+    freeViewsUsed.value = viewedNannyIds.length;
     return true;
   }
 

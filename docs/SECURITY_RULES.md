@@ -68,6 +68,7 @@ from `firestore.indexes.json` under **Firestore Database → Indexes**.
 | `jobs/{id}` | any signed‑in | owner family | owner family / admin | owner family / admin |
 | `applications/{id}` | the nanny or family on it / admin | the applying nanny | either party / admin | admin |
 | `shortlists/{id}` | owner family / admin | owner family | owner family | owner family / admin |
+| `profileViews/{id}` | owner family / admin | owner family | owner family | admin *(server-processed into `viewedProfiles`/`freeContactsUsed`/`stats.profileViews`)* |
 | `chatThreads/{id}` | the two parties / admin | family *(needs active subscription **or** an active trial with that nanny)* | either party / admin | admin |
 | `chatThreads/{id}/messages/{id}` | the two parties / admin | nanny always; family only with access/trial; admin | admin | admin |
 | `trials/{id}` | the two parties / admin | owner family | either party / admin | admin |
@@ -250,6 +251,15 @@ service cloud.firestore {
       allow read, write: if isAdmin()
         || (isSignedIn() && (existing().familyId == request.auth.uid
                             || incoming().familyId == request.auth.uid));
+    }
+
+    // ---------- profileViews (free-contact accounting) ----------
+    match /profileViews/{viewId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && existing().familyId == request.auth.uid);
+      allow create, update: if isSignedIn()
+        && incoming().familyId == request.auth.uid;
+      allow delete: if isAdmin();
     }
 
     // ---------- chatThreads ----------
