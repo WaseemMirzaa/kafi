@@ -21,6 +21,9 @@ export const onBroadcastCreated = onDocumentCreated(
 
     const audience: string = broadcast.audience || 'all';
     const tokens: string[] = [];
+    // Recipient user ids — every targeted user gets a durable inbox doc, even
+    // those without an FCM token (who would otherwise never see the broadcast).
+    const recipientIds: string[] = [];
 
     if (audience === 'subscribers') {
       // Subscribers = families with an active subscription. Resolve via the
@@ -39,6 +42,7 @@ export const onBroadcastCreated = onDocumentCreated(
           .where(admin.firestore.FieldPath.documentId(), 'in', batch)
           .get();
         userSnap.forEach((d) => {
+          recipientIds.push(d.id);
           const t = d.data().fcmTokens as string[] | undefined;
           if (t?.length) tokens.push(...t);
         });
@@ -52,9 +56,28 @@ export const onBroadcastCreated = onDocumentCreated(
       }
       const snap = await usersQuery.get();
       snap.forEach((d) => {
+        recipientIds.push(d.id);
         const t = d.data().fcmTokens as string[] | undefined;
         if (t?.length) tokens.push(...t);
       });
+    }
+
+    // Fan the broadcast into every recipient's inbox (batched; Firestore caps
+    // at 500 writes/commit).
+    for (let i = 0; i < recipientIds.length; i += 450) {
+      const inboxBatch = db.batch();
+      for (const uid of recipientIds.slice(i, i + 450)) {
+        inboxBatch.set(db.collection('notifications').doc(), {
+          userId: uid,
+          type: 'systemAnnouncement',
+          title: broadcast.title || 'Kafi',
+          body: broadcast.message || '',
+          data: { type: 'broadcast', broadcastId: event.params.broadcastId },
+          read: false,
+          createdAt: admin.firestore.FieldValue.serverTimestamp(),
+        });
+      }
+      await inboxBatch.commit();
     }
 
     let sent = 0;

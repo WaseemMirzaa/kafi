@@ -64,6 +64,77 @@ export async function sendNotification(
   }
 }
 
+/// Notification-inbox `type` values — mirror the Flutter `NotificationType`
+/// enum names (kafi_app/lib/models/notification_model.dart). The in-app inbox
+/// queries `notifications` where `userId == me` ordered by `createdAt`, and maps
+/// this exact string back to the enum (an unknown value → systemAnnouncement).
+export type InboxType =
+  | 'newMessage'
+  | 'newApplication'
+  | 'applicationViewed'
+  | 'applicationDeclined'
+  | 'trialOfferReceived'
+  | 'trialAccepted'
+  | 'trialDeclined'
+  | 'trialCountered'
+  | 'trialStartingSoon'
+  | 'trialEndingSoon'
+  | 'trialCompleted'
+  | 'hired'
+  | 'profileViewed'
+  | 'documentsApproved'
+  | 'documentsRejected'
+  | 'profileVerified'
+  | 'subscriptionExpiring'
+  | 'subscriptionRenewed'
+  | 'subscriptionExpired'
+  | 'freeContactsLow'
+  | 'systemAnnouncement';
+
+/// The stored inbox document, minus the server-set `createdAt`. Kept pure (no
+/// FieldValue sentinel / admin dependency) so the shape can be unit-tested and
+/// stays in lockstep with the app's `AppNotification.fromMap` reader.
+export interface InboxDoc {
+  userId: string;
+  type: InboxType;
+  title: string;
+  body: string;
+  data: Record<string, string>;
+  read: boolean;
+}
+
+export function buildInboxDoc(
+  userId: string,
+  type: InboxType,
+  title: string,
+  body: string,
+  data: Record<string, string> = {},
+): InboxDoc {
+  return { userId, type, title, body, data, read: false };
+}
+
+/// Persists an in-app notification so it appears in the recipient's inbox even
+/// when they have no FCM token or the push is never delivered. The companion to
+/// [sendNotification]: call `writeInbox` for the durable record, then
+/// `sendNotification` for the live push. Best-effort — never throws.
+export async function writeInbox(
+  userId: string | undefined,
+  type: InboxType,
+  title: string,
+  body: string,
+  data: Record<string, string> = {},
+): Promise<void> {
+  if (!userId) return;
+  try {
+    await admin.firestore().collection('notifications').add({
+      ...buildInboxDoc(userId, type, title, body, data),
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+  } catch (error) {
+    console.error('writeInbox error:', error);
+  }
+}
+
 /// Returns the user document (where FCM tokens live).
 export async function getUser(userId: string): Promise<TokenBearer> {
   const snap = await admin.firestore().collection('users').doc(userId).get();
