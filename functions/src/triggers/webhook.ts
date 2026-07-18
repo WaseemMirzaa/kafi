@@ -1,6 +1,6 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
-import { sendNotification } from '../utils/notifications';
+import { sendNotification, writeInbox, InboxType } from '../utils/notifications';
 
 export const revenueCatWebhook = onRequest(async (req, res) => {
   if (req.method !== 'POST') {
@@ -48,7 +48,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
 
   const eventType = event.type;
   let update: Record<string, unknown> = {};
-  let notification: { title: string; body: string } | null = null;
+  let notification: { title: string; body: string; type: InboxType } | null = null;
 
   switch (eventType) {
     case 'INITIAL_PURCHASE':
@@ -66,6 +66,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
       notification = {
         title: '✅ Subscription active',
         body: 'Full access unlocked - browse, chat, and contact nannies!',
+        type: 'subscriptionRenewed',
       };
       break;
 
@@ -77,6 +78,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
       notification = {
         title: 'Subscription cancelled',
         body: 'Your access continues until the end of the current period',
+        type: 'systemAnnouncement',
       };
       break;
 
@@ -90,6 +92,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
       notification = {
         title: '⚠️ Subscription expired',
         body: 'Renew to access chats and contacts',
+        type: 'subscriptionExpired',
       };
       break;
 
@@ -102,6 +105,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
       notification = {
         title: '❌ Payment failed',
         body: 'Update your payment method to continue access',
+        type: 'systemAnnouncement',
       };
       break;
 
@@ -113,6 +117,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
       notification = {
         title: '🎉 Subscription resumed',
         body: 'Your plan will renew automatically',
+        type: 'subscriptionRenewed',
       };
       break;
 
@@ -127,6 +132,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
       notification = {
         title: 'Plan updated',
         body: 'Your subscription plan has changed.',
+        type: 'systemAnnouncement',
       };
       break;
 
@@ -137,12 +143,18 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
 
   await familyRef.update(update);
 
-  const familyData = familySnap.data();
-  if (notification && familyData?.fcmTokens?.length) {
-    await sendNotification(familyData.fcmTokens, {
-      ...notification,
-      data: { type: `subscription_${eventType.toLowerCase()}` },
-    });
+  if (notification) {
+    const data = { type: `subscription_${eventType.toLowerCase()}` };
+    // Durable inbox record (survives a missing FCM token), then the live push.
+    await writeInbox(familyId, notification.type, notification.title, notification.body, data);
+    const familyData = familySnap.data();
+    if (familyData?.fcmTokens?.length) {
+      await sendNotification(familyData.fcmTokens, {
+        title: notification.title,
+        body: notification.body,
+        data,
+      });
+    }
   }
 
   res.status(200).send('OK');
