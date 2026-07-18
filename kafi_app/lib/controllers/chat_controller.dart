@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -28,6 +30,10 @@ class ChatController extends GetxController {
   final inputCtrl = TextEditingController();
   final RxBool isLoading = false.obs;
   final RxBool isLocked = false.obs;
+
+  // Live Firestore subscriptions — threads list + the open thread's messages.
+  StreamSubscription<List<ChatThread>>? _threadsSub;
+  StreamSubscription<List<ChatMessage>>? _messagesSub;
 
   String? _pendingThreadId;
   String? _pendingNannyId;
@@ -94,24 +100,38 @@ class ChatController extends GetxController {
 
   @override
   void onClose() {
+    _messagesSub?.cancel();
+    _threadsSub?.cancel();
     inputCtrl.dispose();
     super.onClose();
   }
 
+  /// Binds the thread list to a live Firestore stream (new messages, unread
+  /// counts and trial links update without a manual refresh). Completes after
+  /// the first snapshot so callers that then open a thread see it populated.
   Future<void> refreshThreads() async {
+    final id = currentUserId(_auth);
+    if (id == null) return;
     isLoading.value = true;
-    try {
-      final id = currentUserId(_auth);
-      if (id == null) return;
-      threads.value = await _chat.listThreads(id);
-    } finally {
+    await _threadsSub?.cancel();
+    final first = Completer<void>();
+    void done() {
       isLoading.value = false;
+      if (!first.isCompleted) first.complete();
     }
+
+    _threadsSub = _chat.watchThreads(id).listen((list) {
+      threads.value = list;
+      done();
+    }, onError: (_) => done());
+    await first.future;
   }
 
   /// Per docs: Family must have active subscription OR thread has active trial
   /// to open a chat thread. Otherwise redirect to paywall.
   void closeThread() {
+    _messagesSub?.cancel();
+    _messagesSub = null;
     activeThreadId.value = '';
     messages.clear();
     inputCtrl.clear();
@@ -134,7 +154,15 @@ class ChatController extends GetxController {
       }
     }
     activeThreadId.value = threadId;
-    messages.value = await _chat.loadMessages(threadId);
+    messages.clear();
+    await _messagesSub?.cancel();
+    _messagesSub = _chat.watchMessages(threadId).listen((serverMsgs) {
+      // Keep any optimistic messages the stream hasn't caught up to yet, so a
+      // just-sent message never blinks out before the server round-trip.
+      final serverIds = serverMsgs.map((m) => m.id).toSet();
+      final pending = messages.where((m) => !serverIds.contains(m.id)).toList();
+      messages.value = [...serverMsgs, ...pending];
+    });
     await markAsRead(threadId);
   }
 
@@ -292,6 +320,8 @@ class ChatController extends GetxController {
     isLocked.value = true;
     final open = activeThread;
     if (open == null || !open.hasActiveTrial) {
+      _messagesSub?.cancel();
+      _messagesSub = null;
       activeThreadId.value = '';
       messages.clear();
     }
