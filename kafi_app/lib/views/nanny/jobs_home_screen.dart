@@ -3,10 +3,12 @@ import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/application_controller.dart';
 import 'package:kafi_app/controllers/job_post_controller.dart';
+import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
+import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 class JobsHomeScreen extends GetView<JobPostController> {
@@ -236,10 +238,25 @@ class JobsHomeScreen extends GetView<JobPostController> {
       if (jobs.isEmpty) {
         return _emptyState();
       }
+      // Real attribute-based match for the signed-in nanny (Spec §9 /
+      // MatchService — the same scorer used on job detail & smart match), not a
+      // hardcoded placeholder. Reading nanny.value inside this Obx also makes
+      // the list re-rank once the profile finishes loading. Best matches first.
+      final nanny = Get.isRegistered<NannyProfileController>()
+          ? Get.find<NannyProfileController>().nanny.value
+          : null;
+      final matchService = MatchService();
+      final scored = [
+        for (final job in jobs)
+          (job, nanny == null ? null : matchService.calculateJobMatch(nanny, job)),
+      ];
+      if (nanny != null) {
+        scored.sort((a, b) => (b.$2 ?? 0).compareTo(a.$2 ?? 0));
+      }
       return ListView.builder(
         padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
-        itemCount: jobs.length,
-        itemBuilder: (_, i) => _jobCard(jobs[i]),
+        itemCount: scored.length,
+        itemBuilder: (_, i) => _jobCard(scored[i].$1, scored[i].$2),
       );
     });
   }
@@ -261,9 +278,8 @@ class JobsHomeScreen extends GetView<JobPostController> {
     );
   }
 
-  Widget _jobCard(JobPostModel job) {
-    const matchScore = 85;
-    const isHotMatch = matchScore >= 90;
+  Widget _jobCard(JobPostModel job, int? matchScore) {
+    final isHotMatch = (matchScore ?? 0) >= 90;
     final typeLabel = job.jobType == JobType.liveOut ? 'Live-out' : 'Live-in';
     final initial = job.familyName.isNotEmpty ? job.familyName[0].toUpperCase() : 'F';
 
@@ -315,26 +331,28 @@ class JobsHomeScreen extends GetView<JobPostController> {
                           style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
                       Text('AED ${job.salaryMin}–${job.salaryMax}/mo · ${job.familyName}',
                           style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
-                      const SizedBox(height: 3),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: matchScore >= 85
-                              ? const Color(0xFFE8F8EE)
-                              : KafiColors.ambL,
-                          borderRadius: BorderRadius.circular(14),
+                      if (matchScore != null) ...[
+                        const SizedBox(height: 3),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: matchScore >= 85
+                                ? const Color(0xFFE8F8EE)
+                                : KafiColors.ambL,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            matchScore >= 85
+                                ? '⭐ $matchScore% match'
+                                : '$matchScore% match',
+                            style: KafiTheme.fredoka(9,
+                                color: matchScore >= 85
+                                    ? const Color(0xFF2A8A50)
+                                    : const Color(0xFFC07A10),
+                                w: FontWeight.w700),
+                          ),
                         ),
-                        child: Text(
-                          matchScore >= 85
-                              ? '⭐ $matchScore% match'
-                              : '$matchScore% match',
-                          style: KafiTheme.fredoka(9,
-                              color: matchScore >= 85
-                                  ? const Color(0xFF2A8A50)
-                                  : const Color(0xFFC07A10),
-                              w: FontWeight.w700),
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ),
