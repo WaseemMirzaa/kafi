@@ -72,6 +72,19 @@ class FirestoreUserService implements IUserService {
   }
 
   @override
+  Future<void> saveNannyDocumentUrls(
+      String nannyId, Map<DocumentType, String> urls) async {
+    if (urls.isEmpty) return;
+    final docs = _col.doc(nannyId).collection('documents');
+    // One doc per type (deterministic id = type name). Merge so re-uploading a
+    // single document doesn't clobber the others.
+    await Future.wait(urls.entries.map((e) => docs.doc(e.key.name).set(
+          {'type': e.key.name, 'url': e.value, 'updatedAt': FieldValue.serverTimestamp()},
+          SetOptions(merge: true),
+        )));
+  }
+
+  @override
   Future<void> submitNannyForReview(String id) async {
     // Resubmitting after a rejection must clear the admin's previous verdict so
     // the nanny isn't shown a stale reason once they're back in the queue. The

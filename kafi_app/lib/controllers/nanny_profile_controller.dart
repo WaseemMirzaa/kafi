@@ -720,6 +720,7 @@ class NannyProfileController extends GetxController {
   /// already-uploaded docs are removed from the staging map so they are not
   /// re-uploaded on a retry.
   Future<void> _uploadStagedDocs(String userId) async {
+    final uploadedUrls = <DocumentType, String>{};
     for (final entry in _stagedDocs.entries.toList()) {
       final type = entry.key;
       final staged = entry.value;
@@ -735,7 +736,14 @@ class NannyProfileController extends GetxController {
         status: DocumentStatus.reviewing,
         uploadedAt: DateTime.now(),
       );
+      uploadedUrls[type] = url;
       _stagedDocs.remove(type);
+    }
+    // Persist the sensitive download URLs to the private
+    // nannies/{id}/documents/{type} subcollection (owner/admin only). saveNanny
+    // then writes only status/metadata to the world-readable parent doc (C5).
+    if (uploadedUrls.isNotEmpty) {
+      await _userService.saveNannyDocumentUrls(userId, uploadedUrls);
     }
   }
 

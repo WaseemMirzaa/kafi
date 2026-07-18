@@ -119,10 +119,16 @@ class NannyDocument {
         reviewedBy: reviewedBy ?? this.reviewedBy,
       );
 
+  /// NOTE: `url` is deliberately **omitted** here. This map is embedded in the
+  /// `nannies/{id}` doc, which becomes world-readable once the nanny is
+  /// approved+verified — and a Storage download URL carries a token that
+  /// bypasses Storage rules (C5). The sensitive URL is instead persisted to the
+  /// private `nannies/{id}/documents/{type}` subcollection (owner/admin only);
+  /// only status/metadata — which the admin list, review flow, and the
+  /// onDocumentReviewed function rely on — stays on the parent doc.
   Map<String, dynamic> toMap() => {
         'type': type.name,
         'status': status.name,
-        'url': url,
         'uploadedAt': uploadedAt?.toIso8601String(),
         'rejectionReason': rejectionReason,
         'reviewedAt': reviewedAt?.toIso8601String(),

@@ -801,6 +801,21 @@ export const NannyService = {
     );
     await updateDoc(ref, { documents: next, updatedAt: serverTimestamp() });
   },
+  /// Reads the private `nannies/{id}/documents/{type}` subcollection where the
+  /// app now stores sensitive KYC download URLs (C5 — kept off the
+  /// world-readable parent doc). Returns a `{ [docType]: url }` map so the
+  /// review UI can display each document. Mock nannies carry inline URLs, so
+  /// this is a no-op there.
+  async getDocumentUrls(nannyId: string): Promise<Record<string, string>> {
+    if (useMock()) return {};
+    const snap = await getDocs(collection(db!, 'nannies', nannyId, 'documents'));
+    const out: Record<string, string> = {};
+    snap.docs.forEach((d) => {
+      const url = (d.data() as { url?: string }).url;
+      if (url) out[d.id] = url; // doc id === document type name
+    });
+    return out;
+  },
 };
 
 // ─────────────────────────────────────────────────────────
