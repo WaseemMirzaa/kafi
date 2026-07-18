@@ -1,6 +1,6 @@
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
-import { sendNotification, getUser, getNanny, getFamily } from '../utils/notifications';
+import { sendNotification, writeInbox, getUser, getNanny, getFamily } from '../utils/notifications';
 
 export const onNewApplication = onDocumentCreated(
   'applications/{appId}',
@@ -11,16 +11,13 @@ export const onNewApplication = onDocumentCreated(
     const family = await getFamily(app.familyId);
     const nanny = await getNanny(app.nannyId);
 
-    if (!family.fcmTokens?.length) return;
+    const title = '📝 New application';
+    const body = `${nanny.fullName || 'A nanny'} applied - ${app.matchScore || 0}% match`;
+    const data = { type: 'new_application', applicationId: event.params.appId };
 
-    await sendNotification(family.fcmTokens, {
-      title: '📝 New application',
-      body: `${nanny.fullName || 'A nanny'} applied - ${app.matchScore || 0}% match`,
-      data: {
-        type: 'new_application',
-        applicationId: event.params.appId,
-      },
-    });
+    // Durable inbox record first (survives a missing FCM token), then the push.
+    await writeInbox(app.familyId as string, 'newApplication', title, body, data);
+    await sendNotification((family.fcmTokens as string[]) ?? [], { title, body, data });
   }
 );
 
@@ -31,16 +28,12 @@ export const onTrialOffered = onDocumentCreated('trials/{trialId}', async (event
   const nanny = await getUser(trial.nannyId);
   const family = await getFamily(trial.familyId);
 
-  if (!nanny.fcmTokens?.length) return;
+  const title = '🎉 Trial offer received!';
+  const body = `${family.fullName || 'A family'} sent ${trial.durationDays}-day trial @ AED ${trial.dailyRate}/day`;
+  const data = { type: 'trial_offer_received', trialId: event.params.trialId };
 
-  await sendNotification(nanny.fcmTokens, {
-    title: '🎉 Trial offer received!',
-    body: `${family.fullName || 'A family'} sent ${trial.durationDays}-day trial @ AED ${trial.dailyRate}/day`,
-    data: {
-      type: 'trial_offer_received',
-      trialId: event.params.trialId,
-    },
-  });
+  await writeInbox(trial.nannyId as string, 'trialOfferReceived', title, body, data);
+  await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
 });
 
 export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (event) => {
@@ -51,36 +44,34 @@ export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (even
   const family = await getFamily(after.familyId);
   const nanny = await getUser(after.nannyId);
 
-  if (!family.fcmTokens?.length) return;
+  const byStatus = {
+    accepted: {
+      title: '✅ Trial accepted',
+      body: `${nanny.fullName || 'Nanny'} accepted your offer!`,
+      type: 'trialAccepted',
+    },
+    declined: {
+      title: 'Trial declined',
+      body: `${nanny.fullName || 'Nanny'} declined your offer`,
+      type: 'trialDeclined',
+    },
+    countered: {
+      title: '🔄 Counter offer',
+      body: `${nanny.fullName || 'Nanny'} sent a counter offer`,
+      type: 'trialCountered',
+    },
+  } as const;
 
-  let payload: { title: string; body: string } | null = null;
-  switch (after.status) {
-    case 'accepted':
-      payload = {
-        title: '✅ Trial accepted',
-        body: `${nanny.fullName || 'Nanny'} accepted your offer!`,
-      };
-      break;
-    case 'declined':
-      payload = {
-        title: 'Trial declined',
-        body: `${nanny.fullName || 'Nanny'} declined your offer`,
-      };
-      break;
-    case 'countered':
-      payload = {
-        title: '🔄 Counter offer',
-        body: `${nanny.fullName || 'Nanny'} sent a counter offer`,
-      };
-      break;
-  }
+  const entry = byStatus[after.status as keyof typeof byStatus];
+  if (!entry) return;
 
-  if (payload) {
-    await sendNotification(family.fcmTokens, {
-      ...payload,
-      data: { type: `trial_${after.status}`, trialId: event.params.trialId },
-    });
-  }
+  const data = { type: `trial_${after.status}`, trialId: event.params.trialId };
+  await writeInbox(after.familyId as string, entry.type, entry.title, entry.body, data);
+  await sendNotification((family.fcmTokens as string[]) ?? [], {
+    title: entry.title,
+    body: entry.body,
+    data,
+  });
 });
 
 /// Per Technical Architecture §10.2 — when a trial transitions to a terminal
@@ -114,12 +105,10 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
 
   if (after.status === 'completed') {
     const family = await getFamily(familyId);
-    if (family.fcmTokens?.length) {
-      await sendNotification(family.fcmTokens, {
-        title: 'Trial completed',
-        body: 'Evaluate the nanny in your trial.',
-        data: { type: 'trial_completed', trialId: event.params.trialId },
-      });
-    }
+    const title = 'Trial completed';
+    const body = 'Evaluate the nanny in your trial.';
+    const data = { type: 'trial_completed', trialId: event.params.trialId };
+    await writeInbox(familyId, 'trialCompleted', title, body, data);
+    await sendNotification((family.fcmTokens as string[]) ?? [], { title, body, data });
   }
 });

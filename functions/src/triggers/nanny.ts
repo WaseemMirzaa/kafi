@@ -1,5 +1,5 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
-import { sendNotification, getUser } from '../utils/notifications';
+import { sendNotification, writeInbox, getUser } from '../utils/notifications';
 
 interface NannyDoc {
   type?: string;
@@ -32,29 +32,32 @@ export const onDocumentReviewed = onDocumentUpdated(
     const blockedChanged = (before.blocked === true) !== (after.blocked === true);
     if (changed.length === 0 && before.status === after.status && !blockedChanged) return;
 
-    // Only notify when the user has FCM tokens. Tokens live on the user doc.
-    const user = await getUser(event.params.nannyId);
-    if (!user.fcmTokens?.length) return;
+    // Tokens live on the user doc and may be empty — the inbox is written
+    // regardless so the record survives a missing/rotated FCM token.
+    const nannyId = event.params.nannyId;
+    const user = await getUser(nannyId);
+    const tokens = (user.fcmTokens as string[]) ?? [];
 
-    // 1. Per-document approved / rejected pushes.
+    // 1. Per-document approved / rejected notifications.
     for (const d of changed) {
       const payload =
         d.status === 'approved'
           ? {
               title: '✅ Document approved',
               body: `${d.type} verified — keep going!`,
+              type: 'documentsApproved' as const,
             }
           : d.status === 'rejected'
           ? {
               title: '❌ Action needed',
               body: `${d.type} rejected: ${d.rejectionReason || 'Please re-upload'}`,
+              type: 'documentsRejected' as const,
             }
           : null;
       if (!payload) continue;
-      await sendNotification(user.fcmTokens, {
-        ...payload,
-        data: { type: `documents_${d.status}`, docType: d.type ?? '' },
-      });
+      const data = { type: `documents_${d.status}`, docType: d.type ?? '' };
+      await writeInbox(nannyId, payload.type, payload.title, payload.body, data);
+      await sendNotification(tokens, { title: payload.title, body: payload.body, data });
     }
 
     // 2. Overall onboarding status push. The nanny doc is CREATED as `draft`
@@ -70,20 +73,22 @@ export const onDocumentReviewed = onDocumentUpdated(
           ? {
               title: '🎉 Profile approved!',
               body: 'Your profile is now visible to families.',
+              type: 'profileVerified' as const,
             }
           : after.status === 'rejected'
           ? {
               title: '❌ Profile rejected',
               body: after.rejectionReason || 'Please review the feedback and re-submit.',
+              type: 'documentsRejected' as const,
             }
           : {
               title: '📋 Profile submitted',
               body: 'Admin is reviewing your profile (1–24 hours).',
+              type: 'systemAnnouncement' as const,
             };
-      await sendNotification(user.fcmTokens, {
-        ...payload,
-        data: { type: `profile_${after.status}` },
-      });
+      const data = { type: `profile_${after.status}` };
+      await writeInbox(nannyId, payload.type, payload.title, payload.body, data);
+      await sendNotification(tokens, { title: payload.title, body: payload.body, data });
     }
 
     // 3. Block / unblock push. The mobile app also enforces the block live via
@@ -99,10 +104,9 @@ export const onDocumentReviewed = onDocumentUpdated(
               title: '✅ Account restored',
               body: 'Your Kafi account has been re-enabled. Welcome back!',
             };
-      await sendNotification(user.fcmTokens, {
-        ...payload,
-        data: { type: after.blocked === true ? 'account_blocked' : 'account_unblocked' },
-      });
+      const data = { type: after.blocked === true ? 'account_blocked' : 'account_unblocked' };
+      await writeInbox(nannyId, 'systemAnnouncement', payload.title, payload.body, data);
+      await sendNotification(tokens, { title: payload.title, body: payload.body, data });
     }
   },
 );

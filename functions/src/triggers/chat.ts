@@ -1,6 +1,6 @@
 import { onDocumentCreated } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
-import { sendNotification, getUser } from '../utils/notifications';
+import { sendNotification, writeInbox, getUser } from '../utils/notifications';
 
 export const onNewMessage = onDocumentCreated(
   'chatThreads/{threadId}/messages/{messageId}',
@@ -21,16 +21,15 @@ export const onNewMessage = onDocumentCreated(
     const recipient = await getUser(recipientId);
     const sender = await getUser(message.senderId);
 
-    if (!recipient.fcmTokens?.length) return;
+    const title = '💬 New message';
+    const body = `${sender.fullName || 'Someone'}: ${(message.content || '').substring(0, 80)}`;
+    const data = {
+      type: 'new_message',
+      threadId: event.params.threadId,
+      senderId: message.senderId,
+    };
 
-    await sendNotification(recipient.fcmTokens, {
-      title: '💬 New message',
-      body: `${sender.fullName || 'Someone'}: ${(message.content || '').substring(0, 80)}`,
-      data: {
-        type: 'new_message',
-        threadId: event.params.threadId,
-        senderId: message.senderId,
-      },
-    });
+    await writeInbox(recipientId, 'newMessage', title, body, data);
+    await sendNotification((recipient.fcmTokens as string[]) ?? [], { title, body, data });
   }
 );
