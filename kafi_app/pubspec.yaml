@@ -36,6 +36,7 @@ dependencies:
   image_picker: ^1.1.2
   file_picker: ^8.1.6
   video_player: ^2.9.2
+  path_provider: ^2.1.4 # temp/app dirs for the mock storage service
 
   # Notifications — local display of FCM foreground messages
   flutter_local_notifications: ^18.0.1
