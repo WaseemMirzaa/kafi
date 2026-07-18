@@ -49,6 +49,10 @@ export default function VerifyDocuments() {
   // popup is currently showing the full profile instead of the document list.
   const [docsFor, setDocsFor] = useState<NannyRow | null>(null);
   const [showProfile, setShowProfile] = useState(false);
+  // Sensitive KYC download URLs now live in the private
+  // nannies/{id}/documents subcollection (C5) — fetched on demand when a
+  // nanny's documents are opened, keyed by document type.
+  const [docUrls, setDocUrls] = useState<Record<string, string>>({});
   const { user } = useAuthStore();
 
   const reload = async (): Promise<NannyRow[]> => {
@@ -77,9 +81,15 @@ export default function VerifyDocuments() {
     setDocsFor((prev) => (prev ? all.find((n) => n.id === prev.id) ?? null : null));
   };
 
-  const openDocs = (n: NannyRow) => {
+  const openDocs = async (n: NannyRow) => {
     setShowProfile(false);
     setDocsFor(n);
+    setDocUrls({});
+    try {
+      setDocUrls(await NannyService.getDocumentUrls(n.id));
+    } catch {
+      // Non-fatal — the approve/reject actions work without the previews.
+    }
   };
   const closeDocs = () => {
     setDocsFor(null);
@@ -293,12 +303,15 @@ export default function VerifyDocuments() {
                       <div className="flex flex-col gap-2">
                         {(docsFor.documents ?? []).map((doc) => {
                           const docBusyKey = `${docsFor.id}:${doc.type}`;
+                          // Prefer the inline url (mock / legacy data), else the
+                          // one fetched from the private documents subcollection.
+                          const docUrl = doc.url ?? docUrls[doc.type];
                           return (
                             <div
                               key={doc.type}
                               className="flex items-center gap-3 rounded-lg border border-[#EBEEF8] p-2"
                             >
-                              <DocThumb url={doc.url} label={docLabel[doc.type] ?? doc.type} />
+                              <DocThumb url={docUrl} label={docLabel[doc.type] ?? doc.type} />
                               <div className="flex-1 min-w-0">
                                 <div className="text-[10.5px] font-extrabold text-navy">
                                   {docLabel[doc.type] ?? doc.type}
@@ -308,9 +321,9 @@ export default function VerifyDocuments() {
                                     {doc.rejectionReason}
                                   </div>
                                 )}
-                                {doc.url && (
+                                {docUrl && (
                                   <a
-                                    href={doc.url}
+                                    href={docUrl}
                                     target="_blank"
                                     rel="noreferrer"
                                     className="text-[8.5px] font-bold text-purple font-fredoka"

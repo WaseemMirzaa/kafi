@@ -7,6 +7,11 @@ abstract class IUserService {
   Future<void> submitNannyForReview(String id);
   Stream<NannyModel?> watchNanny(String id);
 
+  /// Persists sensitive document download URLs to the **private**
+  /// `nannies/{id}/documents/{type}` subcollection (owner/admin only) instead of
+  /// the world-readable parent doc (C5). The admin panel reads these to review.
+  Future<void> saveNannyDocumentUrls(String nannyId, Map<DocumentType, String> urls);
+
   Future<FamilyModel?> getFamily(String id);
   Future<void> saveFamily(FamilyModel family);
 

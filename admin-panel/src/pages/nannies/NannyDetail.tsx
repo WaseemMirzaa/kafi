@@ -28,9 +28,23 @@ export default function NannyDetail() {
   const [busy, setBusy] = useState(false);
   const { user } = useAuthStore();
 
+  // Loads the nanny and merges the sensitive KYC URLs from the private
+  // nannies/{id}/documents subcollection (C5) into each document for preview.
+  const fetchMerged = async (nannyId: string): Promise<NannyRow | null> => {
+    const n = await NannyService.get(nannyId);
+    if (!n) return null;
+    const urls = await NannyService.getDocumentUrls(nannyId).catch(
+      () => ({}) as Record<string, string>,
+    );
+    return {
+      ...n,
+      documents: (n.documents ?? []).map((d) => ({ ...d, url: d.url ?? urls[d.type] })),
+    };
+  };
+
   useEffect(() => {
     if (!id) return;
-    NannyService.get(id)
+    fetchMerged(id)
       .then((n) => {
         setNanny(n);
         if (n) setForm({ fullName: n.fullName, nationality: n.nationality, city: n.city });
@@ -64,7 +78,7 @@ export default function NannyDetail() {
     await NannyService.update(nanny.id, form);
     setBusy(false);
     setEditing(false);
-    const fresh = await NannyService.get(nanny.id);
+    const fresh = await fetchMerged(nanny.id);
     if (fresh) setNanny(fresh);
   };
 
@@ -72,7 +86,7 @@ export default function NannyDetail() {
     setBusy(true);
     await NannyService.approve(nanny.id, user?.uid ?? 'unknown');
     setBusy(false);
-    const fresh = await NannyService.get(nanny.id);
+    const fresh = await fetchMerged(nanny.id);
     if (fresh) setNanny(fresh);
   };
 
@@ -93,7 +107,7 @@ export default function NannyDetail() {
       await NannyService.block(nanny.id);
     }
     setBusy(false);
-    const fresh = await NannyService.get(nanny.id);
+    const fresh = await fetchMerged(nanny.id);
     if (fresh) setNanny(fresh);
   };
 

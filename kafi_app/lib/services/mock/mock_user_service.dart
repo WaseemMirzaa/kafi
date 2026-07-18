@@ -50,6 +50,14 @@ class MockUserService implements IUserService {
   }
 
   @override
+  Future<void> saveNannyDocumentUrls(
+      String nannyId, Map<DocumentType, String> urls) async {
+    // Mock keeps document URLs inline on the in-memory model, so nothing extra
+    // to persist — the live service writes them to a private subcollection.
+    await Future<void>.delayed(AppConfig.mockDelay);
+  }
+
+  @override
   Future<void> submitNannyForReview(String id) async {
     final n = _nannies[id];
     if (n == null) return;
