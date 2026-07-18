@@ -1,0 +1,741 @@
+<title>Kafi — Backend Feature Map</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  :root {
+    /* warm plum-biased neutrals + care-app accent (nanny rose / family purple) */
+    --ground: #FBF8F7;
+    --surface: #FFFFFF;
+    --surface-2: #F5F0F2;
+    --ink: #241F27;
+    --muted: #6E6570;
+    --faint: #948B96;
+    --line: #EAE3E7;
+    --accent: #6B3FA0;   /* plum */
+    --accent-soft: #EFE7F6;
+    --rose: #C64E74;
+
+    --live:    #2E9E6B;
+    --mock:    #4B63C9;
+    --partial: #B8811A;
+    --blocked: #CE4B45;
+    --todo:    #857D8B;
+
+    --live-bg:    #E6F3EC;
+    --mock-bg:    #E7EBF8;
+    --partial-bg: #F6EDD9;
+    --blocked-bg: #F7E4E3;
+    --todo-bg:    #ECE9EE;
+
+    --shadow: 0 1px 2px rgba(36,31,39,.05), 0 6px 20px -12px rgba(36,31,39,.18);
+    --radius: 12px;
+
+    --serif: Georgia, "Iowan Old Style", "Times New Roman", serif;
+    --sans: system-ui, -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    --mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+
+    --maxw: 1140px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --ground: #171319;
+      --surface: #211B26;
+      --surface-2: #2A2330;
+      --ink: #F1EBF0;
+      --muted: #A79FAE;
+      --faint: #7E7686;
+      --line: #342C3B;
+      --accent: #B48CE0;
+      --accent-soft: #2E2439;
+      --rose: #E888A6;
+
+      --live:    #55C293;
+      --mock:    #8B9EEC;
+      --partial: #E0A83E;
+      --blocked: #EC7A73;
+      --todo:    #A79FAE;
+
+      --live-bg:    #16302449;
+      --mock-bg:    #21294f4d;
+      --partial-bg: #3a2f1355;
+      --blocked-bg: #3a201f66;
+      --todo-bg:    #2c2632;
+
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 26px -14px rgba(0,0,0,.6);
+    }
+  }
+  :root[data-theme="light"] {
+    --ground:#FBF8F7; --surface:#FFF; --surface-2:#F5F0F2; --ink:#241F27; --muted:#6E6570; --faint:#948B96; --line:#EAE3E7;
+    --accent:#6B3FA0; --accent-soft:#EFE7F6; --rose:#C64E74;
+    --live:#2E9E6B; --mock:#4B63C9; --partial:#B8811A; --blocked:#CE4B45; --todo:#857D8B;
+    --live-bg:#E6F3EC; --mock-bg:#E7EBF8; --partial-bg:#F6EDD9; --blocked-bg:#F7E4E3; --todo-bg:#ECE9EE;
+    --shadow:0 1px 2px rgba(36,31,39,.05), 0 6px 20px -12px rgba(36,31,39,.18);
+  }
+  :root[data-theme="dark"] {
+    --ground:#171319; --surface:#211B26; --surface-2:#2A2330; --ink:#F1EBF0; --muted:#A79FAE; --faint:#7E7686; --line:#342C3B;
+    --accent:#B48CE0; --accent-soft:#2E2439; --rose:#E888A6;
+    --live:#55C293; --mock:#8B9EEC; --partial:#E0A83E; --blocked:#EC7A73; --todo:#A79FAE;
+    --live-bg:#16302449; --mock-bg:#21294f4d; --partial-bg:#3a2f1355; --blocked-bg:#3a201f66; --todo-bg:#2c2632;
+    --shadow:0 1px 2px rgba(0,0,0,.3), 0 8px 26px -14px rgba(0,0,0,.6);
+  }
+
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } * { transition: none !important; } }
+  body {
+    margin: 0; background: var(--ground); color: var(--ink);
+    font-family: var(--sans); font-size: 16px; line-height: 1.6;
+    -webkit-font-smoothing: antialiased;
+  }
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 22px; }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    position: sticky; top: 0; z-index: 50;
+    background: color-mix(in srgb, var(--ground) 88%, transparent);
+    backdrop-filter: blur(10px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar__row { display: flex; align-items: center; gap: 18px; height: 58px; }
+  .brand { font-family: var(--serif); font-weight: 700; font-size: 1.05rem; letter-spacing: .01em; display: flex; align-items: center; gap: 9px; }
+  .brand .dot { width: 11px; height: 11px; border-radius: 50%; background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+  .topnav { display: flex; gap: 4px; margin-left: auto; flex-wrap: wrap; }
+  .topnav a {
+    font: 500 .8rem/1 var(--sans); color: var(--muted); text-decoration: none;
+    padding: 8px 11px; border-radius: 8px;
+  }
+  .topnav a:hover { color: var(--ink); background: var(--surface-2); }
+  .topnav a:focus-visible, .fbtn:focus-visible, .theme-toggle:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .theme-toggle {
+    background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+    width: 34px; height: 34px; border-radius: 8px; cursor: pointer; font-size: .95rem; display: grid; place-items: center;
+  }
+  .theme-toggle:hover { color: var(--ink); }
+  @media (max-width: 720px) { .topnav { display: none; } }
+
+  /* ---------- hero ---------- */
+  .hero { padding: 52px 0 26px; }
+  .eyebrow { font: 600 .72rem/1 var(--mono); letter-spacing: .18em; text-transform: uppercase; color: var(--accent); }
+  h1 { font-family: var(--serif); font-weight: 700; font-size: clamp(2rem, 4.4vw, 3.1rem); line-height: 1.05; letter-spacing: -.01em; text-wrap: balance; margin: .5rem 0 0; }
+  .lede { max-width: 66ch; color: var(--muted); font-size: 1.06rem; margin: 1.1rem 0 0; }
+  .meta-chips { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 20px; }
+  .chip { font: 500 .78rem/1 var(--sans); color: var(--muted); background: var(--surface); border: 1px solid var(--line); padding: 7px 11px; border-radius: 999px; }
+  .chip b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- summary tiles ---------- */
+  .tiles { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 30px 0 8px; }
+  @media (max-width: 720px) { .tiles { grid-template-columns: repeat(2, 1fr); } }
+  .tile { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 18px 18px 16px; box-shadow: var(--shadow); }
+  .tile .n { font-family: var(--serif); font-size: 2.3rem; line-height: 1; font-variant-numeric: tabular-nums; letter-spacing: -.01em; }
+  .tile .l { font: 500 .8rem/1.3 var(--sans); color: var(--muted); margin-top: 8px; }
+  .tile.-live .n { color: var(--live); }
+  .tile.-work .n { color: var(--partial); }
+  .tile.-block .n { color: var(--blocked); }
+
+  /* ---------- legend + filter ---------- */
+  .toolbar { position: sticky; top: 58px; z-index: 40; background: color-mix(in srgb, var(--ground) 92%, transparent); backdrop-filter: blur(8px); border-top: 1px solid var(--line); border-bottom: 1px solid var(--line); margin-top: 26px; }
+  .toolbar__row { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; padding: 12px 0; }
+  .toolbar__lbl { font: 600 .7rem/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--faint); margin-right: 2px; }
+  .fbtn {
+    display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+    background: var(--surface); border: 1px solid var(--line); color: var(--muted);
+    font: 500 .82rem/1 var(--sans); padding: 8px 12px; border-radius: 999px;
+  }
+  .fbtn .sw { width: 9px; height: 9px; border-radius: 50%; }
+  .fbtn .ct { font-family: var(--mono); font-size: .72rem; color: var(--faint); }
+  .fbtn[aria-pressed="true"] { color: var(--ink); border-color: color-mix(in srgb, var(--accent) 45%, var(--line)); background: var(--accent-soft); }
+  .fbtn:hover { color: var(--ink); }
+  .sw.-live{background:var(--live);} .sw.-mock{background:var(--mock);} .sw.-partial{background:var(--partial);} .sw.-blocked{background:var(--blocked);} .sw.-todo{background:var(--todo);} .sw.-all{background:linear-gradient(135deg,var(--accent),var(--rose));}
+
+  /* ---------- sections ---------- */
+  section { padding: 44px 0 6px; }
+  .sec-head { margin-bottom: 20px; }
+  .sec-head .eyebrow { color: var(--rose); }
+  h2 { font-family: var(--serif); font-weight: 700; font-size: clamp(1.5rem, 3vw, 2rem); letter-spacing: -.01em; margin: .4rem 0 0; text-wrap: balance; }
+  .sec-head p { color: var(--muted); margin: .5rem 0 0; max-width: 70ch; }
+
+  /* ---------- workstream cards (C1-C8) ---------- */
+  .grid2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  @media (max-width: 720px) { .grid2 { grid-template-columns: 1fr; } }
+  .work { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 18px; box-shadow: var(--shadow); display: flex; gap: 14px; }
+  .work__code { font-family: var(--mono); font-weight: 700; font-size: .95rem; color: var(--accent); padding-top: 1px; }
+  .work__title { font-weight: 650; font-size: 1rem; margin: 0; display: flex; align-items: center; gap: 9px; flex-wrap: wrap; }
+  .work__body { color: var(--muted); font-size: .92rem; margin: 5px 0 0; }
+  .work__fix { color: var(--ink); font-size: .86rem; margin: 8px 0 0; }
+  .work__fix b { color: var(--accent); font-weight: 600; }
+
+  /* ---------- screen rows ---------- */
+  .screens { display: flex; flex-direction: column; gap: 11px; }
+  .screen {
+    position: relative; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow); overflow: hidden;
+    display: grid; grid-template-columns: 1.15fr 1.5fr 1.5fr; gap: 0;
+  }
+  .screen::before { content:""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: var(--todo); }
+  .screen[data-status="live"]::before { background: var(--live); }
+  .screen[data-status="mock"]::before { background: var(--mock); }
+  .screen[data-status="partial"]::before { background: var(--partial); }
+  .screen[data-status="blocked"]::before { background: var(--blocked); }
+  .screen[data-status="todo"]::before { background: var(--todo); }
+  .screen.-hide { display: none; }
+
+  .cell { padding: 15px 18px; border-left: 1px solid var(--line); min-width: 0; }
+  .cell:first-of-type { border-left: 0; padding-left: 22px; }
+  .cell dt { font: 600 .64rem/1 var(--mono); letter-spacing: .12em; text-transform: uppercase; color: var(--faint); margin-bottom: 6px; }
+  .cell dd { margin: 0; font-size: .9rem; color: var(--muted); }
+  .cell dd b { color: var(--ink); font-weight: 600; }
+  .screen__name { font-weight: 650; font-size: 1rem; color: var(--ink); margin: 0 0 6px; line-height: 1.25; }
+  .screen__file { display: block; font: 400 .72rem/1.3 var(--mono); color: var(--faint); margin-top: 4px; word-break: break-word; }
+  .row-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; align-items: center; }
+  .tag { font: 600 .64rem/1 var(--mono); letter-spacing: .06em; text-transform: uppercase; padding: 5px 7px; border-radius: 5px; background: var(--surface-2); color: var(--muted); border: 1px solid var(--line); }
+  .pill { font: 600 .68rem/1 var(--sans); letter-spacing: .02em; padding: 5px 9px 4px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+  .pill::before { content:""; width: 7px; height: 7px; border-radius: 50%; }
+  .pill.-live{color:var(--live);background:var(--live-bg);} .pill.-live::before{background:var(--live);}
+  .pill.-mock{color:var(--mock);background:var(--mock-bg);} .pill.-mock::before{background:var(--mock);}
+  .pill.-partial{color:var(--partial);background:var(--partial-bg);} .pill.-partial::before{background:var(--partial);}
+  .pill.-blocked{color:var(--blocked);background:var(--blocked-bg);} .pill.-blocked::before{background:var(--blocked);}
+  .pill.-todo{color:var(--todo);background:var(--todo-bg);} .pill.-todo::before{background:var(--todo);}
+
+  @media (max-width: 780px) {
+    .screen { grid-template-columns: 1fr; }
+    .cell { border-left: 0; border-top: 1px solid var(--line); padding: 13px 18px; }
+    .cell:first-of-type { border-top: 0; padding: 15px 18px 13px 22px; }
+  }
+
+  /* ---------- callout ---------- */
+  .callout { background: var(--accent-soft); border: 1px solid color-mix(in srgb, var(--accent) 30%, var(--line)); border-radius: var(--radius); padding: 18px 20px; margin-top: 16px; }
+  .callout h3 { margin: 0 0 8px; font-size: 1rem; font-weight: 650; display:flex; align-items:center; gap:8px; }
+  .callout ul { margin: 6px 0 0; padding-left: 20px; color: var(--muted); font-size: .92rem; }
+  .callout li { margin: 4px 0; }
+  .callout li b { color: var(--ink); font-weight: 600; }
+
+  /* ---------- roadmap ---------- */
+  .phases { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+  @media (max-width: 900px){ .phases { grid-template-columns: repeat(2,1fr); } }
+  @media (max-width: 560px){ .phases { grid-template-columns: 1fr; } }
+  .phase { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px 16px 14px; box-shadow: var(--shadow); }
+  .phase__k { font: 700 .72rem/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--accent); }
+  .phase h3 { margin: 8px 0 2px; font-size: 1rem; font-weight: 650; }
+  .phase p { margin: 8px 0 0; font-size: .86rem; color: var(--muted); }
+  .phase ul { margin: 8px 0 0; padding-left: 18px; font-size: .84rem; color: var(--muted); }
+  .phase li { margin: 3px 0; }
+
+  footer { border-top: 1px solid var(--line); margin-top: 50px; padding: 26px 0 60px; color: var(--faint); font-size: .82rem; }
+  footer code { font-family: var(--mono); color: var(--muted); background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+  .note-inline { color: var(--muted); }
+</style>
+
+<div class="topbar">
+  <div class="wrap topbar__row">
+    <span class="brand"><span class="dot"></span>Kafi · Backend Map</span>
+    <nav class="topnav">
+      <a href="#overview">Overview</a>
+      <a href="#remaining">Remaining</a>
+      <a href="#auth">Auth</a>
+      <a href="#nanny">Nanny</a>
+      <a href="#family">Family</a>
+      <a href="#admin">Admin</a>
+      <a href="#roadmap">Roadmap</a>
+    </nav>
+    <button class="theme-toggle" id="themeToggle" title="Toggle light / dark" aria-label="Toggle colour theme">◐</button>
+  </div>
+</div>
+
+<header class="hero wrap" id="overview">
+  <p class="eyebrow">Feature &amp; backend status · screen by screen</p>
+  <h1>What works in mock mode, what's live, and what's left to build.</h1>
+  <p class="lede">Kafi is a UAE nanny&nbsp;↔&nbsp;family matching app. This map covers every screen across the mobile app and the admin panel, showing how each feature <b style="color:var(--ink)">behaves today in mock mode</b>, whether its <b style="color:var(--ink)">live Firebase backend</b> is wired, and the <b style="color:var(--ink)">remaining work</b> — so backend development can be planned from one page.</p>
+  <div class="meta-chips">
+    <span class="chip"><b>Flutter</b> mobile app · GetX</span>
+    <span class="chip"><b>React</b> admin panel · Vite</span>
+    <span class="chip"><b>Firebase</b> Auth · Firestore · Storage · Functions</span>
+    <span class="chip">Bilingual <b>EN / AR</b></span>
+    <span class="chip">Mock switch: <b>AppConfig.useMock</b> / <b>VITE_USE_MOCK</b></span>
+  </div>
+
+  <div class="tiles">
+    <div class="tile"><div class="n" id="t-total">—</div><div class="l">Screens mapped<br>(mobile + admin)</div></div>
+    <div class="tile -live"><div class="n" id="t-live">—</div><div class="l">Live-wired<br>working against Firebase</div></div>
+    <div class="tile -work"><div class="n" id="t-work">—</div><div class="l">Partial or mock-only<br>backend still needed</div></div>
+    <div class="tile -block"><div class="n" id="t-block">—</div><div class="l">Blocked or to-build<br>fails or absent in live</div></div>
+  </div>
+</header>
+
+<div class="toolbar">
+  <div class="wrap toolbar__row" id="filterbar">
+    <span class="toolbar__lbl">Filter</span>
+    <button class="fbtn" data-f="all" aria-pressed="true"><span class="sw -all"></span>All <span class="ct" id="c-all"></span></button>
+    <button class="fbtn" data-f="live" aria-pressed="false"><span class="sw -live"></span>Live <span class="ct" id="c-live"></span></button>
+    <button class="fbtn" data-f="mock" aria-pressed="false"><span class="sw -mock"></span>Mock-only <span class="ct" id="c-mock"></span></button>
+    <button class="fbtn" data-f="partial" aria-pressed="false"><span class="sw -partial"></span>Partial <span class="ct" id="c-partial"></span></button>
+    <button class="fbtn" data-f="blocked" aria-pressed="false"><span class="sw -blocked"></span>Blocked <span class="ct" id="c-blocked"></span></button>
+    <button class="fbtn" data-f="todo" aria-pressed="false"><span class="sw -todo"></span>To&nbsp;build <span class="ct" id="c-todo"></span></button>
+  </div>
+</div>
+
+<main class="wrap">
+
+  <!-- ============ REMAINING WORKSTREAMS ============ -->
+  <section id="remaining">
+    <div class="sec-head">
+      <p class="eyebrow">The big picture</p>
+      <h2>Eight backend workstreams stand between mock and live</h2>
+      <p>The mock build demos the whole product end-to-end. Going fully live in production hinges on these cross-cutting items — most of them touch several screens at once. Everything below in the screen tables ladders up to these.</p>
+    </div>
+    <div class="grid2">
+      <div class="work"><div class="work__code">C1</div><div><h3 class="work__title">Security rules deny core client writes <span class="pill -blocked">Blocked</span></h3><p class="work__body">Subscription, free-view counters, viewed-profiles and nanny stats are written by the client but rejected by <code>firestore.rules</code> in live.</p><p class="work__fix"><b>Fix →</b> move these writes to Cloud Functions / callables; make the client request-only.</p></div></div>
+      <div class="work"><div class="work__code">C2</div><div><h3 class="work__title">Storage upload paths don't match rules <span class="pill -blocked">Blocked</span></h3><p class="work__body">Intro-video, documents and chat-image uploads write to paths <code>storage.rules</code> doesn't match → denied in live (photos are fine).</p><p class="work__fix"><b>Fix →</b> align client paths to the (already-correct) rules; add client-side size/type pre-checks.</p></div></div>
+      <div class="work"><div class="work__code">C3</div><div><h3 class="work__title">Notification inbox is never written <span class="pill -blocked">Blocked</span></h3><p class="work__body">The bell reads the <code>notifications</code> collection, but Functions only send FCM push and never create inbox docs → inbox always empty in live.</p><p class="work__fix"><b>Fix →</b> every push-sending Function also writes an inbox doc; standardize the deep-link payload.</p></div></div>
+      <div class="work"><div class="work__code">C4</div><div><h3 class="work__title">No real payment (monetization) <span class="pill -todo">To build</span></h3><p class="work__body">No RevenueCat SDK; <code>subscribe()</code> just flips a flag. The correct server path (webhook + expiry enforcer) already exists but is unreachable.</p><p class="work__fix"><b>Fix →</b> integrate RevenueCat native purchase → webhook sets subscription server-side.</p></div></div>
+      <div class="work"><div class="work__code">C5</div><div><h3 class="work__title">Nanny self-approval &amp; private-data exposure <span class="pill -blocked">Security</span></h3><p class="work__body">Rules let a nanny write her own <code>status/isVerified</code>, and the whole approved-nanny doc (docs URLs, DOB, health) is world-readable to any signed-in user.</p><p class="work__fix"><b>Fix →</b> reject client writes to admin-owned fields; split private data into an owner/admin-only subcollection.</p></div></div>
+      <div class="work"><div class="work__code">C6</div><div><h3 class="work__title">Faked match scores &amp; empty stats <span class="pill -partial">Partial</span></h3><p class="work__body">Apply/list match % are hardcoded (80 / 85 / 92-i·3); nanny <code>stats</code> (views/shortlists/rating) are never incremented in live.</p><p class="work__fix"><b>Fix →</b> compute real <code>MatchService</code> scores at apply &amp; list time; Functions to maintain nanny stats.</p></div></div>
+      <div class="work"><div class="work__code">C7</div><div><h3 class="work__title">Chat not realtime + free-tier over-restricted <span class="pill -partial">Partial</span></h3><p class="work__body">Chat uses one-shot <code>.get()</code> (manual refresh), and rules require a subscription to open a thread, which contradicts the free-tier-chat spec.</p><p class="work__fix"><b>Fix →</b> switch to <code>snapshots()</code> streams; reconcile free-tier chat rules with the spec.</p></div></div>
+      <div class="work"><div class="work__code">C8</div><div><h3 class="work__title">Active-trial unlock never engages <span class="pill -partial">Partial</span></h3><p class="work__body"><code>activeTrialNannyIds</code> (keeps contacts open during a trial) is only set when a trial ends, never on accept — so a first trial never unlocks in live.</p><p class="work__fix"><b>Fix →</b> a trial <code>onUpdate</code> Function sets it on accept/active + flips nanny availability.</p></div></div>
+    </div>
+  </section>
+
+  <!-- ============ AUTH / SHARED ============ -->
+  <section id="auth">
+    <div class="sec-head">
+      <p class="eyebrow">Mobile · shared</p>
+      <h2>Auth &amp; account screens</h2>
+      <p>Themed per role (rose for nanny, purple for family). Phone-OTP + password auth is genuinely wired; the gaps are hardening (lockouts, password policy) and the notification inbox.</p>
+    </div>
+    <div class="screens">
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Welcome / role select<code class="screen__file">welcome_screen.dart</code></h3><div class="row-tags"><span class="tag">Role cards</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Pick <b>Nanny</b> or <b>Family</b>; sets the pending role, "have an account" links set returning-user state.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>None — in-memory role selection only, no write before auth.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Phone login<code class="screen__file">login_{nanny,family}_screen.dart</code></h3><div class="row-tags"><span class="tag">Form</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Country code + phone; "Send OTP" reveals mock code <b>123456</b> via snackbar. Returning users get a password field (accepts any password in mock).</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Real <code>sendOtp</code> wired. Add per-country length rules; "no account found" is error-mapping only.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">OTP verify<code class="screen__file">otp_verify_screen.dart</code></h3><div class="row-tags"><span class="tag">6-box code</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Only <b>123456</b> passes; 5-min timer + resend; on success creates the demo user and routes to create-password / home.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Firebase verify works. <b>Missing:</b> wrong-attempt counter, 5-attempt/30-min lockout, 60s resend cooldown.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Create password<code class="screen__file">create_password_screen.dart</code></h3><div class="row-tags"><span class="tag">Form + strength</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Live strength meter + match check; sets <code>hasPassword=true</code> and routes to the role home.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Wired (synthetic-email credential). Enforce policy: ≥1 uppercase + ≥1 number (currently computed but not required).</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Password reset<code class="screen__file">password_reset_screen.dart</code></h3><div class="row-tags"><span class="tag">Multi-step form</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Send → verify → reset all accept mock OTP <b>123456</b>, new password length ≥ 8.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Reset flow wired. Add "account exists" pre-check (OTP currently sent to any number), password policy, country picker.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="blocked">
+        <div class="cell"><h3 class="screen__name">Notifications inbox<code class="screen__file">notifications_screen.dart</code></h3><div class="row-tags"><span class="tag">Inbox list</span><span class="pill -blocked">Blocked</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Lists <b>21 seeded notifications</b> (one per type, role-specific copy); tap deep-links, mark-read / mark-all / delete all work, unread badge accurate.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><b>C3</b> — nothing writes the inbox in live (Functions push FCM only) → always empty. Also fix the <code>data.route</code> vs <code>data.type</code> deep-link mismatch.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="todo">
+        <div class="cell"><h3 class="screen__name">Legal — terms / privacy<code class="screen__file">legal_screen.dart</code></h3><div class="row-tags"><span class="tag">Static text</span><span class="pill -todo">Static</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Fully static, role-tinted long-form content; no service call.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Optional — fetch versioned legal docs + record acceptance, if the spec requires it.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Delete account<code class="screen__file">delete_account_screen.dart</code></h3><div class="row-tags"><span class="tag">Reason + confirm</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Two-step reason picker + type-to-confirm; clears the mock session and returns to Welcome.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Cascade delete wired. Add guards: block during active trial, cancel-sub-first, pending payments, 30-day re-register cooldown; remove FCM token first.</dd></dl>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ NANNY ============ -->
+  <section id="nanny">
+    <div class="sec-head">
+      <p class="eyebrow">Mobile · nanny journey</p>
+      <h2>Nanny flow</h2>
+      <p>Onboarding → review → approved-nanny app. Persistence is wired; the standouts are the <b>C2</b> upload-path blocks (video / documents), faked stats/match, and the 30-second mock auto-approve that stands in for a real admin decision.</p>
+    </div>
+    <div class="screens">
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Onboarding · About you<code class="screen__file">nanny_info_screen.dart</code></h3><div class="row-tags"><span class="tag">Long form</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Full required-field validation; saves the <code>NannyModel</code> to the in-memory service and advances to media.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><code>saveNanny</code> wired. <b>C5:</b> stop serializing admin fields (<code>status/isVerified</code>). Fix dead emergency country-code control.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Photos &amp; intro video<code class="screen__file">nanny_media_screen.dart</code></h3><div class="row-tags"><span class="tag">Media picker</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Picker → mock storage returns a <code>data:</code> URI so photos/video actually preview; needs ≥3 photos + a video.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Photos upload OK. <b>C2:</b> video writes <code>nannies/{uid}/video.mp4</code> but the rule expects <code>videos/{file}</code> → denied in live.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Experience &amp; References<code class="screen__file">nanny_exp / refs_screen.dart</code></h3><div class="row-tags"><span class="tag">Repeating cards</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Add / remove entries persist to the in-memory nanny; both steps optional to advance.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Add experience validation. References screen <b>drops <code>hasReferences</code> / <code>commitsToShare</code></b> on save — persist them.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="blocked">
+        <div class="cell"><h3 class="screen__name">Documents<code class="screen__file">nanny_docs_screen.dart</code></h3><div class="row-tags"><span class="tag">Upload tiles</span><span class="pill -blocked">Blocked</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Stages passport / visa / EID etc., "uploads" on submit (data-URI); passport + visa required → submit sets pending.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><b>C2:</b> writes <code>…/docs/…</code> but rule expects <code>…/documents/…</code> → upload denied in live. <b>C5:</b> doc URLs sit on the world-readable doc.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Pending / review<code class="screen__file">nanny_pending_screen.dart</code></h3><div class="row-tags"><span class="tag">Status hero</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>"Under review" + live per-doc tiles; <b>auto-approves after 30s</b> then navigates to the dashboard. Shows rejection reason + resubmit if rejected.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Realtime <code>watchNanny</code> wired; the admin panel owns the real approve/reject decision (the 30s auto-approve is mock-only).</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Dashboard<code class="screen__file">nanny_dashboard_screen.dart</code></h3><div class="row-tags"><span class="tag">Stat tiles + list</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Hero for the onboarded nanny; post-approval stats <b>143 views / 12 shortlists / 4.8★</b>, quality score, "Jobs for you" = top 2 active jobs.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><b>C6:</b> those stats never populate in live (always 0/0/—); match % faked; quality score is ad-hoc, not spec-weighted.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Jobs tab<code class="screen__file">jobs_home_screen.dart</code></h3><div class="row-tags"><span class="tag">Search + card list</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Lists the 5 active mock jobs with filters + search and an applied-count from the application controller.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><code>browseJobs</code> wired. Card match % hardcoded 85; filtering is client-side over a 50-doc page — rank by real match, push filters server-side.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Job detail<code class="screen__file">job_detail_screen.dart</code></h3><div class="row-tags"><span class="tag">Detail + match ring</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Renders the passed job with a <b>real</b> match ring + factors; Apply routes to smart-match.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Real <code>MatchService</code> wired. Several display values hardcoded (schedule / "member since 2024" / always-"Verified"); <code>viewsCount</code> never incremented.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Smart match (pre-apply)<code class="screen__file">smart_match_screen.dart</code></h3><div class="row-tags"><span class="tag">Score + checklist</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Deterministic score ring + pass/fail/warn checklist; "Send application" → dup-guarded <code>apply</code> → success dialog.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Apply hardcodes <code>matchScore: 80</code>; no cover-message step; no <code>applicationsCount</code> increment.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">My applications<code class="screen__file">my_applications_screen.dart</code></h3><div class="row-tags"><span class="tag">Status-grouped list</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Shows 7 seeded applications across every status (pending → hired → withdrawn); withdraw mutates.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Queries + withdraw wired (needs composite index). Match % is the faked 80; job-by-id lookup fails if outside the current page.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Messages<code class="screen__file">chat_screen.dart</code></h3><div class="row-tags"><span class="tag">Chat threads</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Nanny sees the demo threads; send appends in-memory; trial bubbles render.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Threads/messages wired but <b>C7</b> one-shot (not realtime); <b>C2</b> image path denied; no inbox record; nanny can't start a thread.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Edit profile<code class="screen__file">nanny_edit_profile_screen.dart</code></h3><div class="row-tags"><span class="tag">Form</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Hydrates from the in-memory nanny, saves the draft back with an updated profile score.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><b>Lossy:</b> saves only a subset (salary / visa / availability / religion dropped); language-vocab mismatch desyncs match. Persist the full set.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Settings<code class="screen__file">settings_screen.dart</code></h3><div class="row-tags"><span class="tag">Toggle list</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Toggles persist via the settings map; language toggle switches EN/AR locale live.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><code>getSettings/updateSettings</code> wired, but notification toggles are write-only — Functions never read <code>settings.*</code> before pushing.</dd></dl>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ FAMILY ============ -->
+  <section id="family">
+    <div class="sec-head">
+      <p class="eyebrow">Mobile · family journey</p>
+      <h2>Family flow</h2>
+      <p>Post job → browse → unlock → shortlist → trial → subscribe. The monetization core is the least-wired area: contact reveal is entirely mock, and payment is a client flag with no SDK.</p>
+    </div>
+    <div class="screens">
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Job &amp; family form<code class="screen__file">family_form_screen.dart</code></h3><div class="row-tags"><span class="tag">Long form</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Validates + saves a <code>FamilyModel</code> and a <code>JobPostModel</code> in-memory; GPS city auto-detect no-ops without a Maps key; → browse.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Saves wired, but the job post <b>drops matching-critical fields</b> (title, experience, required languages, start date…); no family photo upload; no 7-day expiry Function.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Browse nannies<code class="screen__file">browse_screen.dart</code></h3><div class="row-tags"><span class="tag">Ranked card list</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>8 nanny cards with working category filters + text search; "Top Matches" re-ranked against the family's job via real <code>MatchService</code>; free-view counter = seeded 3.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><code>browseNannies</code> wired but base match % hardcoded; query lacks the <code>isVerified</code> filter the rules require; years-exp derived wrong.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="mock">
+        <div class="cell"><h3 class="screen__name">Nanny profile — unlocked<code class="screen__file">profile_unlocked_screen.dart</code></h3><div class="row-tags"><span class="tag">Profile + contact</span><span class="pill -mock">Mock-only</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Renders (subscription active by default); shortlist + Send-trial-offer work. <b>Phone <code>+971 50 234 5678</code>, WhatsApp / Call / CV are hardcoded stubs</b> — buttons show a "production build" snackbar.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>No real contact backend. Build a callable that returns the real number / CV only for subscribed families or active trials; real <code>tel:</code> / <code>wa.me</code> / CV launch; viewed-push to the nanny.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Nanny profile — locked / re-locked<code class="screen__file">profile_locked / relocked_screen.dart</code></h3><div class="row-tags"><span class="tag">Paywall</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Blurred contact rows + Subscribe / Renew CTA → pricing. Reached only when subscription isn't active (mock defaults to active, so needs <code>simulateExpire</code>).</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Presentationally correct. Depends on <b>C1</b> free-view + viewed-profile persistence so "previously viewed" and the paywall gate work in live.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Shortlist<code class="screen__file">shortlist_screen.dart</code></h3><div class="row-tags"><span class="tag">Saved card list</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>3 seeded nannies (Sarah / Priya / Kavitha); add / remove / notes mutate.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Shortlist doc wired. <b>C1:</b> the nanny-stat increment is rules-denied (throws); the card resolver only searches mock data → real shortlisted nannies show a mock card.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Compare<code class="screen__file">compare_screen.dart</code></h3><div class="row-tags"><span class="tag">Comparison table</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Takes the first 2 shortlisted; table compares match % / type / experience / city from the browse cards.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Falls back to mock cards on any error; match % is the base/hardcoded value. Needs the shared real fetch-by-id + real match.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="blocked">
+        <div class="cell"><h3 class="screen__name">Messages<code class="screen__file">chat_screen.dart</code></h3><div class="row-tags"><span class="tag">Chat threads</span><span class="pill -blocked">Blocked</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>5 seeded threads by recency with unread badges + trial bubbles; send / open / mark-read work (open gated only if expired).</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><b>C7:</b> free-tier thread creation is rules-denied though the spec allows it; <b>C2</b> image path denied; contact strip stubs; not realtime.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Applicants inbox<code class="screen__file">family_applicants_screen.dart</code></h3><div class="row-tags"><span class="tag">Received list</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>4 seeded applications received (with match % + status badges); tap marks viewed; Shortlist / Decline mutate.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Queries + status updates wired (needs index). Match % hardcoded 80; "Shortlist" here only flips app status; no trial-offer entry point.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Trial<code class="screen__file">trial_screen.dart</code></h3><div class="row-tags"><span class="tag">Detail + checklist</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Active/selected trial (e.g. 7 days @ AED 150) with an evaluation checklist + outcome bar; nanny side shows the payment block.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Trial reads/updates wired. <b>C8:</b> <code>activeTrialNannyIds</code> never set on accept → no unlock; nanny availability not flipped; no 48h auto-decline.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Trial offer<code class="screen__file">trial_offer_screen.dart</code></h3><div class="row-tags"><span class="tag">Form</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Duration / rate / date / type form; requires payment-acknowledge + active subscription; sends the trial, posts a chat bubble, links the thread.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><code>sendOffer</code> wired. Enforce preconditions <b>in rules</b> (nanny-verified, no-active-trial, subscription) — currently client-only; drop the hardcoded "Verified" badge.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="blocked">
+        <div class="cell"><h3 class="screen__name">Pricing / subscription<code class="screen__file">pricing_screen.dart</code></h3><div class="row-tags"><span class="tag">Plan cards</span><span class="pill -blocked">Blocked</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>3 plans (Weekly 89 / Monthly 239 / 2-Month 369 AED) with live VAT math; Select sets the active plan + "Current plan" badge.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd><b>C4 + C1:</b> no payment SDK — <code>subscribe()</code> flips a flag and is rules-denied. Integrate RevenueCat → webhook writes subscription server-side.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Edit family profile<code class="screen__file">family_edit_screen.dart</code></h3><div class="row-tags"><span class="tag">Form</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Hydrates from the saved family + latest job, saves in place.</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>Same missing job fields as the form + no profile-photo upload.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Settings<code class="screen__file">settings_screen.dart</code></h3><div class="row-tags"><span class="tag">Toggle list</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Mock mode</dt><dd>Shared settings screen (toggles + EN/AR language).</dd></dl>
+        <dl class="cell"><dt>Remaining backend</dt><dd>"Restore purchases" is a no-op; no in-app cancel (store deep-link); honor <code>settings.*</code> server-side.</dd></dl>
+      </article>
+
+    </div>
+  </section>
+
+  <!-- ============ ADMIN ============ -->
+  <section id="admin">
+    <div class="sec-head">
+      <p class="eyebrow">Web · operations</p>
+      <h2>Admin panel</h2>
+      <p>React/Vite console with a single <code>VITE_USE_MOCK</code> switch (all screens flip together). Currently pointed at Firebase — the core ops (approval, document review, blocking, disputes, revenue) are genuinely wired; a few service methods exist but aren't surfaced on any screen yet.</p>
+    </div>
+    <div class="screens">
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Admin login<code class="screen__file">pages/Login.tsx</code></h3><div class="row-tags"><span class="tag">Form</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Email + password. Requires a Firebase Auth user with the <code>admin:true</code> custom claim; non-admins are signed out.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Wired. Claims seeded by <code>scripts/set-admin-claims.ts</code> (not from the panel). Mock bypass: <code>admin@kafi.ae / admin123</code>.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Dashboard<code class="screen__file">pages/Dashboard.tsx</code></h3><div class="row-tags"><span class="tag">KPI tiles + queues</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>KPI stat cards, document-verification queue, nanny/family lists, nationality + city + subscription breakdowns, active-trials, revenue cards.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — reads Nanny / Family / Revenue / Trial services from Firestore.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">All nannies<code class="screen__file">nannies/AllNannies.tsx</code></h3><div class="row-tags"><span class="tag">Table</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Filterable, paginated table of every nanny (status, availability, block toggle).</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — <code>NannyService.list / block / unblock</code>.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Verify documents<code class="screen__file">nannies/VerifyDocuments.tsx</code></h3><div class="row-tags"><span class="tag">Table + doc popup</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Queue of pending nannies; per-document thumbnails with approve / reject + rejection reason.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — <code>listPendingDocs / reviewDocument / approve / reject</code> patch the embedded <code>documents[]</code> array.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Nanny detail (360)<code class="screen__file">nannies/NannyDetail.tsx</code></h3><div class="row-tags"><span class="tag">Profile 360</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>All profile fields, docs grid, intro-video link, engagement stats, family conversations.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — get / update / approve / reject / block + chat reads.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">All families<code class="screen__file">families/AllFamilies.tsx</code></h3><div class="row-tags"><span class="tag">Table</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Searchable table of families (subscription status, block toggle).</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — <code>FamilyService.list / block / unblock</code>.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Subscriptions<code class="screen__file">families/Subscriptions.tsx</code></h3><div class="row-tags"><span class="tag">Bars + list</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Plan-breakdown bars, active-subscriber list, revenue stat.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — family list + <code>RevenueService.summary</code>.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Family detail (360)<code class="screen__file">families/FamilyDetail.tsx</code></h3><div class="row-tags"><span class="tag">Profile 360</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Profile, subscription (<b>view-only</b>), job posts, applications, trials, reviews, conversations.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live reads. The subscription-override method exists in the service but isn't surfaced here yet.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">All trials<code class="screen__file">trials/AllTrials.tsx</code></h3><div class="row-tags"><span class="tag">Table</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Filterable, paginated table of trials (day counter, status).</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — <code>TrialService.listAll</code>.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Trial detail<code class="screen__file">trials/TrialDetail.tsx</code></h3><div class="row-tags"><span class="tag">Detail + checklist</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Progress bar, nanny + family party cards, linked job, evaluation checklist, read-only chat.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — trial / nanny / family / job / chat reads.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Disputes<code class="screen__file">disputes/Disputes.tsx</code></h3><div class="row-tags"><span class="tag">Queue list</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>List of reports (category, parties, status).</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — <code>DisputeService.list</code>.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Dispute detail<code class="screen__file">disputes/DisputeDetail.tsx</code></h3><div class="row-tags"><span class="tag">Chat + resolve</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Details, admin↔user support chat (send), resolve / dismiss form.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — get / messages / sendMessage / resolve all persist.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="live">
+        <div class="cell"><h3 class="screen__name">Revenue<code class="screen__file">business/Revenue.tsx</code></h3><div class="row-tags"><span class="tag">KPIs + bar chart</span><span class="pill -live">Live</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>KPI tiles, revenue-trend bar chart, plan-split bars, transactions list, date presets, VAT.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Live — <code>RevenueService.allTransactions</code> aggregated client-side.</dd></dl>
+      </article>
+
+      <article class="screen" data-status="partial">
+        <div class="cell"><h3 class="screen__name">Broadcast<code class="screen__file">business/Broadcast.tsx</code></h3><div class="row-tags"><span class="tag">Form + recent</span><span class="pill -partial">Partial</span></div></div>
+        <dl class="cell"><dt>Listing / UI</dt><dd>Audience picker + title / message form, recent-broadcasts list.</dd></dl>
+        <dl class="cell"><dt>Backend</dt><dd>Writes a <code>broadcasts</code> doc (<code>status: queued</code>) only — <b>no push dispatch</b>. A Function must fan out the FCM send.</dd></dl>
+      </article>
+
+    </div>
+
+    <div class="callout">
+      <h3>⚑ Built in the service layer, not yet surfaced on any admin screen</h3>
+      <ul>
+        <li><b>Intro-video review</b> — <code>reviewVideo</code> / <code>listPendingVideos</code> exist, but there's no approve/reject UI or queue (only a read-only "watch" link).</li>
+        <li><b>Subscription override</b> — <code>overrideSubscription</code> exists; Family detail labels subscription "view only".</li>
+        <li><b>Free-contact reset</b> — <code>resetFreeContacts</code> exists but is called by no page.</li>
+        <li><b>Global settings</b> — <code>SettingsService.get/update</code> exists but there's no settings page/route.</li>
+        <li><b>Broadcast delivery</b> — the panel queues the doc; the actual FCM fan-out is an unbuilt backend job.</li>
+      </ul>
+    </div>
+  </section>
+
+  <!-- ============ ROADMAP ============ -->
+  <section id="roadmap">
+    <div class="sec-head">
+      <p class="eyebrow">Sequencing</p>
+      <h2>A phased build order</h2>
+      <p>Fix the correctness/security blockers first (they unblock many screens at once), then make each journey functional, then chase accuracy and polish.</p>
+    </div>
+    <div class="phases">
+      <div class="phase">
+        <span class="phase__k">Phase 0</span>
+        <h3>Correctness &amp; security</h3>
+        <p>Unblock live. Touches the most screens.</p>
+        <ul>
+          <li><b>C1</b> — subscription/view/stat writes → server</li>
+          <li><b>C2</b> — align Storage upload paths</li>
+          <li><b>C5</b> — nanny self-approve + private data</li>
+          <li><b>C3</b> — notification inbox docs</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <span class="phase__k">Phase 1</span>
+        <h3>Make both journeys work</h3>
+        <p>The monetization + contact core.</p>
+        <ul>
+          <li><b>C4</b> — RevenueCat → real subscription</li>
+          <li>Real contact reveal (callable) + <code>tel:</code>/<code>wa.me</code>/CV</li>
+          <li><b>C8</b> — active-trial unlock</li>
+          <li><b>C7</b> — free-tier chat + realtime streams</li>
+          <li>Real nanny-by-id (kill mock resolvers)</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <span class="phase__k">Phase 2</span>
+        <h3>Match, stats &amp; completeness</h3>
+        <p>Make the numbers real.</p>
+        <ul>
+          <li><b>C6</b> — real match at apply/list + stats Functions</li>
+          <li>Capture missing job fields + family photo</li>
+          <li>Persist references; fix edit-profile loss</li>
+          <li>Trial 48h + job 7-day schedulers</li>
+          <li>Admin: video review, sub-override, broadcast fan-out</li>
+        </ul>
+      </div>
+      <div class="phase">
+        <span class="phase__k">Phase 3</span>
+        <h3>Validation &amp; parity</h3>
+        <p>Hardening + spec details.</p>
+        <ul>
+          <li>OTP lockout, password policy, reset account-check</li>
+          <li>Delete-account guards + cooldown</li>
+          <li>Notification settings honored server-side</li>
+          <li>Job-detail real fields + counters; legal versioning</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<footer class="wrap">
+  Synthesized from a full read of the Flutter app (<code>views · controllers · services · mock/*</code>), the React admin panel (<code>admin-panel/src</code>), <code>firestore.rules</code>, <code>storage.rules</code>, and <code>functions/</code>. Status reflects the current <code>main</code> branch. Companion source: <code>docs/BACKEND_IMPLEMENTATION_PLAN.md</code>.
+</footer>
+
+<script>
+  (function () {
+    "use strict";
+    // theme toggle (respects OS default; toggles data-theme)
+    var root = document.documentElement, tbtn = document.getElementById("themeToggle");
+    tbtn.addEventListener("click", function () {
+      var cur = root.getAttribute("data-theme");
+      if (!cur) { cur = matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light"; }
+      root.setAttribute("data-theme", cur === "dark" ? "light" : "dark");
+    });
+
+    // counts
+    var screens = Array.prototype.slice.call(document.querySelectorAll(".screen"));
+    var counts = { live:0, mock:0, partial:0, blocked:0, todo:0 };
+    screens.forEach(function (s) { var k = s.getAttribute("data-status"); if (counts[k] != null) counts[k]++; });
+    var total = screens.length;
+    function set(id, v){ var e = document.getElementById(id); if (e) e.textContent = v; }
+    set("t-total", total);
+    set("t-live", counts.live);
+    set("t-work", counts.mock + counts.partial);
+    set("t-block", counts.blocked + counts.todo);
+    set("c-all", total);
+    ["live","mock","partial","blocked","todo"].forEach(function(k){ set("c-"+k, counts[k]); });
+
+    // filter
+    var bar = document.getElementById("filterbar");
+    bar.addEventListener("click", function (e) {
+      var btn = e.target.closest(".fbtn"); if (!btn) return;
+      var f = btn.getAttribute("data-f");
+      bar.querySelectorAll(".fbtn").forEach(function (b) { b.setAttribute("aria-pressed", b === btn ? "true" : "false"); });
+      screens.forEach(function (s) {
+        s.classList.toggle("-hide", f !== "all" && s.getAttribute("data-status") !== f);
+      });
+    });
+  })();
+</script>
