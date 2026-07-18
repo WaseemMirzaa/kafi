@@ -178,6 +178,77 @@ class JobPostModel {
         i18n: i18n ?? this.i18n,
       );
 
+  /// Firestore / mock JSON → [JobPostModel]. Tolerates Timestamp or ISO dates
+  /// and unknown enum names (falls back to sensible defaults).
+  factory JobPostModel.fromMap(String id, Map<String, dynamic> m) {
+    T enumBy<T extends Enum>(List<T> values, dynamic raw, T fallback) {
+      for (final v in values) {
+        if (v.name == raw) return v;
+      }
+      return fallback;
+    }
+
+    DateTime? date(dynamic v) {
+      if (v == null) return null;
+      if (v is DateTime) return v;
+      if (v is String) return DateTime.tryParse(v);
+      try {
+        return (v as dynamic).toDate() as DateTime?;
+      } catch (_) {
+        return null;
+      }
+    }
+
+    NannyReligionPreference? relPref(dynamic raw) {
+      if (raw == null) return null;
+      for (final v in NannyReligionPreference.values) {
+        if (v.name == raw) return v;
+      }
+      return null;
+    }
+
+    return JobPostModel(
+      id: id,
+      familyId: (m['familyId'] as String?) ?? '',
+      familyName: (m['familyName'] as String?) ?? '',
+      status: enumBy(JobPostStatus.values, m['status'], JobPostStatus.active),
+      createdAt: date(m['createdAt']),
+      updatedAt: date(m['updatedAt']),
+      expiresAt: date(m['expiresAt']),
+      jobTitle: (m['jobTitle'] as String?) ?? '',
+      rolesNeeded: List<String>.from(m['rolesNeeded'] ?? const []),
+      jobType: enumBy(JobType.values, m['jobType'], JobType.liveIn),
+      schedule: (m['schedule'] as String?) ?? '',
+      startDate: date(m['startDate']),
+      startImmediate: m['startImmediate'] ?? true,
+      duration: enumBy(JobDuration.values, m['duration'], JobDuration.permanent),
+      employmentType: enumBy(
+          JobEmploymentType.values, m['employmentType'], JobEmploymentType.fullTime),
+      contractMonths: (m['contractMonths'] as num?)?.toInt(),
+      experienceYears: (m['experienceYears'] as num?)?.toInt() ?? 0,
+      languagesRequired: List<String>.from(m['languagesRequired'] ?? const []),
+      languagesPreferred: List<String>.from(m['languagesPreferred'] ?? const []),
+      skillsRequired: List<String>.from(m['skillsRequired'] ?? const []),
+      nationalityPreference: List<String>.from(m['nationalityPreference'] ?? const []),
+      religionPreference: relPref(m['religionPreference']),
+      duties: List<String>.from(m['duties'] ?? const []),
+      salaryMin: (m['salaryMin'] as num?)?.toInt() ?? 0,
+      salaryMax: (m['salaryMax'] as num?)?.toInt() ?? 0,
+      currency: (m['currency'] as String?) ?? 'AED',
+      benefits: List<String>.from(m['benefits'] ?? const []),
+      visaSponsorship:
+          enumBy(VisaSponsorship.values, m['visaSponsorship'], VisaSponsorship.full),
+      trialDurationDays: (m['trialDurationDays'] as num?)?.toInt() ?? 0,
+      trialDailyRate: (m['trialDailyRate'] as num?)?.toInt() ?? 0,
+      additionalNotes: m['additionalNotes'] as String?,
+      viewsCount: (m['viewsCount'] as num?)?.toInt() ?? 0,
+      applicationsCount: (m['applicationsCount'] as num?)?.toInt() ?? 0,
+      city: (m['city'] as String?) ?? '',
+      commitmentAgreed: m['commitmentAgreed'] ?? false,
+      i18n: i18nMapsFrom(m, const ['jobTitle', 'schedule', 'additionalNotes']),
+    );
+  }
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'familyId': familyId,

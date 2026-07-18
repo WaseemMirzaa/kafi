@@ -1,6 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:kafi_app/models/application_model.dart';
+import 'package:kafi_app/models/job_post_model.dart';
+import 'package:kafi_app/models/nanny_map_codec.dart';
 import 'package:kafi_app/services/interfaces/i_application_service.dart';
+import 'package:kafi_app/services/match_service.dart';
 
 class FirestoreApplicationService implements IApplicationService {
   final _apps = FirebaseFirestore.instance.collection('applications');
@@ -55,13 +58,22 @@ class FirestoreApplicationService implements IApplicationService {
     final nannySnap =
         await FirebaseFirestore.instance.collection('nannies').doc(nannyId).get();
 
+    // Real attribute-based match (Spec §9 / MatchService) computed from the
+    // stored job + nanny docs, not a hardcoded placeholder.
+    final matchScore = (jobData != null && nannySnap.data() != null)
+        ? MatchService().calculateJobMatch(
+            nannyModelFromMap(nannyId, nannySnap.data()!),
+            JobPostModel.fromMap(jobId, jobData),
+          )
+        : 0;
+
     final app = ApplicationModel(
       id: id,
       jobPostId: jobId,
       nannyId: nannyId,
       familyId: (jobData?['familyId'] as String?) ?? '',
       status: ApplicationStatus.pending,
-      matchScore: 80,
+      matchScore: matchScore,
       coverMessage: coverMessage,
       createdAt: DateTime.now(),
       // Denormalized so admin/family lists render without extra lookups.
