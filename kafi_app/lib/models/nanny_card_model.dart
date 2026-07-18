@@ -14,6 +14,8 @@ class NannyCardModel {
     this.availableNow = false,
     this.featured = false,
     this.introVideoUrl,
+    this.averageRating,
+    this.reviewsCount = 0,
   });
 
   final String id;
@@ -30,6 +32,11 @@ class NannyCardModel {
   final bool featured;
   final String? introVideoUrl;
 
+  /// Reviewee rating aggregate (from the nanny's server-owned stats). Null/0
+  /// until the nanny has received reviews.
+  final double? averageRating;
+  final int reviewsCount;
+
   NannyCardModel copyWith({int? matchPercent, bool? featured}) => NannyCardModel(
         id: id,
         initials: initials,
@@ -44,5 +51,7 @@ class NannyCardModel {
         availableNow: availableNow,
         featured: featured ?? this.featured,
         introVideoUrl: introVideoUrl,
+        averageRating: averageRating,
+        reviewsCount: reviewsCount,
       );
 }

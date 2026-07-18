@@ -28,6 +28,7 @@ class FirestoreJobService implements IJobService {
       final m = d.data();
       final name = m['fullName'] ?? '';
       final expCount = (m['experiences'] as List?)?.length ?? 0;
+      final stats = m['stats'] as Map<String, dynamic>?;
       return NannyCardModel(
         id: d.id,
         initials: name.isNotEmpty ? name[0].toUpperCase() : 'N',
@@ -40,6 +41,8 @@ class FirestoreJobService implements IJobService {
         tags: List<String>.from(m['languages'] ?? []).take(3).toList(),
         verified: m['isVerified'] ?? false,
         availableNow: m['availability'] == 'availableNow',
+        averageRating: (stats?['averageRating'] as num?)?.toDouble(),
+        reviewsCount: (stats?['reviewsCount'] as num?)?.toInt() ?? 0,
       );
     }).toList();
 

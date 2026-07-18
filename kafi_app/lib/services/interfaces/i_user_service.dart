@@ -17,7 +17,6 @@ abstract class IUserService {
 
   Future<Map<String, dynamic>?> getSettings(String userId);
   Future<void> updateSettings(String userId, Map<String, dynamic> settings);
-  Future<void> recordProfileView(String familyId, String nannyId);
   Future<int> getFreeContactsUsed(String familyId);
 
   /// Whether an admin has blocked this user (nanny or family) in Firestore.

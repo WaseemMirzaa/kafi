@@ -12,13 +12,16 @@ class ProfileSections {
 
   // ── Stats row (Years exp · Rating · Reviews) ──────────────────────────────
   static Widget statsRow(NannyCardModel card) {
+    final hasReviews = card.reviewsCount > 0 && card.averageRating != null;
     return Row(
       children: [
         Expanded(child: _statBox('${card.yearsExp}', AppStrings.yearsExp.tr)),
         const SizedBox(width: 6),
-        Expanded(child: _statBox('4.9★', AppStrings.rating.tr)),
+        Expanded(
+            child: _statBox(hasReviews ? '${card.averageRating!.toStringAsFixed(1)}★' : '—',
+                AppStrings.rating.tr)),
         const SizedBox(width: 6),
-        Expanded(child: _statBox('12', AppStrings.reviews.tr)),
+        Expanded(child: _statBox('${card.reviewsCount}', AppStrings.reviews.tr)),
       ],
     );
   }

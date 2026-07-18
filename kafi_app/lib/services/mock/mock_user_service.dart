@@ -120,13 +120,6 @@ class MockUserService implements IUserService {
   }
 
   @override
-  Future<void> recordProfileView(String familyId, String nannyId) async {
-    await Future<void>.delayed(AppConfig.mockDelay);
-    _viewedNannies.putIfAbsent(familyId, () => {});
-    _viewedNannies[familyId]!.add(nannyId);
-  }
-
-  @override
   Future<int> getFreeContactsUsed(String familyId) async {
     await Future<void>.delayed(AppConfig.mockDelay);
     return _viewedNannies[familyId]?.length ?? 0;

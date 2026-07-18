@@ -32,8 +32,10 @@ service firebase.storage {
       allow read: if isSignedIn();
       allow write: if (isUser(uid) || isAdmin()) && isImage() && under(5);
     }
-    // Chat attachments (images only)
-    match /chats/{threadId}/{file} {
+    // Chat attachments (images only). The app uploads to
+    // chats/{threadId}/{uid}/{file}, so match the nested path with {file=**}
+    // (a single {file} segment would not match and the upload would be denied).
+    match /chats/{threadId}/{file=**} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && isImage() && under(8);
     }

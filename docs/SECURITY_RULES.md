@@ -102,7 +102,7 @@ Key protections baked into the rules:
 | `nannies/{uid}/videos/{file}` | public | owner/admin · video · ≤25 MB |
 | `nannies/{uid}/documents/{file}` | **owner/admin only** | owner/admin · ≤25 MB |
 | `families/{uid}/avatar/{file}` | signed‑in | owner/admin · image · ≤5 MB |
-| `chats/{threadId}/{file}` | signed‑in | signed‑in · image · ≤8 MB |
+| `chats/{threadId}/{file=**}` | signed‑in | signed‑in · image · ≤8 MB |
 | `public/**` | public | admin |
 
 The app uploads to paths that match these exactly (e.g. nanny KYC docs go to
@@ -406,7 +406,7 @@ service firebase.storage {
       allow write: if (isUser(uid) || isAdmin()) && isImage() && under(5);
     }
     // Chat attachments (images only)
-    match /chats/{threadId}/{file} {
+    match /chats/{threadId}/{file=**} {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && isImage() && under(8);
     }
