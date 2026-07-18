@@ -118,25 +118,6 @@ class FirestoreUserService implements IUserService {
   }
 
   @override
-  Future<void> recordProfileView(String familyId, String nannyId) async {
-    // Use a transaction to ensure freeContactsUsed only increments
-    // when the nannyId is genuinely new — prevents duplicate burns.
-    final ref = _families.doc(familyId);
-    await FirebaseFirestore.instance.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      final viewed = List<String>.from(
-        (snap.data()?['viewedProfiles'] as List?) ?? const [],
-      );
-      if (viewed.contains(nannyId)) return;
-      viewed.add(nannyId);
-      tx.update(ref, {
-        'viewedProfiles': viewed,
-        'freeContactsUsed': FieldValue.increment(1),
-      });
-    });
-  }
-
-  @override
   Future<int> getFreeContactsUsed(String familyId) async {
     final snap = await _families.doc(familyId).get();
     if (!snap.exists) return 0;
