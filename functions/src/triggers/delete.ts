@@ -109,7 +109,7 @@ export const onUserDeleted = onDocumentDeleted(
     tasks.push(
       db
         .collection('reviews')
-        .where('subjectId', '==', userId)
+        .where('revieweeId', '==', userId)
         .get()
         .then((s) => _batchDelete(s.docs.map((d) => d.ref)))
     );

@@ -10,6 +10,7 @@ import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 import 'package:kafi_app/services/interfaces/i_dispute_service.dart';
 import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
+import 'package:kafi_app/views/family/review_dialog.dart';
 import 'package:uuid/uuid.dart';
 
 class TrialController extends GetxController {
@@ -337,6 +338,11 @@ class TrialController extends GetxController {
         evaluation: evaluation, outcomeLabel: outcomeLabel);
     selected.value = null;
     await refreshAll();
+    // Once a family completes a trial, invite them to rate the nanny (no-ops
+    // for nannies or if they've already reviewed her). Feeds stats.averageRating.
+    if (s == TrialStatus.completed && !(_auth.currentUser.value?.isNanny ?? false)) {
+      await showReviewDialog(nannyId: t.nannyId, trialId: t.id);
+    }
   }
 
   Future<void> cancelTrial(String trialId, {String? reason}) async {

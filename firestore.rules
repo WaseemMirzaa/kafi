@@ -191,6 +191,22 @@ service cloud.firestore {
       allow create: if isAdmin();
     }
 
+    // ---------- reviews ----------
+    // A reviewer writes their own review; the reviewee's rating aggregate is
+    // maintained server-side by the onReviewCreated function. Public reviews are
+    // readable by any signed-in user (shown on the nanny profile); a private
+    // review is visible only to the two parties. Create-only for the reviewer
+    // (deterministic id = one review per pair); edits/removal are admin-only.
+    match /reviews/{reviewId} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && (existing().isPublic == true
+                || existing().reviewerId == request.auth.uid
+                || existing().revieweeId == request.auth.uid));
+      allow create: if isSignedIn() && incoming().reviewerId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
     // ---------- disputes / reports ----------
     match /disputes/{disputeId} {
       allow read: if isAdmin()
