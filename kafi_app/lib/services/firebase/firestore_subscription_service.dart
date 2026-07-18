@@ -49,27 +49,20 @@ class FirestoreSubscriptionService implements ISubscriptionService {
 
   @override
   Future<void> recordView(String familyId, String nannyId) async {
-    // Transactional dedupe — `freeContactsUsed` must only increment when the
-    // nannyId is genuinely new. The previous `arrayUnion` + `increment(1)`
-    // burned a free view every revisit which caused the "out of free views"
-    // paywall to fire before the spec'd 3 unique profiles.
-    final ref = _families.doc(familyId);
-    await FirebaseFirestore.instance.runTransaction((tx) async {
-      final snap = await tx.get(ref);
-      final viewed = List<String>.from(
-        (snap.data()?['viewedProfiles'] as List?) ?? const [],
-      );
-      if (viewed.contains(nannyId)) return;
-      viewed.add(nannyId);
-      tx.set(
-        ref,
-        {
-          'viewedProfiles': viewed,
-          'freeContactsUsed': FieldValue.increment(1),
-        },
-        SetOptions(merge: true),
-      );
-    });
+    // The family cannot write `viewedProfiles` / `freeContactsUsed` on its own
+    // doc (security rules — otherwise a family could reset its free-view count).
+    // Instead record an idempotent event doc that the onProfileViewed Cloud
+    // Function turns into the family's viewedProfiles/freeContactsUsed and the
+    // nanny's stats.profileViews. Deterministic id = one event per (family,
+    // nanny), so a revisit never double-burns a free contact.
+    await FirebaseFirestore.instance
+        .collection('profileViews')
+        .doc('${familyId}_$nannyId')
+        .set({
+      'familyId': familyId,
+      'nannyId': nannyId,
+      'viewedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
   }
 
   @override

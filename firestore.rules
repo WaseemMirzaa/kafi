@@ -113,6 +113,19 @@ service cloud.firestore {
                             || incoming().familyId == request.auth.uid));
     }
 
+    // ---------- profileViews (free-contact accounting) ----------
+    // A family records a view of a nanny by creating/merging its own event doc.
+    // The onProfileViewed function (admin) turns these into the family's
+    // viewedProfiles/freeContactsUsed and the nanny's stats.profileViews, so
+    // the family can never write those server-owned counters directly.
+    match /profileViews/{viewId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && existing().familyId == request.auth.uid);
+      allow create, update: if isSignedIn()
+        && incoming().familyId == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
     // ---------- chatThreads ----------
     match /chatThreads/{threadId} {
       allow read: if isAdmin()
