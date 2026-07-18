@@ -18,6 +18,18 @@ export const onNewApplication = onDocumentCreated(
     // Durable inbox record first (survives a missing FCM token), then the push.
     await writeInbox(app.familyId as string, 'newApplication', title, body, data);
     await sendNotification((family.fcmTokens as string[]) ?? [], { title, body, data });
+
+    // Server-owned nanny aggregate (rules deny cross-client nanny-doc writes).
+    if (app.nannyId) {
+      await admin
+        .firestore()
+        .collection('nannies')
+        .doc(app.nannyId as string)
+        .set(
+          { stats: { applicationsCount: admin.firestore.FieldValue.increment(1) } },
+          { merge: true },
+        );
+    }
   }
 );
 
