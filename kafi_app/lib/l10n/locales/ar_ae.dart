@@ -34,6 +34,14 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.privacy: 'الخصوصية',
     AppStrings.errorTitle: 'خطأ',
     AppStrings.successTitle: 'نجاح',
+    AppStrings.reviewTitle: 'كيف كانت @name؟',
+    AppStrings.reviewSubtitle: 'تقييمك يساعد العائلات الأخرى.',
+    AppStrings.reviewYourNanny: 'مربيتك',
+    AppStrings.reviewCommentHint: 'أضف تعليقًا (اختياري)',
+    AppStrings.reviewSubmit: 'إرسال التقييم',
+    AppStrings.reviewSkip: 'تخطي',
+    AppStrings.reviewThanks: 'شكرًا على تقييمك!',
+    AppStrings.reviewFailed: 'تعذّر إرسال تقييمك. حاول مرة أخرى.',
 
     // OTP
     AppStrings.otpEnterTitle: 'أدخل رمز التحقق',

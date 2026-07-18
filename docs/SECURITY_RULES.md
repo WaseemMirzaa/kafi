@@ -73,6 +73,7 @@ from `firestore.indexes.json` under **Firestore Database → Indexes**.
 | `chatThreads/{id}/messages/{id}` | the two parties / admin | nanny always; family only with access/trial; admin | admin | admin |
 | `trials/{id}` | the two parties / admin | owner family | either party / admin | admin |
 | `notifications/{id}` | recipient / admin | **admin/server only** | recipient / admin | recipient / admin |
+| `reviews/{id}` | public reviews → any signed-in; else the two parties / admin | reviewer | admin *(rating folded into `stats.averageRating` by the function)* | admin |
 | `disputes/{id}` | reporter/reported / admin | reporter | admin | admin |
 | `settings/{id}` | any signed‑in | — | admin | admin |
 | `admins/{uid}` | self / admin | — | admin | admin |
@@ -323,6 +324,17 @@ service cloud.firestore {
       allow read, update, delete: if isAdmin()
         || (isSignedIn() && existing().userId == request.auth.uid);
       allow create: if isAdmin();
+    }
+
+    // ---------- reviews ----------
+    match /reviews/{reviewId} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && (existing().isPublic == true
+                || existing().reviewerId == request.auth.uid
+                || existing().revieweeId == request.auth.uid));
+      allow create: if isSignedIn() && incoming().reviewerId == request.auth.uid;
+      allow update, delete: if isAdmin();
     }
 
     // ---------- disputes / reports ----------

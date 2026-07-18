@@ -16,7 +16,12 @@ import { revenueCatWebhook } from './triggers/webhook';
 import { onBroadcastCreated } from './triggers/broadcast';
 import { onUserDeleted } from './triggers/delete';
 import { translateNanny, translateFamily, translateJob } from './triggers/translate';
-import { onShortlistCreated, onShortlistDeleted, onProfileViewed } from './triggers/stats';
+import {
+  onShortlistCreated,
+  onShortlistDeleted,
+  onProfileViewed,
+  onReviewCreated,
+} from './triggers/stats';
 
 admin.initializeApp();
 
@@ -39,4 +44,5 @@ export {
   onShortlistCreated,
   onShortlistDeleted,
   onProfileViewed,
+  onReviewCreated,
 };

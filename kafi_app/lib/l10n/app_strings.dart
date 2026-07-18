@@ -111,6 +111,16 @@ abstract class AppStrings {
   static const nextRefs = 'next_refs';
   static const nextDocs = 'next_docs';
   static const submitReview = 'submit_review';
+
+  // Family → nanny reviews (post-trial rating)
+  static const reviewTitle = 'review_title';
+  static const reviewSubtitle = 'review_subtitle';
+  static const reviewYourNanny = 'review_your_nanny';
+  static const reviewCommentHint = 'review_comment_hint';
+  static const reviewSubmit = 'review_submit';
+  static const reviewSkip = 'review_skip';
+  static const reviewThanks = 'review_thanks';
+  static const reviewFailed = 'review_failed';
   static const addAnother = 'add_another';
   static const removeItem = 'remove_item';
 
