@@ -121,6 +121,10 @@ abstract class AppStrings {
   static const reviewSkip = 'review_skip';
   static const reviewThanks = 'review_thanks';
   static const reviewFailed = 'review_failed';
+
+  // Contact reveal
+  static const contactUnavailable = 'contact_unavailable';
+  static const contactLaunchFailed = 'contact_launch_failed';
   static const addAnother = 'add_another';
   static const removeItem = 'remove_item';
 

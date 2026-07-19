@@ -22,6 +22,7 @@ import {
   onProfileViewed,
   onReviewCreated,
 } from './triggers/stats';
+import { onContactRevealRequested } from './triggers/contact';
 
 admin.initializeApp();
 
@@ -45,4 +46,5 @@ export {
   onShortlistDeleted,
   onProfileViewed,
   onReviewCreated,
+  onContactRevealRequested,
 };

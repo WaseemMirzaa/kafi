@@ -113,6 +113,17 @@ service cloud.firestore {
                             || incoming().familyId == request.auth.uid));
     }
 
+    // ---------- contactReveals (gated phone reveal) ----------
+    // A family requests a nanny's phone by creating its own event doc; the
+    // onContactRevealRequested function checks entitlement and writes back only
+    // the phone. The family may read its own reveal but never write the result.
+    match /contactReveals/{revealId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && existing().familyId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().familyId == request.auth.uid;
+      allow update, delete: if isAdmin();
+    }
+
     // ---------- profileViews (free-contact accounting) ----------
     // A family records a view of a nanny by creating/merging its own event doc.
     // The onProfileViewed function (admin) turns these into the family's

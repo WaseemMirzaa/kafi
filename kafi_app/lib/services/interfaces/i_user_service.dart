@@ -19,6 +19,11 @@ abstract class IUserService {
   Future<void> updateSettings(String userId, Map<String, dynamic> settings);
   Future<int> getFreeContactsUsed(String familyId);
 
+  /// Requests the nanny's real phone via the gated onContactRevealRequested
+  /// function (a family can't read the nanny's user doc directly). Returns the
+  /// phone if entitled, or null if denied / timed out.
+  Future<String?> revealContact(String familyId, String nannyId);
+
   /// Whether an admin has blocked this user (nanny or family) in Firestore.
   Future<bool> isUserBlocked(String userId, {required bool isNanny});
 
