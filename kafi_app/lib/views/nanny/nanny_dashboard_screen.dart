@@ -4,6 +4,8 @@ import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/controllers/nanny_shell_controller.dart';
+import 'package:kafi_app/controllers/notification_controller.dart';
+import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
@@ -131,17 +133,19 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                     ],
                   ),
                 ),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: KafiColors.grnL,
-                    borderRadius: BorderRadius.circular(14),
+                if (n?.isVerified == true) ...[
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: KafiColors.grnL,
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                    child: Text('Kafi Verified ✓',
+                        style:
+                            KafiTheme.fredoka(9, color: KafiColors.grnD, w: FontWeight.w700)),
                   ),
-                  child: Text('Kafi Verified ✓',
-                      style:
-                          KafiTheme.fredoka(9, color: KafiColors.grnD, w: FontWeight.w700)),
-                ),
-                const SizedBox(width: 8),
+                  const SizedBox(width: 8),
+                ],
                 _notifBell(),
               ],
             );
@@ -181,18 +185,25 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
           alignment: Alignment.center,
           children: [
             const Icon(Icons.notifications_outlined, color: KafiColors.roseD, size: 15),
+            // Dot only when there are genuinely unread notifications.
             Positioned(
               top: 5,
               right: 6,
-              child: Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: KafiColors.roseD,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-              ),
+              child: Obx(() {
+                final unread = Get.isRegistered<NotificationController>()
+                    ? Get.find<NotificationController>().unreadCount.value
+                    : 0;
+                if (unread == 0) return const SizedBox.shrink();
+                return Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: KafiColors.roseD,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                );
+              }),
             ),
           ],
         ),
@@ -289,10 +300,12 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                 DocumentStatus.missing;
             return Column(
               children: [
-                _qcItem(done: hasPhoto, label: 'Profile 100% complete'),
+                _qcItem(done: hasPhoto, label: 'Profile photo added'),
                 _qcItem(done: isVerified, label: 'Kafi Verified badge'),
                 _qcItem(done: hasVideo, label: 'Video introduction uploaded'),
-                _qcItem(done: hasPhoto, label: 'Multiple photos added'),
+                _qcItem(
+                    done: controller.photoUrls.length > 1,
+                    label: 'Multiple photos added'),
                 _qcItem(
                     done: hasPolice,
                     label: 'Add police clearance',
@@ -385,10 +398,20 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                     style: KafiTheme.nunito(11, color: KafiColors.tm)),
               );
             }
+            // Real attribute-based match for the signed-in nanny (the same
+            // MatchService scorer used on the jobs tab and job detail), not a
+            // decorative placeholder. Reading nanny.value here also re-ranks
+            // once the profile finishes loading.
+            final nanny = controller.nanny.value;
+            final matchService = MatchService();
             return Column(
               children: [
-                for (var i = 0; i < preview.length; i++)
-                  _jobCard(preview[i], i == 0, 92 - i * 3),
+                for (final job in preview)
+                  _jobCard(
+                      job,
+                      nanny == null
+                          ? null
+                          : matchService.calculateJobMatch(nanny, job)),
               ],
             );
           }),
@@ -397,7 +420,8 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
     );
   }
 
-  Widget _jobCard(JobPostModel job, bool isHot, int matchPercent) {
+  Widget _jobCard(JobPostModel job, int? matchScore) {
+    final isHot = (matchScore ?? 0) >= 90;
     final typeLabel = job.jobType == JobType.liveOut ? 'Live-out' : 'Live-in';
     final initial = job.familyName.isNotEmpty ? job.familyName[0].toUpperCase() : 'F';
     return GestureDetector(
@@ -452,27 +476,29 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                           'AED ${job.salaryMin}–${job.salaryMax}/mo · ${job.familyName}',
                           style: KafiTheme.nunito(9, color: KafiColors.ts,
                               w: FontWeight.w600)),
-                      const SizedBox(height: 3),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                            horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: matchPercent >= 85
-                              ? const Color(0xFFE8F8EE)
-                              : KafiColors.ambL,
-                          borderRadius: BorderRadius.circular(14),
+                      if (matchScore != null) ...[
+                        const SizedBox(height: 3),
+                        Container(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: matchScore >= 85
+                                ? const Color(0xFFE8F8EE)
+                                : KafiColors.ambL,
+                            borderRadius: BorderRadius.circular(14),
+                          ),
+                          child: Text(
+                            matchScore >= 85
+                                ? '⭐ $matchScore% match'
+                                : '$matchScore% match',
+                            style: KafiTheme.fredoka(9,
+                                color: matchScore >= 85
+                                    ? const Color(0xFF2A8A50)
+                                    : const Color(0xFFC07A10),
+                                w: FontWeight.w700),
+                          ),
                         ),
-                        child: Text(
-                          matchPercent >= 85
-                              ? '⭐ $matchPercent% match'
-                              : '$matchPercent% match',
-                          style: KafiTheme.fredoka(9,
-                              color: matchPercent >= 85
-                                  ? const Color(0xFF2A8A50)
-                                  : const Color(0xFFC07A10),
-                              w: FontWeight.w700),
-                        ),
-                      ),
+                      ],
                     ],
                   ),
                 ),

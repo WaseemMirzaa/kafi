@@ -144,25 +144,9 @@ class JobDetailScreen extends StatelessWidget {
               children: [
                 Text('${job.familyName} Family',
                     style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w900)),
-                Text('${job.city} · Member since 2024',
-                    style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
-                const SizedBox(height: 4),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: KafiColors.grnL,
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.verified, size: 10, color: KafiColors.grnD),
-                      const SizedBox(width: 3),
-                      Text('Verified',
-                          style: KafiTheme.fredoka(9, color: KafiColors.grnD, w: FontWeight.w700)),
-                    ],
-                  ),
-                ),
+                if (job.city.isNotEmpty)
+                  Text(job.city,
+                      style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
               ],
             ),
           ),
@@ -230,9 +214,22 @@ class JobDetailScreen extends StatelessWidget {
       'Job Details',
       [
         _detailRow('Job Type', job.jobType.name.titleCase),
-        _detailRow('Schedule', 'Sun-Thu, 7am-7pm'),
-        _detailRow('Start Date', 'Immediate'),
-        _detailRow('Duration', 'Permanent'),
+        _detailRow('Schedule',
+            job.schedule.isNotEmpty ? job.schedule : 'Not specified'),
+        _detailRow(
+            'Start Date',
+            job.startImmediate
+                ? 'Immediate'
+                : (job.startDate != null
+                    ? '${job.startDate!.day}/${job.startDate!.month}/${job.startDate!.year}'
+                    : 'Flexible')),
+        _detailRow(
+            'Duration',
+            job.duration == JobDuration.permanent
+                ? 'Permanent'
+                : (job.contractMonths != null
+                    ? 'Contract · ${job.contractMonths} months'
+                    : 'Contract')),
         _detailRow('Salary', 'AED ${job.salaryMin} - ${job.salaryMax}/month'),
       ],
     );
