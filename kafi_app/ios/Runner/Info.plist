@@ -43,10 +43,6 @@
 	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 	<string>Kafi uses your location to autofill your city and help find nearby opportunities.</string>
 
-	<!-- ─── Contacts ─────────────────────────────────────────────────── -->
-	<key>NSContactsUsageDescription</key>
-	<string>Kafi may access your contacts to help you invite references.</string>
-
 	<!-- ─── Push Notifications / FCM background ──────────────────────── -->
 	<key>UIBackgroundModes</key>
 	<array>
