@@ -3,7 +3,6 @@ import 'package:get/get.dart';
 import 'package:kafi_app/controllers/browse_controller.dart';
 import 'package:kafi_app/controllers/shortlist_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
-import 'package:kafi_app/utils/nanny_card_resolver.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_nanny_card.dart';
@@ -35,7 +34,7 @@ class ShortlistScreen extends GetView<ShortlistController> {
           itemCount: controller.shortlistedNannies.length,
           itemBuilder: (_, i) {
             final item = controller.shortlistedNannies[i];
-            final card = resolveNannyCard(item.nannyId);
+            final card = controller.cardFor(item);
             // Identical card to the home feed; swipe left to remove.
             return Dismissible(
               key: ValueKey(item.nannyId),

@@ -5,7 +5,6 @@ import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
-import 'package:kafi_app/utils/nanny_card_resolver.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
@@ -57,7 +56,7 @@ class TrialScreen extends GetView<TrialController> {
   Widget _header(TrialModel t) {
     final famUser = Get.isRegistered<AuthController>() ? Get.find<AuthController>().currentUser.value : null;
     final famName = (famUser?.fullName?.isNotEmpty == true) ? famUser!.fullName! : 'Your family';
-    final nanny = resolveNannyCard(t.nannyId);
+    final nanny = controller.nannyCardFor(t.nannyId);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(13, 12, 13, 14),

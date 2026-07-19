@@ -8,7 +8,9 @@ import 'package:kafi_app/models/dispute_model.dart';
 import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 import 'package:kafi_app/services/interfaces/i_dispute_service.dart';
+import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/services/interfaces/i_trial_service.dart';
+import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
 import 'package:kafi_app/views/family/review_dialog.dart';
 import 'package:uuid/uuid.dart';
@@ -18,7 +20,28 @@ class TrialController extends GetxController {
   final IChatService _chat = Get.find<IChatService>();
   final AuthController _auth = Get.find<AuthController>();
   final IDisputeService _disputes = Get.find<IDisputeService>();
+  final IUserService _users = Get.find<IUserService>();
   final _uuid = const Uuid();
+
+  /// Real nanny cards for the loaded trials, keyed by nannyId — fetched from
+  /// Firestore so the trial header shows the actual nanny, not seed data.
+  final RxMap<String, NannyCardModel> nannyCards = <String, NannyCardModel>{}.obs;
+
+  /// The real card for [nannyId]; a blank placeholder until the fetch resolves
+  /// (never seed data).
+  NannyCardModel nannyCardFor(String nannyId) =>
+      nannyCards[nannyId] ??
+      NannyCardModel(
+        id: nannyId,
+        initials: 'N',
+        name: '',
+        nationality: '',
+        yearsExp: 0,
+        jobType: 'Live-in',
+        city: '',
+        matchPercent: 0,
+        tags: const [],
+      );
 
   final Rx<TrialModel?> active = Rx<TrialModel?>(null);
   /// When opened via notification/deep-link with a specific `trialId`.
@@ -74,6 +97,18 @@ class TrialController extends GetxController {
       }
       active.value = act;
     }
+    await _loadNannyCards();
+  }
+
+  /// Fetches the real nanny doc for each loaded trial and builds a card.
+  Future<void> _loadNannyCards() async {
+    final ids = all.map((t) => t.nannyId).toSet();
+    final loaded = <String, NannyCardModel>{};
+    await Future.wait(ids.map((id) async {
+      final n = await _users.getNanny(id);
+      if (n != null) loaded[id] = NannyCardModel.fromNanny(n);
+    }));
+    nannyCards.assignAll(loaded);
   }
 
   Future<TrialModel?> getTrial(String trialId) => _trials.getTrial(trialId);

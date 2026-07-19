@@ -1,16 +1,41 @@
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
+import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/models/shortlist_model.dart';
 import 'package:kafi_app/services/interfaces/i_shortlist_service.dart';
+import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
 
 class ShortlistController extends GetxController {
   final IShortlistService _shortlistService = Get.find<IShortlistService>();
+  final IUserService _userService = Get.find<IUserService>();
   final AuthController _auth = Get.find<AuthController>();
 
   final RxList<ShortlistItem> shortlistedNannies = <ShortlistItem>[].obs;
   final RxSet<String> shortlistedIds = <String>{}.obs;
   final RxBool isLoading = false.obs;
+
+  /// Real browse cards for the shortlisted nannies, keyed by nannyId — loaded
+  /// from Firestore so the shortlist shows the actual nanny (not seed data).
+  final RxMap<String, NannyCardModel> cards = <String, NannyCardModel>{}.obs;
+
+  /// The real card for a shortlisted item; falls back to the item's own
+  /// denormalized name (still real) while the full card is loading.
+  NannyCardModel cardFor(ShortlistItem item) =>
+      cards[item.nannyId] ??
+      NannyCardModel(
+        id: item.nannyId,
+        initials: (item.nannyName != null && item.nannyName!.isNotEmpty)
+            ? item.nannyName![0].toUpperCase()
+            : 'N',
+        name: item.nannyName ?? '',
+        nationality: '',
+        yearsExp: 0,
+        jobType: 'Live-in',
+        city: '',
+        matchPercent: 0,
+        tags: const [],
+      );
 
   @override
   void onInit() {
@@ -25,9 +50,20 @@ class ShortlistController extends GetxController {
       if (familyId == null) return;
       shortlistedNannies.value = await _shortlistService.getShortlist(familyId);
       shortlistedIds.assignAll(shortlistedNannies.map((s) => s.nannyId).toSet());
+      await _loadCards();
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Fetches the real nanny doc for each shortlisted id and builds a card.
+  Future<void> _loadCards() async {
+    final loaded = <String, NannyCardModel>{};
+    await Future.wait(shortlistedNannies.map((s) async {
+      final n = await _userService.getNanny(s.nannyId);
+      if (n != null) loaded[s.nannyId] = NannyCardModel.fromNanny(n);
+    }));
+    cards.assignAll(loaded);
   }
 
   bool isShortlisted(String nannyId) => shortlistedIds.contains(nannyId);

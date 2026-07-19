@@ -1,49 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/shortlist_controller.dart';
-import 'package:kafi_app/data/mock/mock_nannies.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
-import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_app_bar.dart';
 
-class CompareScreen extends StatefulWidget {
+class CompareScreen extends StatelessWidget {
   const CompareScreen({super.key});
-
-  @override
-  State<CompareScreen> createState() => _CompareScreenState();
-}
-
-class _CompareScreenState extends State<CompareScreen> {
-  final _cardsById = <String, NannyCardModel>{};
-  var _loaded = false;
-
-  @override
-  void initState() {
-    super.initState();
-    _loadCards();
-  }
-
-  Future<void> _loadCards() async {
-    try {
-      final all = await Get.find<IJobService>().browseNannies();
-      for (final c in all) {
-        _cardsById[c.id] = c;
-      }
-    } catch (_) {
-      for (final c in mockNannyCards) {
-        _cardsById[c.id] = c;
-      }
-    }
-    if (mounted) setState(() => _loaded = true);
-  }
-
-  NannyCardModel _card(String nannyId) =>
-      _cardsById[nannyId] ??
-      mockNannyCards.firstWhereOrNull((c) => c.id == nannyId) ??
-      mockNannyCards.first;
 
   @override
   Widget build(BuildContext context) {
@@ -51,9 +16,7 @@ class _CompareScreenState extends State<CompareScreen> {
     return Scaffold(
       backgroundColor: KafiColors.bgLight,
       appBar: KafiAppBar(title: AppStrings.shortlistCompare.tr),
-      body: !_loaded
-          ? const Center(child: CircularProgressIndicator(color: KafiColors.roseD))
-          : Obx(() {
+      body: Obx(() {
               final items = controller.shortlistedNannies.take(2).toList();
               if (items.length < 2) {
                 return Center(
@@ -63,8 +26,10 @@ class _CompareScreenState extends State<CompareScreen> {
                   ),
                 );
               }
-              final a = _card(items[0].nannyId);
-              final b = _card(items[1].nannyId);
+              // Real cards from the shortlist controller (loaded from Firestore),
+              // not seed data.
+              final a = controller.cardFor(items[0]);
+              final b = controller.cardFor(items[1]);
               return ListView(
                 padding: const EdgeInsets.all(14),
                 children: [
