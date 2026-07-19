@@ -110,17 +110,21 @@ class KafiNannyCard extends StatelessWidget {
                     runSpacing: 3,
                     crossAxisAlignment: WrapCrossAlignment.center,
                     children: [
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                        decoration: BoxDecoration(
-                          color: matchBg,
-                          borderRadius: BorderRadius.circular(16),
+                      // Only show a match chip when the card was scored against a
+                      // real job (matchPercent > 0); browsing with no job posted
+                      // leaves it 0 → no fake percentage.
+                      if (card.matchPercent > 0)
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: matchBg,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text(
+                            '${good ? '⭐ ' : ''}${card.matchPercent}${AppStrings.matchSuffix.tr}',
+                            style: KafiTheme.fredoka(9, color: matchColor, w: FontWeight.w700),
+                          ),
                         ),
-                        child: Text(
-                          '${good ? '⭐ ' : ''}${card.matchPercent}${AppStrings.matchSuffix.tr}',
-                          style: KafiTheme.fredoka(9, color: matchColor, w: FontWeight.w700),
-                        ),
-                      ),
                       if (jobLabel != null && jobLabel!.isNotEmpty)
                         Container(
                           constraints: const BoxConstraints(maxWidth: 150),

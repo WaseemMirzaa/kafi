@@ -94,8 +94,12 @@ class ProfileRelockedScreen extends StatelessWidget {
       child: Row(
         children: [
           _stat('${card.yearsExp}', AppStrings.yearsExp.tr),
-          _stat('4.9★', AppStrings.rating.tr),
-          _stat('12', AppStrings.reviews.tr),
+          _stat(
+              card.averageRating != null
+                  ? '${card.averageRating!.toStringAsFixed(1)}★'
+                  : '—',
+              AppStrings.rating.tr),
+          _stat('${card.reviewsCount}', AppStrings.reviews.tr),
         ],
       ),
     );

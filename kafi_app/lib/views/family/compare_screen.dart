@@ -68,7 +68,10 @@ class CompareScreen extends StatelessWidget {
       ),
       child: Column(
         children: [
-          _row('Match', '${a.matchPercent}%', '${b.matchPercent}%'),
+          _row(
+              'Match',
+              a.matchPercent > 0 ? '${a.matchPercent}%' : '—',
+              b.matchPercent > 0 ? '${b.matchPercent}%' : '—'),
           _row('Type', a.jobType, b.jobType),
           _row('Exp', '${a.yearsExp}y', '${b.yearsExp}y'),
           _row('City', a.city, b.city),

@@ -88,25 +88,29 @@ class ProfileHero extends StatelessWidget {
                 const SizedBox(height: 1),
                 Text('${card.jobType} · ${card.city} · ${card.nationality}',
                     style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600)),
-                const SizedBox(height: 8),
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: [Color(0xFF9B6EDB), Color(0xFFC084FC)],
+                // Shown only when the nanny was scored against the family's job
+                // (matchPercent > 0); otherwise there's no "your job" to match.
+                if (card.matchPercent > 0) ...[
+                  const SizedBox(height: 8),
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 5),
+                    decoration: BoxDecoration(
+                      gradient: const LinearGradient(
+                        colors: [Color(0xFF9B6EDB), Color(0xFFC084FC)],
+                      ),
+                      borderRadius: BorderRadius.circular(16),
                     ),
-                    borderRadius: BorderRadius.circular(16),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.star, color: Colors.white, size: 11),
+                        const SizedBox(width: 4),
+                        Text('${card.matchPercent}% match with your job',
+                            style: KafiTheme.fredoka(11.5, color: Colors.white, w: FontWeight.w600)),
+                      ],
+                    ),
                   ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Icon(Icons.star, color: Colors.white, size: 11),
-                      const SizedBox(width: 4),
-                      Text('${card.matchPercent}% match with your job',
-                          style: KafiTheme.fredoka(11.5, color: Colors.white, w: FontWeight.w600)),
-                    ],
-                  ),
-                ),
+                ],
               ],
             ),
           ),

@@ -37,7 +37,10 @@ class FirestoreJobService implements IJobService {
         yearsExp: expCount,
         jobType: m['jobTypePreference'] == 'liveIn' ? 'Live-in' : 'Live-out',
         city: m['currentArea'] ?? 'Dubai',
-        matchPercent: 85,
+        // No job context yet → 0 (the card hides the match chip). When a
+        // matchJob is provided below, rankCards overwrites this with the real
+        // MatchService score (always ≥ 35), so 0 uniquely means "not ranked".
+        matchPercent: 0,
         tags: List<String>.from(m['languages'] ?? []).take(3).toList(),
         verified: m['isVerified'] ?? false,
         availableNow: m['availability'] == 'availableNow',
