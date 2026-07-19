@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/config/routes.dart';
+import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/models/user_model.dart';
@@ -70,6 +71,7 @@ class AuthController extends GetxController {
     otpError.value = '';
     countryCode.value = AuthConstants.defaultCountryCode;
     _authService.setUserRole(UserType.nanny);
+    _requestStartupPermissions();
   }
 
   void prepareFamilyLogin() {
@@ -77,6 +79,18 @@ class AuthController extends GetxController {
     otpError.value = '';
     countryCode.value = AuthConstants.defaultCountryCode;
     _authService.setUserRole(UserType.family);
+    _requestStartupPermissions();
+  }
+
+  /// Prompt for every runtime permission the app uses, the moment the user
+  /// picks a role ("Get Started"). Fire-and-forget so navigation is not blocked;
+  /// the controller guards against running more than once per session. The
+  /// registration check keeps this safe in unit/widget tests that build the
+  /// AuthController without the full DI graph.
+  void _requestStartupPermissions() {
+    if (Get.isRegistered<PermissionController>()) {
+      Get.find<PermissionController>().requestStartupPermissions();
+    }
   }
 
   Future<void> sendOtpAndNavigate() async {
