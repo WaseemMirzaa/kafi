@@ -115,6 +115,32 @@ class PermissionService {
     return status.isGranted;
   }
 
+  /// Requests every runtime permission the app actually uses, in one upfront
+  /// batch shown right after the user picks a role on the welcome screen
+  /// ("Get Started"). Prompts are sequential (the OS shows them one-by-one).
+  ///
+  /// Deliberately silent about denials — it does not pop the settings dialog —
+  /// so a first-run user is asked once and never nagged; each feature still
+  /// re-requests in context via the `ensure*`/`request*` methods when it is
+  /// actually used. Contacts is intentionally excluded: no feature reads the
+  /// address book, so requesting it would be an unused-permission prompt.
+  Future<void> requestStartupBatch() async {
+    final permissions = <Permission>[
+      Permission.notification,
+      Permission.locationWhenInUse,
+      Permission.camera,
+      Permission.microphone,
+      Permission.photos,
+      if (Platform.isAndroid) ...[
+        // Granular media (Android 13+) and the legacy storage fallback
+        // (Android ≤ 12) so gallery/video upload works across versions.
+        Permission.videos,
+        Permission.storage,
+      ],
+    ];
+    await permissions.request();
+  }
+
   Future<void> openSettings() async => openAppSettings();
 
   Future<void> _showSettingsDialog(String bodyMessage) async {

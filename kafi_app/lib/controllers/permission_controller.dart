@@ -11,10 +11,28 @@ class PermissionController extends GetxController {
   final RxBool hasLocationPermission = false.obs;
   final RxBool hasContactsPermission = false.obs;
 
+  bool _startupRequested = false;
+
   @override
   void onInit() {
     super.onInit();
     checkAllPermissions();
+  }
+
+  /// One-time upfront permission request, fired right after the user picks a
+  /// role on the welcome screen ("Get Started"). Guarded so it runs at most
+  /// once per app session; individual features still re-request in context.
+  /// Never throws — permission plugin failures are swallowed so they can't
+  /// break the login flow that triggers this.
+  Future<void> requestStartupPermissions() async {
+    if (_startupRequested) return;
+    _startupRequested = true;
+    try {
+      await _permService.requestStartupBatch();
+    } catch (_) {
+      // Best-effort: features still request their own permissions in context.
+    }
+    await checkAllPermissions();
   }
 
   Future<void> checkAllPermissions() async {
