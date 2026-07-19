@@ -9,7 +9,6 @@ class PermissionController extends GetxController {
   final RxBool hasGalleryPermission = false.obs;
   final RxBool hasMicrophonePermission = false.obs;
   final RxBool hasLocationPermission = false.obs;
-  final RxBool hasContactsPermission = false.obs;
 
   bool _startupRequested = false;
 
@@ -41,7 +40,6 @@ class PermissionController extends GetxController {
     hasGalleryPermission.value = await _permService.checkGallery();
     hasMicrophonePermission.value = await _permService.checkMicrophone();
     hasLocationPermission.value = await _permService.checkLocation();
-    hasContactsPermission.value = await _permService.checkContacts();
   }
 
   Future<bool> requestNotification() async {
@@ -71,12 +69,6 @@ class PermissionController extends GetxController {
   Future<bool> requestLocation() async {
     final granted = await _permService.requestLocation();
     hasLocationPermission.value = granted;
-    return granted;
-  }
-
-  Future<bool> requestContacts() async {
-    final granted = await _permService.requestContacts();
-    hasContactsPermission.value = granted;
     return granted;
   }
 

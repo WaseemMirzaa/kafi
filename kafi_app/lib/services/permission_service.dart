@@ -34,9 +34,6 @@ class PermissionService {
   Future<bool> checkLocation() async =>
       (await Permission.locationWhenInUse.status).isGranted;
 
-  Future<bool> checkContacts() async =>
-      (await Permission.contacts.status).isGranted;
-
   Future<bool> requestNotification() async {
     final status = await Permission.notification.request();
     if (status.isPermanentlyDenied) {
@@ -107,14 +104,6 @@ class PermissionService {
     return status.isGranted;
   }
 
-  Future<bool> requestContacts() async {
-    final status = await Permission.contacts.request();
-    if (status.isPermanentlyDenied) {
-      await _showSettingsDialog(AppStrings.permissionPermanentlyDeniedBody.tr);
-    }
-    return status.isGranted;
-  }
-
   /// Requests every runtime permission the app actually uses, in one upfront
   /// batch shown right after the user picks a role on the welcome screen
   /// ("Get Started"). Prompts are sequential (the OS shows them one-by-one).
@@ -122,8 +111,7 @@ class PermissionService {
   /// Deliberately silent about denials — it does not pop the settings dialog —
   /// so a first-run user is asked once and never nagged; each feature still
   /// re-requests in context via the `ensure*`/`request*` methods when it is
-  /// actually used. Contacts is intentionally excluded: no feature reads the
-  /// address book, so requesting it would be an unused-permission prompt.
+  /// actually used.
   Future<void> requestStartupBatch() async {
     final permissions = <Permission>[
       Permission.notification,
