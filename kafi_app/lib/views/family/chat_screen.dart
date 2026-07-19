@@ -13,6 +13,7 @@ import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_trial_offer_bubble.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 class ChatScreen extends StatefulWidget {
   const ChatScreen({super.key, this.embedInShell = false});
@@ -649,14 +650,37 @@ class _ChatScreenState extends State<ChatScreen> {
             ),
           ),
           if (controller.isSubscribed && !controller.isNanny) ...[
-            _topbarAction(Icons.chat, const Color(0xFF25D366), () => AppNavigation.mockContactAction('WhatsApp')),
+            _topbarAction(Icons.chat, const Color(0xFF25D366),
+                () => _launchNannyContact(whatsapp: true)),
             const SizedBox(width: 6),
-            _topbarAction(Icons.call, Colors.white, () => AppNavigation.mockContactAction('Call'),
+            _topbarAction(Icons.call, Colors.white,
+                () => _launchNannyContact(whatsapp: false),
                 iconColor: _accent.last),
           ],
         ],
       ),
     );
+  }
+
+  /// Reveal the nanny's real phone (server-side entitlement check) and open the
+  /// dialer or WhatsApp. Replaces the old mock snackbar.
+  Future<void> _launchNannyContact({required bool whatsapp}) async {
+    final phone = await controller.revealActiveNannyPhone();
+    if (phone == null || phone.trim().isEmpty) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.contactUnavailable.tr,
+          snackPosition: SnackPosition.BOTTOM);
+      return;
+    }
+    final digits = phone.replaceAll(RegExp(r'[^0-9]'), '');
+    final uri = whatsapp
+        ? Uri.parse('https://wa.me/$digits')
+        : Uri.parse('tel:$phone');
+    try {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } catch (_) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.contactLaunchFailed.tr,
+          snackPosition: SnackPosition.BOTTOM);
+    }
   }
 
   Widget _topbarAction(IconData icon, Color bg, VoidCallback onTap, {Color iconColor = Colors.white}) {
@@ -728,10 +752,10 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
           if (subscribed && !controller.isNanny) ...[
             _ccsButton('📞 ${AppStrings.callHer.tr.split(' ').first}', KafiColors.grnD,
-                () => AppNavigation.mockContactAction('Call')),
+                () => _launchNannyContact(whatsapp: false)),
             const SizedBox(width: 5),
             _ccsButton('WhatsApp', const Color(0xFF25D366),
-                () => AppNavigation.mockContactAction('WhatsApp')),
+                () => _launchNannyContact(whatsapp: true)),
           ],
         ],
       ),

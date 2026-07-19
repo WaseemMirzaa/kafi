@@ -95,10 +95,6 @@ class AppNavigation {
     );
   }
 
-  static void mockContactAction(String channel) {
-    Get.snackbar(channel, 'Contact action — production build');
-  }
-
   static void familyGoToTab(int index) {
     if (Get.isRegistered<FamilyShellController>()) {
       Get.find<FamilyShellController>().goToTab(index);
