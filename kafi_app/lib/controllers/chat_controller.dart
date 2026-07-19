@@ -13,6 +13,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
+import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
 import 'package:uuid/uuid.dart';
 
@@ -22,6 +23,7 @@ class ChatController extends GetxController {
   final IChatService _chat = Get.find<IChatService>();
   final AuthController _auth = Get.find<AuthController>();
   final SubscriptionController _subs = Get.find<SubscriptionController>();
+  final IUserService _user = Get.find<IUserService>();
   final _uuid = const Uuid();
 
   final RxList<ChatThread> threads = <ChatThread>[].obs;
@@ -140,6 +142,16 @@ class ChatController extends GetxController {
   ChatThread? get activeThread {
     if (activeThreadId.value.isEmpty) return null;
     return threads.firstWhereOrNull((t) => t.id == activeThreadId.value);
+  }
+
+  /// Reveal the chatting nanny's real phone so the family can call or WhatsApp
+  /// directly from the conversation. Entitlement (active subscription / trial /
+  /// spent free-contact) is enforced server-side by the onContactRevealRequested
+  /// function; returns null when there's no open thread or the reveal is denied.
+  Future<String?> revealActiveNannyPhone() async {
+    final thread = activeThread;
+    if (thread == null) return null;
+    return _user.revealContact(thread.familyId, thread.nannyId);
   }
 
   Future<void> openThread(String threadId) async {
