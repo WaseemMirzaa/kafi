@@ -9,6 +9,11 @@ class SubscriptionConstants {
   static const planMonthly = 'monthly';
   static const planBimonthly = 'bimonthly';
 
+  /// Entry-tier (weekly) headline price in AED, shown on paywalls so they stay
+  /// in sync with the pricing screen instead of hardcoding the number.
+  static int get weeklyPriceAed =>
+      plans.firstWhere((p) => p.id == planWeekly).priceAed;
+
   static const plans = [
     SubscriptionPlan(id: planWeekly, label: 'Weekly', priceAed: 89, durationDays: 7),
     SubscriptionPlan(

@@ -7,6 +7,7 @@ import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/models/trial_model.dart';
+import 'package:kafi_app/utils/constants/subscription_constants.dart';
 import 'package:kafi_app/utils/nanny_card_resolver.dart';
 import 'package:kafi_app/views/family/profile_hero.dart';
 import 'package:kafi_app/views/family/profile_sections.dart';
@@ -211,7 +212,8 @@ class ProfileLockedScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.baseline,
                 textBaseline: TextBaseline.alphabetic,
                 children: [
-                  Text('89', style: KafiTheme.nunito(16, color: Colors.white, w: FontWeight.w900)),
+                  Text('${SubscriptionConstants.weeklyPriceAed}',
+                      style: KafiTheme.nunito(16, color: Colors.white, w: FontWeight.w900)),
                   const SizedBox(width: 3),
                   Text(AppStrings.perWeek.tr,
                       style: KafiTheme.nunito(9.5, color: Colors.white.withValues(alpha: 0.8), w: FontWeight.w600)),
