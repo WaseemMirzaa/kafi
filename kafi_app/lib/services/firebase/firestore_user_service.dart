@@ -51,11 +51,20 @@ class FirestoreUserService implements IUserService {
 
   @override
   Future<void> saveFamily(FamilyModel family) {
-    // A profile save must not clobber the subscription sub-map: the family
-    // controller rebuilds FamilyModel with a default 'free' subscription, so
-    // merge-writing it would reset a paid family. Subscription is owned by the
-    // subscription service / RevenueCat webhook.
-    final data = family.toMap()..remove('subscription');
+    // Strip every server-owned / admin-only field from a family's own profile
+    // write. The security rules DENY an update that touches subscription,
+    // freeContactsUsed, viewedProfiles, or activeTrialNannyIds — so leaving them
+    // in makes the whole merge-write permission-denied for any family that has
+    // used a free contact (the controller rebuilds these as 0/[]). `stats` is
+    // server-maintained too and would be clobbered to zeros. These are owned by
+    // the subscription service / RevenueCat webhook and the profileViews /
+    // trial Cloud Functions.
+    final data = family.toMap()
+      ..remove('subscription')
+      ..remove('freeContactsUsed')
+      ..remove('viewedProfiles')
+      ..remove('activeTrialNannyIds')
+      ..remove('stats');
     return _families.doc(family.id).set(data, SetOptions(merge: true));
   }
 

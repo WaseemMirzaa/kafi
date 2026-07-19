@@ -1,3 +1,5 @@
+import 'package:kafi_app/models/nanny_model.dart';
+
 /// Light-weight card representation used in the browse list.
 class NannyCardModel {
   const NannyCardModel({
@@ -36,6 +38,29 @@ class NannyCardModel {
   /// until the nanny has received reviews.
   final double? averageRating;
   final int reviewsCount;
+
+  /// Builds a browse card from a full [NannyModel] (e.g. a shortlisted / trial
+  /// nanny resolved by id from Firestore). Mirrors the mapping in
+  /// firestore_job_service.browseNannies so cards look identical everywhere.
+  /// `matchPercent` is left 0 (no job context here); callers may rank/override.
+  factory NannyCardModel.fromNanny(NannyModel n) {
+    final name = n.fullName;
+    return NannyCardModel(
+      id: n.id,
+      initials: name.isNotEmpty ? name[0].toUpperCase() : 'N',
+      name: name,
+      nationality: n.nationality,
+      yearsExp: n.experiences.length,
+      jobType: n.jobTypePreference == JobTypePreference.liveIn ? 'Live-in' : 'Live-out',
+      city: n.currentArea,
+      matchPercent: 0,
+      tags: n.languages.take(3).toList(),
+      verified: n.isVerified,
+      introVideoUrl: n.introVideoUrl,
+      averageRating: n.stats.averageRating,
+      reviewsCount: n.stats.reviewsCount,
+    );
+  }
 
   NannyCardModel copyWith({int? matchPercent, bool? featured}) => NannyCardModel(
         id: id,
