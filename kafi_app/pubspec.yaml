@@ -31,6 +31,7 @@ dependencies:
   google_maps_flutter: ^2.9.0
   geolocator: ^13.0.2
   http: ^1.2.2
+  url_launcher: ^6.3.0 # launch tel:/wa.me/mailto for the revealed nanny contact
 
   # Media — camera, gallery, files, video
   image_picker: ^1.1.2

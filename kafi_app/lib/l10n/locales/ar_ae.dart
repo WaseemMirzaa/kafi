@@ -42,6 +42,8 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.reviewSkip: 'تخطي',
     AppStrings.reviewThanks: 'شكرًا على تقييمك!',
     AppStrings.reviewFailed: 'تعذّر إرسال تقييمك. حاول مرة أخرى.',
+    AppStrings.contactUnavailable: 'غير متاح',
+    AppStrings.contactLaunchFailed: 'تعذّر الفتح. تم حفظ الرقم.',
 
     // OTP
     AppStrings.otpEnterTitle: 'أدخل رمز التحقق',

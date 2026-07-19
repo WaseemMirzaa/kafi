@@ -124,4 +124,10 @@ class MockUserService implements IUserService {
     await Future<void>.delayed(AppConfig.mockDelay);
     return _viewedNannies[familyId]?.length ?? 0;
   }
+
+  @override
+  Future<String?> revealContact(String familyId, String nannyId) async {
+    await Future<void>.delayed(AppConfig.mockDelay);
+    return '+971 50 123 4567';
+  }
 }
