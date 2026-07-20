@@ -9,6 +9,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/support/report_problem_sheet.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
 class TrialScreen extends GetView<TrialController> {
@@ -44,6 +45,8 @@ class TrialScreen extends GetView<TrialController> {
                           child: _paymentBlock(context, t),
                         ),
                       ],
+                      _reportProblemLink(t),
+                      const SizedBox(height: 6),
                     ],
                   ),
                 ),
@@ -610,6 +613,31 @@ class TrialScreen extends GetView<TrialController> {
           ),
         ),
       ],
+    );
+  }
+
+  // Always-available "Report a problem" entry (both roles) — files a dispute
+  // about the trial counterparty (no-show, abuse, fraud, payment, other). The
+  // report then appears under Settings → My reports and in the admin panel.
+  Widget _reportProblemLink(TrialModel t) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(9, 6, 13, 0),
+        child: TextButton.icon(
+          onPressed: () => showReportProblemSheet(
+            reportedUserId: _isNanny ? t.familyId : t.nannyId,
+            relatedTrialId: t.id,
+          ),
+          style: TextButton.styleFrom(
+            foregroundColor: KafiColors.ts,
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+          ),
+          icon: const Icon(Icons.flag_outlined, size: 15),
+          label: Text(AppStrings.reportProblemTitle.tr,
+              style: KafiTheme.nunito(10.5, color: KafiColors.ts, w: FontWeight.w700)),
+        ),
+      ),
     );
   }
 

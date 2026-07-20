@@ -57,6 +57,40 @@ class DisputeController extends GetxController {
     }
   }
 
+  /// Files a report about another user (fraud / abuse / no-show / payment /
+  /// other) and refreshes the reports list. This is the UI-callable filing path
+  /// — invoked from the chat and trial screens — mirroring
+  /// [TicketController.createTicket]. Returns true on success so the caller can
+  /// pop its sheet.
+  Future<bool> createDispute({
+    required String reportedUserId,
+    required DisputeCategory category,
+    required String description,
+    String? relatedTrialId,
+  }) async {
+    final uid = currentUserId(_auth);
+    final text = description.trim();
+    if (uid == null || text.isEmpty) return false;
+    isLoading.value = true;
+    try {
+      await _disputes.fileDispute(
+        reporterId: uid,
+        reportedUserId: reportedUserId,
+        category: category,
+        description: text,
+        relatedTrialId: relatedTrialId,
+      );
+      await loadDisputes();
+      Get.snackbar(AppStrings.successTitle.tr, AppStrings.reportSentToast.tr);
+      return true;
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      return false;
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   /// Binds the live message stream for [d] and refreshes the dispute doc so the
   /// header reflects the latest admin-owned status/resolution.
   void openDisputeThread(DisputeModel d) {

@@ -702,6 +702,13 @@ const Map<String, String> enUs = {
   AppStrings.disputeStatusInvestigating: 'Investigating',
   AppStrings.disputeStatusResolved: 'Resolved',
   AppStrings.disputeStatusDismissed: 'Dismissed',
+  AppStrings.reportProblemTitle: 'Report a problem',
+  AppStrings.reportProblemSub: 'Tell our team what happened — we review every report.',
+  AppStrings.reportProblemCategory: 'What kind of problem?',
+  AppStrings.reportProblemDescHint: 'Describe what happened…',
+  AppStrings.reportProblemSend: 'Send report',
+  AppStrings.reportSentToast: 'Report sent to our team',
+  AppStrings.reportEmptyDesc: 'Please describe the problem first.',
 
   // Edit profile
   AppStrings.editProfile: 'Edit Profile',
