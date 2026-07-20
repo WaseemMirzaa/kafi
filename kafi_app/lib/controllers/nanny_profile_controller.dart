@@ -58,7 +58,10 @@ class NannyProfileController extends GetxController {
   final dobCtrl = TextEditingController();
   final ageCtrl = TextEditingController(); // read-only, auto-filled from dob
   final Rx<DateTime?> dob = Rx<DateTime?>(null);
-  final RxString nationality = 'Filipino'.obs;
+  // Start empty so a non-Filipino nanny must pick her own nationality (was
+  // pre-seeded 'Filipino', which silently saved for anyone who didn't change it
+  // and made the required-check dead) — ONB-2. Hydrated from the model on edit.
+  final RxString nationality = ''.obs;
   // Required selections start unset so a new nanny must actively choose them
   // (previously pre-seeded with demo values that were saved verbatim).
   final RxList<String> selectedLanguages = <String>[].obs;
