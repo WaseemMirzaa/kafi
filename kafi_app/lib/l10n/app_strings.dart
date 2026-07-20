@@ -25,6 +25,11 @@ abstract class AppStrings {
   static const nannySignUpSub = 'nanny_signup_sub';
   static const nannyWelcomeBack = 'nanny_welcome_back';
   static const nannyWelcomeBackSub = 'nanny_welcome_back_sub';
+  static const nannyHomeHiredTitle = 'nanny_home_hired_title';
+  static const nannyHomeHiredSub = 'nanny_home_hired_sub';
+  static const nannyHomeOnTrialTitle = 'nanny_home_on_trial_title';
+  static const nannyHomeOnTrialSub = 'nanny_home_on_trial_sub';
+  static const nannyHomeViewChat = 'nanny_home_view_chat';
   static const authEnterPhone = 'auth_enter_phone';
   static const authEnterPhoneSub = 'auth_enter_phone_sub';
   static const authPhoneLabel = 'auth_phone_label';
@@ -528,6 +533,8 @@ abstract class AppStrings {
   static const chatEmptySub = 'chat_empty_sub';
   static const chatSearchHint = 'chat_search_hint';
   static const chatOnTrialBadge = 'chat_on_trial_badge';
+  static const chatHiredBadge = 'chat_hired_badge';
+  static const chatHiredPill = 'chat_hired_pill';
   static const chatOnlineStatus = 'chat_online_status';
   static const chatYou = 'chat_you';
   static const chatNewConversation = 'chat_new_conversation';

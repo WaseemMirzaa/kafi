@@ -12,7 +12,9 @@ import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/chat_models.dart';
+import 'package:kafi_app/models/hire_model.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
+import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/services/interfaces/i_subscription_service.dart';
 import 'package:kafi_app/services/mock/mock_subscription_service.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
@@ -27,9 +29,20 @@ class ChatController extends GetxController {
   final AuthController _auth = Get.find<AuthController>();
   final SubscriptionController _subs = Get.find<SubscriptionController>();
   final IUserService _user = Get.find<IUserService>();
+  final IHireService _hire = Get.find<IHireService>();
   final _uuid = const Uuid();
 
   final RxList<ChatThread> threads = <ChatThread>[].obs;
+
+  /// Active hires for the current user, keyed by the *counterparty* id (the
+  /// nanny's id when a family is signed in, the family's id when a nanny is).
+  /// Drives the "Hired" badge on the chat list and conversation header.
+  final RxMap<String, HireModel> _activeHires = <String, HireModel>{}.obs;
+
+  /// The active hire tied to this thread, if the two parties are in an ongoing
+  /// employment relationship. Null when there is no active hire.
+  HireModel? activeHireFor(ChatThread t) =>
+      _activeHires[isNanny ? t.familyId : t.nannyId];
   final RxList<ChatMessage> messages = <ChatMessage>[].obs;
   final RxString activeThreadId = ''.obs;
   final inputCtrl = TextEditingController();
@@ -144,6 +157,7 @@ class ChatController extends GetxController {
     isLoading.value = true;
     threadsError.value = null;
     await _syncFirestoreEntitlementsIfNeeded();
+    await _loadActiveHires(id);
     try {
       threads.value = await _chat.listThreads(id);
     } catch (_) {
@@ -165,6 +179,22 @@ class ChatController extends GetxController {
       done();
     }, onError: (e) => done(e));
     await first.future;
+  }
+
+  /// Loads the current user's active hires into [_activeHires], keyed by the
+  /// counterparty id. Non-fatal — a failure just means no "Hired" badge shows.
+  Future<void> _loadActiveHires(String id) async {
+    try {
+      final hires =
+          isNanny ? await _hire.getHiresForNanny(id) : await _hire.getHiresForFamily(id);
+      final map = <String, HireModel>{};
+      for (final h in hires.where((h) => h.isActive)) {
+        map[isNanny ? h.familyId : h.nannyId] = h;
+      }
+      _activeHires.assignAll(map);
+    } catch (_) {
+      // Leave any prior map in place; badges degrade gracefully.
+    }
   }
 
   /// Per docs: Family must have active subscription OR thread has active trial

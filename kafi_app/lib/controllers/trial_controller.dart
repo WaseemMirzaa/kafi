@@ -384,6 +384,13 @@ class TrialController extends GetxController {
     if (s == TrialStatus.completed && outcomeLabel == 'hired' && isFamily) {
       await _createHireFromTrial(t);
     }
+    // Retire the trial badge on the chat thread: once the trial is completed or
+    // cancelled it is no longer "active/accepted", so the chat list swaps the
+    // green trial pill for the hire badge (or nothing on a pass).
+    if (const {TrialStatus.completed, TrialStatus.cancelled, TrialStatus.declined}
+        .contains(s)) {
+      await _flipThreadTrialStatus(t, s.name);
+    }
     selected.value = null;
     await refreshAll();
     // Once a family completes a trial, invite them to rate the nanny (no-ops
@@ -425,6 +432,25 @@ class TrialController extends GetxController {
       if (match != null) await _apps.markHired(match.id);
     } catch (_) {
       // No application to update (trial may have been offered directly) — fine.
+    }
+  }
+
+  /// Persists the terminal trial [status] onto the linked chat thread so the
+  /// chat list / conversation header stop showing the "on trial" badge once the
+  /// trial ends. Best-effort — a missing thread is fine.
+  Future<void> _flipThreadTrialStatus(TrialModel t, String status) async {
+    try {
+      final lookupUserId = currentUserId(_auth) ?? t.familyId;
+      final threads = await _chat.listThreads(lookupUserId);
+      final thread = threads.firstWhereOrNull(
+          (th) => th.familyId == t.familyId && th.nannyId == t.nannyId);
+      if (thread == null || (thread.trialId ?? '').isEmpty) return;
+      await _chat.linkTrialToThread(thread.id, thread.trialId!, trialStatus: status);
+      if (Get.isRegistered<ChatController>()) {
+        await Get.find<ChatController>().refreshThreads();
+      }
+    } catch (_) {
+      // Non-fatal — the badge will still retire on the next full thread refresh.
     }
   }
 

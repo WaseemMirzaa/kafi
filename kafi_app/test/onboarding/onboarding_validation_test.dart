@@ -6,13 +6,17 @@ import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/services/interfaces/i_auth_service.dart';
+import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
+import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/services/location_service.dart';
 import 'package:kafi_app/services/mock/mock_auth_service.dart';
+import 'package:kafi_app/services/mock/mock_hire_service.dart';
 import 'package:kafi_app/services/mock/mock_job_service.dart';
 import 'package:kafi_app/services/mock/mock_storage_service.dart';
+import 'package:kafi_app/services/mock/mock_trial_service.dart';
 import 'package:kafi_app/services/mock/mock_user_service.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -38,6 +42,11 @@ void main() {
     Get.put<IAuthService>(MockAuthService());
     Get.put<IUserService>(MockUserService());
     Get.put<IStorageService>(MockStorageService());
+    // NannyProfileController resolves the hire + trial services in its field
+    // initializers (for the home employment-status card), so they must be
+    // registered before it is constructed.
+    Get.put<IHireService>(MockHireService());
+    Get.put<ITrialService>(MockTrialService());
     Get.put(AuthController());
   }
 
