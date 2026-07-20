@@ -175,7 +175,7 @@ class SupportScreen extends GetView<TicketController> {
     );
   }
 
-  void _openNewTicket(BuildContext context) {
+  void _openNewTicket() {
     Get.bottomSheet(
       const _NewTicketSheet(),
       isScrollControlled: true,
