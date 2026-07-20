@@ -369,7 +369,9 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
         children: [
           // Title + score
           Obx(() {
-            final score = controller.nanny.value?.profileScore ?? 78;
+            // Real server-maintained score; 0 (the model default) until loaded —
+            // never a fabricated placeholder.
+            final score = controller.nanny.value?.profileScore ?? 0;
             return Row(
               children: [
                 Expanded(
@@ -386,7 +388,7 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
           const SizedBox(height: 8),
           // Progress bar (rose gradient fill, like the web .qc-fill)
           Obx(() {
-            final score = ((controller.nanny.value?.profileScore ?? 78) / 100).clamp(0.0, 1.0);
+            final score = ((controller.nanny.value?.profileScore ?? 0) / 100).clamp(0.0, 1.0);
             return ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: Stack(
@@ -432,7 +434,6 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                     done: hasCert,
                     label: 'Add training certificate',
                     bonus: hasCert ? null : '→ +7pts'),
-                _qcItem(done: false, label: 'Log in within 7 days', bonus: '→ +5pts'),
               ],
             );
           }),

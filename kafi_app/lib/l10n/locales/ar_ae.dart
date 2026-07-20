@@ -456,4 +456,5 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.refsReferenceNum: 'مرجع رقم @num',
     AppStrings.refsCallable: 'قابل للاتصال',
     AppStrings.refsShareNote: 'ستشارك جهة الاتصال هذه مباشرة أثناء المقابلة أو التجربة',
+    AppStrings.refsNeedOne: 'أضف مرجعاً واحداً على الأقل، أو اختر "لا مراجع حتى الآن".',
   });

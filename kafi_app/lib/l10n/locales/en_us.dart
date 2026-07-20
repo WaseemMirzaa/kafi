@@ -874,4 +874,5 @@ const Map<String, String> enUs = {
   AppStrings.refsReferenceNum: 'Reference #@num',
   AppStrings.refsCallable: 'Callable',
   AppStrings.refsShareNote: 'You will share this contact directly during your interview or trial',
+  AppStrings.refsNeedOne: 'Add at least one reference, or choose "No references yet".',
 };

@@ -892,4 +892,5 @@ abstract class AppStrings {
   static const refsReferenceNum = 'refs_reference_num';
   static const refsCallable = 'refs_callable';
   static const refsShareNote = 'refs_share_note';
+  static const refsNeedOne = 'refs_need_one';
 }

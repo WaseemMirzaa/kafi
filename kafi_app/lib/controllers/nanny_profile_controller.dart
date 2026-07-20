@@ -342,6 +342,8 @@ class NannyProfileController extends GetxController {
     photoUrls.value = List.of(n.photoUrls);
     introVideoUrl.value = n.introVideoUrl;
     experiences.value = List.of(n.experiences);
+    hasReferences.value = n.hasReferences;
+    commitsToShare.value = n.commitsToShare;
     references.value = List.of(n.references);
     for (final d in n.documents) {
       documents[d.type] = d;
@@ -743,10 +745,16 @@ class NannyProfileController extends GetxController {
   }
 
   /// Fire-and-forget save of the references list (see [_persistExperiences]).
+  /// Carries the two reference flags too, so the instant-save never leaves a
+  /// saved reference card sitting under a stale `hasReferences: false`.
   Future<void> _persistReferences() async {
     final n = nanny.value;
     if (n == null) return;
-    final updated = n.copyWith(references: List.of(references));
+    final updated = n.copyWith(
+      references: List.of(references),
+      hasReferences: hasReferences.value,
+      commitsToShare: commitsToShare.value,
+    );
     nanny.value = updated;
     try {
       await _userService.saveNanny(updated);
@@ -761,9 +769,20 @@ class NannyProfileController extends GetxController {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyCompleteStep1.tr);
       return;
     }
+    // If she says she has references, she must have added at least one card —
+    // otherwise the "Yes" toggle persists with an empty list, which reads as a
+    // lie to families and blocks the reference-check flow.
+    if (hasReferences.value && references.isEmpty) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.refsNeedOne.tr);
+      return;
+    }
     isLoading.value = true;
     try {
-      final updated = n.copyWith(references: List.of(references));
+      final updated = n.copyWith(
+        references: List.of(references),
+        hasReferences: hasReferences.value,
+        commitsToShare: commitsToShare.value,
+      );
       await _userService.saveNanny(updated);
       nanny.value = updated;
       if (!advance) {

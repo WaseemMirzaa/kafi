@@ -37,6 +37,13 @@ android {
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
         versionName = flutter.versionName
+
+        // Google Maps native SDK reads its key from the manifest, not from
+        // --dart-define. Supply it at build time with `-PMAPS_API_KEY=AIza...`
+        // (or a git-ignored gradle.properties); falls back to the placeholder so
+        // a mock/offline build needs no key. See ../../docs/GOOGLE_MAPS_SETUP.md.
+        manifestPlaceholders["MAPS_API_KEY"] =
+            (project.findProperty("MAPS_API_KEY") as String? ?: "YOUR_GOOGLE_MAPS_API_KEY")
     }
 
     buildTypes {

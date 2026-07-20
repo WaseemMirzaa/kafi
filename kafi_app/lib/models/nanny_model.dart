@@ -231,6 +231,7 @@ class NannyModel {
     this.introVideoUrl,
     this.experiences = const [],
     this.hasReferences = false,
+    this.commitsToShare = false,
     this.numberOfReferences = 0,
     this.references = const [],
     this.documents = const [],
@@ -297,6 +298,10 @@ class NannyModel {
   final String? introVideoUrl;
   final List<WorkExperience> experiences;
   final bool hasReferences;
+
+  /// The nanny has explicitly agreed to share her reference contacts with
+  /// families during the trial/hire process. Captured on the references step.
+  final bool commitsToShare;
   final int numberOfReferences;
   final List<ReferenceContact> references;
   final List<NannyDocument> documents;
@@ -420,6 +425,7 @@ class NannyModel {
     String? introVideoUrl,
     List<WorkExperience>? experiences,
     bool? hasReferences,
+    bool? commitsToShare,
     int? numberOfReferences,
     List<ReferenceContact>? references,
     List<NannyDocument>? documents,
@@ -483,6 +489,7 @@ class NannyModel {
         introVideoUrl: introVideoUrl ?? this.introVideoUrl,
         experiences: experiences ?? this.experiences,
         hasReferences: hasReferences ?? this.hasReferences,
+        commitsToShare: commitsToShare ?? this.commitsToShare,
         numberOfReferences: numberOfReferences ?? this.numberOfReferences,
         references: references ?? this.references,
         documents: documents ?? this.documents,
@@ -548,6 +555,7 @@ class NannyModel {
         'introVideoUrl': introVideoUrl,
         'experiences': experiences.map((e) => e.toMap()).toList(),
         'hasReferences': hasReferences,
+        'commitsToShare': commitsToShare,
         'numberOfReferences': numberOfReferences,
         'references': references.map((r) => r.toMap()).toList(),
         'documents': documents.map((d) => d.toMap()).toList(),

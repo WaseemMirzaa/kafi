@@ -125,6 +125,7 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
               .toList() ??
           const [],
       hasReferences: m['hasReferences'] == true,
+      commitsToShare: m['commitsToShare'] == true,
       numberOfReferences: (m['numberOfReferences'] as num?)?.toInt() ?? 0,
       references: (m['references'] as List?)
               ?.map((e) => _referenceFromMap(Map<String, dynamic>.from(e as Map)))
