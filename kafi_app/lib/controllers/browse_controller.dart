@@ -37,7 +37,10 @@ class BrowseController extends GetxController {
     return j.jobTitle.isNotEmpty ? j.jobTitle : '${j.jobType == JobType.liveOut ? 'Live-out' : 'Live-in'} · ${j.city}';
   }
 
-  static const filters = ['All', 'Live-in', 'Newborn', 'Arabic', 'Filipino', 'Indian'];
+  // 'Live-out' replaces the old 'Newborn' pill, which could never match: filters
+  // post-match on nationality/jobType/language-tags, and no card carries a
+  // "newborn" tag. 'Live-out' matches on the card's jobType.
+  static const filters = ['All', 'Live-in', 'Live-out', 'Arabic', 'Filipino', 'Indian'];
 
   String get familyFirstName => _auth.currentUser.value?.fullName?.split(' ').first ?? 'Fatima';
 

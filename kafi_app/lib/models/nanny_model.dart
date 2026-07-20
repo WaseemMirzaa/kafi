@@ -378,6 +378,15 @@ class NannyModel {
   String localizedReligiousNotes([String? lang]) =>
       localize(religiousNotes, i18n['religiousNotes'], lang);
 
+  /// Total years of experience summed across all work-experience entries (each
+  /// entry clamped 0–20). The single source of truth for "years of experience"
+  /// — used by both the match scorer and the profile cards so they never
+  /// diverge (a card must not show job *count* where the scorer sums durations).
+  int get totalExperienceYears => experiences.fold<int>(0, (sum, e) {
+        final years = e.toDate.year - e.fromDate.year;
+        return sum + years.clamp(0, 20);
+      });
+
   NannyModel copyWith({
     String? fullName,
     DateTime? dateOfBirth,

@@ -517,6 +517,7 @@ abstract class AppStrings {
   static const whatsappHer = 'whatsapp_her';
   static const callHer = 'call_her';
   static const inAppChat = 'in_app_chat';
+  static const watchIntroVideo = 'watch_intro_video';
   static const fullCv = 'full_cv';
   static const downloadCv = 'download_cv';
   static const shortlist = 'shortlist';

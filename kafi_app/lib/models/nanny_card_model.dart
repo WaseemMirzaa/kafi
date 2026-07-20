@@ -50,7 +50,7 @@ class NannyCardModel {
       initials: name.isNotEmpty ? name[0].toUpperCase() : 'N',
       name: name,
       nationality: n.nationality,
-      yearsExp: n.experiences.length,
+      yearsExp: n.totalExperienceYears,
       jobType: switch (n.jobTypePreference) {
         JobTypePreference.liveIn => 'Live-in',
         JobTypePreference.liveOut => 'Live-out',

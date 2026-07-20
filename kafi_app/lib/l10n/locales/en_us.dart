@@ -329,6 +329,7 @@ const Map<String, String> enUs = {
   AppStrings.whatsappHer: 'WhatsApp her',
   AppStrings.callHer: 'Call her',
   AppStrings.inAppChat: 'In-app chat',
+  AppStrings.watchIntroVideo: 'Watch intro video',
   AppStrings.fullCv: 'Full CV',
   AppStrings.downloadCv: "Download full CV",
   AppStrings.shortlist: '⭐ Shortlist',

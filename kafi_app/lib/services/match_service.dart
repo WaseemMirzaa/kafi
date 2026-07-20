@@ -100,10 +100,7 @@ class MatchService {
     return 0.3;
   }
 
-  int _nannyYears(NannyModel nanny) => nanny.experiences.fold<int>(0, (sum, exp) {
-        final years = exp.toDate.year - exp.fromDate.year;
-        return sum + years.clamp(0, 20);
-      });
+  int _nannyYears(NannyModel nanny) => nanny.totalExperienceYears;
 
   double _salaryScore(NannyModel nanny, JobPostModel job) {
     if (nanny.expectedSalaryMin == 0 && nanny.expectedSalaryMax == 0) return 1.0;

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/browse_controller.dart';
 import 'package:kafi_app/controllers/shortlist_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
@@ -70,6 +71,41 @@ class ShortlistScreen extends GetView<ShortlistController> {
               }),
             ),
           ],
+        ),
+      ),
+      // Compare is reachable once at least two nannies are saved (the Compare
+      // screen reads the shortlist controller directly).
+      bottomNavigationBar: Obx(() => controller.shortlistedNannies.length >= 2
+          ? _compareBar()
+          : const SizedBox.shrink()),
+    );
+  }
+
+  Widget _compareBar() {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
+        child: GestureDetector(
+          onTap: () => Get.toNamed(Routes.compare),
+          child: Container(
+            alignment: Alignment.center,
+            padding: const EdgeInsets.symmetric(vertical: 13),
+            decoration: BoxDecoration(
+              color: KafiColors.pur,
+              borderRadius: BorderRadius.circular(13),
+              boxShadow: const [BoxShadow(color: Color(0x339B6EDB), blurRadius: 12, offset: Offset(0, 4))],
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.compare_arrows, color: Colors.white, size: 18),
+                const SizedBox(width: 7),
+                Text(AppStrings.shortlistCompare.tr,
+                    style: KafiTheme.fredoka(13, color: Colors.white, w: FontWeight.w700)),
+              ],
+            ),
+          ),
         ),
       ),
     );
