@@ -852,8 +852,8 @@ const Map<String, String> enUs = {
   AppStrings.docUploading: 'Uploading documents…',
   AppStrings.docUploadingHint: 'This may take a moment — please keep the app open.',
   AppStrings.docUploadFailed: 'Upload failed. Please check your connection and try again.',
-  AppStrings.docPickFailed: "Couldn't open that file. Please pick a PDF or image (JPG/PNG).",
-  AppStrings.docTooLarge: 'That file is too large. Please choose a file under 10 MB.',
+  AppStrings.docPickFailed: "Couldn't open that file. Please try another.",
+  AppStrings.docTooLarge: 'That file is too large. Please choose a file under 25 MB.',
 
   // Family job — employment type + edit fields
   AppStrings.fldEmployment: 'Employment type',
