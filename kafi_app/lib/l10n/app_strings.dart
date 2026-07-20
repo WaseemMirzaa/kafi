@@ -711,6 +711,14 @@ abstract class AppStrings {
   static const disputeStatusInvestigating = 'dispute_status_investigating';
   static const disputeStatusResolved = 'dispute_status_resolved';
   static const disputeStatusDismissed = 'dispute_status_dismissed';
+  // Report a problem (file a dispute from chat / trial)
+  static const reportProblemTitle = 'report_problem_title';
+  static const reportProblemSub = 'report_problem_sub';
+  static const reportProblemCategory = 'report_problem_category';
+  static const reportProblemDescHint = 'report_problem_desc_hint';
+  static const reportProblemSend = 'report_problem_send';
+  static const reportSentToast = 'report_sent_toast';
+  static const reportEmptyDesc = 'report_empty_desc';
 
   // Password Reset
   static const pwResetTitle = 'pw_reset_title';

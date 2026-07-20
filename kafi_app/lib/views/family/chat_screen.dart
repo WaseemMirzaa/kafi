@@ -11,6 +11,7 @@ import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/views/support/report_problem_sheet.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_trial_offer_bubble.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -706,7 +707,11 @@ class _ChatScreenState extends State<ChatScreen> {
               ],
             ),
           ),
+          // Report the other party (files a dispute) — both roles, always on.
+          _topbarAction(Icons.flag_outlined, Colors.white.withValues(alpha: 0.25),
+              _reportCounterparty),
           if (controller.isSubscribed && !controller.isNanny) ...[
+            const SizedBox(width: 6),
             _topbarAction(Icons.chat, const Color(0xFF25D366),
                 () => _launchNannyContact(whatsapp: true)),
             const SizedBox(width: 6),
@@ -717,6 +722,15 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  /// Opens the shared "Report a problem" sheet for the active thread's
+  /// counterparty (families report the nanny, nannies report the family).
+  void _reportCounterparty() {
+    final thread = controller.activeThread;
+    if (thread == null) return;
+    final reportedId = controller.isNanny ? thread.familyId : thread.nannyId;
+    showReportProblemSheet(reportedUserId: reportedId);
   }
 
   /// Reveal the nanny's real phone (server-side entitlement check) and open the

@@ -272,6 +272,13 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.disputeStatusInvestigating: 'قيد المراجعة',
     AppStrings.disputeStatusResolved: 'تم الحل',
     AppStrings.disputeStatusDismissed: 'مرفوض',
+    AppStrings.reportProblemTitle: 'الإبلاغ عن مشكلة',
+    AppStrings.reportProblemSub: 'أخبر فريقنا بما حدث — نراجع كل بلاغ.',
+    AppStrings.reportProblemCategory: 'ما نوع المشكلة؟',
+    AppStrings.reportProblemDescHint: 'صف ما حدث…',
+    AppStrings.reportProblemSend: 'إرسال البلاغ',
+    AppStrings.reportSentToast: 'تم إرسال البلاغ إلى فريقنا',
+    AppStrings.reportEmptyDesc: 'يرجى وصف المشكلة أولاً.',
 
     // Delete account
     AppStrings.deleteAccountTitle: 'حذف الحساب',
