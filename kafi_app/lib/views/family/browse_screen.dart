@@ -199,6 +199,20 @@ class BrowseScreen extends GetView<BrowseController> {
               Text(AppStrings.appName.tr, style: KafiTheme.pacifico(18, color: const Color(0xFF5A2090))),
               const Spacer(),
               GestureDetector(
+                onTap: () => Get.toNamed(Routes.familyMyJobs),
+                child: Container(
+                  width: 30,
+                  height: 30,
+                  margin: const EdgeInsets.only(right: 8),
+                  decoration: const BoxDecoration(
+                    color: Colors.white,
+                    shape: BoxShape.circle,
+                    boxShadow: [BoxShadow(color: Color(0x269B6EDB), blurRadius: 8, offset: Offset(0, 2))],
+                  ),
+                  child: const Icon(Icons.work_outline, color: KafiColors.pur, size: 15),
+                ),
+              ),
+              GestureDetector(
                 onTap: AppNavigation.openNotifications,
                 child: Container(
                   width: 30,

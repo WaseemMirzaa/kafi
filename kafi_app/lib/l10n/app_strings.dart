@@ -623,6 +623,33 @@ abstract class AppStrings {
   static const hireActiveBanner = 'hire_active_banner';
   static const nannyJobCapReached = 'nanny_job_cap_reached';
 
+  // Family "My Jobs" management
+  static const myJobsTitle = 'my_jobs_title';
+  static const myJobsSubtitle = 'my_jobs_subtitle';
+  static const myJobsEmpty = 'my_jobs_empty';
+  static const myJobsEmptySub = 'my_jobs_empty_sub';
+  static const myJobsPostNew = 'my_jobs_post_new';
+  static const jobStatusActiveLabel = 'job_status_active_label';
+  static const jobStatusPausedLabel = 'job_status_paused_label';
+  static const jobStatusClosedLabel = 'job_status_closed_label';
+  static const jobStatusExpiredLabel = 'job_status_expired_label';
+  static const jobHiredWith = 'job_hired_with';
+  static const jobApplicantsN = 'job_applicants_n';
+  static const jobActionEdit = 'job_action_edit';
+  static const jobActionDelete = 'job_action_delete';
+  static const jobActionPause = 'job_action_pause';
+  static const jobActionReopen = 'job_action_reopen';
+  static const jobActionClose = 'job_action_close';
+  static const jobDeleteTitle = 'job_delete_title';
+  static const jobDeleteBody = 'job_delete_body';
+  static const jobDeletedToast = 'job_deleted_toast';
+  static const jobUpdatedToast = 'job_updated_toast';
+  static const jobEditTitle = 'job_edit_title';
+  static const jobFieldTitle = 'job_field_title';
+  static const jobFieldSchedule = 'job_field_schedule';
+  static const jobFieldSalaryMin = 'job_field_salary_min';
+  static const jobFieldSalaryMax = 'job_field_salary_max';
+
   // Password Reset
   static const pwResetTitle = 'pw_reset_title';
   static const pwResetEnterPhone = 'pw_reset_enter_phone';

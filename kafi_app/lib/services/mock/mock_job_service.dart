@@ -71,4 +71,10 @@ class MockJobService implements IJobService {
       _posts[jobId] = job.copyWith(status: status);
     }
   }
+
+  @override
+  Future<void> deleteJob(String jobId) async {
+    await Future<void>.delayed(AppConfig.mockDelay);
+    _posts.remove(jobId);
+  }
 }
