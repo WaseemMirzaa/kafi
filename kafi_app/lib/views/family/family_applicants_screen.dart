@@ -11,6 +11,7 @@ import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/services/mock/mock_subscription_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_search_field.dart';
 
 /// Family "Applicants" inbox — the nannies who applied to this family's jobs
 /// (Spec §6: family receives applications). Backed by
@@ -28,14 +29,19 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
         child: Column(
           children: [
             _hero(),
+            KafiSearchField(
+              hint: AppStrings.searchHint.tr,
+              onChanged: (v) => controller.receivedQuery.value = v,
+            ),
             Expanded(
               child: Obx(() {
-                final apps = controller.receivedApplications;
-                if (controller.isLoading.value && apps.isEmpty) {
+                final all = controller.receivedApplications;
+                if (controller.isLoading.value && all.isEmpty) {
                   return const Center(
                       child: CircularProgressIndicator(color: KafiColors.pur));
                 }
-                if (apps.isEmpty) return _emptyState();
+                if (all.isEmpty) return _emptyState();
+                final apps = controller.filteredReceived;
                 return RefreshIndicator(
                   color: KafiColors.pur,
                   onRefresh: controller.loadApplications,

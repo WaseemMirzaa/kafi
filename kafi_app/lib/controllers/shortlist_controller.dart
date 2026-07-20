@@ -16,6 +16,16 @@ class ShortlistController extends GetxController {
   final RxList<ShortlistItem> shortlistedNannies = <ShortlistItem>[].obs;
   final RxSet<String> shortlistedIds = <String>{}.obs;
   final RxBool isLoading = false.obs;
+  final RxString query = ''.obs;
+
+  /// Shortlist filtered by the search box (nanny name).
+  List<ShortlistItem> get filteredShortlist {
+    final q = query.value.trim().toLowerCase();
+    if (q.isEmpty) return shortlistedNannies;
+    return shortlistedNannies
+        .where((s) => (s.nannyName ?? '').toLowerCase().contains(q))
+        .toList();
+  }
   final RxnString loadError = RxnString();
   Worker? _authWorker;
 

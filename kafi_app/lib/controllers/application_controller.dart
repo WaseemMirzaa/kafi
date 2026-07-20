@@ -16,6 +16,32 @@ class ApplicationController extends GetxController {
   final RxList<ApplicationModel> receivedApplications = <ApplicationModel>[].obs;
   final RxBool isLoading = false.obs;
 
+  // Search queries for the applicants (family) and my-applications (nanny) lists.
+  final RxString receivedQuery = ''.obs;
+  final RxString sentQuery = ''.obs;
+
+  /// Family "Applicants" filtered by the search box (nanny name / job title).
+  List<ApplicationModel> get filteredReceived {
+    final q = receivedQuery.value.trim().toLowerCase();
+    if (q.isEmpty) return receivedApplications;
+    return receivedApplications
+        .where((a) =>
+            (a.nannyName ?? '').toLowerCase().contains(q) ||
+            (a.jobTitle ?? '').toLowerCase().contains(q))
+        .toList();
+  }
+
+  /// Nanny "My Applications" filtered by the search box (family name / job title).
+  List<ApplicationModel> get filteredSent {
+    final q = sentQuery.value.trim().toLowerCase();
+    if (q.isEmpty) return myApplications;
+    return myApplications
+        .where((a) =>
+            (a.familyName ?? '').toLowerCase().contains(q) ||
+            (a.jobTitle ?? '').toLowerCase().contains(q))
+        .toList();
+  }
+
   @override
   void onInit() {
     super.onInit();
