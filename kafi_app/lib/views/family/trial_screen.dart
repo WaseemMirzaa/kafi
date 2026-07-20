@@ -392,15 +392,17 @@ class TrialScreen extends GetView<TrialController> {
 
   // ── Evaluation checklist ───────────────────────────────────────────────────
   Widget _evalSection(TrialModel t) {
-    final eval = t.evaluation;
-    final items = <(String, bool)>[
-      ('Child interaction & patience', eval?.childInteractionAndPatience ?? false),
-      ('Punctuality & reliability', eval?.punctualityAndReliability ?? false),
-      ('Following instructions', eval?.followingInstructions ?? false),
-      ('Communication & language', eval?.communicationAndLanguage ?? false),
-      ('Cooking (family food)', eval?.cookingFamilyFood ?? false),
-      ('Honesty & trustworthiness', eval?.honestyAndTrustworthiness ?? false),
+    // (TrialEvaluation field key, label). The family ticks these before
+    // recording an outcome; the nanny sees the recorded result read-only.
+    final items = <(String, String)>[
+      ('childInteractionAndPatience', 'Child interaction & patience'),
+      ('punctualityAndReliability', 'Punctuality & reliability'),
+      ('followingInstructions', 'Following instructions'),
+      ('communicationAndLanguage', 'Communication & language'),
+      ('cookingFamilyFood', 'Cooking (family food)'),
+      ('honestyAndTrustworthiness', 'Honesty & trustworthiness'),
     ];
+    final editable = !_isNanny;
     return Padding(
       padding: const EdgeInsets.fromLTRB(13, 4, 13, 0),
       child: Column(
@@ -409,33 +411,58 @@ class TrialScreen extends GetView<TrialController> {
           Text('📋 ${AppStrings.trialEval.tr}',
               style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
           const SizedBox(height: 4),
-          for (var i = 0; i < items.length; i++) _evalItem(items[i].$1, items[i].$2, i == items.length - 1),
+          for (final (i, item) in items.indexed)
+            Obx(() => _evalItem(
+                  item.$2,
+                  editable
+                      ? (controller.evalDraft[item.$1] ?? false)
+                      : _evalValue(t.evaluation, item.$1),
+                  i == items.length - 1,
+                  onTap: editable ? () => controller.toggleEval(item.$1) : null,
+                )),
         ],
       ),
     );
   }
 
-  Widget _evalItem(String label, bool ok, bool last) {
-    return Container(
-      padding: const EdgeInsets.symmetric(vertical: 7),
-      decoration: BoxDecoration(
-        border: last ? null : const Border(bottom: BorderSide(color: Color(0xFFF5F5F5), width: 1)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            width: 18,
-            height: 18,
-            decoration: BoxDecoration(
-              color: ok ? KafiColors.grn : Colors.white,
-              borderRadius: BorderRadius.circular(5),
-              border: ok ? null : Border.all(color: const Color(0xFFE0E0E0), width: 2),
+  bool _evalValue(TrialEvaluation? e, String key) {
+    if (e == null) return false;
+    return switch (key) {
+      'childInteractionAndPatience' => e.childInteractionAndPatience,
+      'punctualityAndReliability' => e.punctualityAndReliability,
+      'followingInstructions' => e.followingInstructions,
+      'communicationAndLanguage' => e.communicationAndLanguage,
+      'cookingFamilyFood' => e.cookingFamilyFood,
+      'honestyAndTrustworthiness' => e.honestyAndTrustworthiness,
+      _ => false,
+    };
+  }
+
+  Widget _evalItem(String label, bool ok, bool last, {VoidCallback? onTap}) {
+    return GestureDetector(
+      onTap: onTap,
+      behavior: HitTestBehavior.opaque,
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 7),
+        decoration: BoxDecoration(
+          border: last ? null : const Border(bottom: BorderSide(color: Color(0xFFF5F5F5), width: 1)),
+        ),
+        child: Row(
+          children: [
+            Container(
+              width: 18,
+              height: 18,
+              decoration: BoxDecoration(
+                color: ok ? KafiColors.grn : Colors.white,
+                borderRadius: BorderRadius.circular(5),
+                border: ok ? null : Border.all(color: const Color(0xFFE0E0E0), width: 2),
+              ),
+              child: ok ? const Icon(Icons.check, color: Colors.white, size: 11) : null,
             ),
-            child: ok ? const Icon(Icons.check, color: Colors.white, size: 11) : null,
-          ),
-          const SizedBox(width: 7),
-          Expanded(child: Text(label, style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w700))),
-        ],
+            const SizedBox(width: 7),
+            Expanded(child: Text(label, style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w700))),
+          ],
+        ),
       ),
     );
   }
@@ -468,7 +495,8 @@ class TrialScreen extends GetView<TrialController> {
           children: [
             Expanded(
               child: GestureDetector(
-                onTap: () => controller.setOutcome(TrialStatus.completed, outcomeLabel: 'failed'),
+                onTap: () => controller.setOutcome(TrialStatus.completed,
+                    outcomeLabel: 'failed', evaluation: controller.buildEvaluation()),
                 child: Container(
                   alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(vertical: 11),
@@ -485,7 +513,8 @@ class TrialScreen extends GetView<TrialController> {
             const SizedBox(width: 6),
             Expanded(
               child: GestureDetector(
-                onTap: () => controller.setOutcome(TrialStatus.completed, outcomeLabel: 'hired'),
+                onTap: () => controller.setOutcome(TrialStatus.completed,
+                    outcomeLabel: 'hired', evaluation: controller.buildEvaluation()),
                 child: Container(
                   alignment: Alignment.center,
                   padding: const EdgeInsets.symmetric(vertical: 11),
