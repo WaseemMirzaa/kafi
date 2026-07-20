@@ -14,6 +14,8 @@ import Revenue from './pages/business/Revenue';
 import Broadcast from './pages/business/Broadcast';
 import Disputes from './pages/disputes/Disputes';
 import DisputeDetail from './pages/disputes/DisputeDetail';
+import SupportTickets from './pages/support/SupportTickets';
+import SupportTicketDetail from './pages/support/SupportTicketDetail';
 import AllTrials from './pages/trials/AllTrials';
 import TrialDetail from './pages/trials/TrialDetail';
 
@@ -49,6 +51,8 @@ export default function App() {
                 <Route path="/trials/:id" element={<TrialDetail />} />
                 <Route path="/disputes" element={<Disputes />} />
                 <Route path="/disputes/:id" element={<DisputeDetail />} />
+                <Route path="/support" element={<SupportTickets />} />
+                <Route path="/support/:id" element={<SupportTicketDetail />} />
                 <Route path="/revenue" element={<Revenue />} />
                 <Route path="/broadcast" element={<Broadcast />} />
               </Routes>

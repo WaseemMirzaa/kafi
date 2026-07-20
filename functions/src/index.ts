@@ -1,5 +1,6 @@
 import * as admin from 'firebase-admin';
 import { onNewMessage } from './triggers/chat';
+import { onNewTicketMessage } from './triggers/ticket';
 import {
   onNewApplication,
   onTrialEnded,
@@ -31,6 +32,7 @@ admin.initializeApp();
 
 export {
   onNewMessage,
+  onNewTicketMessage,
   onNewApplication,
   onTrialOffered,
   onTrialResponse,

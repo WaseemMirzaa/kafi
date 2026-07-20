@@ -660,6 +660,33 @@ abstract class AppStrings {
   static const trialProofPending = 'trial_proof_pending';
   static const trialProofUploaded = 'trial_proof_uploaded';
 
+  // Support tickets
+  static const settingsSupport = 'settings_support';
+  static const supportTitle = 'support_title';
+  static const supportSubtitle = 'support_subtitle';
+  static const supportEmpty = 'support_empty';
+  static const supportEmptySub = 'support_empty_sub';
+  static const supportNewTicket = 'support_new_ticket';
+  static const supportJustNow = 'support_just_now';
+  static const supportSubjectLabel = 'support_subject_label';
+  static const supportCategoryLabel = 'support_category_label';
+  static const supportMessageLabel = 'support_message_label';
+  static const supportSubmit = 'support_submit';
+  static const supportFillFields = 'support_fill_fields';
+  static const supportThreadEmpty = 'support_thread_empty';
+  static const supportAgentName = 'support_agent_name';
+  static const supportMessageHint = 'support_message_hint';
+  static const supportCatAccount = 'support_cat_account';
+  static const supportCatPayment = 'support_cat_payment';
+  static const supportCatTrial = 'support_cat_trial';
+  static const supportCatHiring = 'support_cat_hiring';
+  static const supportCatTechnical = 'support_cat_technical';
+  static const supportCatOther = 'support_cat_other';
+  static const supportStatusOpen = 'support_status_open';
+  static const supportStatusInvestigating = 'support_status_investigating';
+  static const supportStatusResolved = 'support_status_resolved';
+  static const supportStatusClosed = 'support_status_closed';
+
   // Password Reset
   static const pwResetTitle = 'pw_reset_title';
   static const pwResetEnterPhone = 'pw_reset_enter_phone';

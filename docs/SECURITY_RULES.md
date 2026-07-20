@@ -79,6 +79,8 @@ from `firestore.indexes.json` under **Firestore Database → Indexes**.
 | `hires/{id}` | the two parties / admin | owner family | either party / admin *(nanny resigns, family terminates)* | admin |
 | `disputes/{id}` | reporter/reported / admin | reporter | admin | admin |
 | `disputes/{id}/messages/{id}` | admin / reporter | admin, or reporter (as `senderType: 'user'`) | admin | admin |
+| `tickets/{id}` | opener / admin | opener | opener *(not status — admin owns it)* / admin | admin |
+| `tickets/{id}/messages/{id}` | admin / opener | admin, or opener (as `senderType: 'user'`) | admin | admin |
 | `settings/{id}` | any signed‑in | — | admin | admin |
 | `admins/{uid}` | self / admin | — | admin | admin |
 | `broadcasts/{id}` | admin | admin | admin | admin |
@@ -400,6 +402,32 @@ service cloud.firestore {
         allow read: if isAdmin() || isReporter();
         allow create: if isAdmin()
           || (isReporter() && incoming().senderType == 'user');
+        allow update, delete: if isAdmin();
+      }
+    }
+
+    // ---------- support tickets ----------
+    // A user opens a ticket and chats with admin. The opener may bump
+    // lastMessage/lastMessageAt but not status (admin owns status).
+    match /tickets/{ticketId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && existing().openerId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().openerId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && existing().openerId == request.auth.uid
+            && incoming().status == existing().status);
+      allow delete: if isAdmin();
+
+      match /messages/{msgId} {
+        function isOpener() {
+          return isSignedIn()
+            && get(/databases/$(database)/documents/tickets/$(ticketId)).data.openerId
+                == request.auth.uid;
+        }
+        allow read: if isAdmin() || isOpener();
+        allow create: if isAdmin()
+          || (isOpener() && incoming().senderType == 'user');
         allow update, delete: if isAdmin();
       }
     }

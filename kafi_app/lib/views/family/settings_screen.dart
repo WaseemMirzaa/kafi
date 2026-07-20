@@ -111,6 +111,12 @@ class SettingsScreen extends GetView<SettingsController> {
             const SizedBox(height: 24),
           ],
           _sectionHeader(AppStrings.settingsAccount.tr),
+          // Support tickets — available to both roles.
+          _actionTile(
+            Icons.support_agent,
+            AppStrings.settingsSupport.tr,
+            () => Get.toNamed(Routes.support),
+          ),
           // Restore purchases is family-only (nannies have no paid subscription).
           if (!_isNanny)
             _actionTile(

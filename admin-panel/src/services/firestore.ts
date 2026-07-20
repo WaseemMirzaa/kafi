@@ -319,6 +319,31 @@ export interface DisputeMessageRow {
   createdAt: Date;
 }
 
+// Support tickets a user (family or nanny) opens with admin. Distinct from
+// disputes, which are conduct/payment reports about another user.
+export interface TicketRow {
+  id: string;
+  openerId: string;
+  openerName?: string;
+  openerType: 'family' | 'nanny';
+  subject: string;
+  category: 'account' | 'payment' | 'trial' | 'hiring' | 'technical' | 'other';
+  status: 'open' | 'investigating' | 'resolved' | 'closed';
+  relatedTrialId?: string;
+  lastMessage?: string;
+  createdAt: Date;
+  lastMessageAt?: Date;
+}
+
+export interface TicketMessageRow {
+  id: string;
+  ticketId: string;
+  senderType: 'admin' | 'user';
+  senderName?: string;
+  content: string;
+  createdAt: Date;
+}
+
 // ─────────────────────────────────────────────────────────
 // Mock data (used when AppConfig.useMock or no db)
 // ─────────────────────────────────────────────────────────
@@ -661,6 +686,18 @@ const mockDisputes: DisputeRow[] = [
   { id: 'd3', reporterId: 'f3', reporterName: 'Lin Chen', reporterType: 'family', reportedUserId: 'n5', reportedName: 'Kezia Wanjiru', category: 'other', description: 'Nanny stopped responding after agreeing to an interview.', status: 'open', createdAt: new Date(Date.now() - 1 * 86400000) },
   { id: 'd4', reporterId: 'n4', reporterName: 'Grace Nkemelu', reporterType: 'nanny', reportedUserId: 'f4', reportedName: 'Mohammed Al Rashid', category: 'abuse', description: 'Felt disrespected and overworked during the trial period.', status: 'resolved', resolution: 'Mediated between both parties; family agreed to revised hours.', createdAt: new Date(Date.now() - 14 * 86400000) },
   { id: 'd5', reporterId: 'f2', reporterName: 'James & Sarah K.', reporterType: 'family', reportedUserId: 'n2', reportedName: 'Priya Sharma', category: 'fraud', description: 'Suspected fake references provided.', status: 'dismissed', resolution: 'References verified as genuine. No action taken.', createdAt: new Date(Date.now() - 20 * 86400000) },
+];
+
+// ── Support tickets (admin ↔ user) ──
+const mockTicketMessages: TicketMessageRow[] = [
+  { id: 'tm1', ticketId: 'tk1', senderType: 'user', senderName: 'Al Mansoori Family', content: 'I was charged twice for my subscription this month.', createdAt: new Date(Date.now() - 1 * 86400000) },
+  { id: 'tm2', ticketId: 'tk1', senderType: 'admin', senderName: 'Kafi Support', content: "Thanks for flagging — we're checking the payment logs and will refund any duplicate.", createdAt: new Date(Date.now() - 1 * 86400000 + 3600000) },
+  { id: 'tm3', ticketId: 'tk2', senderType: 'user', senderName: 'Amara Kebede', content: 'How do I upload my proof photo for day 2 of the trial?', createdAt: new Date(Date.now() - 3 * 3600000) },
+];
+
+const mockTickets: TicketRow[] = [
+  { id: 'tk1', openerId: 'f1', openerName: 'Al Mansoori Family', openerType: 'family', subject: 'Double charged for subscription', category: 'payment', status: 'investigating', lastMessage: "Thanks for flagging — we're checking the payment logs and will refund any duplicate.", createdAt: new Date(Date.now() - 1 * 86400000), lastMessageAt: new Date(Date.now() - 1 * 86400000 + 3600000) },
+  { id: 'tk2', openerId: 'n3', openerName: 'Amara Kebede', openerType: 'nanny', subject: 'How to upload daily trial proof', category: 'trial', status: 'open', lastMessage: 'How do I upload my proof photo for day 2 of the trial?', createdAt: new Date(Date.now() - 3 * 3600000), lastMessageAt: new Date(Date.now() - 3 * 3600000) },
 ];
 
 const mockSettings = {
@@ -1266,6 +1303,22 @@ function parseDispute(id: string, data: Record<string, unknown>): DisputeRow {
   };
 }
 
+function parseTicket(id: string, data: Record<string, unknown>): TicketRow {
+  return {
+    id,
+    openerId: (data.openerId as string) ?? '',
+    openerName: data.openerName as string | undefined,
+    openerType: (data.openerType as TicketRow['openerType']) ?? 'family',
+    subject: (data.subject as string) ?? '',
+    category: (data.category as TicketRow['category']) ?? 'other',
+    status: (data.status as TicketRow['status']) ?? 'open',
+    relatedTrialId: data.relatedTrialId as string | undefined,
+    lastMessage: data.lastMessage as string | undefined,
+    createdAt: parseTimestamp(data.createdAt),
+    lastMessageAt: data.lastMessageAt ? parseTimestamp(data.lastMessageAt) : undefined,
+  };
+}
+
 export const DisputeService = {
   async list(): Promise<DisputeRow[]> {
     if (useMock()) return mockDisputes;
@@ -1336,6 +1389,80 @@ export const DisputeService = {
       createdAt: serverTimestamp(),
     });
     return { id: ref.id, disputeId, senderType: 'admin', senderName, content, createdAt: new Date() };
+  },
+};
+
+export const TicketService = {
+  async list(): Promise<TicketRow[]> {
+    if (useMock()) return mockTickets;
+    const snap = await getDocs(query(collection(db!, 'tickets'), orderBy('createdAt', 'desc'), limit(100)));
+    return snap.docs.map((d) => parseTicket(d.id, d.data() as Record<string, unknown>));
+  },
+  async get(id: string): Promise<TicketRow | null> {
+    if (useMock()) return mockTickets.find((t) => t.id === id) ?? null;
+    const snap = await getDoc(doc(db!, 'tickets', id));
+    return snap.exists() ? parseTicket(snap.id, snap.data() as Record<string, unknown>) : null;
+  },
+  async updateStatus(id: string, status: TicketRow['status']): Promise<void> {
+    if (useMock()) {
+      const i = mockTickets.findIndex((t) => t.id === id);
+      if (i >= 0) mockTickets[i] = { ...mockTickets[i], status };
+      return;
+    }
+    await updateDoc(doc(db!, 'tickets', id), { status, updatedAt: serverTimestamp() });
+  },
+  // ── Ticket conversation (admin ↔ opener) ──
+  async listMessages(ticketId: string): Promise<TicketMessageRow[]> {
+    if (useMock()) {
+      return mockTicketMessages
+        .filter((m) => m.ticketId === ticketId)
+        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
+    }
+    const snap = await getDocs(
+      query(collection(db!, 'tickets', ticketId, 'messages'), orderBy('createdAt', 'asc'), limit(500)),
+    );
+    return snap.docs.map((d) => {
+      const data = d.data() as Record<string, unknown>;
+      return {
+        id: d.id,
+        ticketId,
+        senderType: (data.senderType as 'admin' | 'user') ?? 'admin',
+        senderName: data.senderName as string | undefined,
+        content: (data.content as string) ?? '',
+        createdAt: parseTimestamp(data.createdAt),
+      };
+    });
+  },
+  async sendMessage(ticketId: string, content: string, senderName = 'Kafi Support'): Promise<TicketMessageRow> {
+    if (useMock()) {
+      const msg: TicketMessageRow = {
+        id: `tm_${mockTicketMessages.length + 1}_${ticketId}`,
+        ticketId,
+        senderType: 'admin',
+        senderName,
+        content,
+        createdAt: new Date(),
+      };
+      mockTicketMessages.push(msg);
+      const i = mockTickets.findIndex((t) => t.id === ticketId);
+      if (i >= 0 && mockTickets[i].status === 'open') {
+        mockTickets[i] = { ...mockTickets[i], status: 'investigating' };
+      }
+      return msg;
+    }
+    const ref = await addDoc(collection(db!, 'tickets', ticketId, 'messages'), {
+      senderType: 'admin',
+      senderName,
+      content,
+      createdAt: serverTimestamp(),
+    });
+    // Bump the ticket's last-message preview so the queue sorts (status is
+    // changed explicitly via updateStatus).
+    await updateDoc(doc(db!, 'tickets', ticketId), {
+      lastMessage: content,
+      lastMessageAt: serverTimestamp(),
+    });
+    return { id: ref.id, ticketId, senderType: 'admin', senderName, content, createdAt: new Date() };
   },
 };
 
