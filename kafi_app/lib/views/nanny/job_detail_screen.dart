@@ -84,27 +84,10 @@ class JobDetailScreen extends StatelessWidget {
               child: Icon(Icons.arrow_back, color: KafiColors.roseD, size: 20),
             ),
           ),
-          Expanded(child: Text('Job Details', style: KafiTheme.pacifico(17))),
-          _heroAction(Icons.share, () => Get.snackbar('Share', 'Share link copied (mock)')),
-          const SizedBox(width: 6),
-          _heroAction(Icons.bookmark_border, () => Get.snackbar('Saved', 'Job saved for later (mock)')),
+          Expanded(child: Text(AppStrings.jobDetailsTitle.tr, style: KafiTheme.pacifico(17))),
+          // Share / Save were unimplemented stubs that surfaced literal "(mock)"
+          // text in production — removed until built (NAP-9).
         ],
-      ),
-    );
-  }
-
-  Widget _heroAction(IconData icon, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        width: 30,
-        height: 30,
-        decoration: const BoxDecoration(
-          color: Colors.white,
-          shape: BoxShape.circle,
-          boxShadow: [BoxShadow(color: Color(0x1AFF5F96), blurRadius: 7, offset: Offset(0, 2))],
-        ),
-        child: Icon(icon, color: KafiColors.roseD, size: 15),
       ),
     );
   }
