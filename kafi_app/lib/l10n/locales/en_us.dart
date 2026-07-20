@@ -514,6 +514,8 @@ const Map<String, String> enUs = {
   AppStrings.trialOfferTo: 'Sending trial offer to',
   AppStrings.trialOfferDuration: 'Trial Duration',
   AppStrings.trialOfferRate: 'Daily Rate (AED)',
+  AppStrings.trialOfferRateHint: 'e.g. 150',
+  AppStrings.trialOfferInfoBanner: 'Trials are paid and arranged directly with the nanny. Set the details below and send your offer — the nanny can accept or counter.',
   AppStrings.trialOfferStart: 'Start Date',
   AppStrings.trialOfferType: 'Trial Type',
   AppStrings.trialOfferNotes: 'Additional Notes',

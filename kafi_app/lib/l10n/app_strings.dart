@@ -384,6 +384,8 @@ abstract class AppStrings {
   static const trialOfferTo = 'trial_offer_to';
   static const trialOfferDuration = 'trial_offer_duration';
   static const trialOfferRate = 'trial_offer_rate';
+  static const trialOfferRateHint = 'trial_offer_rate_hint';
+  static const trialOfferInfoBanner = 'trial_offer_info_banner';
   static const trialOfferStart = 'trial_offer_start';
   static const trialOfferType = 'trial_offer_type';
   static const trialOfferNotes = 'trial_offer_notes';
