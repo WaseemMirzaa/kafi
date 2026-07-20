@@ -255,6 +255,23 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.supportStatusResolved: 'تم الحل',
     AppStrings.supportStatusClosed: 'مغلقة',
 
+    // Disputes / reports
+    AppStrings.settingsMyReports: 'بلاغاتي',
+    AppStrings.disputesTitle: 'بلاغاتي',
+    AppStrings.disputesSubtitle: 'المشكلات التي أبلغت عنها كافي',
+    AppStrings.disputesEmpty: 'لا توجد بلاغات بعد',
+    AppStrings.disputesEmptySub: 'عند الإبلاغ عن مشكلة أثناء التجربة أو التوظيف، تظهر محادثتك مع فريقنا هنا.',
+    AppStrings.disputeResolutionLabel: 'القرار',
+    AppStrings.disputeCatFraud: 'احتيال',
+    AppStrings.disputeCatAbuse: 'إساءة',
+    AppStrings.disputeCatNoShow: 'عدم حضور',
+    AppStrings.disputeCatPayment: 'الدفع',
+    AppStrings.disputeCatOther: 'أخرى',
+    AppStrings.disputeStatusOpen: 'مفتوح',
+    AppStrings.disputeStatusInvestigating: 'قيد المراجعة',
+    AppStrings.disputeStatusResolved: 'تم الحل',
+    AppStrings.disputeStatusDismissed: 'مرفوض',
+
     // Delete account
     AppStrings.deleteAccountTitle: 'حذف الحساب',
     AppStrings.deleteAccountQuestion: 'هل تريد حذف حسابك؟',

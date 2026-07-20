@@ -690,6 +690,23 @@ abstract class AppStrings {
   static const supportStatusResolved = 'support_status_resolved';
   static const supportStatusClosed = 'support_status_closed';
 
+  // Disputes / reports (reporter ↔ admin support chat)
+  static const settingsMyReports = 'settings_my_reports';
+  static const disputesTitle = 'disputes_title';
+  static const disputesSubtitle = 'disputes_subtitle';
+  static const disputesEmpty = 'disputes_empty';
+  static const disputesEmptySub = 'disputes_empty_sub';
+  static const disputeResolutionLabel = 'dispute_resolution_label';
+  static const disputeCatFraud = 'dispute_cat_fraud';
+  static const disputeCatAbuse = 'dispute_cat_abuse';
+  static const disputeCatNoShow = 'dispute_cat_no_show';
+  static const disputeCatPayment = 'dispute_cat_payment';
+  static const disputeCatOther = 'dispute_cat_other';
+  static const disputeStatusOpen = 'dispute_status_open';
+  static const disputeStatusInvestigating = 'dispute_status_investigating';
+  static const disputeStatusResolved = 'dispute_status_resolved';
+  static const disputeStatusDismissed = 'dispute_status_dismissed';
+
   // Password Reset
   static const pwResetTitle = 'pw_reset_title';
   static const pwResetEnterPhone = 'pw_reset_enter_phone';

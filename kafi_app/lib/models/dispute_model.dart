@@ -73,12 +73,6 @@ class DisputeModel {
       };
 
   factory DisputeModel.fromMap(String id, Map<String, dynamic> m) {
-    DateTime parseDate(dynamic v) {
-      if (v is Timestamp) return v.toDate();
-      if (v is String) return DateTime.tryParse(v) ?? DateTime.now();
-      return DateTime.now();
-    }
-
     return DisputeModel(
       id: id,
       reporterId: m['reporterId']?.toString() ?? '',
@@ -88,7 +82,58 @@ class DisputeModel {
       status: DisputeStatusX.fromString(m['status']?.toString() ?? ''),
       relatedTrialId: m['relatedTrialId']?.toString(),
       resolution: m['resolution']?.toString(),
-      createdAt: parseDate(m['createdAt']),
+      createdAt: _parseDisputeDate(m['createdAt']),
     );
   }
+}
+
+DateTime _parseDisputeDate(dynamic v) {
+  if (v is Timestamp) return v.toDate();
+  if (v is DateTime) return v;
+  if (v is String) return DateTime.tryParse(v) ?? DateTime.now();
+  return DateTime.now();
+}
+
+/// A single message in a dispute's support conversation (reporter ↔ admin),
+/// living in the `disputes/{id}/messages` subcollection. `senderType` is
+/// 'user' or 'admin' — the security rules pin a non-admin to 'user'.
+class DisputeMessage {
+  const DisputeMessage({
+    required this.id,
+    required this.disputeId,
+    required this.senderId,
+    required this.senderType,
+    this.senderName,
+    required this.content,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String disputeId;
+  final String senderId;
+  final String senderType;
+  final String? senderName;
+  final String content;
+  final DateTime createdAt;
+
+  bool get isAdmin => senderType == 'admin';
+
+  Map<String, dynamic> toMap() => {
+        'disputeId': disputeId,
+        'senderId': senderId,
+        'senderType': senderType,
+        if (senderName != null) 'senderName': senderName,
+        'content': content,
+        'createdAt': createdAt.toIso8601String(),
+      };
+
+  factory DisputeMessage.fromMap(String id, Map<String, dynamic> m) => DisputeMessage(
+        id: id,
+        disputeId: (m['disputeId'] ?? '').toString(),
+        senderId: (m['senderId'] ?? '').toString(),
+        senderType: (m['senderType'] ?? 'user').toString(),
+        senderName: m['senderName']?.toString(),
+        content: (m['content'] ?? '').toString(),
+        createdAt: _parseDisputeDate(m['createdAt']),
+      );
 }
