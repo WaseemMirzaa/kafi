@@ -6,6 +6,7 @@ import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
+import 'package:kafi_app/views/family/family_household_fields.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
 import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
@@ -49,6 +50,9 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
                     ),
                     const SizedBox(height: 10),
                     _youSection(),
+                    // Nationality, cameras, pets, religion & religion-preference —
+                    // captured at create but previously omitted from edit.
+                    const FamilyHouseholdFields(),
                     _roleSection(),
                     _dutiesSection(),
                     _benefitsSection(),
