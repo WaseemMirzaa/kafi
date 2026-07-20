@@ -2,6 +2,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:kafi_app/firebase_options.dart';
 import 'package:get/get.dart';
@@ -55,6 +56,14 @@ class KafiApp extends StatelessWidget {
       supportedLocales: const [
         Locale('en', 'US'),
         Locale('ar', 'AE'),
+      ],
+      // Required for Arabic to mirror layout (Directionality → RTL) and for
+      // Material/Cupertino widgets to have Arabic localizations. Without these
+      // delegates, switching to `ar` changed strings but not layout direction.
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
       ],
       initialBinding: InitialBinding(),
       initialRoute: Routes.splash,

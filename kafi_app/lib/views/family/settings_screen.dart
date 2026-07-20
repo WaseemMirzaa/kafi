@@ -97,7 +97,7 @@ class SettingsScreen extends GetView<SettingsController> {
             ),
             const SizedBox(height: 24),
           ],
-          // Privacy (show-online-status) and language are hidden in the profile tab.
+          // Show-online-status is hidden in the embedded profile tab.
           if (!embedInShell) ...[
             _sectionHeader(AppStrings.settingsPrivacy.tr),
             _switchTile(
@@ -107,10 +107,13 @@ class SettingsScreen extends GetView<SettingsController> {
               (v) => controller.updateSetting('showOnlineStatus', v),
             ),
             const SizedBox(height: 24),
-            _sectionHeader(AppStrings.settingsLanguage.tr),
-            _languageTile(),
-            const SizedBox(height: 24),
           ],
+          // Language must be reachable everywhere — the app only ever renders
+          // settings embedded in the shell, so gating this behind !embedInShell
+          // made switching to Arabic impossible.
+          _sectionHeader(AppStrings.settingsLanguage.tr),
+          _languageTile(),
+          const SizedBox(height: 24),
           _sectionHeader(AppStrings.settingsAccount.tr),
           // Support tickets — available to both roles.
           _actionTile(
