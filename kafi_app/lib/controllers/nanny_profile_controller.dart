@@ -570,9 +570,30 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  void addExperience(WorkExperience exp) => experiences.add(exp);
+  void addExperience(WorkExperience exp) {
+    experiences.add(exp);
+    _persistExperiences();
+  }
+
   void removeExperience(int index) {
-    if (index < experiences.length) experiences.removeAt(index);
+    if (index < experiences.length) {
+      experiences.removeAt(index);
+      _persistExperiences();
+    }
+  }
+
+  /// Fire-and-forget save of the experiences list so an added/removed entry is
+  /// persisted immediately, not only when the nanny taps Next.
+  Future<void> _persistExperiences() async {
+    final n = nanny.value;
+    if (n == null) return;
+    final updated = n.copyWith(experiences: List.of(experiences));
+    nanny.value = updated;
+    try {
+      await _userService.saveNanny(updated);
+    } catch (_) {
+      // Best-effort — the step's Next also saves.
+    }
   }
 
   Future<void> saveExpAndNext({bool advance = true}) async {
@@ -608,9 +629,29 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  void addReference(ReferenceContact r) => references.add(r);
+  void addReference(ReferenceContact r) {
+    references.add(r);
+    _persistReferences();
+  }
+
   void removeReference(int index) {
-    if (index < references.length) references.removeAt(index);
+    if (index < references.length) {
+      references.removeAt(index);
+      _persistReferences();
+    }
+  }
+
+  /// Fire-and-forget save of the references list (see [_persistExperiences]).
+  Future<void> _persistReferences() async {
+    final n = nanny.value;
+    if (n == null) return;
+    final updated = n.copyWith(references: List.of(references));
+    nanny.value = updated;
+    try {
+      await _userService.saveNanny(updated);
+    } catch (_) {
+      // Best-effort — the step's Next also saves.
+    }
   }
 
   Future<void> saveRefsAndNext({bool advance = true}) async {
