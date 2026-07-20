@@ -6,6 +6,7 @@ import 'package:kafi_app/controllers/chat_controller.dart';
 import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/models/dispute_model.dart';
 import 'package:kafi_app/models/hire_model.dart';
@@ -92,7 +93,22 @@ class TrialController extends GetxController {
   Future<void> openTrialById(String trialId) async {
     final t = await getTrial(trialId);
     selected.value = t;
+    // Seed the evaluation checklist from any already-recorded evaluation so the
+    // family resumes where it left off (and switching trials never carries a
+    // stale draft over).
+    _hydrateEvalDraft(t?.evaluation);
     if (t != null) await loadDayProofs(t.id);
+  }
+
+  void _hydrateEvalDraft(TrialEvaluation? e) {
+    evalDraft.value = {
+      'childInteractionAndPatience': e?.childInteractionAndPatience ?? false,
+      'punctualityAndReliability': e?.punctualityAndReliability ?? false,
+      'followingInstructions': e?.followingInstructions ?? false,
+      'communicationAndLanguage': e?.communicationAndLanguage ?? false,
+      'cookingFamilyFood': e?.cookingFamilyFood ?? false,
+      'honestyAndTrustworthiness': e?.honestyAndTrustworthiness ?? false,
+    };
   }
 
   Future<void> refreshAll() async {
@@ -221,12 +237,32 @@ class TrialController extends GetxController {
 
     isLoading.value = true;
     try {
+      // If this nanny applied to one of the family's jobs, link the trial to
+      // that application: thread its jobPostId (so the eventual hire maps back
+      // to the job for the My-Jobs "Hired" pill) and flip the application to
+      // `trialOffered` so the Applicants list reflects the offer. Best-effort —
+      // a lookup failure must never block the offer itself.
+      ApplicationModel? linkedApp;
+      try {
+        final apps = await _apps.getApplicationsForFamily(familyId);
+        linkedApp = apps.firstWhereOrNull((a) =>
+            a.nannyId == nannyId &&
+            const {
+              ApplicationStatus.pending,
+              ApplicationStatus.viewed,
+              ApplicationStatus.shortlisted,
+            }.contains(a.status));
+      } catch (_) {
+        // No application link — a browse/chat-initiated offer is still valid.
+      }
+
       final trialId = 'trial_${_uuid.v4()}';
       final start = startDate.value ?? DateTime.now().add(const Duration(days: 1));
       final trial = TrialModel(
         id: trialId,
         familyId: familyId,
         nannyId: nannyId,
+        jobPostId: linkedApp?.jobPostId,
         durationDays: durationDays.value,
         dailyRate: dailyRate.value,
         startDate: start,
@@ -238,6 +274,14 @@ class TrialController extends GetxController {
       );
 
       await _trials.sendOffer(trial);
+
+      if (linkedApp != null) {
+        try {
+          await _apps.offerTrial(linkedApp.id);
+        } catch (_) {
+          // The trial offer already succeeded; the badge is cosmetic.
+        }
+      }
 
       ChatThread thread;
       if (threadId != null) {
@@ -438,6 +482,22 @@ class TrialController extends GetxController {
       isLoading.value = false;
     }
   }
+
+  /// The family's in-progress evaluation checklist for the trial being viewed,
+  /// keyed by [TrialEvaluation] field name. Ticked in the trial screen and read
+  /// back into a [TrialEvaluation] when an outcome is recorded.
+  final RxMap<String, bool> evalDraft = <String, bool>{}.obs;
+
+  void toggleEval(String key) => evalDraft[key] = !(evalDraft[key] ?? false);
+
+  TrialEvaluation buildEvaluation() => TrialEvaluation(
+        childInteractionAndPatience: evalDraft['childInteractionAndPatience'] ?? false,
+        punctualityAndReliability: evalDraft['punctualityAndReliability'] ?? false,
+        followingInstructions: evalDraft['followingInstructions'] ?? false,
+        communicationAndLanguage: evalDraft['communicationAndLanguage'] ?? false,
+        cookingFamilyFood: evalDraft['cookingFamilyFood'] ?? false,
+        honestyAndTrustworthiness: evalDraft['honestyAndTrustworthiness'] ?? false,
+      );
 
   Future<void> setOutcome(
     TrialStatus s, {
