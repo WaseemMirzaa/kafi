@@ -132,6 +132,7 @@ const Map<String, String> enUs = {
   AppStrings.reviewFailed: 'Could not submit your review. Please try again.',
   AppStrings.contactUnavailable: 'Not available',
   AppStrings.contactLaunchFailed: 'Could not open. The number has been noted.',
+  AppStrings.contactLoadFailed: "Couldn't load the contact. Please try again.",
   AppStrings.addAnother: '+ Add another',
   AppStrings.removeItem: 'Remove',
 

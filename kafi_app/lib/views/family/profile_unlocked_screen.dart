@@ -60,7 +60,9 @@ class _RevealState extends State<_Reveal> {
     } catch (_) {
       if (mounted) {
         setState(() => _loading = false);
-        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.contactLaunchFailed.tr,
+        // This is a reveal FETCH failure, not a dialer-launch failure — use a
+        // message that matches (DISC-12).
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.contactLoadFailed.tr,
             snackPosition: SnackPosition.BOTTOM);
       }
     }
@@ -434,7 +436,10 @@ class ProfileUnlockedScreen extends StatelessWidget {
     return Obx(() {
       final trial = trialCtrl.all.firstWhereOrNull((t) => t.nannyId == nannyId);
       if (trial == null) return const SizedBox.shrink();
-      final isActive = trial.status.name.contains('active') || trial.status.name.contains('pending');
+      // Exact status match (was a fragile substring check that missed
+      // "accepted" and wrongly matched "pending") — DISC-13.
+      final s = trial.status.name;
+      final isActive = s == 'active' || s == 'accepted';
       if (!isActive) return const SizedBox.shrink();
       return Padding(
         padding: const EdgeInsets.only(bottom: 8),

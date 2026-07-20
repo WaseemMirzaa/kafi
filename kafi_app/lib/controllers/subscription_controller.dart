@@ -3,6 +3,7 @@ import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
+import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/subscription_plan.dart';
 import 'package:kafi_app/models/trial_model.dart';
@@ -147,11 +148,20 @@ class SubscriptionController extends GetxController {
     return true;
   }
 
-  Future<void> subscribe(String planId) async {
+  /// Returns true when the subscription write succeeded, so the caller only
+  /// confirms + navigates on success (was previously fire-and-forget with an
+  /// unconditional "active" toast).
+  Future<bool> subscribe(String planId) async {
     final id = currentFamilyId(_auth);
-    if (id == null) return;
-    await _subs.subscribe(id, planId);
-    await refreshAndEnforce();
+    if (id == null) return false;
+    try {
+      await _subs.subscribe(id, planId);
+      await refreshAndEnforce();
+      return true;
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      return false;
+    }
   }
 
   Future<void> restorePurchases() async {

@@ -383,9 +383,13 @@ class PricingScreen extends GetView<SubscriptionController> {
   }
 
   Future<void> _select(SubscriptionPlan p) async {
-    await controller.subscribe(p.id);
+    final ok = await controller.subscribe(p.id);
+    if (!ok) return; // the controller already surfaced the error
     Get.snackbar(AppStrings.subscribeNow.tr, 'Subscription active');
-    if (Get.previousRoute == Routes.browse || Get.previousRoute == Routes.nannyHome) {
+    // Return to wherever the paywall was hit from — including the (now
+    // unlockable) locked profile — instead of always resetting to browse
+    // (DISC-15). Fall back to browse only when there's nothing to pop.
+    if (Get.previousRoute.isNotEmpty) {
       Get.back();
     } else {
       Get.offAllNamed(Routes.browse);
