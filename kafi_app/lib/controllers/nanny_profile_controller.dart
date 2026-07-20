@@ -12,9 +12,13 @@ import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/geo_location.dart';
+import 'package:kafi_app/models/hire_model.dart';
 import 'package:kafi_app/models/nanny_model.dart';
+import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/models/user_model.dart';
+import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
+import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/utils/validators.dart';
@@ -34,12 +38,19 @@ class NannyProfileController extends GetxController {
 
   final IUserService _userService = Get.find<IUserService>();
   final IStorageService _storageService = Get.find<IStorageService>();
+  final IHireService _hireService = Get.find<IHireService>();
+  final ITrialService _trialService = Get.find<ITrialService>();
   final AuthController _auth = Get.find<AuthController>();
   final _uuid = const Uuid();
 
   final Rx<NannyModel?> nanny = Rx<NannyModel?>(null);
   final RxInt currentStep = 1.obs;
   final RxBool isLoading = false.obs;
+
+  /// The nanny's current employment status, surfaced as a card on her home:
+  /// an active hire wins; otherwise an active/accepted trial (she's on trial).
+  final Rx<HireModel?> activeHire = Rx<HireModel?>(null);
+  final Rx<TrialModel?> activeTrial = Rx<TrialModel?>(null);
 
   // step 1
   final fullNameCtrl = TextEditingController();
@@ -190,6 +201,25 @@ class NannyProfileController extends GetxController {
     }
     if (AppConfig.useMock && profile.status == NannyOnboardingStatus.pending) {
       await _userService.submitNannyForReview(profile.id);
+    }
+    await loadEmploymentStatus();
+  }
+
+  /// Loads the nanny's active hire and active/accepted trial for the home
+  /// status card. Best-effort — a failure just hides the card.
+  Future<void> loadEmploymentStatus() async {
+    final user = _auth.currentUser.value;
+    if (user == null || user.type != UserType.nanny) return;
+    try {
+      activeHire.value = await _hireService.activeHireForNanny(user.id);
+      if (activeHire.value == null) {
+        final trials = await _trialService.listTrialsForNanny(user.id);
+        activeTrial.value = trials.firstWhereOrNull((t) => t.isAcceptedOrActive);
+      } else {
+        activeTrial.value = null;
+      }
+    } catch (_) {
+      // Non-fatal — leave prior values; the card degrades gracefully.
     }
   }
 

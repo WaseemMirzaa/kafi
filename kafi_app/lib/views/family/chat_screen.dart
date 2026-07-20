@@ -257,6 +257,9 @@ class _ChatScreenState extends State<ChatScreen> {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final unread = _unreadForCurrentRole(t);
     final onTrial = t.hasActiveTrial;
+    // A hire only exists once the trial has completed (which clears the trial
+    // flags), so the two states never overlap — guard anyway for safety.
+    final hired = !onTrial && controller.activeHireFor(t) != null;
     final gradient = onTrial
         ? const [KafiColors.rose, KafiColors.roseD]
         : _avatarGradient(name);
@@ -269,7 +272,12 @@ class _ChatScreenState extends State<ChatScreen> {
           color: Colors.white,
           borderRadius: BorderRadius.circular(14),
           border: Border.all(
-              color: onTrial ? KafiColors.grnL : Colors.transparent, width: 1.5),
+              color: onTrial
+                  ? KafiColors.grnL
+                  : hired
+                      ? KafiColors.purL
+                      : Colors.transparent,
+              width: 1.5),
           boxShadow: const [BoxShadow(color: Color(0x12FF5F96), blurRadius: 9, offset: Offset(0, 2))],
         ),
         child: Row(
@@ -346,6 +354,17 @@ class _ChatScreenState extends State<ChatScreen> {
                           child: Text(AppStrings.chatTrialBadge.tr,
                               style: KafiTheme.fredoka(8, color: KafiColors.grnD, w: FontWeight.w700)),
                         ),
+                      ] else if (hired) ...[
+                        const SizedBox(width: 5),
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          decoration: BoxDecoration(
+                            color: KafiColors.purL,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(AppStrings.chatHiredBadge.tr,
+                              style: KafiTheme.fredoka(8, color: KafiColors.purpD, w: FontWeight.w700)),
+                        ),
                       ],
                     ],
                   ),
@@ -364,6 +383,16 @@ class _ChatScreenState extends State<ChatScreen> {
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(AppStrings.chatOnTrialBadge.tr,
+                        style: KafiTheme.fredoka(7.5, color: Colors.white, w: FontWeight.w700)),
+                  )
+                else if (hired)
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    decoration: BoxDecoration(
+                      color: KafiColors.pur,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(AppStrings.chatHiredPill.tr,
                         style: KafiTheme.fredoka(7.5, color: Colors.white, w: FontWeight.w700)),
                   )
                 else if (unread > 0)
@@ -608,6 +637,10 @@ class _ChatScreenState extends State<ChatScreen> {
 
   Widget _chatTopbar(String name) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
+    final thread = controller.activeThread;
+    final hired = thread != null &&
+        !thread.hasActiveTrial &&
+        controller.activeHireFor(thread) != null;
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 12, 9),
       decoration: BoxDecoration(
@@ -643,10 +676,28 @@ class _ChatScreenState extends State<ChatScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(name,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KafiTheme.fredoka(12, color: Colors.white, w: FontWeight.w900)),
+                Row(
+                  children: [
+                    Flexible(
+                      child: Text(name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: KafiTheme.fredoka(12, color: Colors.white, w: FontWeight.w900)),
+                    ),
+                    if (hired) ...[
+                      const SizedBox(width: 6),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.28),
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: Text(AppStrings.chatHiredPill.tr,
+                            style: KafiTheme.fredoka(7.5, color: Colors.white, w: FontWeight.w800)),
+                      ),
+                    ],
+                  ],
+                ),
                 Text(AppStrings.chatOnlineStatus.tr,
                     style: KafiTheme.nunito(9, color: Colors.white.withValues(alpha: 0.85), w: FontWeight.w600)),
               ],

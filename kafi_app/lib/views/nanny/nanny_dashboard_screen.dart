@@ -48,6 +48,7 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
           child: Column(
             children: [
               _hero(),
+              _statusCard(),
               _qualityCard(),
               _jobsSection(jobsCtrl),
             ],
@@ -232,6 +233,78 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
         ),
       ),
     );
+  }
+
+  // ── Employment status card (hired / on trial) ──────────────────
+  Widget _statusCard() {
+    return Obx(() {
+      final hire = controller.activeHire.value;
+      final trial = controller.activeTrial.value;
+      if (hire == null && trial == null) return const SizedBox.shrink();
+      final hired = hire != null;
+      final accent = hired ? KafiColors.grnD : KafiColors.roseD;
+      final light = hired ? KafiColors.grnL : KafiColors.roseL;
+      final title =
+          hired ? AppStrings.nannyHomeHiredTitle.tr : AppStrings.nannyHomeOnTrialTitle.tr;
+      final familyName = hire?.familyName ?? '';
+      final sub = familyName.isNotEmpty
+          ? familyName
+          : (hired ? AppStrings.nannyHomeHiredSub.tr : AppStrings.nannyHomeOnTrialSub.tr);
+
+      return GestureDetector(
+        onTap: () {
+          if (Get.isRegistered<NannyShellController>()) {
+            Get.find<NannyShellController>().goToTab(2);
+          }
+        },
+        child: Container(
+          margin: const EdgeInsets.fromLTRB(14, 12, 14, 0),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [light, Colors.white],
+            ),
+            borderRadius: BorderRadius.circular(13),
+            border: Border.all(color: accent.withValues(alpha: 0.35), width: 1.5),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 38,
+                height: 38,
+                decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(11)),
+                child: Icon(hired ? Icons.workspace_premium : Icons.handshake,
+                    color: Colors.white, size: 20),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(title,
+                        style: KafiTheme.nunito(12.5, color: KafiColors.td, w: FontWeight.w800)),
+                    const SizedBox(height: 1),
+                    Text(sub,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KafiTheme.nunito(10, color: accent, w: FontWeight.w700)),
+                  ],
+                ),
+              ),
+              Row(
+                children: [
+                  Text(AppStrings.nannyHomeViewChat.tr,
+                      style: KafiTheme.nunito(9.5, color: accent, w: FontWeight.w800)),
+                  Icon(Icons.chevron_right, color: accent, size: 16),
+                ],
+              ),
+            ],
+          ),
+        ),
+      );
+    });
   }
 
   // ── Profile quality card ────────────────────────────────────────
