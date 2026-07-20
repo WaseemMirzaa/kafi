@@ -85,6 +85,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.nannyHomeOnTrialSub: 'التجربة جارية',
     AppStrings.nannyHomeViewChat: 'فتح المحادثة',
     AppStrings.nannyIntroVideo: 'فيديو التعريف',
+    AppStrings.profileSaveFailed: 'تعذّر حفظ ملفك الشخصي. حاول مرة أخرى.',
     AppStrings.nannyUpdateDocuments: '📁 تحديث المستندات',
     AppStrings.nannyRejectedTitle: 'مطلوب إجراء 💛',
     AppStrings.nannyRejectedSub:
@@ -183,6 +184,9 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.cancel: 'إلغاء',
     AppStrings.confirm: 'تأكيد',
     AppStrings.goBack: 'رجوع',
+    AppStrings.retry: 'إعادة المحاولة',
+    AppStrings.loadErrorTitle: 'تعذّر التحميل',
+    AppStrings.loadErrorSub: 'حدث خطأ ما. تحقق من اتصالك وحاول مرة أخرى.',
     AppStrings.hireResignAction: 'استقالة',
     AppStrings.hireResignTitle: 'الاستقالة من هذه الوظيفة؟',
     AppStrings.hireResignBody: 'سيؤدي هذا إلى إنهاء عملك الحالي مع هذه العائلة.',

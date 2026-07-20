@@ -611,6 +611,9 @@ abstract class AppStrings {
   static const cancel = 'cancel';
   static const confirm = 'confirm';
   static const goBack = 'go_back';
+  static const retry = 'retry';
+  static const loadErrorTitle = 'load_error_title';
+  static const loadErrorSub = 'load_error_sub';
 
   // Hire continuation (resign / terminate)
   static const hireResignAction = 'hire_resign_action';
@@ -706,6 +709,7 @@ abstract class AppStrings {
   static const editEmergencyContact = 'edit_emergency_contact';
   static const editComfort = 'edit_comfort';
   static const profileUpdated = 'profile_updated';
+  static const profileSaveFailed = 'profile_save_failed';
   static const saveAndClose = 'save_and_close';
   static const editProfileSection = 'edit_profile_section';
   static const editPersonalInfo = 'edit_personal_info';

@@ -366,11 +366,14 @@ class NannyProfileController extends GetxController {
 
   /// Save profile updates without advancing onboarding step.
   /// Used by Screen 27A (nanny edit profile).
-  Future<void> saveProfileDraft() async {
+  /// Saves the edit-profile draft. Returns true on success; on failure it shows
+  /// an error and returns false so the caller keeps the screen open (a live
+  /// Firestore write can throw, which previously bubbled up uncaught).
+  Future<bool> saveProfileDraft() async {
     isLoading.value = true;
     try {
       final user = _auth.currentUser.value;
-      if (user == null) return;
+      if (user == null) return false;
       final id = nanny.value?.id ?? user.id;
       final updated = (nanny.value ?? NannyModel(id: id, userId: user.id)).copyWith(
         fullName: fullNameCtrl.text.trim(),
@@ -391,7 +394,10 @@ class NannyProfileController extends GetxController {
       await _userService.saveNanny(updated);
       nanny.value = updated;
       calculateProfileScore();
-      Get.snackbar(AppStrings.successTitle.tr, AppStrings.profileUpdated.tr);
+      return true;
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.profileSaveFailed.tr);
+      return false;
     } finally {
       isLoading.value = false;
     }
