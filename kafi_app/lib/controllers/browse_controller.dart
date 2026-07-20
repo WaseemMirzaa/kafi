@@ -80,6 +80,8 @@ class BrowseController extends GetxController {
         family: familyContext,
       );
     } catch (e) {
+      // Log the raw error; the UI surfaces a friendly localized message (DISC-1).
+      Get.log('browse load failed: $e', isError: true);
       results.clear();
       loadError.value = e.toString();
     } finally {

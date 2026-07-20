@@ -33,6 +33,10 @@ class ShortlistScreen extends GetView<ShortlistController> {
                 if (controller.isLoading.value) {
                   return const Center(child: CircularProgressIndicator(color: KafiColors.roseD));
                 }
+                if (controller.loadError.value != null &&
+                    controller.shortlistedNannies.isEmpty) {
+                  return _errorState();
+                }
                 if (controller.shortlistedNannies.isEmpty) {
                   return _emptyState();
                 }
@@ -145,6 +149,35 @@ class ShortlistScreen extends GetView<ShortlistController> {
             return Text('$n ${n == 1 ? 'nanny' : 'nannies'} saved',
                 style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600));
           }),
+        ],
+      ),
+    );
+  }
+
+  /// Shown when the shortlist read fails (was previously masked as the empty
+  /// "no shortlist yet" state).
+  Widget _errorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 48, color: KafiColors.roseD.withValues(alpha: 0.7)),
+          const SizedBox(height: 12),
+          Text(AppStrings.loadErrorTitle.tr,
+              style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w700)),
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(AppStrings.loadErrorSub.tr,
+                textAlign: TextAlign.center,
+                style: KafiTheme.nunito(10, color: KafiColors.ts)),
+          ),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: controller.loadShortlist,
+            child: Text(AppStrings.retry.tr,
+                style: KafiTheme.fredoka(12, color: KafiColors.roseD, w: FontWeight.w700)),
+          ),
         ],
       ),
     );

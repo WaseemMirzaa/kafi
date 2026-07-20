@@ -75,13 +75,16 @@ class AppNavigation {
       Get.put(ShortlistController());
     }
     final sl = Get.find<ShortlistController>();
-    if (sl.isShortlisted(card.id)) {
-      await sl.removeFromShortlist(card.id);
-      Get.snackbar(AppStrings.shortlistTitle.tr, 'Removed from shortlist');
-    } else {
-      await sl.addToShortlist(card.id);
-      Get.snackbar(AppStrings.shortlistTitle.tr, 'Added to shortlist');
-    }
+    final wasShortlisted = sl.isShortlisted(card.id);
+    // Only confirm once the write succeeds; the controller surfaces any error.
+    final ok = wasShortlisted
+        ? await sl.removeFromShortlist(card.id)
+        : await sl.addToShortlist(card.id);
+    if (!ok) return;
+    Get.snackbar(
+      AppStrings.shortlistTitle.tr,
+      wasShortlisted ? 'Removed from shortlist' : 'Added to shortlist',
+    );
   }
 
   static void openTrialOffer({required String nannyId, required String nannyName, String? threadId}) {
