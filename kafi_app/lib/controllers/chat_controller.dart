@@ -433,26 +433,6 @@ class ChatController extends GetxController {
     }
   }
 
-  Future<void> sendTrialOffer(Map<String, dynamic> offerData) async {
-    if (!_skipSubscriptionGates && !isNanny && _subs.isExpired) {
-      Get.snackbar('Subscription Required', 'Renew to send trial offers');
-      return;
-    }
-    final senderId = _auth.currentUser.value?.id ?? 'family';
-    final senderType = isNanny ? 'nanny' : 'family';
-    final msg = ChatMessage(
-      id: _uuid.v4(),
-      threadId: activeThreadId.value,
-      senderId: senderId,
-      senderType: senderType,
-      content: 'Trial offer sent',
-      createdAt: DateTime.now(),
-      type: MessageType.trialOffer,
-    );
-    messages.add(msg);
-    await _chat.sendMessage(activeThreadId.value, msg);
-  }
-
   Future<void> markAsRead(String threadId) async {
     final idx = threads.indexWhere((t) => t.id == threadId);
     if (idx >= 0) {
