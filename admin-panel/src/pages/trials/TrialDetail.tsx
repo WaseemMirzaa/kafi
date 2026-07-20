@@ -117,25 +117,33 @@ export default function TrialDetail() {
   const [thread, setThread] = useState<ChatThreadRow | null>(null);
   const [messages, setMessages] = useState<ChatMessageRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id) return;
     (async () => {
-      const t = await TrialService.get(id);
-      setTrial(t);
-      if (t) {
-        const [n, f, th] = await Promise.all([
-          NannyService.get(t.nannyId),
-          FamilyService.get(t.familyId),
-          ChatService.findThreadByTrial(t.id),
-        ]);
-        setNanny(n);
-        setFamily(f);
-        setThread(th);
-        if (t.jobPostId) setJob(await JobPostService.get(t.jobPostId));
-        if (th) setMessages(await ChatService.listMessages(th.id));
+      setError(null);
+      try {
+        const t = await TrialService.get(id);
+        setTrial(t);
+        if (t) {
+          const [n, f, th] = await Promise.all([
+            NannyService.get(t.nannyId),
+            FamilyService.get(t.familyId),
+            ChatService.findThreadByTrial(t.id),
+          ]);
+          setNanny(n);
+          setFamily(f);
+          setThread(th);
+          if (t.jobPostId) setJob(await JobPostService.get(t.jobPostId));
+          if (th) setMessages(await ChatService.listMessages(th.id));
+        }
+      } catch (e) {
+        // Without this the page hangs on "Loading…" forever on any read failure.
+        setError((e as Error).message || 'Failed to load trial');
+      } finally {
+        setLoading(false);
       }
-      setLoading(false);
     })();
   }, [id]);
 
@@ -144,6 +152,15 @@ export default function TrialDetail() {
       <PageShell>
         <PageContent>
           <div className="text-[10px] text-[#8090B0]">Loading…</div>
+        </PageContent>
+      </PageShell>
+    );
+  }
+  if (error) {
+    return (
+      <PageShell>
+        <PageContent>
+          <div className="text-[10px] text-rose-dark">{error}</div>
         </PageContent>
       </PageShell>
     );

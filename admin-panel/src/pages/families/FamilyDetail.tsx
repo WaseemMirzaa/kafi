@@ -102,28 +102,36 @@ export default function FamilyDetail() {
   const [rating, setRating] = useState<{ average: number | null; count: number }>({ average: null, count: 0 });
   const [threads, setThreads] = useState<ChatThreadRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
   const load = async () => {
     if (!id) return;
     setLoading(true);
-    const [f, j, a, t, rv, avg, th] = await Promise.all([
-      FamilyService.get(id),
-      JobPostService.listByFamily(id),
-      ApplicationService.listByFamily(id),
-      TrialService.listByFamily(id),
-      ReviewService.listForReviewee(id),
-      ReviewService.averageFor(id),
-      ChatService.listThreadsForFamily(id),
-    ]);
-    setFamily(f);
-    setJobs(j);
-    setApps(a);
-    setTrials(t);
-    setReviews(rv);
-    setRating(avg);
-    setThreads(th);
-    setLoading(false);
+    setError(null);
+    try {
+      const [f, j, a, t, rv, avg, th] = await Promise.all([
+        FamilyService.get(id),
+        JobPostService.listByFamily(id),
+        ApplicationService.listByFamily(id),
+        TrialService.listByFamily(id),
+        ReviewService.listForReviewee(id),
+        ReviewService.averageFor(id),
+        ChatService.listThreadsForFamily(id),
+      ]);
+      setFamily(f);
+      setJobs(j);
+      setApps(a);
+      setTrials(t);
+      setReviews(rv);
+      setRating(avg);
+      setThreads(th);
+    } catch (e) {
+      // Without this the page hangs on "Loading…" forever on any read failure.
+      setError((e as Error).message || 'Failed to load family');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -135,6 +143,18 @@ export default function FamilyDetail() {
       <PageShell>
         <PageContent>
           <div className="text-[10px] text-[#8090B0]">Loading…</div>
+        </PageContent>
+      </PageShell>
+    );
+  }
+  if (error) {
+    return (
+      <PageShell>
+        <PageContent>
+          <div className="text-[10px] text-rose-dark">{error}</div>
+          <button type="button" className="qa-btn qa-n mt-2" onClick={load}>
+            Retry
+          </button>
         </PageContent>
       </PageShell>
     );
@@ -151,10 +171,15 @@ export default function FamilyDetail() {
 
   const toggleBlock = async () => {
     setBusy(true);
-    if (family.blocked) await FamilyService.unblock(family.id);
-    else await FamilyService.block(family.id);
-    setBusy(false);
-    load();
+    try {
+      if (family.blocked) await FamilyService.unblock(family.id);
+      else await FamilyService.block(family.id);
+      load();
+    } catch (e) {
+      alert((e as Error).message || 'Block toggle failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const completedTrials = trials.filter((t) => t.status === 'completed').length;

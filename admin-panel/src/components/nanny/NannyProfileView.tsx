@@ -78,9 +78,16 @@ export function DocumentsGrid({ nanny }: { nanny: NannyRow }) {
 export function NannyProfileView({
   nanny,
   showDocuments = true,
+  onReviewVideo,
+  videoBusy = false,
 }: {
   nanny: NannyRow;
   showDocuments?: boolean;
+  /** When provided, the intro-video section renders Approve/Reject controls
+   *  wired to this callback (calls `NannyService.reviewVideo`). Omit it for the
+   *  read-only contexts (e.g. the verification queue). */
+  onReviewVideo?: (status: 'approved' | 'rejected') => void;
+  videoBusy?: boolean;
 }) {
   return (
     <>
@@ -247,7 +254,7 @@ export function NannyProfileView({
             preload="metadata"
             className="w-full max-h-72 rounded-lg bg-black mt-2"
           />
-          <div className="mt-1 flex items-center gap-2">
+          <div className="mt-1 flex items-center gap-2 flex-wrap">
             {nanny.introVideoStatus && (
               <StatusBadge variant={docVariant(nanny.introVideoStatus)}>
                 {nanny.introVideoStatus}
@@ -261,6 +268,30 @@ export function NannyProfileView({
             >
               Open video ↗
             </a>
+            {onReviewVideo && (
+              <div className="flex gap-1.5 ml-auto">
+                {nanny.introVideoStatus !== 'approved' && (
+                  <button
+                    type="button"
+                    className="qa-btn qa-g"
+                    onClick={() => onReviewVideo('approved')}
+                    disabled={videoBusy}
+                  >
+                    Approve video ✓
+                  </button>
+                )}
+                {nanny.introVideoStatus !== 'rejected' && (
+                  <button
+                    type="button"
+                    className="qa-btn qa-r"
+                    onClick={() => onReviewVideo('rejected')}
+                    disabled={videoBusy}
+                  >
+                    Reject video ✗
+                  </button>
+                )}
+              </div>
+            )}
           </div>
         </Section>
       )}

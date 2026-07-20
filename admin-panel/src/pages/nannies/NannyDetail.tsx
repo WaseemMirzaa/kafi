@@ -75,40 +75,77 @@ export default function NannyDetail() {
 
   const save = async () => {
     setBusy(true);
-    await NannyService.update(nanny.id, form);
-    setBusy(false);
-    setEditing(false);
-    const fresh = await fetchMerged(nanny.id);
-    if (fresh) setNanny(fresh);
+    try {
+      await NannyService.update(nanny.id, form);
+      setEditing(false);
+      const fresh = await fetchMerged(nanny.id);
+      if (fresh) setNanny(fresh);
+    } catch (e) {
+      alert((e as Error).message || 'Save failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const approve = async () => {
     setBusy(true);
-    await NannyService.approve(nanny.id, user?.uid ?? 'unknown');
-    setBusy(false);
-    const fresh = await fetchMerged(nanny.id);
-    if (fresh) setNanny(fresh);
+    try {
+      await NannyService.approve(nanny.id, user?.uid ?? 'unknown');
+      const fresh = await fetchMerged(nanny.id);
+      if (fresh) setNanny(fresh);
+    } catch (e) {
+      alert((e as Error).message || 'Approve failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const reject = async () => {
     const reason = window.prompt('Reason for rejection (visible to nanny):');
     if (!reason) return;
     setBusy(true);
-    await NannyService.reject(nanny.id, reason, user?.uid ?? 'unknown');
-    setBusy(false);
-    nav('/nannies');
+    try {
+      await NannyService.reject(nanny.id, reason, user?.uid ?? 'unknown');
+      nav('/nannies');
+    } catch (e) {
+      alert((e as Error).message || 'Reject failed');
+      setBusy(false);
+    }
   };
 
   const toggleBlock = async () => {
     setBusy(true);
-    if (nanny.blocked) {
-      await NannyService.unblock(nanny.id);
-    } else {
-      await NannyService.block(nanny.id);
+    try {
+      if (nanny.blocked) {
+        await NannyService.unblock(nanny.id);
+      } else {
+        await NannyService.block(nanny.id);
+      }
+      const fresh = await fetchMerged(nanny.id);
+      if (fresh) setNanny(fresh);
+    } catch (e) {
+      alert((e as Error).message || 'Block toggle failed');
+    } finally {
+      setBusy(false);
     }
-    setBusy(false);
-    const fresh = await fetchMerged(nanny.id);
-    if (fresh) setNanny(fresh);
+  };
+
+  const reviewVideo = async (status: 'approved' | 'rejected') => {
+    let reason: string | undefined;
+    if (status === 'rejected') {
+      reason = window.prompt('Reason (visible to nanny — prompts a re-record):') ?? undefined;
+      if (!reason) return;
+    }
+    setBusy(true);
+    try {
+      await NannyService.reviewVideo(nanny.id, status, user?.uid ?? 'unknown', reason);
+      const fresh = await fetchMerged(nanny.id);
+      if (fresh) setNanny(fresh);
+    } catch (e) {
+      alert((e as Error).message || 'Video review failed');
+    } finally {
+      setBusy(false);
+    }
   };
 
   return (
@@ -220,7 +257,7 @@ export default function NannyDetail() {
           </FieldGrid>
         </DetailCard>
 
-        <NannyProfileView nanny={nanny} />
+        <NannyProfileView nanny={nanny} onReviewVideo={reviewVideo} videoBusy={busy} />
 
         <Section title={`Conversations with families (${threads.length})`}>
           <ConversationsPanel threads={threads} counterpart="family" />
