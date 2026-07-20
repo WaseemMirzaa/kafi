@@ -644,6 +644,13 @@ const Map<String, String> enUs = {
   AppStrings.jobFieldSchedule: 'Schedule',
   AppStrings.jobFieldSalaryMin: 'Min salary (AED)',
   AppStrings.jobFieldSalaryMax: 'Max salary (AED)',
+  AppStrings.trialProofTitle: 'Daily task proof',
+  AppStrings.trialProofNannySub: 'Upload a photo for each trial day',
+  AppStrings.trialProofFamilySub: 'Photos uploaded each trial day',
+  AppStrings.trialProofDay: 'Day @n',
+  AppStrings.trialProofAdd: 'Add',
+  AppStrings.trialProofPending: 'Pending',
+  AppStrings.trialProofUploaded: 'Proof uploaded',
 
   // Edit profile
   AppStrings.editProfile: 'Edit Profile',

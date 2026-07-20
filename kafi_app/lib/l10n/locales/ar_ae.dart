@@ -217,6 +217,13 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.jobFieldSchedule: 'الجدول',
     AppStrings.jobFieldSalaryMin: 'الحد الأدنى للراتب (درهم)',
     AppStrings.jobFieldSalaryMax: 'الحد الأقصى للراتب (درهم)',
+    AppStrings.trialProofTitle: 'إثبات المهام اليومية',
+    AppStrings.trialProofNannySub: 'ارفعي صورة لكل يوم من أيام التجربة',
+    AppStrings.trialProofFamilySub: 'الصور المرفوعة كل يوم من أيام التجربة',
+    AppStrings.trialProofDay: 'اليوم @n',
+    AppStrings.trialProofAdd: 'إضافة',
+    AppStrings.trialProofPending: 'قيد الانتظار',
+    AppStrings.trialProofUploaded: 'تم رفع الإثبات',
 
     // Delete account
     AppStrings.deleteAccountTitle: 'حذف الحساب',

@@ -1,6 +1,9 @@
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/chat_controller.dart';
+import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/chat_models.dart';
@@ -12,6 +15,7 @@ import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 import 'package:kafi_app/services/interfaces/i_dispute_service.dart';
 import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
+import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
@@ -26,7 +30,12 @@ class TrialController extends GetxController {
   final IUserService _users = Get.find<IUserService>();
   final IHireService _hires = Get.find<IHireService>();
   final IApplicationService _apps = Get.find<IApplicationService>();
+  final IStorageService _storage = Get.find<IStorageService>();
   final _uuid = const Uuid();
+
+  /// Uploaded proof photos for the displayed trial, keyed by day index (1-based).
+  final RxMap<int, DayProof> dayProofs = <int, DayProof>{}.obs;
+  final RxBool isUploadingProof = false.obs;
 
   /// Real nanny cards for the loaded trials, keyed by nannyId — fetched from
   /// Firestore so the trial header shows the actual nanny, not seed data.
@@ -83,6 +92,7 @@ class TrialController extends GetxController {
   Future<void> openTrialById(String trialId) async {
     final t = await getTrial(trialId);
     selected.value = t;
+    if (t != null) await loadDayProofs(t.id);
   }
 
   Future<void> refreshAll() async {
@@ -103,6 +113,63 @@ class TrialController extends GetxController {
       active.value = act;
     }
     await _loadNannyCards();
+    final d = displayed;
+    if (d != null) await loadDayProofs(d.id);
+  }
+
+  /// The current 1-based trial day (date-floored, clamped to the trial length).
+  int currentTrialDay(TrialModel t) {
+    final start = DateTime(t.startDate.year, t.startDate.month, t.startDate.day);
+    final today = DateTime.now();
+    final idx = today.difference(start).inDays + 1;
+    return idx.clamp(1, t.durationDays);
+  }
+
+  Future<void> loadDayProofs(String trialId) async {
+    try {
+      final list = await _trials.listDayProofs(trialId);
+      dayProofs.assignAll({for (final p in list) p.dayIndex: p});
+    } catch (_) {
+      // Non-fatal — the proof grid just shows empty slots.
+    }
+  }
+
+  /// Nanny uploads (or replaces) her proof photo for [dayIndex] of [t].
+  Future<void> uploadDayProof(TrialModel t, int dayIndex, ImageSource source) async {
+    final permissions = Get.find<PermissionController>();
+    final allowed = source == ImageSource.camera
+        ? await permissions.requestCamera()
+        : await permissions.ensureGallery();
+    if (!allowed) return;
+
+    final picked =
+        await ImagePicker().pickImage(source: source, imageQuality: 85, maxWidth: 1200);
+    if (picked == null) return;
+
+    isUploadingProof.value = true;
+    try {
+      final nannyId = currentUserId(_auth) ?? t.nannyId;
+      String url;
+      if (AppConfig.useMock) {
+        // Mock storage returns a local path; keep the picked file path so the
+        // family view can render it with Image.file.
+        url = picked.path;
+      } else {
+        final bytes = await picked.readAsBytes();
+        url = await _storage.uploadBytes(
+          path: 'trial_proofs/${t.id}/$nannyId/day_$dayIndex.jpg',
+          bytes: bytes,
+          contentType: 'image/jpeg',
+        );
+      }
+      await _trials.saveDayProof(t.id, dayIndex, imageUrl: url, nannyId: nannyId);
+      await loadDayProofs(t.id);
+      Get.snackbar(AppStrings.successTitle.tr, AppStrings.trialProofUploaded.tr);
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    } finally {
+      isUploadingProof.value = false;
+    }
   }
 
   /// Fetches the real nanny doc for each loaded trial and builds a card.

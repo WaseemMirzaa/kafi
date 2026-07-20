@@ -650,6 +650,15 @@ abstract class AppStrings {
   static const jobFieldSalaryMin = 'job_field_salary_min';
   static const jobFieldSalaryMax = 'job_field_salary_max';
 
+  // Daily trial proof
+  static const trialProofTitle = 'trial_proof_title';
+  static const trialProofNannySub = 'trial_proof_nanny_sub';
+  static const trialProofFamilySub = 'trial_proof_family_sub';
+  static const trialProofDay = 'trial_proof_day';
+  static const trialProofAdd = 'trial_proof_add';
+  static const trialProofPending = 'trial_proof_pending';
+  static const trialProofUploaded = 'trial_proof_uploaded';
+
   // Password Reset
   static const pwResetTitle = 'pw_reset_title';
   static const pwResetEnterPhone = 'pw_reset_enter_phone';

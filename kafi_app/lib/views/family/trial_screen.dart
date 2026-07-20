@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
@@ -34,6 +37,7 @@ class TrialScreen extends GetView<TrialController> {
                       _header(t),
                       const SizedBox(height: 4),
                       _evalSection(t),
+                      if (t.isActive) _dayProofSection(t),
                       if (_isNanny) ...[
                         Padding(
                           padding: const EdgeInsets.fromLTRB(13, 8, 13, 0),
@@ -49,6 +53,197 @@ class TrialScreen extends GetView<TrialController> {
           );
         }),
       ),
+    );
+  }
+
+  // ── Daily task proof: nanny uploads a photo per trial day; family views ──
+  Widget _dayProofSection(TrialModel t) {
+    final today = controller.currentTrialDay(t);
+    return Container(
+      margin: const EdgeInsets.fromLTRB(13, 8, 13, 0),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: const Color(0xFFDCEFE4), width: 1.5),
+        boxShadow: const [BoxShadow(color: Color(0x0F2E9A58), blurRadius: 8, offset: Offset(0, 2))],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.photo_camera_outlined, color: KafiColors.grnD, size: 18),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(AppStrings.trialProofTitle.tr,
+                        style: KafiTheme.fredoka(12.5, color: KafiColors.td, w: FontWeight.w700)),
+                    Text(
+                      _isNanny
+                          ? AppStrings.trialProofNannySub.tr
+                          : AppStrings.trialProofFamilySub.tr,
+                      style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Obx(() {
+            // Read the reactive maps so the grid rebuilds after an upload.
+            final proofs = controller.dayProofs;
+            final uploading = controller.isUploadingProof.value;
+            return Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                for (int day = 1; day <= t.durationDays; day++)
+                  _dayTile(t, day, today, proofs[day], uploading),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _dayTile(TrialModel t, int day, int today, DayProof? proof, bool uploading) {
+    const size = 72.0;
+    final label = AppStrings.trialProofDay.trParams({'n': '$day'});
+
+    Widget frame(Widget child, {Color border = const Color(0xFFE3EFE8)}) => Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            color: const Color(0xFFF6FBF8),
+            borderRadius: BorderRadius.circular(11),
+            border: Border.all(color: border, width: 1.3),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: child,
+        );
+
+    if (proof != null && proof.imageUrl.isNotEmpty) {
+      return GestureDetector(
+        onTap: () => _viewProof(proof.imageUrl),
+        child: frame(
+          Stack(
+            fit: StackFit.expand,
+            children: [
+              _proofImage(proof.imageUrl),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 0,
+                child: Container(
+                  color: Colors.black.withValues(alpha: 0.45),
+                  padding: const EdgeInsets.symmetric(vertical: 2),
+                  child: Text(label,
+                      textAlign: TextAlign.center,
+                      style: KafiTheme.fredoka(8.5, color: Colors.white, w: FontWeight.w700)),
+                ),
+              ),
+            ],
+          ),
+          border: KafiColors.grn,
+        ),
+      );
+    }
+
+    // No proof yet. The nanny can add for today or any past day; the family (or
+    // future days) just see a pending placeholder.
+    final canUpload = _isNanny && day <= today;
+    return GestureDetector(
+      onTap: canUpload && !uploading ? () => _chooseProofSource(t, day) : null,
+      child: frame(
+        Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            if (canUpload && uploading)
+              const SizedBox(
+                  width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: KafiColors.grnD))
+            else
+              Icon(canUpload ? Icons.add_a_photo_outlined : Icons.hourglass_empty,
+                  size: 18, color: canUpload ? KafiColors.grnD : KafiColors.ts.withValues(alpha: 0.5)),
+            const SizedBox(height: 3),
+            Text(label,
+                style: KafiTheme.nunito(8.5, color: KafiColors.ts, w: FontWeight.w700)),
+            Text(canUpload ? AppStrings.trialProofAdd.tr : AppStrings.trialProofPending.tr,
+                style: KafiTheme.nunito(7.5, color: KafiColors.ts.withValues(alpha: 0.7))),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _proofImage(String url) {
+    if (url.startsWith('http')) {
+      return Image.network(url,
+          fit: BoxFit.cover,
+          errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: KafiColors.ts));
+    }
+    return Image.file(File(url),
+        fit: BoxFit.cover,
+        errorBuilder: (_, __, ___) => const Icon(Icons.broken_image_outlined, color: KafiColors.ts));
+  }
+
+  void _viewProof(String url) {
+    Get.dialog(
+      GestureDetector(
+        onTap: Get.back,
+        child: Container(
+          color: Colors.black.withValues(alpha: 0.85),
+          alignment: Alignment.center,
+          padding: const EdgeInsets.all(20),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(14),
+            child: _proofImage(url),
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _chooseProofSource(TrialModel t, int day) {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: KafiColors.cardBorder, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 14),
+            _sourceTile(Icons.photo_camera_outlined, AppStrings.mediaTakePhoto.tr, () {
+              Get.back();
+              controller.uploadDayProof(t, day, ImageSource.camera);
+            }),
+            _sourceTile(Icons.photo_library_outlined, AppStrings.mediaChooseGallery.tr, () {
+              Get.back();
+              controller.uploadDayProof(t, day, ImageSource.gallery);
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _sourceTile(IconData icon, String label, VoidCallback onTap) {
+    return ListTile(
+      onTap: onTap,
+      leading: Icon(icon, color: KafiColors.grnD),
+      title: Text(label, style: KafiTheme.nunito(12.5, color: KafiColors.td, w: FontWeight.w700)),
     );
   }
 

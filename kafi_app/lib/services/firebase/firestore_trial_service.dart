@@ -141,6 +141,30 @@ class FirestoreTrialService implements ITrialService {
     });
   }
 
+  @override
+  Future<void> saveDayProof(
+    String trialId,
+    int dayIndex, {
+    required String imageUrl,
+    String? nannyId,
+    String? note,
+  }) async {
+    await _trials.doc(trialId).collection('days').doc('$dayIndex').set({
+      'dayIndex': dayIndex,
+      'imageUrl': imageUrl,
+      'nannyId': nannyId,
+      'note': note,
+      'uploadedAt': FieldValue.serverTimestamp(),
+    }, SetOptions(merge: true));
+  }
+
+  @override
+  Future<List<DayProof>> listDayProofs(String trialId) async {
+    final snap = await _trials.doc(trialId).collection('days').get();
+    return snap.docs.map((d) => DayProof.fromMap(d.data())).toList()
+      ..sort((a, b) => a.dayIndex.compareTo(b.dayIndex));
+  }
+
   TrialModel _trialFromMap(String id, Map<String, dynamic> m) =>
       TrialModel.fromMap({...m, 'id': id});
 }
