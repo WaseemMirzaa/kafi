@@ -98,8 +98,22 @@ export default function VerifyDocuments() {
 
   // `items` already holds only pending nannies (listPendingDocs).
   const pending = items;
-  const approved = 0; // approved & rejected counts handled in AllNannies tab.
-  const rejected = 0;
+  // Live document-status tallies across the nannies currently in the queue —
+  // these two cards were previously hardcoded to 0. They count individual
+  // documents (a queued nanny can have some docs already approved and others
+  // still pending); overall approved/rejected *nannies* live in the All-nannies
+  // tab.
+  const { approved, rejected } = useMemo(() => {
+    let approved = 0;
+    let rejected = 0;
+    for (const n of items) {
+      for (const d of n.documents ?? []) {
+        if (d.status === 'approved') approved += 1;
+        else if (d.status === 'rejected') rejected += 1;
+      }
+    }
+    return { approved, rejected };
+  }, [items]);
 
   const extraFilter = useMemo(
     () => (n: NannyRow) =>

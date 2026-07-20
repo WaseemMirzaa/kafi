@@ -19,13 +19,17 @@ export default function Subscriptions() {
   const [families, setFamilies] = useState<FamilyRow[]>([]);
   const [revenue, setRevenue] = useState<RevenueSummary | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([FamilyService.list(), RevenueService.summary()]).then(([f, r]) => {
-      setFamilies(f);
-      setRevenue(r);
-      setLoading(false);
-    });
+    Promise.all([FamilyService.list(), RevenueService.summary()])
+      .then(([f, r]) => {
+        setFamilies(f);
+        setRevenue(r);
+      })
+      // Without .catch/.finally the page hangs on "Loading…" on any read failure.
+      .catch((e) => setError((e as Error).message || 'Failed to load subscriptions'))
+      .finally(() => setLoading(false));
   }, []);
 
   const subscribed = families.filter((f) => f.subscription.status === 'active').length;
@@ -46,6 +50,7 @@ export default function Subscriptions() {
   }, [families]);
 
   const free = families.filter((f) => f.subscription.status === 'free').length;
+  const activeSubs = families.filter((f) => f.subscription.status === 'active');
   const monthly = revenue?.monthly ?? 0;
 
   const onExport = () => {
@@ -77,6 +82,7 @@ export default function Subscriptions() {
         </div>
 
         {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
+        {error && <div className="px-3 py-4 text-[10px] text-rose-dark">{error}</div>}
 
         <TableCard title="Plan breakdown">
           {Object.entries(planCounts).map(([plan, count]) => {
@@ -101,9 +107,10 @@ export default function Subscriptions() {
         </TableCard>
 
         <TableCard title="Active subscribers">
-          {families
-            .filter((f) => f.subscription.status === 'active')
-            .map((f) => (
+          {!loading && activeSubs.length === 0 ? (
+            <div className="px-3 py-4 text-[10px] text-[#8090B0]">No active subscribers yet.</div>
+          ) : (
+            activeSubs.map((f) => (
               <Row key={f.id}>
                 <div className="flex-1 min-w-0">
                   <div className="text-[10.5px] font-extrabold text-navy">{f.fullName}</div>
@@ -116,7 +123,8 @@ export default function Subscriptions() {
                   View →
                 </Link>
               </Row>
-            ))}
+            ))
+          )}
         </TableCard>
       </PageContent>
     </PageShell>

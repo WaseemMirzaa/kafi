@@ -30,7 +30,15 @@ export const onDocumentReviewed = onDocumentUpdated(
     const changed = afterDocs.filter((d) => d.type && d.status && prevByType.get(d.type) !== d.status);
 
     const blockedChanged = (before.blocked === true) !== (after.blocked === true);
-    if (changed.length === 0 && before.status === after.status && !blockedChanged) return;
+    const videoChanged = before.introVideoStatus !== after.introVideoStatus;
+    if (
+      changed.length === 0 &&
+      before.status === after.status &&
+      !blockedChanged &&
+      !videoChanged
+    ) {
+      return;
+    }
 
     // Tokens live on the user doc and may be empty — the inbox is written
     // regardless so the record survives a missing/rotated FCM token.
@@ -106,6 +114,32 @@ export const onDocumentReviewed = onDocumentUpdated(
             };
       const data = { type: after.blocked === true ? 'account_blocked' : 'account_unblocked' };
       await writeInbox(nannyId, 'systemAnnouncement', payload.title, payload.body, data);
+      await sendNotification(tokens, { title: payload.title, body: payload.body, data });
+    }
+
+    // 4. Intro-video review push. Admin approves/rejects the intro video from
+    // the nanny detail page (sets `introVideoStatus`); the nanny is told the
+    // outcome so a rejection prompts a re-record.
+    if (
+      videoChanged &&
+      (after.introVideoStatus === 'approved' || after.introVideoStatus === 'rejected')
+    ) {
+      const payload =
+        after.introVideoStatus === 'approved'
+          ? {
+              title: '✅ Intro video approved',
+              body: 'Your introduction video is now visible to families.',
+              type: 'documentsApproved' as const,
+            }
+          : {
+              title: '❌ Intro video needs changes',
+              body:
+                (after.introVideoRejectionReason as string) ||
+                'Please re-record your introduction video.',
+              type: 'documentsRejected' as const,
+            };
+      const data = { type: `intro_video_${after.introVideoStatus}` };
+      await writeInbox(nannyId, payload.type, payload.title, payload.body, data);
       await sendNotification(tokens, { title: payload.title, body: payload.body, data });
     }
   },
