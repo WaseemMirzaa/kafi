@@ -203,6 +203,22 @@ service cloud.firestore {
             && (existing().familyId == request.auth.uid
                 || existing().nannyId == request.auth.uid));
       allow delete: if isAdmin();
+
+      // Daily proof photos the nanny uploads during the trial. Both parties +
+      // admin read; only the trial's nanny writes her proof (rules don't
+      // cascade, and a subcollection can't use the parent's resource, so gate
+      // via a get() on the parent trial doc — same pattern as chat messages).
+      match /days/{dayId} {
+        function trial() {
+          return get(/databases/$(database)/documents/trials/$(trialId)).data;
+        }
+        allow read: if isAdmin()
+          || (isSignedIn()
+              && (trial().familyId == request.auth.uid
+                  || trial().nannyId == request.auth.uid));
+        allow create, update: if isSignedIn() && trial().nannyId == request.auth.uid;
+        allow delete: if isAdmin();
+      }
     }
 
     // ---------- notifications ----------

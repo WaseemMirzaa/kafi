@@ -68,6 +68,40 @@ class TrialEvaluation {
       };
 }
 
+/// A single trial day's proof-of-work photo the nanny uploads during an active
+/// trial. Stored at `trials/{trialId}/days/{dayIndex}`; the family views them.
+class DayProof {
+  const DayProof({
+    required this.dayIndex,
+    required this.imageUrl,
+    this.nannyId = '',
+    this.note,
+    this.uploadedAt,
+  });
+
+  final int dayIndex;
+  final String imageUrl;
+  final String nannyId;
+  final String? note;
+  final DateTime? uploadedAt;
+
+  Map<String, dynamic> toMap() => {
+        'dayIndex': dayIndex,
+        'imageUrl': imageUrl,
+        'nannyId': nannyId,
+        'note': note,
+        'uploadedAt': uploadedAt?.toIso8601String(),
+      };
+
+  factory DayProof.fromMap(Map<String, dynamic> m) => DayProof(
+        dayIndex: (m['dayIndex'] as num?)?.toInt() ?? 0,
+        imageUrl: (m['imageUrl'] ?? '').toString(),
+        nannyId: (m['nannyId'] ?? '').toString(),
+        note: m['note']?.toString(),
+        uploadedAt: _parseDate(m['uploadedAt']),
+      );
+}
+
 /// Complete Trial model per System Spec §3.6
 class TrialModel {
   TrialModel({

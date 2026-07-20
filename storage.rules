@@ -44,6 +44,13 @@ service firebase.storage {
       allow read: if isSignedIn();
       allow write: if isSignedIn() && isImage() && under(8);
     }
+    // Daily trial proof photos. Path is trial_proofs/{trialId}/{uid}/{file},
+    // so only the nanny whose uid is in the path may upload (images, max 8 MB);
+    // any signed-in user may read (the two parties view them in-app).
+    match /trial_proofs/{trialId}/{uid}/{file=**} {
+      allow read: if isSignedIn();
+      allow write: if (isUser(uid) || isAdmin()) && isImage() && under(8);
+    }
     // Public marketing/assets — admin only
     match /public/{file=**} {
       allow read: if true;

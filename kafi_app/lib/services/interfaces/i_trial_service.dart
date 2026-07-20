@@ -31,4 +31,17 @@ abstract class ITrialService {
   /// Apply a counter offer's accepted terms to the trial record
   /// (daily rate, duration, start date) and mark it `accepted`.
   Future<void> applyCounterAndAccept(String trialId, CounterOffer counter);
+
+  /// Saves the nanny's proof-of-work photo for [dayIndex] of the trial
+  /// (upsert — re-uploading a day replaces it).
+  Future<void> saveDayProof(
+    String trialId,
+    int dayIndex, {
+    required String imageUrl,
+    String? nannyId,
+    String? note,
+  });
+
+  /// All uploaded day proofs for a trial, ascending by day.
+  Future<List<DayProof>> listDayProofs(String trialId);
 }

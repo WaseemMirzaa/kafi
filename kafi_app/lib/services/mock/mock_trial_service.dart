@@ -5,6 +5,7 @@ import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 
 class MockTrialService implements ITrialService {
   final Map<String, TrialModel> _trials = {};
+  final Map<String, Map<int, DayProof>> _dayProofs = {};
 
   MockTrialService() {
     _trials.addAll(buildMockTrials(DateTime.now()));
@@ -148,5 +149,31 @@ class MockTrialService implements ITrialService {
       outcome: t.outcome,
       outcomeAt: t.outcomeAt,
     );
+  }
+
+  @override
+  Future<void> saveDayProof(
+    String trialId,
+    int dayIndex, {
+    required String imageUrl,
+    String? nannyId,
+    String? note,
+  }) async {
+    await Future<void>.delayed(AppConfig.mockDelay);
+    final map = _dayProofs.putIfAbsent(trialId, () => {});
+    map[dayIndex] = DayProof(
+      dayIndex: dayIndex,
+      imageUrl: imageUrl,
+      nannyId: nannyId ?? '',
+      note: note,
+      uploadedAt: DateTime.now(),
+    );
+  }
+
+  @override
+  Future<List<DayProof>> listDayProofs(String trialId) async {
+    await Future<void>.delayed(AppConfig.mockDelay);
+    final map = _dayProofs[trialId] ?? const {};
+    return map.values.toList()..sort((a, b) => a.dayIndex.compareTo(b.dayIndex));
   }
 }

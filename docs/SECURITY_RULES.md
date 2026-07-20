@@ -73,6 +73,7 @@ from `firestore.indexes.json` under **Firestore Database → Indexes**.
 | `chatThreads/{id}` | the two parties / admin | family *(needs active subscription **or** an active trial with that nanny)* | either party / admin | admin |
 | `chatThreads/{id}/messages/{id}` | the two parties / admin | nanny always; family only with access/trial; admin | admin | admin |
 | `trials/{id}` | the two parties / admin | owner family | either party / admin | admin |
+| `trials/{id}/days/{dayId}` | the two parties / admin | the trial's nanny | the trial's nanny / admin | admin |
 | `notifications/{id}` | recipient / admin | **admin/server only** | recipient / admin | recipient / admin |
 | `reviews/{id}` | public reviews → any signed-in; else the two parties / admin | reviewer | admin *(rating folded into `stats.averageRating` by the function)* | admin |
 | `hires/{id}` | the two parties / admin | owner family | either party / admin *(nanny resigns, family terminates)* | admin |
@@ -106,6 +107,7 @@ Key protections baked into the rules:
 | `nannies/{uid}/documents/{file}` | **owner/admin only** | owner/admin · ≤25 MB |
 | `families/{uid}/avatar/{file}` | signed‑in | owner/admin · image · ≤5 MB |
 | `chats/{threadId}/{file=**}` | signed‑in | signed‑in · image · ≤8 MB |
+| `trial_proofs/{trialId}/{uid}/{file=**}` | signed‑in | the nanny (uid in path)/admin · image · ≤8 MB |
 | `public/**` | public | admin |
 
 The app uploads to paths that match these exactly (e.g. nanny KYC docs go to
@@ -328,6 +330,19 @@ service cloud.firestore {
             && (existing().familyId == request.auth.uid
                 || existing().nannyId == request.auth.uid));
       allow delete: if isAdmin();
+
+      // Daily trial proof photos — nanny writes, both parties read.
+      match /days/{dayId} {
+        function trial() {
+          return get(/databases/$(database)/documents/trials/$(trialId)).data;
+        }
+        allow read: if isAdmin()
+          || (isSignedIn()
+              && (trial().familyId == request.auth.uid
+                  || trial().nannyId == request.auth.uid));
+        allow create, update: if isSignedIn() && trial().nannyId == request.auth.uid;
+        allow delete: if isAdmin();
+      }
     }
 
     // ---------- notifications ----------
