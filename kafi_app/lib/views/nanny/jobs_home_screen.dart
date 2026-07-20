@@ -68,7 +68,7 @@ class JobsHomeScreen extends GetView<JobPostController> {
           ),
           const SizedBox(height: 3),
           Obx(() => Text(
-                '${controller.allJobs.length} ${AppStrings.nannyJobsMatching.tr}',
+                '${controller.filteredJobs.length} ${AppStrings.nannyJobsMatching.tr}',
                 style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600),
               )),
           const SizedBox(height: 10),
@@ -211,13 +211,13 @@ class JobsHomeScreen extends GetView<JobPostController> {
             return GestureDetector(
               onTap: () {
                 if (label == 'All') {
-                  controller.applyFilter(JobFilter());
+                  controller.setFilter(JobFilter());
                 } else if (label == 'Live-in') {
-                  controller.applyFilter(JobFilter(jobType: 'liveIn'));
+                  controller.setFilter(JobFilter(jobType: 'liveIn'));
                 } else if (label == 'Live-out') {
-                  controller.applyFilter(JobFilter(jobType: 'liveOut'));
+                  controller.setFilter(JobFilter(jobType: 'liveOut'));
                 } else {
-                  controller.applyFilter(JobFilter(duties: [label.toLowerCase()]));
+                  controller.setFilter(JobFilter(duties: [label.toLowerCase()]));
                 }
               },
               child: Center(
@@ -274,10 +274,14 @@ class JobsHomeScreen extends GetView<JobPostController> {
       if (nanny != null) {
         scored.sort((a, b) => (b.$2 ?? 0).compareTo(a.$2 ?? 0));
       }
-      return ListView.builder(
-        padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
-        itemCount: scored.length,
-        itemBuilder: (_, i) => _jobCard(scored[i].$1, scored[i].$2),
+      return RefreshIndicator(
+        color: KafiColors.roseD,
+        onRefresh: controller.loadJobs,
+        child: ListView.builder(
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 20),
+          itemCount: scored.length,
+          itemBuilder: (_, i) => _jobCard(scored[i].$1, scored[i].$2),
+        ),
       );
     });
   }

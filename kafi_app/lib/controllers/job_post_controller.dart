@@ -27,7 +27,12 @@ class JobPostController extends GetxController {
     try {
       final user = _auth.currentUser.value;
       if (user?.isNanny ?? false) {
-        allJobs.value = await _jobService.browseJobs(filter: filter.value);
+        final jobs = await _jobService.browseJobs(filter: filter.value);
+        // Newest-first as the stable default order; the nanny job list re-ranks
+        // by match score on top of this once a profile is loaded.
+        jobs.sort((a, b) =>
+            (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970)));
+        allJobs.value = jobs;
       } else {
         final familyId = user?.id;
         if (familyId == null) return;
@@ -46,6 +51,11 @@ class JobPostController extends GetxController {
     filter.value = newFilter;
     loadJobs();
   }
+
+  /// Sets the active filter WITHOUT a server round-trip. jobType/duties are
+  /// applied client-side by [filteredJobs], so the chip filters re-filter the
+  /// already-loaded list instead of re-fetching (and flashing a full spinner).
+  void setFilter(JobFilter newFilter) => filter.value = newFilter;
 
   List<JobPostModel> get filteredJobs {
     var list = allJobs.toList();

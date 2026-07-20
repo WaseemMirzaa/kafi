@@ -76,10 +76,14 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
           Obx(() {
             final n = controller.nanny.value;
             final initial =
-                (n?.fullName.isNotEmpty == true ? n!.fullName[0] : 'S').toUpperCase();
-            final name = n?.fullName.isNotEmpty == true ? n!.fullName : 'Sarah Reyes';
+                (n?.fullName.isNotEmpty == true ? n!.fullName[0] : '?').toUpperCase();
+            // No fabricated identity while the profile loads — a neutral greeting
+            // and no fake city (was "Sarah Reyes" / "Dubai").
+            final name =
+                n?.fullName.isNotEmpty == true ? n!.fullName : AppStrings.dashboardGreeting.tr;
+            final area = n?.currentArea.isNotEmpty == true ? n!.currentArea : '';
             final role =
-                '${n?.jobTypePreference.name == 'liveOut' ? 'Live-out' : 'Live-in'} Nanny · ${n?.currentArea.isNotEmpty == true ? n!.currentArea : 'Dubai'}';
+                '${n?.jobTypePreference.name == 'liveOut' ? 'Live-out' : 'Live-in'} Nanny${area.isEmpty ? '' : ' · $area'}';
             return Row(
               children: [
                 // Avatar square with verified badge
@@ -509,7 +513,19 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                   child:
                       CircularProgressIndicator(color: KafiColors.roseD));
             }
-            final preview = jobsCtrl.filteredJobs.take(2).toList();
+            // Real attribute-based match for the signed-in nanny (the same
+            // MatchService scorer used on the jobs tab and job detail), not a
+            // decorative placeholder. Rank by match BEFORE taking the top 2 so
+            // "Jobs for you" surfaces the best matches, not the first two.
+            final nanny = controller.nanny.value;
+            final matchService = MatchService();
+            final ranked = jobsCtrl.filteredJobs.toList();
+            if (nanny != null) {
+              ranked.sort((a, b) => matchService
+                  .calculateJobMatch(nanny, b)
+                  .compareTo(matchService.calculateJobMatch(nanny, a)));
+            }
+            final preview = ranked.take(2).toList();
             if (preview.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -517,12 +533,6 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                     style: KafiTheme.nunito(11, color: KafiColors.tm)),
               );
             }
-            // Real attribute-based match for the signed-in nanny (the same
-            // MatchService scorer used on the jobs tab and job detail), not a
-            // decorative placeholder. Reading nanny.value here also re-ranks
-            // once the profile finishes loading.
-            final nanny = controller.nanny.value;
-            final matchService = MatchService();
             return Column(
               children: [
                 for (final job in preview)
