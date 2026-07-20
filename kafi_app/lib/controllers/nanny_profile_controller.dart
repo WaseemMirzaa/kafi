@@ -17,6 +17,7 @@ import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/utils/validators.dart';
+import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:uuid/uuid.dart';
 
 class NannyProfileController extends GetxController {
@@ -32,6 +33,7 @@ class NannyProfileController extends GetxController {
   // step 1
   final fullNameCtrl = TextEditingController();
   final dobCtrl = TextEditingController();
+  final ageCtrl = TextEditingController(); // read-only, auto-filled from dob
   final Rx<DateTime?> dob = Rx<DateTime?>(null);
   final RxString nationality = 'Filipino'.obs;
   // Required selections start unset so a new nanny must actively choose them
@@ -112,6 +114,13 @@ class NannyProfileController extends GetxController {
   void setDob(DateTime d) {
     dob.value = d;
     dobCtrl.text = _fmtDate(d);
+    _syncAgeField();
+  }
+
+  /// Mirrors the auto-calculated [age] into the read-only age field.
+  void _syncAgeField() {
+    final a = age;
+    ageCtrl.text = a == null ? '' : '$a';
   }
 
   void setAvailableFrom(DateTime d) {
@@ -133,6 +142,7 @@ class NannyProfileController extends GetxController {
     _nannyWatch?.cancel();
     fullNameCtrl.dispose();
     dobCtrl.dispose();
+    ageCtrl.dispose();
     currentAreaCtrl.dispose();
     salaryMinCtrl.dispose();
     salaryMaxCtrl.dispose();
@@ -219,6 +229,7 @@ class NannyProfileController extends GetxController {
       dobCtrl.text =
           '${n.dateOfBirth!.day.toString().padLeft(2, '0')}/${n.dateOfBirth!.month.toString().padLeft(2, '0')}/${n.dateOfBirth!.year}';
     }
+    _syncAgeField();
     nationality.value = n.nationality;
     selectedLanguages.value = List.of(n.languages);
     // Visa + work
@@ -754,17 +765,45 @@ class NannyProfileController extends GetxController {
         canPop: false,
         child: Center(
           child: Container(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 26),
+            margin: const EdgeInsets.symmetric(horizontal: 48),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: KafiColors.cardBorder),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x1FFF5C8A), blurRadius: 24, offset: Offset(0, 8)),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 14),
-                Text(message, style: const TextStyle(fontWeight: FontWeight.w700)),
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: KafiColors.roseP,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(13),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 3, color: KafiColors.roseD),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: KafiTheme.fredoka(13, color: KafiColors.td, w: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppStrings.docUploadingHint.tr,
+                  textAlign: TextAlign.center,
+                  style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600),
+                ),
               ],
             ),
           ),

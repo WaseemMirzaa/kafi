@@ -146,10 +146,13 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           ),
           const SizedBox(width: 6),
           Expanded(
-            child: Obx(() {
-              final age = controller.age;
-              return KafiTextField(label: AppStrings.fldAge.tr, hint: age == null ? '—' : '$age years old');
-            }),
+            // Auto-calculated from date of birth — read-only, never typed into.
+            child: KafiTextField(
+              label: AppStrings.fldAge.tr,
+              controller: controller.ageCtrl,
+              readOnly: true,
+              hint: '—',
+            ),
           ),
         ]),
         Obx(() => Padding(

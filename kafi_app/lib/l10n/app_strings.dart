@@ -738,6 +738,7 @@ abstract class AppStrings {
   static const mediaIntroVideo = 'media_intro_video';
   static const mediaVideoReady = 'media_video_ready';
   static const docUploading = 'doc_uploading';
+  static const docUploadingHint = 'doc_uploading_hint';
   static const docUploadFailed = 'doc_upload_failed';
   static const docPickFailed = 'doc_pick_failed';
   static const docTooLarge = 'doc_too_large';

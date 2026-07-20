@@ -12,6 +12,7 @@ class KafiTextField extends StatelessWidget {
     this.keyboardType,
     this.purple = false,
     this.onChanged,
+    this.readOnly = false,
   });
 
   final String label;
@@ -22,6 +23,10 @@ class KafiTextField extends StatelessWidget {
   final TextInputType? keyboardType;
   final bool purple;
   final ValueChanged<String>? onChanged;
+
+  /// Non-editable display field (e.g. auto-calculated age). Still shows its
+  /// controller text / hint, but the keyboard never opens and input is blocked.
+  final bool readOnly;
 
   @override
   Widget build(BuildContext context) {
@@ -40,6 +45,7 @@ class KafiTextField extends StatelessWidget {
             maxLength: maxLength,
             keyboardType: keyboardType,
             onChanged: onChanged,
+            readOnly: readOnly,
             style: KafiTheme.nunito(11, color: KafiColors.td),
             decoration: InputDecoration(
               hintText: hint,

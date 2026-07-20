@@ -309,6 +309,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.mediaIntroVideo: 'الفيديو التعريفي',
     AppStrings.mediaVideoReady: 'جاهز للإرسال',
     AppStrings.docUploading: 'جارٍ رفع المستندات…',
+    AppStrings.docUploadingHint: 'قد يستغرق هذا لحظة — يُرجى إبقاء التطبيق مفتوحًا.',
     AppStrings.docUploadFailed: 'فشل الرفع. يرجى التحقق من اتصالك والمحاولة مرة أخرى.',
     AppStrings.docPickFailed: 'تعذّر فتح هذا الملف. يرجى اختيار ملف PDF أو صورة (JPG/PNG).',
     AppStrings.docTooLarge: 'حجم الملف كبير جدًا. يرجى اختيار ملف أقل من 10 ميغابايت.',
