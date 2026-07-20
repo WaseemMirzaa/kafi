@@ -723,6 +723,7 @@ const Map<String, String> enUs = {
   AppStrings.nannyCurrentAreaRequired: 'Please add your current area / neighbourhood.',
   AppStrings.nannyPhotosMin3: 'Please add at least 3 photos.',
   AppStrings.nannyVideoRequired: 'Please add a short intro video.',
+  AppStrings.nannyVideoTooLong: 'Video must be 60 seconds or less. Please trim it or choose a shorter clip.',
   AppStrings.mediaCover: 'Cover',
   AppStrings.mediaIntroVideo: 'My intro video',
   AppStrings.mediaVideoReady: 'Ready to submit',

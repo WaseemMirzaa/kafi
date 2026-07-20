@@ -20,6 +20,7 @@ import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/utils/validators.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:uuid/uuid.dart';
+import 'package:video_player/video_player.dart';
 
 class NannyProfileController extends GetxController {
   final IUserService _userService = Get.find<IUserService>();
@@ -510,6 +511,20 @@ class NannyProfileController extends GetxController {
       maxDuration: Duration(seconds: NannyConstants.maxVideoSeconds),
     );
     if (picked == null) return;
+
+    // image_picker's `maxDuration` only caps *camera* recordings — a clip
+    // chosen from the gallery is never length-checked. Enforce the limit
+    // ourselves so an over-long video is rejected (the nanny trims it first)
+    // instead of being uploaded.
+    if (await _videoExceedsLimit(picked.path)) {
+      Get.snackbar(
+        AppStrings.errorTitle.tr,
+        AppStrings.nannyVideoTooLong.tr,
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
+
     isLoading.value = true;
     try {
       if (AppConfig.useMock) {
@@ -529,6 +544,22 @@ class NannyProfileController extends GetxController {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// True when the video at [path] runs longer than [NannyConstants.maxVideoSeconds].
+  /// Best-effort — returns false when the duration can't be read, so a probe
+  /// failure never blocks a valid upload.
+  Future<bool> _videoExceedsLimit(String path) async {
+    final probe = VideoPlayerController.file(File(path));
+    try {
+      await probe.initialize();
+      final secs = probe.value.duration.inSeconds;
+      return secs > NannyConstants.maxVideoSeconds;
+    } catch (_) {
+      return false;
+    } finally {
+      await probe.dispose();
     }
   }
 

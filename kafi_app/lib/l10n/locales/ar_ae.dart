@@ -308,6 +308,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.mediaCover: 'الغلاف',
     AppStrings.mediaIntroVideo: 'الفيديو التعريفي',
     AppStrings.mediaVideoReady: 'جاهز للإرسال',
+    AppStrings.nannyVideoTooLong: 'يجب ألا يزيد الفيديو عن 60 ثانية. يرجى اقتصاصه أو اختيار مقطع أقصر.',
     AppStrings.docUploading: 'جارٍ رفع المستندات…',
     AppStrings.docUploadingHint: 'قد يستغرق هذا لحظة — يُرجى إبقاء التطبيق مفتوحًا.',
     AppStrings.docUploadFailed: 'فشل الرفع. يرجى التحقق من اتصالك والمحاولة مرة أخرى.',
