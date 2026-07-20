@@ -35,7 +35,13 @@ class BrowseScreen extends GetView<BrowseController> {
                         style: KafiTheme.nunito(11.5, color: KafiColors.td, w: FontWeight.w800)),
                   ),
                   GestureDetector(
-                    onTap: () => controller.onFilterTap('All'),
+                    onTap: () {
+                      // Clear search + filter, matching the empty-state "See all"
+                      // (was only resetting the pill) — DISC-3.
+                      controller.searchCtrl.clear();
+                      controller.query.value = '';
+                      controller.onFilterTap('All');
+                    },
                     child: Text(AppStrings.seeAll.tr,
                         style: KafiTheme.nunito(10, color: KafiColors.pur, w: FontWeight.w600)),
                   ),
@@ -56,7 +62,7 @@ class BrowseScreen extends GetView<BrowseController> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            err ?? AppStrings.browseNoMatch.tr,
+                            err != null ? AppStrings.loadErrorSub.tr : AppStrings.browseNoMatch.tr,
                             textAlign: TextAlign.center,
                             style: KafiTheme.nunito(
                               12,

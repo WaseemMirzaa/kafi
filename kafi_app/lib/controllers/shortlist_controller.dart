@@ -1,6 +1,7 @@
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/browse_controller.dart';
+import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/models/shortlist_model.dart';
 import 'package:kafi_app/services/interfaces/i_shortlist_service.dart';
@@ -124,22 +125,57 @@ class ShortlistController extends GetxController {
     }
   }
 
-  Future<void> addToShortlist(String nannyId, {String? notes}) async {
+  /// Adds a nanny to the shortlist. Returns true on success so the caller only
+  /// confirms when the write actually landed (was previously unguarded — a
+  /// failed write threw an unhandled async error from the tap handler).
+  Future<bool> addToShortlist(String nannyId, {String? notes}) async {
     final familyId = currentFamilyId(_auth);
-    if (familyId == null || shortlistedIds.contains(nannyId)) return;
-    final item = await _shortlistService.add(familyId: familyId, nannyId: nannyId, notes: notes);
-    shortlistedNannies.add(item);
-    shortlistedIds.add(nannyId);
-    await _loadCards();
+    if (familyId == null || shortlistedIds.contains(nannyId)) return false;
+    try {
+      final item = await _shortlistService.add(familyId: familyId, nannyId: nannyId, notes: notes);
+      shortlistedNannies.add(item);
+      shortlistedIds.add(nannyId);
+      // Enrich only the newly-added nanny, not the whole list (DISC-8).
+      await _loadCardFor(nannyId);
+      return true;
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      return false;
+    }
   }
 
-  Future<void> removeFromShortlist(String nannyId) async {
+  Future<bool> removeFromShortlist(String nannyId) async {
     final familyId = currentFamilyId(_auth);
-    if (familyId == null) return;
-    await _shortlistService.remove(familyId: familyId, nannyId: nannyId);
-    shortlistedNannies.removeWhere((s) => s.nannyId == nannyId);
-    shortlistedIds.remove(nannyId);
-    cards.remove(nannyId);
+    if (familyId == null) return false;
+    try {
+      await _shortlistService.remove(familyId: familyId, nannyId: nannyId);
+      shortlistedNannies.removeWhere((s) => s.nannyId == nannyId);
+      shortlistedIds.remove(nannyId);
+      cards.remove(nannyId);
+      return true;
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      return false;
+    }
+  }
+
+  /// Enriches a single shortlisted nanny's card (used on add, instead of
+  /// re-fetching every card). Best-effort — the item still shows via [cardFor].
+  Future<void> _loadCardFor(String nannyId) async {
+    final matchJob =
+        Get.isRegistered<BrowseController>() ? Get.find<BrowseController>().matchJob : null;
+    final family =
+        Get.isRegistered<BrowseController>() ? Get.find<BrowseController>().familyContext : null;
+    final matcher = Get.isRegistered<MatchService>() ? Get.find<MatchService>() : MatchService();
+    try {
+      final n = await _userService.getNanny(nannyId);
+      if (n == null) return;
+      cards[nannyId] = matchJob != null
+          ? matcher.cardWithJobMatch(n, matchJob, family: family)
+          : NannyCardModel.fromNanny(n);
+    } catch (_) {
+      // Skip enrichment for this one; the item still shows.
+    }
   }
 
   Future<void> updateNotes(String nannyId, String notes) async {
