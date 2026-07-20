@@ -278,6 +278,7 @@ abstract class AppStrings {
   // Nanny Jobs
   static const nannyJobsTitle = 'nanny_jobs_title';
   static const nannyJobsMatching = 'nanny_jobs_matching';
+  static const dashboardGreeting = 'dashboard_greeting';
   static const nannyJobsSearch = 'nanny_jobs_search';
   static const nannyStatsApplied = 'nanny_stats_applied';
   static const nannyStatsViewed = 'nanny_stats_viewed';
