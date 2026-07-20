@@ -5,6 +5,27 @@ from writing its own `subscription` field, so a subscription only ever becomes
 active when **RevenueCat** confirms a purchase and calls our webhook, which
 writes the state to Firestore.
 
+## ⚠️ Current status — DEFERRED (known launch blocker)
+
+Real payment integration is **intentionally not wired yet** (product decision,
+2026-07). The live build ships with `useMockSubscription = true`, and the mock
+entitlement is **not** synced to the server, so:
+
+- No money is charged; the subscribe/pricing/trial-payment path is mock.
+- `families/{id}.subscription.status` is not written for "paid" families, so the
+  server-enforced `onContactRevealRequested` **denies contact reveal** to them —
+  UI entitlement and server entitlement diverge. **This is the #1 launch
+  blocker** and must be resolved before charging real users.
+- Because nothing writes the `transactions` collection, the admin **Revenue**
+  page has no data; it shows a "billing not integrated" placeholder instead of
+  misleading zeros until this is completed.
+
+To resolve, complete the RevenueCat steps below (the webhook already writes both
+`subscription` state and can populate `transactions`), **or** enable a
+server-side sync of the mock subscription for a free soft-launch. The
+`revenueCatWebhook` groundwork is done — only the client purchase + account
+setup remain.
+
 ## What's already built (no action needed)
 
 - **`revenueCatWebhook`** Cloud Function (`functions/src/triggers/webhook.ts`) —
