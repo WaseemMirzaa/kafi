@@ -611,6 +611,18 @@ abstract class AppStrings {
   static const confirm = 'confirm';
   static const goBack = 'go_back';
 
+  // Hire continuation (resign / terminate)
+  static const hireResignAction = 'hire_resign_action';
+  static const hireResignTitle = 'hire_resign_title';
+  static const hireResignBody = 'hire_resign_body';
+  static const hireResignedToast = 'hire_resigned_toast';
+  static const hireEndAction = 'hire_end_action';
+  static const hireEndTitle = 'hire_end_title';
+  static const hireEndBody = 'hire_end_body';
+  static const hireEndedToast = 'hire_ended_toast';
+  static const hireActiveBanner = 'hire_active_banner';
+  static const nannyJobCapReached = 'nanny_job_cap_reached';
+
   // Password Reset
   static const pwResetTitle = 'pw_reset_title';
   static const pwResetEnterPhone = 'pw_reset_enter_phone';

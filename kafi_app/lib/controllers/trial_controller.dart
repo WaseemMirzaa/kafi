@@ -232,6 +232,11 @@ class TrialController extends GetxController {
   }
 
   Future<void> acceptTrial(String trialId, {String? threadId}) async {
+    // A nanny may hold at most 2 concurrent jobs; block accepting a 3rd.
+    if (await _nannyAtJobCap()) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.nannyJobCapReached.tr);
+      return;
+    }
     isLoading.value = true;
     try {
       await _trials.respondAccept(trialId);
@@ -432,6 +437,23 @@ class TrialController extends GetxController {
       if (match != null) await _apps.markHired(match.id);
     } catch (_) {
       // No application to update (trial may have been offered directly) — fine.
+    }
+  }
+
+  /// A nanny may hold at most 2 concurrent jobs — active hires plus
+  /// accepted/active trials. Enforced nanny-side (the security rules stop a
+  /// family from reading a nanny's other hires). A read failure never blocks.
+  Future<bool> _nannyAtJobCap() async {
+    if (!(_auth.currentUser.value?.isNanny ?? false)) return false;
+    final nannyId = currentUserId(_auth);
+    if (nannyId == null) return false;
+    try {
+      final hires = await _hires.getHiresForNanny(nannyId);
+      final activeHires = hires.where((h) => h.isActive).length;
+      final activeTrials = all.where((t) => t.isAcceptedOrActive).length;
+      return activeHires + activeTrials >= 2;
+    } catch (_) {
+      return false;
     }
   }
 

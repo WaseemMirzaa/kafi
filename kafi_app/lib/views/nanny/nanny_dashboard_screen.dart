@@ -269,42 +269,87 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
             borderRadius: BorderRadius.circular(13),
             border: Border.all(color: accent.withValues(alpha: 0.35), width: 1.5),
           ),
-          child: Row(
+          child: Column(
             children: [
-              Container(
-                width: 38,
-                height: 38,
-                decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(11)),
-                child: Icon(hired ? Icons.workspace_premium : Icons.handshake,
-                    color: Colors.white, size: 20),
-              ),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title,
-                        style: KafiTheme.nunito(12.5, color: KafiColors.td, w: FontWeight.w800)),
-                    const SizedBox(height: 1),
-                    Text(sub,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: KafiTheme.nunito(10, color: accent, w: FontWeight.w700)),
-                  ],
-                ),
-              ),
               Row(
                 children: [
-                  Text(AppStrings.nannyHomeViewChat.tr,
-                      style: KafiTheme.nunito(9.5, color: accent, w: FontWeight.w800)),
-                  Icon(Icons.chevron_right, color: accent, size: 16),
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(color: accent, borderRadius: BorderRadius.circular(11)),
+                    child: Icon(hired ? Icons.workspace_premium : Icons.handshake,
+                        color: Colors.white, size: 20),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(title,
+                            style: KafiTheme.nunito(12.5, color: KafiColors.td, w: FontWeight.w800)),
+                        const SizedBox(height: 1),
+                        Text(sub,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: KafiTheme.nunito(10, color: accent, w: FontWeight.w700)),
+                      ],
+                    ),
+                  ),
+                  Row(
+                    children: [
+                      Text(AppStrings.nannyHomeViewChat.tr,
+                          style: KafiTheme.nunito(9.5, color: accent, w: FontWeight.w800)),
+                      Icon(Icons.chevron_right, color: accent, size: 16),
+                    ],
+                  ),
                 ],
               ),
+              // A hired nanny can resign here (ends the employment).
+              if (hired) ...[
+                const SizedBox(height: 8),
+                const Divider(height: 1),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: GestureDetector(
+                    onTap: _confirmResign,
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 6, left: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.logout, size: 13, color: KafiColors.redD),
+                          const SizedBox(width: 4),
+                          Text(AppStrings.hireResignAction.tr,
+                              style: KafiTheme.nunito(10, color: KafiColors.redD, w: FontWeight.w800)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         ),
       );
     });
+  }
+
+  void _confirmResign() {
+    Get.dialog(AlertDialog(
+      title: Text(AppStrings.hireResignTitle.tr),
+      content: Text(AppStrings.hireResignBody.tr),
+      actions: [
+        TextButton(onPressed: () => Get.back(), child: Text(AppStrings.cancel.tr)),
+        TextButton(
+          onPressed: () {
+            Get.back();
+            controller.resignHire();
+          },
+          child: Text(AppStrings.hireResignAction.tr,
+              style: const TextStyle(color: KafiColors.redD)),
+        ),
+      ],
+    ));
   }
 
   // ── Profile quality card ────────────────────────────────────────

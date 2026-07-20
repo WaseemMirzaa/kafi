@@ -182,6 +182,16 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.cancel: 'إلغاء',
     AppStrings.confirm: 'تأكيد',
     AppStrings.goBack: 'رجوع',
+    AppStrings.hireResignAction: 'استقالة',
+    AppStrings.hireResignTitle: 'الاستقالة من هذه الوظيفة؟',
+    AppStrings.hireResignBody: 'سيؤدي هذا إلى إنهاء عملك الحالي مع هذه العائلة.',
+    AppStrings.hireResignedToast: 'لقد استقلتِ من هذه الوظيفة',
+    AppStrings.hireEndAction: 'إنهاء التوظيف',
+    AppStrings.hireEndTitle: 'إنهاء التوظيف؟',
+    AppStrings.hireEndBody: 'سيؤدي هذا إلى إنهاء التوظيف الحالي. لا يمكن التراجع عن ذلك.',
+    AppStrings.hireEndedToast: 'تم إنهاء التوظيف',
+    AppStrings.hireActiveBanner: 'التوظيف نشط',
+    AppStrings.nannyJobCapReached: 'يمكنكِ الاحتفاظ بوظيفتين كحد أقصى. أنهِ واحدة أولاً.',
 
     // Delete account
     AppStrings.deleteAccountTitle: 'حذف الحساب',
