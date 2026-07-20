@@ -5,28 +5,46 @@ import 'package:geolocator/geolocator.dart';
 import 'package:get/get.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/geo_location.dart';
 import 'package:kafi_app/services/location_service.dart';
 import 'package:kafi_app/services/places_service.dart';
 import 'package:kafi_app/utils/constants/app_constants.dart';
 import 'package:kafi_app/utils/constants/location_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
-/// A selected location value.
+/// A selected location value. Carries the structured pieces the DB persists:
+/// coordinates, a human-readable address, and (when reverse-geocoded) city and
+/// country.
 class KafiLocation {
   final String displayName;
   final String fullAddress;
   final double? lat;
   final double? lng;
+  final String? city;
+  final String? country;
 
   const KafiLocation({
     required this.displayName,
     required this.fullAddress,
     this.lat,
     this.lng,
+    this.city,
+    this.country,
   });
 
   @override
   String toString() => displayName;
+}
+
+/// Convert a picked [KafiLocation] into the persisted [GeoLocation] shape.
+extension KafiLocationGeo on KafiLocation {
+  GeoLocation toGeoLocation() => GeoLocation(
+        lat: lat,
+        lng: lng,
+        address: fullAddress,
+        city: city ?? '',
+        country: country ?? '',
+      );
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,11 +59,17 @@ class KafiLocationPicker extends StatefulWidget {
     super.key,
     this.initialValue,
     required this.onChanged,
+    this.onLocationPicked,
     this.label,
   });
 
   final String? initialValue;
   final ValueChanged<String> onChanged;
+
+  /// Optional richer callback with the full [KafiLocation] (coords + city +
+  /// country + address) so callers can persist the structured location, not
+  /// just the display string.
+  final ValueChanged<KafiLocation>? onLocationPicked;
   final String? label;
 
   @override
@@ -89,6 +113,7 @@ class _KafiLocationPickerState extends State<KafiLocationPicker> {
     if (result != null && result.displayName.trim().isNotEmpty) {
       setState(() => _displayValue = result.displayName.trim());
       widget.onChanged(result.displayName.trim());
+      widget.onLocationPicked?.call(result);
     }
   }
 
@@ -269,6 +294,8 @@ class _FallbackLocationSheetState extends State<_FallbackLocationSheet> {
       KafiLocation(
         displayName: name,
         fullAddress: _selectedSubtitle != null ? '$name, ${_selectedSubtitle!}' : name,
+        city: name,
+        country: 'United Arab Emirates',
       ),
     );
   }
@@ -722,6 +749,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
         fullAddress: place.formattedAddress,
         lat: place.lat,
         lng: place.lng,
+        city: place.city ?? place.emirate,
+        country: place.country,
       ),
     );
   }

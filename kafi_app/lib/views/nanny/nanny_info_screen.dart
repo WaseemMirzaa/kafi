@@ -376,6 +376,8 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           initialValue: controller.currentAreaCtrl.text,
           label: AppStrings.fldCurrentArea.tr,
           onChanged: (v) => controller.currentAreaCtrl.text = v,
+          onLocationPicked: (loc) =>
+              controller.currentLocationPicked = loc.toGeoLocation(),
         ),
       ],
     );

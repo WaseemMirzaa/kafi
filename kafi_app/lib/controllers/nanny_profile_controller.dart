@@ -11,6 +11,7 @@ import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/geo_location.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/models/user_model.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
@@ -45,6 +46,8 @@ class NannyProfileController extends GetxController {
   final RxList<Emirate> workEmirates = <Emirate>[].obs;
   final RxBool willingRelocate = true.obs;
   final currentAreaCtrl = TextEditingController();
+  // Structured current-area location from the map picker (coords/city/country).
+  GeoLocation? currentLocationPicked;
   // Work preferences (System Spec §3.2 — required)
   final salaryMinCtrl = TextEditingController();
   final salaryMaxCtrl = TextEditingController();
@@ -240,6 +243,7 @@ class NannyProfileController extends GetxController {
     workEmirates.value = List.of(n.workEmirates);
     willingRelocate.value = n.willingToRelocate;
     currentAreaCtrl.text = n.currentArea;
+    currentLocationPicked = n.currentLocation;
     // Work preferences
     salaryMinCtrl.text = n.expectedSalaryMin > 0 ? '${n.expectedSalaryMin}' : '';
     salaryMaxCtrl.text = n.expectedSalaryMax > 0 ? '${n.expectedSalaryMax}' : '';
@@ -308,6 +312,7 @@ class NannyProfileController extends GetxController {
         languages: List.of(selectedLanguages),
         workEmirates: List.of(workEmirates),
         currentArea: currentAreaCtrl.text.trim(),
+        currentLocation: currentLocationPicked,
         comfortableWithCameras: comfortCameras.value,
         comfortableWithPets: comfortPets.value,
         canCook: cooks.value,
@@ -392,6 +397,7 @@ class NannyProfileController extends GetxController {
         workEmirates: List.of(workEmirates),
         willingToRelocate: willingRelocate.value,
         currentArea: currentAreaCtrl.text.trim(),
+        currentLocation: currentLocationPicked,
         expectedSalaryMin: int.tryParse(salaryMinCtrl.text) ?? 0,
         expectedSalaryMax: int.tryParse(salaryMaxCtrl.text) ?? 0,
         jobTypePreference: jobTypePref.value,
