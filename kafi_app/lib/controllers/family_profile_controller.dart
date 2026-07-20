@@ -171,7 +171,14 @@ class FamilyProfileController extends GetxController {
     if (fullNameCtrl.text.trim().isEmpty) return AppStrings.familyNameRequired;
     if (nationality.value.trim().isEmpty) return AppStrings.familyNationalityRequired;
     if (city.value.trim().isEmpty) return AppStrings.familyCityRequired;
-    final childCount = int.tryParse(childrenCtrl.text) ?? 0;
+    final childText = childrenCtrl.text.trim();
+    final parsedChildren = int.tryParse(childText);
+    // A non-numeric entry previously parsed to 0 and silently skipped the ages
+    // rule below (FAM-2) — reject it explicitly.
+    if (childText.isNotEmpty && (parsedChildren == null || parsedChildren < 0)) {
+      return AppStrings.familyChildrenInvalid;
+    }
+    final childCount = parsedChildren ?? 0;
     final ages = childrenAgesCtrl.text
         .split(',')
         .map((e) => e.trim())
@@ -268,7 +275,9 @@ class FamilyProfileController extends GetxController {
       ));
       return true;
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      // Log the raw error; show a generic localized message (FAM-1).
+      Get.log('family/job save failed: $e', isError: true);
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.profileSaveFailed.tr);
       return false;
     } finally {
       isLoading.value = false;

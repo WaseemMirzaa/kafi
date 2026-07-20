@@ -136,8 +136,11 @@ class SettingsScreen extends GetView<SettingsController> {
               Icons.restore,
               AppStrings.settingsRestorePurchases.tr,
               () async {
-                await Get.find<SubscriptionController>().restorePurchases();
-                Get.snackbar(AppStrings.settingsRestorePurchases.tr, 'Purchases restored');
+                final ok = await Get.find<SubscriptionController>().restorePurchases();
+                if (ok) {
+                  Get.snackbar(AppStrings.settingsRestorePurchases.tr,
+                      AppStrings.settingsRestoreDone.tr);
+                }
               },
             ),
           _actionTile(

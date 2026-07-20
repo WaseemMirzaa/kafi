@@ -398,6 +398,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
     AppStrings.familyNationalityRequired: 'الرجاء اختيار جنسيتك.',
     AppStrings.familyChildrenAgesRequired: 'الرجاء إدخال أعمار أطفالك.',
+    AppStrings.familyChildrenInvalid: 'أدخل عدداً صحيحاً للأطفال.',
     AppStrings.familyLanguagesRequired: 'الرجاء اختيار لغة منزلية واحدة على الأقل.',
     AppStrings.familyRolesRequired: 'الرجاء اختيار دور واحد على الأقل تحتاجه.',
     AppStrings.familyScheduleRequired: 'الرجاء وصف جدول العمل.',

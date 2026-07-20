@@ -493,6 +493,7 @@ const Map<String, String> enUs = {
   AppStrings.settingsAccount: 'Account',
   AppStrings.settingsChangePassword: 'Change Password',
   AppStrings.settingsRestorePurchases: 'Restore Purchases',
+  AppStrings.settingsRestoreDone: 'Purchases restored',
   AppStrings.settingsTerms: 'Terms & Conditions',
   AppStrings.settingsPrivacyPolicy: 'Privacy Policy',
   AppStrings.settingsDangerZone: 'Danger Zone',
@@ -817,6 +818,7 @@ const Map<String, String> enUs = {
   // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
   AppStrings.familyNationalityRequired: 'Please select your nationality.',
   AppStrings.familyChildrenAgesRequired: "Please enter your children's ages.",
+  AppStrings.familyChildrenInvalid: 'Enter a valid number of children.',
   AppStrings.familyLanguagesRequired: 'Please select at least one home language.',
   AppStrings.familyRolesRequired: 'Please select at least one role you need.',
   AppStrings.familyScheduleRequired: 'Please describe the working schedule.',
