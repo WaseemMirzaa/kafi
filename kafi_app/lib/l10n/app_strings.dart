@@ -734,10 +734,12 @@ abstract class AppStrings {
   static const nannyCurrentAreaRequired = 'nanny_current_area_required';
   static const nannyPhotosMin3 = 'nanny_photos_min3';
   static const nannyVideoRequired = 'nanny_video_required';
+  static const nannyVideoTooLong = 'nanny_video_too_long';
   static const mediaCover = 'media_cover';
   static const mediaIntroVideo = 'media_intro_video';
   static const mediaVideoReady = 'media_video_ready';
   static const docUploading = 'doc_uploading';
+  static const docUploadingHint = 'doc_uploading_hint';
   static const docUploadFailed = 'doc_upload_failed';
   static const docPickFailed = 'doc_pick_failed';
   static const docTooLarge = 'doc_too_large';

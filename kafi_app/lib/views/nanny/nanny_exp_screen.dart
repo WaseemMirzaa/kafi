@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/geo_location.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
@@ -141,11 +142,13 @@ class _ExpCardState extends State<_ExpCard> {
   late String _reason;
   late DateTime _from;
   late DateTime _to;
+  GeoLocation? _cityLocation;
 
   @override
   void initState() {
     super.initState();
     final e = widget.exp;
+    _cityLocation = e.location;
     _employer = TextEditingController(text: e.employer);
     _city = TextEditingController(text: e.cityCountry);
     _children = TextEditingController(text: e.children);
@@ -170,6 +173,7 @@ class _ExpCardState extends State<_ExpCard> {
       children: _children.text,
       duties: _duties.text,
       reasonLeaving: _reason,
+      location: _cityLocation,
     ));
   }
 
@@ -277,6 +281,10 @@ class _ExpCardState extends State<_ExpCard> {
             label: AppStrings.expCityCountry.tr,
             initialValue: _city.text,
             onChanged: (v) => _city.text = v,
+            onLocationPicked: (loc) {
+              _cityLocation = loc.toGeoLocation();
+              _emit();
+            },
           ),
           const SizedBox(height: 7),
           Row(

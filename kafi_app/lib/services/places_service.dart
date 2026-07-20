@@ -35,6 +35,7 @@ class PlaceDetails {
   final String? city;
   final String? emirate;
   final String? neighbourhood;
+  final String? country;
 
   const PlaceDetails({
     required this.placeId,
@@ -45,6 +46,7 @@ class PlaceDetails {
     this.city,
     this.emirate,
     this.neighbourhood,
+    this.country,
   });
 
   /// Short area label for form fields (neighbourhood → city → name).
@@ -142,6 +144,7 @@ class PlacesService {
       city: _component(comps, 'locality') ??
           _component(comps, 'administrative_area_level_2'),
       emirate: _component(comps, 'administrative_area_level_1'),
+      country: _component(comps, 'country'),
     );
   }
 

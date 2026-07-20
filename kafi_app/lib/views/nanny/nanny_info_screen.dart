@@ -4,9 +4,11 @@ import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
+import 'package:kafi_app/utils/constants/auth_constants.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
+import 'package:kafi_app/views/widgets/kafi_phone_input.dart';
 import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_searchable_picker.dart';
@@ -17,6 +19,14 @@ import 'package:kafi_app/views/widgets/kafi_toggle_box.dart';
 
 class NannyInfoScreen extends GetView<NannyProfileController> {
   const NannyInfoScreen({super.key});
+
+  /// Country-code options for the emergency contact — nanny-origin countries
+  /// (the emergency contact is usually back home). Rendered "Name +code"; the
+  /// picker extracts the +code.
+  static final List<String> _emergencyCodeOptions = AuthConstants
+      .nannyCountryCodes.entries
+      .map((e) => '${e.key} ${e.value}')
+      .toList();
 
   @override
   Widget build(BuildContext context) {
@@ -146,10 +156,13 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           ),
           const SizedBox(width: 6),
           Expanded(
-            child: Obx(() {
-              final age = controller.age;
-              return KafiTextField(label: AppStrings.fldAge.tr, hint: age == null ? '—' : '$age years old');
-            }),
+            // Auto-calculated from date of birth — read-only, never typed into.
+            child: KafiTextField(
+              label: AppStrings.fldAge.tr,
+              controller: controller.ageCtrl,
+              readOnly: true,
+              hint: '—',
+            ),
           ),
         ]),
         Obx(() => Padding(
@@ -363,6 +376,8 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           initialValue: controller.currentAreaCtrl.text,
           label: AppStrings.fldCurrentArea.tr,
           onChanged: (v) => controller.currentAreaCtrl.text = v,
+          onLocationPicked: (loc) =>
+              controller.currentLocationPicked = loc.toGeoLocation(),
         ),
       ],
     );
@@ -624,33 +639,16 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
             ),
           ),
         ),
-        Row(children: [
-          Container(
-            margin: const EdgeInsets.only(right: 6),
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: KafiColors.inputBg,
-              border: Border.all(color: KafiColors.cardBorder, width: 1.5),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: DropdownButtonHideUnderline(
-              child: DropdownButton<String>(
-                value: '+971',
-                isDense: true,
-                style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w700),
-                items: ['+971', '+63', '+91', '+92', '+880', '+44', '+1']
-                    .map((c) => DropdownMenuItem(value: c, child: Text(c)))
-                    .toList(),
-                onChanged: (_) {},
-              ),
-            ),
-          ),
-          Expanded(child: KafiTextField(
-            label: AppStrings.fldEmergencyPhone.tr,
-            controller: controller.emergencyPhoneCtrl,
-            keyboardType: TextInputType.phone,
-          )),
-        ]),
+        Text(AppStrings.fldEmergencyPhone.tr,
+            style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Obx(() => KafiPhoneInput(
+              controller: controller.emergencyPhoneCtrl,
+              countryCode: controller.emergencyCountryCode.value,
+              onCountryChanged: (c) => controller.emergencyCountryCode.value = c,
+              countryOptions: _emergencyCodeOptions,
+            )),
+        const SizedBox(height: 7),
       ],
     );
   }

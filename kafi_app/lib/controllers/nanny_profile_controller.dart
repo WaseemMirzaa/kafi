@@ -11,13 +11,16 @@ import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/geo_location.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/models/user_model.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/utils/validators.dart';
+import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:uuid/uuid.dart';
+import 'package:video_player/video_player.dart';
 
 class NannyProfileController extends GetxController {
   final IUserService _userService = Get.find<IUserService>();
@@ -32,6 +35,7 @@ class NannyProfileController extends GetxController {
   // step 1
   final fullNameCtrl = TextEditingController();
   final dobCtrl = TextEditingController();
+  final ageCtrl = TextEditingController(); // read-only, auto-filled from dob
   final Rx<DateTime?> dob = Rx<DateTime?>(null);
   final RxString nationality = 'Filipino'.obs;
   // Required selections start unset so a new nanny must actively choose them
@@ -43,6 +47,8 @@ class NannyProfileController extends GetxController {
   final RxList<Emirate> workEmirates = <Emirate>[].obs;
   final RxBool willingRelocate = true.obs;
   final currentAreaCtrl = TextEditingController();
+  // Structured current-area location from the map picker (coords/city/country).
+  GeoLocation? currentLocationPicked;
   // Work preferences (System Spec §3.2 — required)
   final salaryMinCtrl = TextEditingController();
   final salaryMaxCtrl = TextEditingController();
@@ -65,6 +71,7 @@ class NannyProfileController extends GetxController {
   final emergencyNameCtrl = TextEditingController();
   final emergencyRelCtrl = TextEditingController();
   final emergencyPhoneCtrl = TextEditingController();
+  final emergencyCountryCode = '+971'.obs;
   final bioCtrl = TextEditingController();
 
   // step 2
@@ -112,6 +119,13 @@ class NannyProfileController extends GetxController {
   void setDob(DateTime d) {
     dob.value = d;
     dobCtrl.text = _fmtDate(d);
+    _syncAgeField();
+  }
+
+  /// Mirrors the auto-calculated [age] into the read-only age field.
+  void _syncAgeField() {
+    final a = age;
+    ageCtrl.text = a == null ? '' : '$a';
   }
 
   void setAvailableFrom(DateTime d) {
@@ -133,6 +147,7 @@ class NannyProfileController extends GetxController {
     _nannyWatch?.cancel();
     fullNameCtrl.dispose();
     dobCtrl.dispose();
+    ageCtrl.dispose();
     currentAreaCtrl.dispose();
     salaryMinCtrl.dispose();
     salaryMaxCtrl.dispose();
@@ -219,6 +234,7 @@ class NannyProfileController extends GetxController {
       dobCtrl.text =
           '${n.dateOfBirth!.day.toString().padLeft(2, '0')}/${n.dateOfBirth!.month.toString().padLeft(2, '0')}/${n.dateOfBirth!.year}';
     }
+    _syncAgeField();
     nationality.value = n.nationality;
     selectedLanguages.value = List.of(n.languages);
     // Visa + work
@@ -228,6 +244,7 @@ class NannyProfileController extends GetxController {
     workEmirates.value = List.of(n.workEmirates);
     willingRelocate.value = n.willingToRelocate;
     currentAreaCtrl.text = n.currentArea;
+    currentLocationPicked = n.currentLocation;
     // Work preferences
     salaryMinCtrl.text = n.expectedSalaryMin > 0 ? '${n.expectedSalaryMin}' : '';
     salaryMaxCtrl.text = n.expectedSalaryMax > 0 ? '${n.expectedSalaryMax}' : '';
@@ -253,6 +270,8 @@ class NannyProfileController extends GetxController {
     // Emergency contact
     emergencyNameCtrl.text = n.emergencyName;
     emergencyRelCtrl.text = n.emergencyRelationship;
+    emergencyCountryCode.value =
+        n.emergencyCountryCode.isNotEmpty ? n.emergencyCountryCode : '+971';
     emergencyPhoneCtrl.text = n.emergencyPhone;
     // Bio + media + history
     bioCtrl.text = n.bio;
@@ -294,12 +313,14 @@ class NannyProfileController extends GetxController {
         languages: List.of(selectedLanguages),
         workEmirates: List.of(workEmirates),
         currentArea: currentAreaCtrl.text.trim(),
+        currentLocation: currentLocationPicked,
         comfortableWithCameras: comfortCameras.value,
         comfortableWithPets: comfortPets.value,
         canCook: cooks.value,
         canDoNightShifts: nightShifts.value,
         emergencyName: emergencyNameCtrl.text.trim(),
         emergencyRelationship: emergencyRelCtrl.text.trim(),
+        emergencyCountryCode: emergencyCountryCode.value,
         emergencyPhone: emergencyPhoneCtrl.text.trim(),
         bio: bioCtrl.text.trim(),
       );
@@ -377,6 +398,7 @@ class NannyProfileController extends GetxController {
         workEmirates: List.of(workEmirates),
         willingToRelocate: willingRelocate.value,
         currentArea: currentAreaCtrl.text.trim(),
+        currentLocation: currentLocationPicked,
         expectedSalaryMin: int.tryParse(salaryMinCtrl.text) ?? 0,
         expectedSalaryMax: int.tryParse(salaryMaxCtrl.text) ?? 0,
         jobTypePreference: jobTypePref.value,
@@ -398,6 +420,7 @@ class NannyProfileController extends GetxController {
         religion: religionCtrl.text.trim(),
         emergencyName: emergencyNameCtrl.text.trim(),
         emergencyRelationship: emergencyRelCtrl.text.trim(),
+        emergencyCountryCode: emergencyCountryCode.value,
         emergencyPhone: emergencyPhoneCtrl.text.trim(),
         bio: bioCtrl.text.trim(),
       );
@@ -488,6 +511,20 @@ class NannyProfileController extends GetxController {
       maxDuration: Duration(seconds: NannyConstants.maxVideoSeconds),
     );
     if (picked == null) return;
+
+    // image_picker's `maxDuration` only caps *camera* recordings — a clip
+    // chosen from the gallery is never length-checked. Enforce the limit
+    // ourselves so an over-long video is rejected (the nanny trims it first)
+    // instead of being uploaded.
+    if (await _videoExceedsLimit(picked.path)) {
+      Get.snackbar(
+        AppStrings.errorTitle.tr,
+        AppStrings.nannyVideoTooLong.tr,
+        duration: const Duration(seconds: 4),
+      );
+      return;
+    }
+
     isLoading.value = true;
     try {
       if (AppConfig.useMock) {
@@ -507,6 +544,22 @@ class NannyProfileController extends GetxController {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  /// True when the video at [path] runs longer than [NannyConstants.maxVideoSeconds].
+  /// Best-effort — returns false when the duration can't be read, so a probe
+  /// failure never blocks a valid upload.
+  Future<bool> _videoExceedsLimit(String path) async {
+    final probe = VideoPlayerController.file(File(path));
+    try {
+      await probe.initialize();
+      final secs = probe.value.duration.inSeconds;
+      return secs > NannyConstants.maxVideoSeconds;
+    } catch (_) {
+      return false;
+    } finally {
+      await probe.dispose();
     }
   }
 
@@ -548,9 +601,30 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  void addExperience(WorkExperience exp) => experiences.add(exp);
+  void addExperience(WorkExperience exp) {
+    experiences.add(exp);
+    _persistExperiences();
+  }
+
   void removeExperience(int index) {
-    if (index < experiences.length) experiences.removeAt(index);
+    if (index < experiences.length) {
+      experiences.removeAt(index);
+      _persistExperiences();
+    }
+  }
+
+  /// Fire-and-forget save of the experiences list so an added/removed entry is
+  /// persisted immediately, not only when the nanny taps Next.
+  Future<void> _persistExperiences() async {
+    final n = nanny.value;
+    if (n == null) return;
+    final updated = n.copyWith(experiences: List.of(experiences));
+    nanny.value = updated;
+    try {
+      await _userService.saveNanny(updated);
+    } catch (_) {
+      // Best-effort — the step's Next also saves.
+    }
   }
 
   Future<void> saveExpAndNext({bool advance = true}) async {
@@ -586,9 +660,29 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  void addReference(ReferenceContact r) => references.add(r);
+  void addReference(ReferenceContact r) {
+    references.add(r);
+    _persistReferences();
+  }
+
   void removeReference(int index) {
-    if (index < references.length) references.removeAt(index);
+    if (index < references.length) {
+      references.removeAt(index);
+      _persistReferences();
+    }
+  }
+
+  /// Fire-and-forget save of the references list (see [_persistExperiences]).
+  Future<void> _persistReferences() async {
+    final n = nanny.value;
+    if (n == null) return;
+    final updated = n.copyWith(references: List.of(references));
+    nanny.value = updated;
+    try {
+      await _userService.saveNanny(updated);
+    } catch (_) {
+      // Best-effort — the step's Next also saves.
+    }
   }
 
   Future<void> saveRefsAndNext({bool advance = true}) async {
@@ -754,17 +848,45 @@ class NannyProfileController extends GetxController {
         canPop: false,
         child: Center(
           child: Container(
-            padding: const EdgeInsets.all(22),
+            padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 26),
+            margin: const EdgeInsets.symmetric(horizontal: 48),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(22),
+              border: Border.all(color: KafiColors.cardBorder),
+              boxShadow: const [
+                BoxShadow(
+                    color: Color(0x1FFF5C8A), blurRadius: 24, offset: Offset(0, 8)),
+              ],
             ),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const CircularProgressIndicator(),
-                const SizedBox(height: 14),
-                Text(message, style: const TextStyle(fontWeight: FontWeight.w700)),
+                Container(
+                  width: 52,
+                  height: 52,
+                  decoration: BoxDecoration(
+                    color: KafiColors.roseP,
+                    shape: BoxShape.circle,
+                  ),
+                  child: const Padding(
+                    padding: EdgeInsets.all(13),
+                    child: CircularProgressIndicator(
+                        strokeWidth: 3, color: KafiColors.roseD),
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Text(
+                  message,
+                  textAlign: TextAlign.center,
+                  style: KafiTheme.fredoka(13, color: KafiColors.td, w: FontWeight.w700),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  AppStrings.docUploadingHint.tr,
+                  textAlign: TextAlign.center,
+                  style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600),
+                ),
               ],
             ),
           ),

@@ -1,6 +1,12 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:kafi_app/models/geo_location.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/utils/localized_text.dart';
+
+/// Parse a nested location map (coords + address + city + country), tolerating
+/// Firestore's `Map<Object?, Object?>` shape.
+GeoLocation? _geoFromMap(dynamic v) =>
+    v is Map ? GeoLocation.fromMap(Map<String, dynamic>.from(v)) : null;
 
 DateTime? _parseDate(dynamic v) {
   if (v == null) return null;
@@ -28,6 +34,7 @@ WorkExperience _experienceFromMap(Map<String, dynamic> m) => WorkExperience(
       children: m['children']?.toString() ?? '',
       duties: m['duties']?.toString() ?? '',
       reasonLeaving: m['reasonLeaving']?.toString() ?? '',
+      location: _geoFromMap(m['location']),
     );
 
 ReferenceContact _referenceFromMap(Map<String, dynamic> m) => ReferenceContact(
@@ -36,6 +43,7 @@ ReferenceContact _referenceFromMap(Map<String, dynamic> m) => ReferenceContact(
       city: m['city']?.toString() ?? '',
       yearsWorked: (m['yearsWorked'] as num?)?.toInt() ?? 0,
       canConfirm: m['canConfirm']?.toString() ?? '',
+      location: _geoFromMap(m['location']),
     );
 
 NannyDocument _documentFromMap(Map<String, dynamic> m) => NannyDocument(
@@ -77,6 +85,7 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
           const [],
       willingToRelocate: m['willingToRelocate'] == true,
       currentArea: (m['currentArea'] as String?) ?? '',
+      currentLocation: _geoFromMap(m['currentLocation']),
       jobTypePreference: _enumByName(JobTypePreference.values, m['jobTypePreference']) ??
           JobTypePreference.both,
       expectedSalaryMin: (m['expectedSalaryMin'] as num?)?.toInt() ?? 0,
@@ -106,6 +115,7 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
       comfortableWithDifferentFaith: m['comfortableWithDifferentFaith'] != false,
       emergencyName: (m['emergencyName'] as String?) ?? '',
       emergencyRelationship: (m['emergencyRelationship'] as String?) ?? '',
+      emergencyCountryCode: (m['emergencyCountryCode'] as String?) ?? '+971',
       emergencyPhone: (m['emergencyPhone'] as String?) ?? '',
       bio: (m['bio'] as String?) ?? '',
       photoUrls: List<String>.from(m['photoUrls'] ?? const []),
