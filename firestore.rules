@@ -228,6 +228,24 @@ service cloud.firestore {
       allow update, delete: if isAdmin();
     }
 
+    // ---------- hires ----------
+    // A family creates a hire record when it hires a nanny at the end of a
+    // trial. Both parties read it; either party may end it (nanny resigns /
+    // family terminates). The nanny's `stats.hiresCount` is maintained by the
+    // onHireCreated function (the rules forbid the family writing the nanny doc).
+    match /hires/{hireId} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && (existing().familyId == request.auth.uid
+                || existing().nannyId == request.auth.uid));
+      allow create: if isSignedIn() && incoming().familyId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && (existing().familyId == request.auth.uid
+                || existing().nannyId == request.auth.uid));
+      allow delete: if isAdmin();
+    }
+
     // ---------- disputes / reports ----------
     match /disputes/{disputeId} {
       allow read: if isAdmin()

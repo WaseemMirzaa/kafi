@@ -90,6 +90,19 @@ export const onProfileViewed = onDocumentCreated('profileViews/{viewId}', async 
     .set({ stats: { profileViews: admin.firestore.FieldValue.increment(1) } }, { merge: true });
 });
 
+/// A family creates `hires/{hireId}` when it hires a nanny. The rules forbid
+/// the family from writing the nanny's doc, so this trigger owns the nanny's
+/// server-side `stats.hiresCount`.
+export const onHireCreated = onDocumentCreated('hires/{hireId}', async (event) => {
+  const nannyId = event.data?.data()?.nannyId as string | undefined;
+  if (!nannyId) return;
+  await admin
+    .firestore()
+    .collection('nannies')
+    .doc(nannyId)
+    .set({ stats: { hiresCount: admin.firestore.FieldValue.increment(1) } }, { merge: true });
+});
+
 /// A review of a nanny folds into her server-owned rating aggregate. The rules
 /// forbid a reviewer from writing the reviewee's doc, so this trigger owns
 /// nannies/{id}.stats.averageRating / reviewsCount.

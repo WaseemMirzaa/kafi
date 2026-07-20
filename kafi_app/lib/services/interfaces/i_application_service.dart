@@ -14,4 +14,8 @@ abstract class IApplicationService {
   Future<void> shortlist(String appId);
   Future<void> decline(String appId);
   Future<void> offerTrial(String appId);
+
+  /// Marks the application as hired — set when a family hires the nanny at the
+  /// end of a trial, so the family's Applicants list shows the "Hired" badge.
+  Future<void> markHired(String appId);
 }

@@ -11,6 +11,7 @@ import 'package:kafi_app/services/firebase/firestore_application_service.dart';
 import 'package:kafi_app/services/firebase/firestore_chat_service.dart';
 import 'package:kafi_app/services/firebase/firestore_job_service.dart';
 import 'package:kafi_app/services/firebase/firestore_dispute_service.dart';
+import 'package:kafi_app/services/firebase/firestore_hire_service.dart';
 import 'package:kafi_app/services/firebase/firestore_review_service.dart';
 import 'package:kafi_app/services/firebase/firestore_shortlist_service.dart';
 import 'package:kafi_app/services/firebase/firestore_subscription_service.dart';
@@ -20,6 +21,7 @@ import 'package:kafi_app/services/interfaces/i_application_service.dart';
 import 'package:kafi_app/services/interfaces/i_auth_service.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 import 'package:kafi_app/services/interfaces/i_dispute_service.dart';
+import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/services/interfaces/i_review_service.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_notification_service.dart';
@@ -36,6 +38,7 @@ import 'package:kafi_app/services/mock/mock_chat_service.dart';
 import 'package:kafi_app/services/mock/mock_job_service.dart';
 import 'package:kafi_app/services/mock/mock_notification_service.dart';
 import 'package:kafi_app/services/mock/mock_dispute_service.dart';
+import 'package:kafi_app/services/mock/mock_hire_service.dart';
 import 'package:kafi_app/services/mock/mock_review_service.dart';
 import 'package:kafi_app/services/mock/mock_shortlist_service.dart';
 import 'package:kafi_app/services/mock/mock_storage_service.dart';
@@ -63,6 +66,7 @@ class InitialBinding extends Bindings {
       Get.put<IShortlistService>(MockShortlistService(), permanent: true);
       Get.put<IDisputeService>(MockDisputeService(), permanent: true);
       Get.put<IReviewService>(MockReviewService(), permanent: true);
+      Get.put<IHireService>(MockHireService(), permanent: true);
     } else {
       Get.put<IAuthService>(FirebaseAuthService(), permanent: true);
       Get.put<IUserService>(FirestoreUserService(), permanent: true);
@@ -79,6 +83,7 @@ class InitialBinding extends Bindings {
       Get.put<IShortlistService>(FirestoreShortlistService(), permanent: true);
       Get.put<IDisputeService>(FirestoreDisputeService(), permanent: true);
       Get.put<IReviewService>(FirestoreReviewService(), permanent: true);
+      Get.put<IHireService>(FirestoreHireService(), permanent: true);
     }
 
     Get.put(PermissionService(), permanent: true);

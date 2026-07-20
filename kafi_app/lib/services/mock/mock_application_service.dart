@@ -121,4 +121,16 @@ class MockApplicationService implements IApplicationService {
       );
     }
   }
+
+  @override
+  Future<void> markHired(String appId) async {
+    await Future.delayed(const Duration(milliseconds: 200));
+    final idx = _applications.indexWhere((a) => a.id == appId);
+    if (idx >= 0) {
+      _applications[idx] = _applications[idx].copyWith(
+        status: ApplicationStatus.hired,
+        respondedAt: DateTime.now(),
+      );
+    }
+  }
 }
