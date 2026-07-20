@@ -100,6 +100,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.familyApplicants: 'المتقدمات',
     AppStrings.familyApplicantsSub: 'المربيات اللاتي تقدمن لوظائفك',
     AppStrings.familyApplicantsEmpty: 'لا يوجد متقدمات بعد',
+    AppStrings.applicantsNoMatch: 'لا يوجد متقدمات مطابقة لبحثك.',
     AppStrings.familyApplicantsEmptySub: 'عندما تتقدم المربيات لوظائفك ستظهر هنا.',
     AppStrings.applicantShortlist: 'القائمة المختصرة',
     AppStrings.applicantDecline: 'رفض',

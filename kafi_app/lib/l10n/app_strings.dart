@@ -398,6 +398,7 @@ abstract class AppStrings {
   static const familyApplicants = 'family_applicants';
   static const familyApplicantsSub = 'family_applicants_sub';
   static const familyApplicantsEmpty = 'family_applicants_empty';
+  static const applicantsNoMatch = 'applicants_no_match';
   static const familyApplicantsEmptySub = 'family_applicants_empty_sub';
   static const applicantShortlist = 'applicant_shortlist';
   static const applicantDecline = 'applicant_decline';

@@ -45,6 +45,7 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
                 }
                 if (all.isEmpty) return _emptyState();
                 final apps = controller.filteredReceived;
+                if (apps.isEmpty) return _noMatchState();
                 return RefreshIndicator(
                   color: KafiColors.pur,
                   onRefresh: controller.loadApplications,
@@ -95,6 +96,15 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Shown when a search filters out every applicant (the list was previously a
+  /// blank ListView) — HIRE-4.
+  Widget _noMatchState() {
+    return Center(
+      child: Text(AppStrings.applicantsNoMatch.tr,
+          style: KafiTheme.nunito(12, color: KafiColors.ts, w: FontWeight.w600)),
     );
   }
 
@@ -246,20 +256,26 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
   }
 
   Future<void> _openApplicant(ApplicationModel app) async {
-    if (app.status == ApplicationStatus.pending) {
-      await controller.markAsViewed(app.id);
-    }
-    final subs = Get.find<SubscriptionController>();
-    await subs.recordViewIfAllowed(app.nannyId);
-    await _syncMockEntitlementsIfNeeded(app.familyId);
-    final nanny = await Get.find<IUserService>().getNanny(app.nannyId);
-    if (nanny == null) {
+    try {
+      if (app.status == ApplicationStatus.pending) {
+        await controller.markAsViewed(app.id);
+      }
+      final subs = Get.find<SubscriptionController>();
+      await subs.recordViewIfAllowed(app.nannyId);
+      await _syncMockEntitlementsIfNeeded(app.familyId);
+      final nanny = await Get.find<IUserService>().getNanny(app.nannyId);
+      if (nanny == null) {
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.applicantProfileUnavailable.tr);
+        return;
+      }
+      final card =
+          NannyCardModel.fromNanny(nanny).copyWith(matchPercent: app.matchScore);
+      AppNavigation.openNannyProfile(card);
+    } catch (e) {
+      // A failed view/reveal must not throw uncaught from the tap (HIRE-1).
+      Get.log('open applicant failed: $e', isError: true);
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.applicantProfileUnavailable.tr);
-      return;
     }
-    final card =
-        NannyCardModel.fromNanny(nanny).copyWith(matchPercent: app.matchScore);
-    AppNavigation.openNannyProfile(card);
   }
 
   Future<void> _syncMockEntitlementsIfNeeded(String familyId) async {
