@@ -139,30 +139,47 @@ class ApplicationController extends GetxController {
   }
 
   Future<void> markAsViewed(String appId) async {
-    await _appService.markViewed(appId);
-    final idx = receivedApplications.indexWhere((a) => a.id == appId);
-    if (idx >= 0) {
-      receivedApplications[idx] = receivedApplications[idx].copyWith(status: ApplicationStatus.viewed);
+    // Best-effort: the "viewed" marker is cosmetic and auto-fired when the
+    // family opens an applicant, so a write failure must not throw and block
+    // the profile from opening. Log it rather than swallow it silently.
+    try {
+      await _appService.markViewed(appId);
+      final idx = receivedApplications.indexWhere((a) => a.id == appId);
+      if (idx >= 0) {
+        receivedApplications[idx] = receivedApplications[idx].copyWith(status: ApplicationStatus.viewed);
+      }
+    } catch (e) {
+      Get.log('markAsViewed failed: $e', isError: true);
     }
   }
 
   Future<void> shortlist(String appId) async {
-    await _appService.shortlist(appId);
-    final idx = receivedApplications.indexWhere((a) => a.id == appId);
-    if (idx >= 0) {
-      final app = receivedApplications[idx];
-      receivedApplications[idx] = app.copyWith(status: ApplicationStatus.shortlisted);
-      if (Get.isRegistered<ShortlistController>()) {
-        await Get.find<ShortlistController>().addToShortlist(app.nannyId);
+    // A deliberate family action: on failure the optimistic status update below
+    // never runs, so tell the user instead of leaving the card unchanged.
+    try {
+      await _appService.shortlist(appId);
+      final idx = receivedApplications.indexWhere((a) => a.id == appId);
+      if (idx >= 0) {
+        final app = receivedApplications[idx];
+        receivedApplications[idx] = app.copyWith(status: ApplicationStatus.shortlisted);
+        if (Get.isRegistered<ShortlistController>()) {
+          await Get.find<ShortlistController>().addToShortlist(app.nannyId);
+        }
       }
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     }
   }
 
   Future<void> decline(String appId) async {
-    await _appService.decline(appId);
-    final idx = receivedApplications.indexWhere((a) => a.id == appId);
-    if (idx >= 0) {
-      receivedApplications[idx] = receivedApplications[idx].copyWith(status: ApplicationStatus.declined);
+    try {
+      await _appService.decline(appId);
+      final idx = receivedApplications.indexWhere((a) => a.id == appId);
+      if (idx >= 0) {
+        receivedApplications[idx] = receivedApplications[idx].copyWith(status: ApplicationStatus.declined);
+      }
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     }
   }
 }

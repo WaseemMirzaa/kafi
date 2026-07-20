@@ -40,6 +40,9 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
                   return const Center(
                       child: CircularProgressIndicator(color: KafiColors.pur));
                 }
+                if (controller.loadError.value != null && all.isEmpty) {
+                  return _errorState();
+                }
                 if (all.isEmpty) return _emptyState();
                 final apps = controller.filteredReceived;
                 return RefreshIndicator(
@@ -110,6 +113,36 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
             child: Text(AppStrings.familyApplicantsEmptySub.tr,
                 textAlign: TextAlign.center,
                 style: KafiTheme.nunito(10, color: KafiColors.ts)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Shown when the applicants read fails and the list is empty, so a live-read
+  /// failure surfaces as an error with a retry instead of a misleading "no
+  /// applicants yet" empty state.
+  Widget _errorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 48, color: KafiColors.pur.withValues(alpha: 0.7)),
+          const SizedBox(height: 12),
+          Text(AppStrings.loadErrorTitle.tr,
+              style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w700)),
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(AppStrings.loadErrorSub.tr,
+                textAlign: TextAlign.center,
+                style: KafiTheme.nunito(10, color: KafiColors.ts)),
+          ),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: controller.loadApplications,
+            child: Text(AppStrings.retry.tr,
+                style: KafiTheme.fredoka(12, color: KafiColors.pur, w: FontWeight.w700)),
           ),
         ],
       ),
