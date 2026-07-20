@@ -11,12 +11,21 @@ import 'package:kafi_app/l10n/app_strings.dart';
 class Validators {
   Validators._();
 
+  /// Normalises a raw phone entry to its national significant number: strips
+  /// spaces, dashes, parentheses and any other non-digit, then drops a single
+  /// leading trunk `0` (e.g. UAE users type `050…` for `+9715…`). Used both by
+  /// the validators below and by the auth service before it builds the E.164
+  /// number for Firebase, so the two never diverge.
+  static String sanitizePhone(String raw) {
+    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
+    return digits.startsWith('0') ? digits.substring(1) : digits;
+  }
+
   /// Phone national-number validation (country code is selected separately).
   /// Accepts spaces/dashes; strips a leading 0; expects 6–12 digits. (§14.1 A1)
   static String? phone(String raw) {
-    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return AppStrings.phoneRequired;
-    final national = digits.startsWith('0') ? digits.substring(1) : digits;
+    if (raw.replaceAll(RegExp(r'[^0-9]'), '').isEmpty) return AppStrings.phoneRequired;
+    final national = sanitizePhone(raw);
     if (national.length < 6 || national.length > 12) {
       return AppStrings.authPhoneInvalid;
     }
@@ -41,9 +50,8 @@ class Validators {
   /// Emergency / secondary phone — same rule as [phone] but reuses the
   /// generic "valid phone" message. (§14.4 V4)
   static String? contactPhone(String raw) {
-    final digits = raw.replaceAll(RegExp(r'[^0-9]'), '');
-    if (digits.isEmpty) return AppStrings.valRequired;
-    final national = digits.startsWith('0') ? digits.substring(1) : digits;
+    if (raw.replaceAll(RegExp(r'[^0-9]'), '').isEmpty) return AppStrings.valRequired;
+    final national = sanitizePhone(raw);
     if (national.length < 6 || national.length > 12) {
       return AppStrings.valPhoneInvalid;
     }

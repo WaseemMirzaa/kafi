@@ -34,6 +34,25 @@ void main() {
     });
   });
 
+  group('Validators.sanitizePhone', () {
+    test('strips spaces, dashes and parentheses', () {
+      expect(Validators.sanitizePhone('(50) 123-4567'), '501234567');
+    });
+
+    test('drops a single leading trunk zero', () {
+      expect(Validators.sanitizePhone('0501234567'), '501234567');
+    });
+
+    test('leaves an already-clean national number untouched', () {
+      expect(Validators.sanitizePhone('501234567'), '501234567');
+    });
+
+    test('empty / non-digit input → empty string', () {
+      expect(Validators.sanitizePhone(''), '');
+      expect(Validators.sanitizePhone('   '), '');
+    });
+  });
+
   group('Validators.dateOfBirth (§14.4 V2/V3)', () {
     final now = DateTime.now();
 
