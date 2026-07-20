@@ -87,11 +87,19 @@ class ShortlistController extends GetxController {
         Get.isRegistered<BrowseController>() ? Get.find<BrowseController>().familyContext : null;
     final matcher = Get.isRegistered<MatchService>() ? Get.find<MatchService>() : MatchService();
     await Future.wait(shortlistedNannies.map((s) async {
-      final n = await _userService.getNanny(s.nannyId);
-      if (n == null) return;
-      loaded[s.nannyId] = matchJob != null
-          ? matcher.cardWithJobMatch(n, matchJob, family: family)
-          : NannyCardModel.fromNanny(n);
+      // Guard per-nanny: a shortlisted nanny we can't currently read (e.g. she's
+      // not approved/verified → rules deny the read) must NOT reject the whole
+      // Future.wait and wipe the list. Her card just falls back to the item's
+      // denormalized name (see cardFor).
+      try {
+        final n = await _userService.getNanny(s.nannyId);
+        if (n == null) return;
+        loaded[s.nannyId] = matchJob != null
+            ? matcher.cardWithJobMatch(n, matchJob, family: family)
+            : NannyCardModel.fromNanny(n);
+      } catch (_) {
+        // Skip enrichment for this one; the shortlist item still shows.
+      }
     }));
     cards.assignAll(loaded);
   }

@@ -193,8 +193,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               Text(AppStrings.chatTitle.tr, style: KafiTheme.pacifico(17, color: titleColor)),
               const Spacer(),
-              _circleIconBtn(Icons.search, () {}),
-              const SizedBox(width: 5),
+              // (Search is the always-visible field below — no dead magnifier here.)
               _circleIconBtn(Icons.notifications_outlined, AppNavigation.openNotifications),
             ],
           ),
