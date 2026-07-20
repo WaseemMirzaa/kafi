@@ -127,6 +127,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.whatsappHer: 'واتساب',
     AppStrings.callHer: 'اتصل',
     AppStrings.inAppChat: 'محادثة',
+    AppStrings.watchIntroVideo: 'مشاهدة فيديو التعريف',
     AppStrings.fullCv: 'السيرة الذاتية',
     AppStrings.monthlyActive: 'اشتراك نشط',
     AppStrings.subExpiredBanner: 'انتهى اشتراكك. جدد للوصول.',

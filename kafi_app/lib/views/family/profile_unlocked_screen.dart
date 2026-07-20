@@ -220,6 +220,17 @@ class ProfileUnlockedScreen extends StatelessWidget {
                   const [KafiColors.rose, KafiColors.roseD],
                   () => AppNavigation.openChat(nannyId: card.id, nannyName: card.name),
                   small: true),
+              // Intro video is an unlocked perk — reachable only from here.
+              if ((card.introVideoUrl ?? '').isNotEmpty) ...[
+                const SizedBox(height: 7),
+                _gridBtn('🎬', AppStrings.watchIntroVideo.tr,
+                    const [KafiColors.pur, Color(0xFF7B5BD5)],
+                    () => Get.toNamed(Routes.videoPlayer, arguments: {
+                          'videoUrl': card.introVideoUrl,
+                          'nannyName': card.name,
+                        }),
+                    small: true),
+              ],
             ],
           ),
         ),
