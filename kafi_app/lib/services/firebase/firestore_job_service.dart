@@ -108,6 +108,11 @@ class FirestoreJobService implements IJobService {
     });
   }
 
+  @override
+  Future<void> deleteJob(String jobId) async {
+    await _jobs.doc(jobId).delete();
+  }
+
   JobPostModel _jobFromMap(String id, Map<String, dynamic> m) => JobPostModel(
         id: id,
         familyId: m['familyId'] ?? '',

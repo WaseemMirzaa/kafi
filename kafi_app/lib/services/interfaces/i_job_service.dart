@@ -17,4 +17,7 @@ abstract class IJobService {
   Future<List<JobPostModel>> browseJobs({JobFilter? filter});
   Future<JobPostModel?> getJob(String id);
   Future<void> updateJobStatus(String jobId, JobPostStatus status);
+
+  /// Permanently deletes a job post (family owner or admin, per the rules).
+  Future<void> deleteJob(String jobId);
 }

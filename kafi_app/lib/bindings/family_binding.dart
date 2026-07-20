@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/controllers/application_controller.dart';
 import 'package:kafi_app/controllers/browse_controller.dart';
 import 'package:kafi_app/controllers/chat_controller.dart';
+import 'package:kafi_app/controllers/family_jobs_controller.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/controllers/family_shell_controller.dart';
 import 'package:kafi_app/controllers/settings_controller.dart';
@@ -22,6 +23,7 @@ class FamilyBinding extends Bindings {
     Get.put(TrialController(), permanent: true);
     Get.put(ApplicationController(), permanent: true);
     Get.put(FamilyProfileController(), permanent: true);
+    Get.put(FamilyJobsController(), permanent: true);
     Get.put(SettingsController(), permanent: true);
   }
 }
