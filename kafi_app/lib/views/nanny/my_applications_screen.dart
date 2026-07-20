@@ -7,6 +7,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_search_field.dart';
 
 class MyApplicationsScreen extends GetView<ApplicationController> {
   const MyApplicationsScreen({super.key});
@@ -21,6 +22,10 @@ class MyApplicationsScreen extends GetView<ApplicationController> {
         child: Column(
           children: [
             _hero(),
+            KafiSearchField(
+              hint: AppStrings.searchHint.tr,
+              onChanged: (v) => controller.sentQuery.value = v,
+            ),
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value) {
@@ -29,10 +34,11 @@ class MyApplicationsScreen extends GetView<ApplicationController> {
                 if (controller.myApplications.isEmpty) {
                   return _emptyState();
                 }
+                final apps = controller.filteredSent;
                 return ListView.builder(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
-                  itemCount: controller.myApplications.length,
-                  itemBuilder: (_, i) => _applicationCard(controller.myApplications[i]),
+                  itemCount: apps.length,
+                  itemBuilder: (_, i) => _applicationCard(apps[i]),
                 );
               }),
             ),

@@ -6,6 +6,8 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_nanny_card.dart';
+import 'package:kafi_app/views/widgets/kafi_search_field.dart';
+
 class ShortlistScreen extends GetView<ShortlistController> {
   const ShortlistScreen({super.key, this.embedInShell = false});
 
@@ -21,6 +23,10 @@ class ShortlistScreen extends GetView<ShortlistController> {
         child: Column(
           children: [
             _hero(),
+            KafiSearchField(
+              hint: AppStrings.searchHint.tr,
+              onChanged: (v) => controller.query.value = v,
+            ),
             Expanded(
               child: Obx(() {
                 if (controller.isLoading.value) {
@@ -29,11 +35,12 @@ class ShortlistScreen extends GetView<ShortlistController> {
                 if (controller.shortlistedNannies.isEmpty) {
                   return _emptyState();
                 }
+                final items = controller.filteredShortlist;
                 return ListView.builder(
                   padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
-          itemCount: controller.shortlistedNannies.length,
+          itemCount: items.length,
           itemBuilder: (_, i) {
-            final item = controller.shortlistedNannies[i];
+            final item = items[i];
             final card = controller.cardFor(item);
             // Identical card to the home feed; swipe left to remove.
             return Dismissible(

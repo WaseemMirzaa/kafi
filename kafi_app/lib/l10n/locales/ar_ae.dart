@@ -109,6 +109,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.browseGoodMorning: 'صباح الخير',
     AppStrings.browseHello: 'مرحباً، @name',
     AppStrings.browseSearchHint: 'ابحث عن مربية...',
+    AppStrings.searchHint: 'بحث…',
     AppStrings.browseTopMatches: 'أفضل المطابقات',
     AppStrings.browseNoMatch: 'لا توجد نتائج',
     AppStrings.seeAll: 'عرض الكل',

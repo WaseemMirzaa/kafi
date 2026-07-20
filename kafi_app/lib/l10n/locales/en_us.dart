@@ -296,6 +296,7 @@ const Map<String, String> enUs = {
   AppStrings.browseGoodMorning: 'Good morning 🌸',
   AppStrings.browseHello: 'Hello, @name!',
   AppStrings.browseSearchHint: 'Search nannies by skills, nationality...',
+  AppStrings.searchHint: 'Search…',
   AppStrings.browseTopMatches: 'Top matches for you',
   AppStrings.seeAll: 'See all',
   AppStrings.verifiedBadge: 'Verified ✓',

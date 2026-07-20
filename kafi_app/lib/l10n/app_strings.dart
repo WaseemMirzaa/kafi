@@ -479,6 +479,7 @@ abstract class AppStrings {
   static const browseGoodMorning = 'browse_good_morning';
   static const browseHello = 'browse_hello';
   static const browseSearchHint = 'browse_search_hint';
+  static const searchHint = 'search_hint';
   static const browseTopMatches = 'browse_top_matches';
   static const seeAll = 'see_all';
   static const verifiedBadge = 'verified_badge';
