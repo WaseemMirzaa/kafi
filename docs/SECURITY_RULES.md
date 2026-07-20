@@ -75,6 +75,7 @@ from `firestore.indexes.json` under **Firestore Database → Indexes**.
 | `trials/{id}` | the two parties / admin | owner family | either party / admin | admin |
 | `notifications/{id}` | recipient / admin | **admin/server only** | recipient / admin | recipient / admin |
 | `reviews/{id}` | public reviews → any signed-in; else the two parties / admin | reviewer | admin *(rating folded into `stats.averageRating` by the function)* | admin |
+| `hires/{id}` | the two parties / admin | owner family | either party / admin *(nanny resigns, family terminates)* | admin |
 | `disputes/{id}` | reporter/reported / admin | reporter | admin | admin |
 | `disputes/{id}/messages/{id}` | admin / reporter | admin, or reporter (as `senderType: 'user'`) | admin | admin |
 | `settings/{id}` | any signed‑in | — | admin | admin |
@@ -345,6 +346,23 @@ service cloud.firestore {
                 || existing().revieweeId == request.auth.uid));
       allow create: if isSignedIn() && incoming().reviewerId == request.auth.uid;
       allow update, delete: if isAdmin();
+    }
+
+    // ---------- hires ----------
+    // A family creates a hire when it hires a nanny at the end of a trial. Both
+    // parties read it; either party may end it (nanny resigns / family
+    // terminates). The nanny's stats.hiresCount is maintained by onHireCreated.
+    match /hires/{hireId} {
+      allow read: if isAdmin()
+        || (isSignedIn()
+            && (existing().familyId == request.auth.uid
+                || existing().nannyId == request.auth.uid));
+      allow create: if isSignedIn() && incoming().familyId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && (existing().familyId == request.auth.uid
+                || existing().nannyId == request.auth.uid));
+      allow delete: if isAdmin();
     }
 
     // ---------- disputes / reports ----------

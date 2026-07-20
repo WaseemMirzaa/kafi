@@ -132,4 +132,12 @@ class FirestoreApplicationService implements IApplicationService {
       'respondedAt': FieldValue.serverTimestamp(),
     });
   }
+
+  @override
+  Future<void> markHired(String appId) async {
+    await _apps.doc(appId).update({
+      'status': ApplicationStatus.hired.name,
+      'respondedAt': FieldValue.serverTimestamp(),
+    });
+  }
 }

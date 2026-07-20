@@ -5,9 +5,12 @@ import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/models/dispute_model.dart';
+import 'package:kafi_app/models/hire_model.dart';
 import 'package:kafi_app/models/trial_model.dart';
+import 'package:kafi_app/services/interfaces/i_application_service.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 import 'package:kafi_app/services/interfaces/i_dispute_service.dart';
+import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
@@ -21,6 +24,8 @@ class TrialController extends GetxController {
   final AuthController _auth = Get.find<AuthController>();
   final IDisputeService _disputes = Get.find<IDisputeService>();
   final IUserService _users = Get.find<IUserService>();
+  final IHireService _hires = Get.find<IHireService>();
+  final IApplicationService _apps = Get.find<IApplicationService>();
   final _uuid = const Uuid();
 
   /// Real nanny cards for the loaded trials, keyed by nannyId — fetched from
@@ -371,12 +376,55 @@ class TrialController extends GetxController {
     if (t == null) return;
     await _trials.recordOutcome(t.id, s,
         evaluation: evaluation, outcomeLabel: outcomeLabel);
+    // A "Hire" outcome turns the finished trial into an employment record so the
+    // family and nanny both see the ongoing hire (and the nanny's hiresCount
+    // ticks up server-side). Best-effort: a hire-write failure must not block
+    // the trial from being marked completed.
+    final isFamily = !(_auth.currentUser.value?.isNanny ?? false);
+    if (s == TrialStatus.completed && outcomeLabel == 'hired' && isFamily) {
+      await _createHireFromTrial(t);
+    }
     selected.value = null;
     await refreshAll();
     // Once a family completes a trial, invite them to rate the nanny (no-ops
     // for nannies or if they've already reviewed her). Feeds stats.averageRating.
-    if (s == TrialStatus.completed && !(_auth.currentUser.value?.isNanny ?? false)) {
+    if (s == TrialStatus.completed && isFamily) {
       await showReviewDialog(nannyId: t.nannyId, trialId: t.id);
+    }
+  }
+
+  /// Creates the `hires/{id}` record for a hired trial and flips the matching
+  /// application to `hired` so the family's Applicants list shows the badge.
+  /// Every step is defensive — the trial is already completed, so a failure
+  /// here should surface a toast, never throw.
+  Future<void> _createHireFromTrial(TrialModel t) async {
+    try {
+      final hire = HireModel(
+        id: 'hire_${t.id}',
+        familyId: t.familyId,
+        nannyId: t.nannyId,
+        jobPostId: t.jobPostId,
+        trialId: t.id,
+        employmentType: t.trialType,
+        status: HireStatus.active,
+        startedAt: DateTime.now(),
+        nannyName: nannyCards[t.nannyId]?.name,
+        familyName: _auth.currentUser.value?.fullName,
+      );
+      await _hires.createHire(hire);
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    }
+    // Flip the application (if one exists) to hired — separate try so a missing
+    // application never undoes the hire.
+    try {
+      final apps = await _apps.getApplicationsForFamily(t.familyId);
+      final match = apps.firstWhereOrNull((a) =>
+          a.nannyId == t.nannyId &&
+          (t.jobPostId == null || a.jobPostId == t.jobPostId));
+      if (match != null) await _apps.markHired(match.id);
+    } catch (_) {
+      // No application to update (trial may have been offered directly) — fine.
     }
   }
 
