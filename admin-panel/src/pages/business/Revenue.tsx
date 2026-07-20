@@ -177,6 +177,34 @@ export default function Revenue() {
     );
   }
 
+  // Every figure on this page is derived from the `transactions` collection,
+  // which is written by the RevenueCat webhook. Until billing is integrated
+  // that collection is empty in production, so rather than show misleading
+  // "AED 0 ↑ Live" tiles and empty tables we render a clear placeholder. Once a
+  // real transaction lands (billing live, or mock/demo data) the full report
+  // renders automatically.
+  if (!error && txns.length === 0) {
+    return (
+      <PageShell>
+        <PageHeader title="Revenue" subtitle="Financial overview & VAT" />
+        <PageContent>
+          <TableCard title="Revenue reporting">
+            <div className="px-3 py-6 text-center">
+              <div className="text-[11px] font-extrabold text-navy">
+                Billing is not integrated yet
+              </div>
+              <div className="mt-1.5 mx-auto max-w-md text-[10px] font-semibold text-[#8090B0] leading-relaxed">
+                Revenue, VAT and transaction data are populated by the RevenueCat
+                webhook. This report will appear here automatically once payments
+                are live. See <span className="font-bold">docs/PAYMENTS.md</span>.
+              </div>
+            </div>
+          </TableCard>
+        </PageContent>
+      </PageShell>
+    );
+  }
+
   return (
     <PageShell>
       <PageHeader
