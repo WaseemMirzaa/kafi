@@ -6,6 +6,7 @@ import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/controllers/nanny_shell_controller.dart';
 import 'package:kafi_app/controllers/settings_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
+import 'package:kafi_app/controllers/ticket_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 
 class NannyBinding extends Bindings {
@@ -21,5 +22,6 @@ class NannyBinding extends Bindings {
     Get.put(ChatController(), permanent: true);
     Get.put(SettingsController(), permanent: true);
     Get.put(TrialController(), permanent: true);
+    Get.put(TicketController(), permanent: true);
   }
 }

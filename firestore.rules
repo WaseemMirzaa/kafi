@@ -288,6 +288,36 @@ service cloud.firestore {
       }
     }
 
+    // ---------- support tickets ----------
+    // A user (family or nanny) opens a support ticket and chats with admin.
+    // The opener may bump lastMessage/lastMessageAt but NOT the status (admin
+    // owns status). Distinct from disputes, which are reports about a user.
+    match /tickets/{ticketId} {
+      allow read: if isAdmin()
+        || (isSignedIn() && existing().openerId == request.auth.uid);
+      allow create: if isSignedIn() && incoming().openerId == request.auth.uid;
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && existing().openerId == request.auth.uid
+            && incoming().status == existing().status);
+      allow delete: if isAdmin();
+
+      // The ticket conversation. Admin or the opener; a non-admin may only post
+      // as sender type 'user' (never impersonate 'admin'/Support). Gated via a
+      // get() on the parent ticket since rules don't cascade.
+      match /messages/{msgId} {
+        function isOpener() {
+          return isSignedIn()
+            && get(/databases/$(database)/documents/tickets/$(ticketId)).data.openerId
+                == request.auth.uid;
+        }
+        allow read: if isAdmin() || isOpener();
+        allow create: if isAdmin()
+          || (isOpener() && incoming().senderType == 'user');
+        allow update, delete: if isAdmin();
+      }
+    }
+
     // ---------- admin config ----------
     match /settings/{settingId} {
       allow read: if isSignedIn();
