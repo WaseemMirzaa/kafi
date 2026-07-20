@@ -179,7 +179,16 @@ class JobsHomeScreen extends GetView<JobPostController> {
   Widget _buildFilters() {
     final filters = ['All', 'Live-in', 'Live-out', 'Newborn'];
     return Obx(() {
-      final active = controller.filter.value.jobType ?? 'All';
+      // Map the current filter back to its display label so the selected pill
+      // highlights (the raw jobType is 'liveIn'/'liveOut', not the label).
+      final f = controller.filter.value;
+      final active = f.jobType == 'liveIn'
+          ? 'Live-in'
+          : f.jobType == 'liveOut'
+              ? 'Live-out'
+              : f.duties.contains('newborn')
+                  ? 'Newborn'
+                  : 'All';
       return Container(
         height: 38,
         margin: const EdgeInsets.fromLTRB(0, 10, 0, 0),
