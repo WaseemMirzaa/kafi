@@ -68,7 +68,9 @@ class TrialController extends GetxController {
   final RxBool isLoading = false.obs;
 
   final RxInt durationDays = 7.obs;
-  final RxInt dailyRate = 150.obs;
+  // Starts at 0 so an offer can't be sent at a fabricated 150/day without the
+  // family actually entering a rate (canSend requires dailyRate > 0) — CHT-5.
+  final RxInt dailyRate = 0.obs;
   final Rx<DateTime?> startDate = Rx<DateTime?>(null);
   final RxString trialType = 'live-in'.obs;
   final RxString notes = ''.obs;
@@ -708,7 +710,7 @@ class TrialController extends GetxController {
 
   void _resetForm() {
     durationDays.value = 7;
-    dailyRate.value = 150;
+    dailyRate.value = 0;
     startDate.value = null;
     trialType.value = 'live-in';
     notes.value = '';
