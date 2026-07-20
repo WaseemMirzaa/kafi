@@ -90,7 +90,7 @@ class TicketController extends GetxController {
     _sub?.cancel();
     _sub = _tickets.watchMessages(t.id).listen(
       (list) => messages.value = list,
-      onError: (_) {},
+      onError: (e) => Get.log('ticket message stream error: $e', isError: true),
     );
   }
 

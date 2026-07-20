@@ -36,6 +36,9 @@ class SupportScreen extends GetView<TicketController> {
                 if (controller.isLoading.value && controller.tickets.isEmpty) {
                   return const Center(child: CircularProgressIndicator(color: KafiColors.pur));
                 }
+                if (controller.error.value != null && controller.tickets.isEmpty) {
+                  return _errorState();
+                }
                 if (controller.tickets.isEmpty) return _emptyState();
                 return RefreshIndicator(
                   color: KafiColors.pur,
@@ -84,6 +87,28 @@ class SupportScreen extends GetView<TicketController> {
                     style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600)),
               ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Shown when the tickets read fails (was previously masked as the empty
+  /// "no tickets" state) — SUP-1.
+  Widget _errorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 48, color: KafiColors.pur.withValues(alpha: 0.7)),
+          const SizedBox(height: 12),
+          Text(AppStrings.loadErrorTitle.tr,
+              style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w700)),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: controller.loadTickets,
+            child: Text(AppStrings.retry.tr,
+                style: KafiTheme.fredoka(12, color: KafiColors.pur, w: FontWeight.w700)),
           ),
         ],
       ),
