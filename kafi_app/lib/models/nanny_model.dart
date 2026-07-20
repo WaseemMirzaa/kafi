@@ -210,6 +210,7 @@ class NannyModel {
     this.comfortableWithDifferentFaith = true,
     this.emergencyName = '',
     this.emergencyRelationship = '',
+    this.emergencyCountryCode = '+971',
     this.emergencyPhone = '',
     this.bio = '',
     this.photoUrls = const [],
@@ -271,6 +272,7 @@ class NannyModel {
   final bool comfortableWithDifferentFaith;
   final String emergencyName;
   final String emergencyRelationship;
+  final String emergencyCountryCode;
   final String emergencyPhone;
   final String bio;
   final List<String> photoUrls;
@@ -392,6 +394,7 @@ class NannyModel {
     bool? comfortableWithDifferentFaith,
     String? emergencyName,
     String? emergencyRelationship,
+    String? emergencyCountryCode,
     String? emergencyPhone,
     String? bio,
     List<String>? photoUrls,
@@ -453,6 +456,7 @@ class NannyModel {
         comfortableWithDifferentFaith: comfortableWithDifferentFaith ?? this.comfortableWithDifferentFaith,
         emergencyName: emergencyName ?? this.emergencyName,
         emergencyRelationship: emergencyRelationship ?? this.emergencyRelationship,
+        emergencyCountryCode: emergencyCountryCode ?? this.emergencyCountryCode,
         emergencyPhone: emergencyPhone ?? this.emergencyPhone,
         bio: bio ?? this.bio,
         photoUrls: photoUrls ?? this.photoUrls,
@@ -516,6 +520,7 @@ class NannyModel {
         'comfortableWithDifferentFaith': comfortableWithDifferentFaith,
         'emergencyName': emergencyName,
         'emergencyRelationship': emergencyRelationship,
+        'emergencyCountryCode': emergencyCountryCode,
         'emergencyPhone': emergencyPhone,
         'bio': bio,
         'photoUrls': photoUrls,

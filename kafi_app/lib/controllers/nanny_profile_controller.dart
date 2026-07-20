@@ -67,6 +67,7 @@ class NannyProfileController extends GetxController {
   final emergencyNameCtrl = TextEditingController();
   final emergencyRelCtrl = TextEditingController();
   final emergencyPhoneCtrl = TextEditingController();
+  final emergencyCountryCode = '+971'.obs;
   final bioCtrl = TextEditingController();
 
   // step 2
@@ -264,6 +265,8 @@ class NannyProfileController extends GetxController {
     // Emergency contact
     emergencyNameCtrl.text = n.emergencyName;
     emergencyRelCtrl.text = n.emergencyRelationship;
+    emergencyCountryCode.value =
+        n.emergencyCountryCode.isNotEmpty ? n.emergencyCountryCode : '+971';
     emergencyPhoneCtrl.text = n.emergencyPhone;
     // Bio + media + history
     bioCtrl.text = n.bio;
@@ -311,6 +314,7 @@ class NannyProfileController extends GetxController {
         canDoNightShifts: nightShifts.value,
         emergencyName: emergencyNameCtrl.text.trim(),
         emergencyRelationship: emergencyRelCtrl.text.trim(),
+        emergencyCountryCode: emergencyCountryCode.value,
         emergencyPhone: emergencyPhoneCtrl.text.trim(),
         bio: bioCtrl.text.trim(),
       );
@@ -409,6 +413,7 @@ class NannyProfileController extends GetxController {
         religion: religionCtrl.text.trim(),
         emergencyName: emergencyNameCtrl.text.trim(),
         emergencyRelationship: emergencyRelCtrl.text.trim(),
+        emergencyCountryCode: emergencyCountryCode.value,
         emergencyPhone: emergencyPhoneCtrl.text.trim(),
         bio: bioCtrl.text.trim(),
       );

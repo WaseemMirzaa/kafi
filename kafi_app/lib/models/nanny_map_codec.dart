@@ -106,6 +106,7 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
       comfortableWithDifferentFaith: m['comfortableWithDifferentFaith'] != false,
       emergencyName: (m['emergencyName'] as String?) ?? '',
       emergencyRelationship: (m['emergencyRelationship'] as String?) ?? '',
+      emergencyCountryCode: (m['emergencyCountryCode'] as String?) ?? '+971',
       emergencyPhone: (m['emergencyPhone'] as String?) ?? '',
       bio: (m['bio'] as String?) ?? '',
       photoUrls: List<String>.from(m['photoUrls'] ?? const []),
