@@ -35,10 +35,37 @@ BoxDecoration _cardDecoration({Color border = const Color(0xFFFFE8EF)}) {
   );
 }
 
-class ApplicationDetailScreen extends StatelessWidget {
+class ApplicationDetailScreen extends StatefulWidget {
   const ApplicationDetailScreen({super.key});
 
-  ApplicationModel get _app => Get.arguments as ApplicationModel;
+  @override
+  State<ApplicationDetailScreen> createState() => _ApplicationDetailScreenState();
+}
+
+class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
+  late final ApplicationModel _arg = Get.arguments as ApplicationModel;
+
+  @override
+  void initState() {
+    super.initState();
+    // Reload on entry so a status change since the list loaded is reflected —
+    // the family may have viewed/shortlisted/offered a trial in the meantime.
+    if (Get.isRegistered<ApplicationController>()) {
+      Get.find<ApplicationController>().loadApplications();
+    }
+  }
+
+  /// The live application from the controller (falls back to the passed
+  /// argument) so the screen reflects status changes, not a frozen snapshot.
+  ApplicationModel get _app {
+    if (Get.isRegistered<ApplicationController>()) {
+      return Get.find<ApplicationController>()
+              .myApplications
+              .firstWhereOrNull((a) => a.id == _arg.id) ??
+          _arg;
+    }
+    return _arg;
+  }
 
   JobPostModel? get _job {
     if (!Get.isRegistered<JobPostController>()) return null;
@@ -63,9 +90,10 @@ class ApplicationDetailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final app = _app;
-    final bottomBar = _buildActionBar(app);
-    return Scaffold(
+    return Obx(() {
+      final app = _app;
+      final bottomBar = _buildActionBar(app);
+      return Scaffold(
       backgroundColor: KafiColors.nannyBg,
       body: SafeArea(
         top: true,
@@ -91,8 +119,9 @@ class ApplicationDetailScreen extends StatelessWidget {
           ],
         ),
       ),
-      bottomNavigationBar: bottomBar,
-    );
+        bottomNavigationBar: bottomBar,
+      );
+    });
   }
 
   Widget? _buildActionBar(ApplicationModel app) {
@@ -113,13 +142,10 @@ class ApplicationDetailScreen extends StatelessWidget {
             children: [
               KafiPrimaryButton(
                 label: '💬 ${AppStrings.appDetailMessageFamily.tr}',
-                onPressed: () {
-                  if (Get.isRegistered<ChatController>()) {
-                    Get.find<ChatController>().setPendingOpen(nannyId: app.nannyId);
-                  }
-                  // Messages is tab 2 (tab 3 is Settings).
-                  AppNavigation.nannyGoToTab(2);
-                },
+                // Pops the pushed detail/list routes to root THEN opens the
+                // Messages tab, so the CTA visibly navigates (nannyGoToTab alone
+                // left the pushed route covering the shell → button looked dead).
+                onPressed: () => AppNavigation.openChat(nannyId: app.nannyId),
               ),
               const SizedBox(height: 8),
               _destructiveOutlineButton(
@@ -137,12 +163,7 @@ class ApplicationDetailScreen extends StatelessWidget {
             child: KafiPrimaryButton(
               label: 'View in Messages',
               icon: Icons.chat_bubble_outline,
-              onPressed: () {
-                if (Get.isRegistered<ChatController>()) {
-                  Get.find<ChatController>().setPendingOpen(nannyId: app.nannyId);
-                }
-                AppNavigation.nannyGoToTab(2);
-              },
+              onPressed: () => AppNavigation.openChat(nannyId: app.nannyId),
             ),
           );
         }
@@ -155,12 +176,7 @@ class ApplicationDetailScreen extends StatelessWidget {
           child: KafiPrimaryButton(
             label: '💬 ${AppStrings.appDetailMessageFamily.tr}',
             icon: Icons.chat_bubble_outline,
-            onPressed: () {
-              if (Get.isRegistered<ChatController>()) {
-                Get.find<ChatController>().setPendingOpen(nannyId: app.nannyId);
-              }
-              AppNavigation.nannyGoToTab(2);
-            },
+            onPressed: () => AppNavigation.openChat(nannyId: app.nannyId),
           ),
         );
       case ApplicationStatus.declined:

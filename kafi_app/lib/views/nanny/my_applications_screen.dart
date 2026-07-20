@@ -9,8 +9,23 @@ import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_search_field.dart';
 
-class MyApplicationsScreen extends GetView<ApplicationController> {
+class MyApplicationsScreen extends StatefulWidget {
   const MyApplicationsScreen({super.key});
+
+  @override
+  State<MyApplicationsScreen> createState() => _MyApplicationsScreenState();
+}
+
+class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
+  final controller = Get.find<ApplicationController>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Reload on entry so family-driven status transitions (viewed → shortlisted
+    // → trial-offered → hired) surface without an app restart.
+    controller.loadApplications();
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -38,10 +53,14 @@ class MyApplicationsScreen extends GetView<ApplicationController> {
                   return _emptyState();
                 }
                 final apps = controller.filteredSent;
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
-                  itemCount: apps.length,
-                  itemBuilder: (_, i) => _applicationCard(apps[i]),
+                return RefreshIndicator(
+                  color: KafiColors.roseD,
+                  onRefresh: controller.loadApplications,
+                  child: ListView.builder(
+                    padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
+                    itemCount: apps.length,
+                    itemBuilder: (_, i) => _applicationCard(apps[i]),
+                  ),
                 );
               }),
             ),

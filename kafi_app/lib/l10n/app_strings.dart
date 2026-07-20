@@ -296,6 +296,10 @@ abstract class AppStrings {
   static const appDetailTitle = 'app_detail_title';
   static const appDetailJobInfo = 'app_detail_job_info';
   static const appDetailCoverMsg = 'app_detail_cover_msg';
+  static const applyCoverTitle = 'apply_cover_title';
+  static const applyCoverSub = 'apply_cover_sub';
+  static const applyCoverHint = 'apply_cover_hint';
+  static const applyCoverSend = 'apply_cover_send';
   static const appDetailApplied = 'app_detail_applied';
   static const appDetailViewed = 'app_detail_viewed';
   static const appDetailDeclined = 'app_detail_declined';
