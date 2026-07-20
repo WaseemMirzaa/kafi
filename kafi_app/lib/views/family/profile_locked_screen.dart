@@ -103,9 +103,11 @@ class ProfileLockedScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 9),
-          _lockedRow(Icons.call, KafiColors.purL, KafiColors.pur, 'Phone number', '+971 50 234 5678'),
-          _lockedRow(Icons.description_outlined, KafiColors.purL, KafiColors.pur, 'Full CV', '${firstName}_CV.pdf'),
-          _lockedRow(Icons.videocam_outlined, KafiColors.purL, KafiColors.pur, 'Intro video (47 sec)', '▶ Watch $firstName\'s video'),
+          // Neutral masked glyphs behind the blur — no fabricated phone/CV/length
+          // that could read as the nanny's real (leaked) data (P24).
+          _lockedRow(Icons.call, KafiColors.purL, KafiColors.pur, 'Phone number', '••• ••• ••••'),
+          _lockedRow(Icons.description_outlined, KafiColors.purL, KafiColors.pur, 'Full CV', '••••••••'),
+          _lockedRow(Icons.videocam_outlined, KafiColors.purL, KafiColors.pur, 'Intro video', '••••••'),
           const SizedBox(height: 3),
           _subBox(firstName),
         ],

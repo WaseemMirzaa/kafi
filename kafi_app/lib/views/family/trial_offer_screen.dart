@@ -38,8 +38,7 @@ class TrialOfferScreen extends GetView<TrialController> {
             const SizedBox(height: 12),
             _infoBanner(
               icon: '🤝',
-              text:
-                  'Trials are paid and arranged directly with the nanny. Set the details below and send your offer — the nanny can accept or counter.',
+              text: AppStrings.trialOfferInfoBanner.tr,
             ),
             const SizedBox(height: 12),
             _detailsSection(),
@@ -182,7 +181,7 @@ class TrialOfferScreen extends GetView<TrialController> {
         const SizedBox(height: 10),
         KafiTextField(
           label: '${AppStrings.trialOfferRate.tr} (AED / day)',
-          hint: 'e.g. 150',
+          hint: AppStrings.trialOfferRateHint.tr,
           keyboardType: TextInputType.number,
           purple: true,
           onChanged: (v) => controller.dailyRate.value = int.tryParse(v) ?? 0,

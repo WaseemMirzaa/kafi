@@ -45,7 +45,6 @@ class NannyProfileController extends GetxController {
   final _uuid = const Uuid();
 
   final Rx<NannyModel?> nanny = Rx<NannyModel?>(null);
-  final RxInt currentStep = 1.obs;
   final RxBool isLoading = false.obs;
 
   /// The nanny's current employment status, surfaced as a card on her home:
@@ -505,7 +504,6 @@ class NannyProfileController extends GetxController {
         _closeEdit();
         return;
       }
-      currentStep.value = 2;
       Get.toNamed(Routes.nannyMedia);
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
@@ -667,7 +665,6 @@ class NannyProfileController extends GetxController {
         _closeEdit();
         return;
       }
-      currentStep.value = 3;
       Get.toNamed(Routes.nannyExp);
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
@@ -726,7 +723,6 @@ class NannyProfileController extends GetxController {
         _closeEdit();
         return;
       }
-      currentStep.value = 4;
       Get.toNamed(Routes.nannyRefs);
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
@@ -792,7 +788,6 @@ class NannyProfileController extends GetxController {
         _closeEdit();
         return;
       }
-      currentStep.value = 5;
       Get.toNamed(Routes.nannyDocs);
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
