@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/utils/constants/auth_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_logo.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
@@ -17,11 +18,8 @@ class LoginNannyScreen extends StatefulWidget {
 class _LoginNannyScreenState extends State<LoginNannyScreen> {
   late final AuthController controller;
 
-  // Nanny-origin country codes per System Spec §1.5.
-  static const _countryOptions = [
-    '🇦🇪 +971', '🇵🇭 +63', '🇮🇳 +91', '🇱🇰 +94', '🇳🇵 +977', '🇮🇩 +62',
-    '🇪🇹 +251', '🇰🇪 +254', '🇬🇭 +233', '🇳🇬 +234', '🇵🇰 +92', '🇧🇩 +880', '🇺🇬 +256',
-  ];
+  // Sourced from the shared constant so the list lives in one place.
+  static const _countryOptions = AuthConstants.nannyCountryOptions;
 
   @override
   void initState() {
@@ -40,7 +38,22 @@ class _LoginNannyScreenState extends State<LoginNannyScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              const SizedBox(height: 24),
+              const SizedBox(height: 8),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: GestureDetector(
+                  onTap: Get.back,
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const Icon(Icons.arrow_back_ios_new, size: 14, color: KafiColors.roseD),
+                      Text(AppStrings.back.tr,
+                          style: KafiTheme.nunito(12, color: KafiColors.roseD)),
+                    ],
+                  ),
+                ),
+              ),
+              const SizedBox(height: 12),
               const Center(child: KafiLogo(size: 28)),
               const SizedBox(height: 16),
               _banner(),

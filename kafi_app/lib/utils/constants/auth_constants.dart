@@ -29,38 +29,20 @@ class AuthConstants {
     'Uganda': '+256',
   };
 
-  /// Family country codes per System Spec §1.5 (extended list)
-  static const familyCountryCodes = <String, String>{
-    // Gulf
-    'UAE': '+971',
-    'Saudi Arabia': '+966',
-    'Kuwait': '+965',
-    'Qatar': '+974',
-    'Bahrain': '+973',
-    'Oman': '+968',
-    // Arab
-    'Egypt': '+20',
-    'Lebanon': '+961',
-    'Jordan': '+962',
-    'Morocco': '+212',
-    // Europe
-    'UK': '+44',
-    'Ireland': '+353',
-    'France': '+33',
-    'Germany': '+49',
-    'Italy': '+39',
-    'Spain': '+34',
-    'Netherlands': '+31',
-    'Switzerland': '+41',
-    // Americas
-    'USA': '+1',
-    'Canada': '+1',
-    // Asia
-    'India': '+91',
-    'Pakistan': '+92',
-    'Singapore': '+65',
-    // Oceania
-    'Australia': '+61',
-    'New Zealand': '+64',
-  };
+  /// Display options (flag + dial code) for the nanny login country picker —
+  /// the single source for that list (System Spec §1.5).
+  static const nannyCountryOptions = <String>[
+    '🇦🇪 +971', '🇵🇭 +63', '🇮🇳 +91', '🇱🇰 +94', '🇳🇵 +977', '🇮🇩 +62',
+    '🇪🇹 +251', '🇰🇪 +254', '🇬🇭 +233', '🇳🇬 +234', '🇵🇰 +92', '🇧🇩 +880', '🇺🇬 +256',
+  ];
+
+  /// Display options (flag + dial code) for the family login country picker
+  /// (extended list per System Spec §1.5).
+  static const familyCountryOptions = <String>[
+    '🇦🇪 +971', '🇸🇦 +966', '🇰🇼 +965', '🇶🇦 +974', '🇧🇭 +973',
+    '🇴🇲 +968', '🇪🇬 +20', '🇱🇧 +961', '🇯🇴 +962', '🇲🇦 +212',
+    '🇬🇧 +44', '🇮🇪 +353', '🇫🇷 +33', '🇩🇪 +49', '🇮🇹 +39',
+    '🇪🇸 +34', '🇳🇱 +31', '🇨🇭 +41', '🇺🇸 +1', '🇨🇦 +1',
+    '🇮🇳 +91', '🇵🇰 +92', '🇸🇬 +65', '🇦🇺 +61', '🇳🇿 +64',
+  ];
 }
