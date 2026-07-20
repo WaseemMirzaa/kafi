@@ -76,6 +76,7 @@ from `firestore.indexes.json` under **Firestore Database → Indexes**.
 | `notifications/{id}` | recipient / admin | **admin/server only** | recipient / admin | recipient / admin |
 | `reviews/{id}` | public reviews → any signed-in; else the two parties / admin | reviewer | admin *(rating folded into `stats.averageRating` by the function)* | admin |
 | `disputes/{id}` | reporter/reported / admin | reporter | admin | admin |
+| `disputes/{id}/messages/{id}` | admin / reporter | admin, or reporter (as `senderType: 'user'`) | admin | admin |
 | `settings/{id}` | any signed‑in | — | admin | admin |
 | `admins/{uid}` | self / admin | — | admin | admin |
 | `broadcasts/{id}` | admin | admin | admin | admin |
@@ -354,6 +355,20 @@ service cloud.firestore {
                 || existing().reportedUserId == request.auth.uid));
       allow create: if isSignedIn() && incoming().reporterId == request.auth.uid;
       allow update, delete: if isAdmin();
+
+      // Support chat about this dispute, between an admin and the reporter (the
+      // reported user is not a participant). Non-admins may only post as 'user'.
+      match /messages/{msgId} {
+        function isReporter() {
+          return isSignedIn()
+            && get(/databases/$(database)/documents/disputes/$(disputeId)).data.reporterId
+                == request.auth.uid;
+        }
+        allow read: if isAdmin() || isReporter();
+        allow create: if isAdmin()
+          || (isReporter() && incoming().senderType == 'user');
+        allow update, delete: if isAdmin();
+      }
     }
 
     // ---------- admin config ----------
