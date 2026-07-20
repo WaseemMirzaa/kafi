@@ -810,6 +810,9 @@ abstract class AppStrings {
   static const authQuickSafeEasy = 'auth_quick_safe_easy';
   static const authDidntReceive = 'auth_didnt_receive';
   static const otpResendShort = 'otp_resend_short';
+  static const otpResendIn = 'otp_resend_in';
+  static const startupOfflineTitle = 'startup_offline_title';
+  static const startupOfflineSub = 'startup_offline_sub';
   static const authAgreePrefix = 'auth_agree_prefix';
   static const authAgreeAnd = 'auth_agree_and';
 

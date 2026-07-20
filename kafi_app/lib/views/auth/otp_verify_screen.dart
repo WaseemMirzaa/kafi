@@ -43,21 +43,26 @@ class OtpVerifyScreen extends GetView<AuthController> {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 6),
-              Obx(
-                () => RichText(
+              Obx(() {
+                // Split on the "@phone" token in the template (not on the phone
+                // value) so the literal placeholder never leaks when the value
+                // isn't present verbatim in the string.
+                final parts = AppStrings.otpEnterSub.tr.split('@phone');
+                return RichText(
                   textAlign: TextAlign.center,
                   text: TextSpan(
                     style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600),
                     children: [
-                      TextSpan(text: AppStrings.otpEnterSub.tr.split(controller.formattedPhone).first),
+                      TextSpan(text: parts.first),
                       TextSpan(
                         text: controller.formattedPhone,
                         style: KafiTheme.nunito(11, color: KafiColors.roseD, w: FontWeight.w800),
                       ),
+                      if (parts.length > 1) TextSpan(text: parts.sublist(1).join('@phone')),
                     ],
                   ),
-                ),
-              ),
+                );
+              }),
               const SizedBox(height: 28),
               _BigOtpBoxes(onChanged: (v) => controller.otpCode.value = v),
               Obx(
@@ -75,15 +80,18 @@ class OtpVerifyScreen extends GetView<AuthController> {
               Obx(
                 () {
                   final label = controller.otpTimerLabel;
+                  // Split on the "@time" token so the placeholder can't leak.
+                  final parts = AppStrings.otpExpires.tr.split('@time');
                   return RichText(
                     text: TextSpan(
                       style: KafiTheme.nunito(10.5, color: KafiColors.ts),
                       children: [
-                        TextSpan(text: AppStrings.otpExpires.tr.split(label).first),
+                        TextSpan(text: parts.first),
                         TextSpan(
                           text: label,
                           style: KafiTheme.nunito(10.5, color: KafiColors.roseD, w: FontWeight.w800),
                         ),
+                        if (parts.length > 1) TextSpan(text: parts.sublist(1).join('@time')),
                       ],
                     ),
                   );
@@ -114,7 +122,7 @@ class OtpVerifyScreen extends GetView<AuthController> {
                     GestureDetector(
                       onTap: controller.canResendOtp ? controller.resendOtp : null,
                       child: Text(
-                        AppStrings.otpResendShort.tr,
+                        controller.otpResendLabel,
                         style: KafiTheme.nunito(
                           10,
                           color: controller.canResendOtp ? KafiColors.roseD : KafiColors.ts,

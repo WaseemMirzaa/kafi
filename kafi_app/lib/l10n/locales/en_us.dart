@@ -790,6 +790,9 @@ const Map<String, String> enUs = {
   AppStrings.authQuickSafeEasy: 'Quick, safe, and easy.',
   AppStrings.authDidntReceive: "Didn't receive it? ",
   AppStrings.otpResendShort: 'Resend OTP',
+  AppStrings.otpResendIn: 'Resend in @sec',
+  AppStrings.startupOfflineTitle: "Couldn't connect",
+  AppStrings.startupOfflineSub: 'Check your connection and try again.',
   AppStrings.authAgreePrefix: "By continuing you agree to Kafi's ",
   AppStrings.authAgreeAnd: ' and ',
 

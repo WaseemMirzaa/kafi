@@ -372,6 +372,9 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.authQuickSafeEasy: 'سريع وآمن وسهل.',
     AppStrings.authDidntReceive: 'لم يصلك الرمز؟ ',
     AppStrings.otpResendShort: 'إعادة إرسال الرمز',
+    AppStrings.otpResendIn: 'إعادة الإرسال خلال @sec',
+    AppStrings.startupOfflineTitle: 'تعذّر الاتصال',
+    AppStrings.startupOfflineSub: 'تحقق من اتصالك وحاول مرة أخرى.',
     AppStrings.authAgreePrefix: 'بالمتابعة فإنك توافق على ',
     AppStrings.authAgreeAnd: ' و ',
 
