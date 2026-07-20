@@ -4,6 +4,7 @@ import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/application_controller.dart';
 import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
+import 'package:kafi_app/controllers/notification_controller.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
@@ -110,18 +111,26 @@ class JobsHomeScreen extends GetView<JobPostController> {
           alignment: Alignment.center,
           children: [
             const Icon(Icons.notifications_outlined, color: KafiColors.roseD, size: 15),
+            // Dot only when there are genuinely unread notifications
+            // (mirrors the dashboard bell — was previously always-on).
             Positioned(
               top: 5,
               right: 6,
-              child: Container(
-                width: 6,
-                height: 6,
-                decoration: BoxDecoration(
-                  color: KafiColors.roseD,
-                  shape: BoxShape.circle,
-                  border: Border.all(color: Colors.white, width: 1.5),
-                ),
-              ),
+              child: Obx(() {
+                final unread = Get.isRegistered<NotificationController>()
+                    ? Get.find<NotificationController>().unreadCount.value
+                    : 0;
+                if (unread == 0) return const SizedBox.shrink();
+                return Container(
+                  width: 6,
+                  height: 6,
+                  decoration: BoxDecoration(
+                    color: KafiColors.roseD,
+                    shape: BoxShape.circle,
+                    border: Border.all(color: Colors.white, width: 1.5),
+                  ),
+                );
+              }),
             ),
           ],
         ),
