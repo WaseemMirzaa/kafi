@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/geo_location.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
@@ -279,11 +280,13 @@ class _RefCardState extends State<_RefCard> {
   late final TextEditingController _canConfirm;
   late String _relationship;
   late String _city;
+  GeoLocation? _cityLocation;
 
   @override
   void initState() {
     super.initState();
     final r = widget.ref;
+    _cityLocation = r.location;
     _years = TextEditingController(text: r.yearsWorked > 0 ? '${r.yearsWorked}' : '');
     _canConfirm = TextEditingController(text: r.canConfirm);
     _relationship = NannyConstants.referenceRelations.contains(r.relationship)
@@ -302,6 +305,7 @@ class _RefCardState extends State<_RefCard> {
       city: _city,
       yearsWorked: int.tryParse(_years.text) ?? 0,
       canConfirm: _canConfirm.text,
+      location: _cityLocation,
     ));
   }
 
@@ -391,6 +395,10 @@ class _RefCardState extends State<_RefCard> {
                       initialValue: _city,
                       onChanged: (v) {
                         setState(() => _city = v);
+                        _emit();
+                      },
+                      onLocationPicked: (loc) {
+                        _cityLocation = loc.toGeoLocation();
                         _emit();
                       },
                     ),

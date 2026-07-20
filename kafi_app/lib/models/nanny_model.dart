@@ -1,3 +1,4 @@
+import 'package:kafi_app/models/geo_location.dart';
 import 'package:kafi_app/utils/localized_text.dart';
 
 enum VisaStatus { visit, residenceSponsored, ownResidence, cancelled, outsideUae }
@@ -29,6 +30,7 @@ class WorkExperience {
     required this.children,
     required this.duties,
     required this.reasonLeaving,
+    this.location,
   });
 
   final String id;
@@ -41,6 +43,10 @@ class WorkExperience {
   final String duties;
   final String reasonLeaving;
 
+  /// Structured city/country from the map picker (coords + address), when
+  /// available. `cityCountry` remains the display string.
+  final GeoLocation? location;
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'jobTitle': jobTitle,
@@ -51,6 +57,7 @@ class WorkExperience {
         'children': children,
         'duties': duties,
         'reasonLeaving': reasonLeaving,
+        if (location != null) 'location': location!.toMap(),
       };
 }
 
@@ -61,6 +68,7 @@ class ReferenceContact {
     required this.city,
     required this.yearsWorked,
     required this.canConfirm,
+    this.location,
   });
 
   final String id;
@@ -69,12 +77,17 @@ class ReferenceContact {
   final int yearsWorked;
   final String canConfirm;
 
+  /// Structured city from the map picker (coords + address), when available.
+  /// `city` remains the display string.
+  final GeoLocation? location;
+
   Map<String, dynamic> toMap() => {
         'id': id,
         'relationship': relationship,
         'city': city,
         'yearsWorked': yearsWorked,
         'canConfirm': canConfirm,
+        if (location != null) 'location': location!.toMap(),
       };
 }
 
@@ -183,6 +196,7 @@ class NannyModel {
     this.workEmirates = const [],
     this.willingToRelocate = false,
     this.currentArea = '',
+    this.currentLocation,
     this.jobTypePreference = JobTypePreference.both,
     this.expectedSalaryMin = 0,
     this.expectedSalaryMax = 0,
@@ -210,6 +224,7 @@ class NannyModel {
     this.comfortableWithDifferentFaith = true,
     this.emergencyName = '',
     this.emergencyRelationship = '',
+    this.emergencyCountryCode = '+971',
     this.emergencyPhone = '',
     this.bio = '',
     this.photoUrls = const [],
@@ -244,6 +259,10 @@ class NannyModel {
   final List<Emirate> workEmirates;
   final bool willingToRelocate;
   final String currentArea;
+
+  /// Structured current area / neighbourhood from the map picker (coords +
+  /// address + city + country). `currentArea` remains the display string.
+  final GeoLocation? currentLocation;
   final JobTypePreference jobTypePreference;
   final int expectedSalaryMin;
   final int expectedSalaryMax;
@@ -271,6 +290,7 @@ class NannyModel {
   final bool comfortableWithDifferentFaith;
   final String emergencyName;
   final String emergencyRelationship;
+  final String emergencyCountryCode;
   final String emergencyPhone;
   final String bio;
   final List<String> photoUrls;
@@ -365,6 +385,7 @@ class NannyModel {
     List<Emirate>? workEmirates,
     bool? willingToRelocate,
     String? currentArea,
+    GeoLocation? currentLocation,
     JobTypePreference? jobTypePreference,
     int? expectedSalaryMin,
     int? expectedSalaryMax,
@@ -392,6 +413,7 @@ class NannyModel {
     bool? comfortableWithDifferentFaith,
     String? emergencyName,
     String? emergencyRelationship,
+    String? emergencyCountryCode,
     String? emergencyPhone,
     String? bio,
     List<String>? photoUrls,
@@ -426,6 +448,7 @@ class NannyModel {
         workEmirates: workEmirates ?? this.workEmirates,
         willingToRelocate: willingToRelocate ?? this.willingToRelocate,
         currentArea: currentArea ?? this.currentArea,
+        currentLocation: currentLocation ?? this.currentLocation,
         jobTypePreference: jobTypePreference ?? this.jobTypePreference,
         expectedSalaryMin: expectedSalaryMin ?? this.expectedSalaryMin,
         expectedSalaryMax: expectedSalaryMax ?? this.expectedSalaryMax,
@@ -453,6 +476,7 @@ class NannyModel {
         comfortableWithDifferentFaith: comfortableWithDifferentFaith ?? this.comfortableWithDifferentFaith,
         emergencyName: emergencyName ?? this.emergencyName,
         emergencyRelationship: emergencyRelationship ?? this.emergencyRelationship,
+        emergencyCountryCode: emergencyCountryCode ?? this.emergencyCountryCode,
         emergencyPhone: emergencyPhone ?? this.emergencyPhone,
         bio: bio ?? this.bio,
         photoUrls: photoUrls ?? this.photoUrls,
@@ -489,6 +513,7 @@ class NannyModel {
         'workEmirates': workEmirates.map((e) => e.name).toList(),
         'willingToRelocate': willingToRelocate,
         'currentArea': currentArea,
+        if (currentLocation != null) 'currentLocation': currentLocation!.toMap(),
         'jobTypePreference': jobTypePreference.name,
         'expectedSalaryMin': expectedSalaryMin,
         'expectedSalaryMax': expectedSalaryMax,
@@ -516,6 +541,7 @@ class NannyModel {
         'comfortableWithDifferentFaith': comfortableWithDifferentFaith,
         'emergencyName': emergencyName,
         'emergencyRelationship': emergencyRelationship,
+        'emergencyCountryCode': emergencyCountryCode,
         'emergencyPhone': emergencyPhone,
         'bio': bio,
         'photoUrls': photoUrls,
