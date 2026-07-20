@@ -2,7 +2,9 @@ import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/chat_controller.dart';
 import 'package:kafi_app/models/notification_model.dart';
+import 'package:kafi_app/services/interfaces/i_dispute_service.dart';
 import 'package:kafi_app/services/interfaces/i_notification_service.dart';
+import 'package:kafi_app/services/interfaces/i_ticket_service.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
@@ -131,6 +133,23 @@ class NotificationController extends GetxController {
 
   void handleNotificationTap(AppNotification notif) {
     markAsRead(notif.id);
+
+    // Support tickets and disputes are written by Cloud Functions with the
+    // generic `systemAnnouncement` type (no NotificationType enum value exists
+    // for them); the real kind + target id ride in `data`. Route these to the
+    // relevant thread so the tap isn't a dead end on the no-op default branch.
+    final dataType = notif.data['type'] as String?;
+    if (dataType == 'support_reply') {
+      _openTicketThread(notif.data['ticketId'] as String?);
+      return;
+    }
+    if (dataType == 'dispute_reply' ||
+        dataType == 'dispute_resolved' ||
+        dataType == 'dispute_dismissed') {
+      _openDisputeThread(notif.data['disputeId'] as String?);
+      return;
+    }
+
     final route = notif.data['route'] as String?;
     final isNanny = _auth.currentUser.value?.isNanny ?? false;
 
@@ -196,6 +215,48 @@ class NotificationController extends GetxController {
       case NotificationType.hired:
       case NotificationType.systemAnnouncement:
         return;
+    }
+  }
+
+  /// Opens a support ticket from a notification tap. The detail screen needs the
+  /// [TicketModel] as its route argument, so load it first; fall back to the
+  /// ticket list if the id is missing or the load fails.
+  Future<void> _openTicketThread(String? ticketId) async {
+    if (ticketId == null || ticketId.isEmpty) {
+      Get.toNamed(Routes.support);
+      return;
+    }
+    try {
+      final ticket = await Get.find<ITicketService>().getTicket(ticketId);
+      if (ticket != null) {
+        Get.toNamed(Routes.supportTicket, arguments: ticket);
+      } else {
+        Get.toNamed(Routes.support);
+      }
+    } catch (e) {
+      Get.log('open ticket from notification failed: $e', isError: true);
+      Get.toNamed(Routes.support);
+    }
+  }
+
+  /// Opens a dispute report thread from a notification tap. Same load-then-route
+  /// pattern as tickets — the dispute chat screen needs the [DisputeModel] as
+  /// its argument; fall back to the reports list if it can't be loaded.
+  Future<void> _openDisputeThread(String? disputeId) async {
+    if (disputeId == null || disputeId.isEmpty) {
+      Get.toNamed(Routes.disputes);
+      return;
+    }
+    try {
+      final dispute = await Get.find<IDisputeService>().getDispute(disputeId);
+      if (dispute != null) {
+        Get.toNamed(Routes.disputeChat, arguments: dispute);
+      } else {
+        Get.toNamed(Routes.disputes);
+      }
+    } catch (e) {
+      Get.log('open dispute from notification failed: $e', isError: true);
+      Get.toNamed(Routes.disputes);
     }
   }
 }
