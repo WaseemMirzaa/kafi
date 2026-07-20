@@ -48,6 +48,13 @@ class FirestoreSubscriptionService implements ISubscriptionService {
   }
 
   @override
+  Future<Set<String>> viewedNannyIds(String familyId) async {
+    final snap = await _families.doc(familyId).get();
+    if (!snap.exists) return {};
+    return (snap.data()?['viewedProfiles'] as List?)?.cast<String>().toSet() ?? {};
+  }
+
+  @override
   Future<void> recordView(String familyId, String nannyId) async {
     // The family cannot write `viewedProfiles` / `freeContactsUsed` on its own
     // doc (security rules — otherwise a family could reset its free-view count).

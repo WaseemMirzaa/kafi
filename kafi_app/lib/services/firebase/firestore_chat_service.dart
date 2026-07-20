@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 
@@ -48,14 +49,24 @@ class FirestoreChatService implements IChatService {
       if (!controller.isClosed) controller.add(list);
     }
 
+    void onStreamError(Object e, StackTrace st, String side) {
+      debugPrint('[FirestoreChatService] watchThreads $side: $e\n$st');
+      if (side == 'family') {
+        asFamily = [];
+      } else {
+        asNanny = [];
+      }
+      emit();
+    }
+
     final subFamily = _threads.where('familyId', isEqualTo: userId).snapshots().listen((s) {
       asFamily = s.docs.map(_threadFromDoc).toList();
       emit();
-    }, onError: controller.addError);
+    }, onError: (e, st) => onStreamError(e, st, 'family'));
     final subNanny = _threads.where('nannyId', isEqualTo: userId).snapshots().listen((s) {
       asNanny = s.docs.map(_threadFromDoc).toList();
       emit();
-    }, onError: controller.addError);
+    }, onError: (e, st) => onStreamError(e, st, 'nanny'));
 
     controller.onCancel = () async {
       await subFamily.cancel();

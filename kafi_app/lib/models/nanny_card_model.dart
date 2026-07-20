@@ -51,7 +51,11 @@ class NannyCardModel {
       name: name,
       nationality: n.nationality,
       yearsExp: n.experiences.length,
-      jobType: n.jobTypePreference == JobTypePreference.liveIn ? 'Live-in' : 'Live-out',
+      jobType: switch (n.jobTypePreference) {
+        JobTypePreference.liveIn => 'Live-in',
+        JobTypePreference.liveOut => 'Live-out',
+        JobTypePreference.both => 'Live-in · Live-out',
+      },
       city: n.currentArea,
       matchPercent: 0,
       tags: n.languages.take(3).toList(),

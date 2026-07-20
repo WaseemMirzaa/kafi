@@ -2,6 +2,7 @@ import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/data/mock/mock_jobs.dart';
 import 'package:kafi_app/data/mock/mock_nannies.dart';
+import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
@@ -13,7 +14,12 @@ class MockJobService implements IJobService {
   };
 
   @override
-  Future<List<NannyCardModel>> browseNannies({String? filter, JobFilter? jobFilter, JobPostModel? matchJob}) async {
+  Future<List<NannyCardModel>> browseNannies({
+    String? filter,
+    JobFilter? jobFilter,
+    JobPostModel? matchJob,
+    FamilyModel? family,
+  }) async {
     await Future<void>.delayed(AppConfig.mockDelay);
     var list = mockNannyCards.toList();
     if (filter != null && filter != 'All') {

@@ -61,6 +61,7 @@ class _ChatScreenState extends State<ChatScreen> {
     subs = Get.find<SubscriptionController>();
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      await controller.refreshThreads();
       final args = Get.arguments;
       if (args is Map) {
         if (args['threadId'] is String && (args['threadId'] as String).isNotEmpty) {
@@ -142,6 +143,9 @@ class _ChatScreenState extends State<ChatScreen> {
                 : controller.visibleThreads
                     .where((t) => _displayName(t).toLowerCase().contains(q))
                     .toList();
+            if (controller.isLoading.value && controller.visibleThreads.isEmpty) {
+              return const Center(child: CircularProgressIndicator());
+            }
             if (controller.visibleThreads.isEmpty) return _emptyThreadList();
             return ListView(
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),

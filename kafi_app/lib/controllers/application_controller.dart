@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
+import 'package:kafi_app/controllers/shortlist_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
@@ -19,18 +20,30 @@ class ApplicationController extends GetxController {
   void onInit() {
     super.onInit();
     loadApplications();
+    // Keep the inbox in sync across login, role switch, and route bindings.
+    ever<dynamic>(_auth.currentUser, (_) {
+      myApplications.clear();
+      receivedApplications.clear();
+      loadApplications();
+    });
   }
 
   Future<void> loadApplications() async {
     isLoading.value = true;
     try {
       final userId = currentUserId(_auth);
-      if (userId == null) return;
+      if (userId == null) {
+        myApplications.clear();
+        receivedApplications.clear();
+        return;
+      }
       final isNanny = _auth.currentUser.value?.isNanny ?? false;
       if (isNanny) {
         myApplications.value = await _appService.getApplicationsForNanny(userId);
+        receivedApplications.clear();
       } else {
         receivedApplications.value = await _appService.getApplicationsForFamily(userId);
+        myApplications.clear();
       }
     } finally {
       isLoading.value = false;
@@ -98,7 +111,11 @@ class ApplicationController extends GetxController {
     await _appService.shortlist(appId);
     final idx = receivedApplications.indexWhere((a) => a.id == appId);
     if (idx >= 0) {
-      receivedApplications[idx] = receivedApplications[idx].copyWith(status: ApplicationStatus.shortlisted);
+      final app = receivedApplications[idx];
+      receivedApplications[idx] = app.copyWith(status: ApplicationStatus.shortlisted);
+      if (Get.isRegistered<ShortlistController>()) {
+        await Get.find<ShortlistController>().addToShortlist(app.nannyId);
+      }
     }
   }
 

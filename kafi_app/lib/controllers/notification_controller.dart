@@ -50,8 +50,7 @@ class NotificationController extends GetxController {
     // the user denies permission it must degrade gracefully, never throw an
     // uncaught error that surfaces in the console or blocks the app.
     try {
-      final granted = await _notifService.requestPermission();
-      if (!granted) return;
+      await _notifService.requestPermission();
       await _notifService.initialize();
       final token = await _notifService.getToken();
       if (token != null) {
@@ -106,30 +105,12 @@ class NotificationController extends GetxController {
     unreadCount.value = notifications.where((n) => !n.read).length;
   }
 
-  void handleNotificationTap(AppNotification notif) {
-    markAsRead(notif.id);
-    final route = notif.data['route'] as String?;
-    if (route == null) return;
-
+  void _openRouteForRole(String route) {
     if (route == Routes.chat) {
       if (_auth.currentUser.value?.isNanny ?? false) {
         AppNavigation.nannyGoToTab(2);
       } else {
         AppNavigation.familyGoToTab(2);
-      }
-      // If the notification carries a specific thread/nanny, open it.
-      final threadId = notif.data['threadId'] as String?;
-      final nannyId = notif.data['nannyId'] as String?;
-      if (Get.isRegistered<ChatController>()) {
-        final chat = Get.find<ChatController>();
-        if (threadId != null && threadId.isNotEmpty) {
-          chat.openThread(threadId);
-        } else if (nannyId != null && nannyId.isNotEmpty) {
-          chat.openThreadForNanny(nannyId: nannyId);
-        }
-      } else {
-        pendingChatThreadId = threadId;
-        pendingChatNannyId = nannyId;
       }
       return;
     }
@@ -141,7 +122,80 @@ class NotificationController extends GetxController {
       AppNavigation.familyGoToTab(route == Routes.shortlist ? 1 : 0);
       return;
     }
+    if (route == Routes.settings) {
+      AppNavigation.familyGoToTab(3);
+      return;
+    }
+    Get.toNamed(route);
+  }
 
-    Get.toNamed(route, arguments: notif.data);
+  void handleNotificationTap(AppNotification notif) {
+    markAsRead(notif.id);
+    final route = notif.data['route'] as String?;
+    final isNanny = _auth.currentUser.value?.isNanny ?? false;
+
+    if (route != null) {
+      _openRouteForRole(route);
+
+      if (route == Routes.chat) {
+        // If the notification carries a specific thread/nanny, open it.
+        final threadId = notif.data['threadId'] as String?;
+        final nannyId = notif.data['nannyId'] as String?;
+        if (Get.isRegistered<ChatController>()) {
+          final chat = Get.find<ChatController>();
+          if (threadId != null && threadId.isNotEmpty) {
+            chat.openThread(threadId);
+          } else if (nannyId != null && nannyId.isNotEmpty) {
+            chat.openThreadForNanny(nannyId: nannyId);
+          }
+        } else {
+          pendingChatThreadId = threadId;
+          pendingChatNannyId = nannyId;
+        }
+      }
+      return;
+    }
+
+    // Legacy / server-generated notifications often omit `route`.
+    switch (notif.type) {
+      case NotificationType.newApplication:
+        if (!isNanny) {
+          Get.toNamed(Routes.familyApplicants);
+        }
+        return;
+      case NotificationType.applicationViewed:
+      case NotificationType.applicationDeclined:
+        if (isNanny) {
+          Get.toNamed(Routes.nannyApplications);
+        } else {
+          Get.toNamed(Routes.familyApplicants);
+        }
+        return;
+      case NotificationType.newMessage:
+      case NotificationType.trialOfferReceived:
+      case NotificationType.trialAccepted:
+      case NotificationType.trialDeclined:
+      case NotificationType.trialCountered:
+      case NotificationType.trialStartingSoon:
+      case NotificationType.trialEndingSoon:
+      case NotificationType.trialCompleted:
+        _openRouteForRole(Routes.chat);
+        return;
+      case NotificationType.subscriptionExpiring:
+      case NotificationType.subscriptionRenewed:
+      case NotificationType.subscriptionExpired:
+      case NotificationType.freeContactsLow:
+        if (!isNanny) {
+          Get.toNamed(Routes.pricing);
+        }
+        return;
+      case NotificationType.profileViewed:
+      case NotificationType.documentsApproved:
+      case NotificationType.documentsRejected:
+      case NotificationType.profileVerified:
+      case NotificationType.hired:
+      case NotificationType.systemAnnouncement:
+        return;
+    }
   }
 }

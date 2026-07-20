@@ -38,6 +38,23 @@ GOOGLE_APPLICATION_CREDENTIALS=./service-account.json \
   npx ts-node scripts/create-admin.ts admin@kafi.ae 'StrongPassword123!' 'Kafi Admin'
 ```
 
+**Automatic first-time setup (no service account):** deploy Cloud Functions, then
+open the admin login page in live mode (`VITE_USE_MOCK=false`). It calls
+`bootstrapFirstAdmin`, which creates the first admin only when `admins` is empty
+and shows the credentials on screen once.
+
+Default bootstrap credentials (unless overridden by env on the function):
+
+- Email: `admin@kafi.ae`
+- Password: `Kafi@Admin2026!`
+
+Or run locally with a service account:
+
+```
+GOOGLE_APPLICATION_CREDENTIALS=./scripts/service-account.json \
+  npx ts-node --project functions/tsconfig.json scripts/bootstrap-admin.ts
+```
+
 Then sign in to the panel with that email/password. (`scripts/set-admin-claims.ts`
 still exists for granting admin to an already-created Auth user.) After the first
 run the user may need to sign out/in once so the claim propagates.

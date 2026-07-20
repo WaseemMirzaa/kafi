@@ -20,6 +20,15 @@ import 'package:kafi_app/utils/validators.dart';
 import 'package:uuid/uuid.dart';
 
 class NannyProfileController extends GetxController {
+  static const Set<String> _onboardingRoutes = {
+    Routes.nannyInfo,
+    Routes.nannyMedia,
+    Routes.nannyExp,
+    Routes.nannyRefs,
+    Routes.nannyDocs,
+    Routes.nannyPending,
+  };
+
   final IUserService _userService = Get.find<IUserService>();
   final IStorageService _storageService = Get.find<IStorageService>();
   final AuthController _auth = Get.find<AuthController>();
@@ -184,7 +193,10 @@ class NannyProfileController extends GetxController {
       if (n.status == NannyOnboardingStatus.approved) {
         _nannyWatch?.cancel();
         calculateProfileScore();
-        if (Get.currentRoute != Routes.nannyHome) {
+        // Only auto-forward approved nannies out of onboarding routes.
+        // Otherwise, opening app screens like My Applications detail gets
+        // bounced back to home as soon as the watcher emits.
+        if (_onboardingRoutes.contains(Get.currentRoute)) {
           Get.offAllNamed(Routes.nannyHome);
           Get.snackbar(
             AppStrings.nannyApprovedTitle.tr,
@@ -197,7 +209,8 @@ class NannyProfileController extends GetxController {
         // Live admin rejection — surface the reason and make sure we're on the
         // pending screen, which renders the rejection + resubmit (Spec §6.1).
         // The watch keeps running so a later re-approval still transitions.
-        if (Get.currentRoute != Routes.nannyPending) {
+        if (_onboardingRoutes.contains(Get.currentRoute) &&
+            Get.currentRoute != Routes.nannyPending) {
           Get.offAllNamed(Routes.nannyPending);
         }
         Get.snackbar(

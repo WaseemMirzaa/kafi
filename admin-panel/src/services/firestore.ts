@@ -670,6 +670,31 @@ const mockSettings = {
   vatRate: 0.05,
 };
 
+function toDateOrUndef(raw: unknown): Date | undefined {
+  if (raw && typeof (raw as { toDate?: () => Date }).toDate === 'function') {
+    return (raw as { toDate: () => Date }).toDate();
+  }
+  if (typeof raw === 'string') {
+    const d = new Date(raw);
+    if (!isNaN(d.getTime())) return d;
+  }
+  return undefined;
+}
+
+/** Normalise a Firestore nanny doc for admin tables (defaults + timestamps). */
+function mapNannyFromFirestore(id: string, data: Record<string, unknown>): NannyRow {
+  const row = { id, ...(data as Omit<NannyRow, 'id'>) };
+  return {
+    ...row,
+    fullName: row.fullName?.trim() || 'Unnamed nanny',
+    nationality: row.nationality?.trim() || '—',
+    city: row.city?.trim() || '—',
+    status: row.status ?? 'draft',
+    isVerified: row.isVerified ?? false,
+    createdAt: toDateOrUndef(data.createdAt) ?? row.createdAt,
+  };
+}
+
 // ─────────────────────────────────────────────────────────
 // Nanny service
 // ─────────────────────────────────────────────────────────
@@ -677,12 +702,12 @@ export const NannyService = {
   async list(): Promise<NannyRow[]> {
     if (useMock()) return mockNannies;
     const snap = await getDocs(query(collection(db!, 'nannies'), limit(200)));
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NannyRow, 'id'>) }));
+    return snap.docs.map((d) => mapNannyFromFirestore(d.id, d.data()));
   },
   async listPendingDocs(): Promise<NannyRow[]> {
     if (useMock()) return mockNannies.filter((n) => n.status === 'pending');
     const snap = await getDocs(query(collection(db!, 'nannies'), where('status', '==', 'pending')));
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NannyRow, 'id'>) }));
+    return snap.docs.map((d) => mapNannyFromFirestore(d.id, d.data()));
   },
   async listPendingVideos(): Promise<NannyRow[]> {
     if (useMock()) return mockNannies.filter((n) => !!n.introVideoUrl && n.introVideoStatus !== 'approved' && n.introVideoStatus !== 'rejected');
@@ -690,12 +715,12 @@ export const NannyService = {
     const snap = await getDocs(
       query(collection(db!, 'nannies'), where('introVideoStatus', '==', 'pending'), limit(200)),
     );
-    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<NannyRow, 'id'>) }));
+    return snap.docs.map((d) => mapNannyFromFirestore(d.id, d.data()));
   },
   async get(id: string): Promise<NannyRow | null> {
     if (useMock()) return mockNannies.find((n) => n.id === id) ?? null;
     const snap = await getDoc(doc(db!, 'nannies', id));
-    return snap.exists() ? { id: snap.id, ...(snap.data() as Omit<NannyRow, 'id'>) } : null;
+    return snap.exists() ? mapNannyFromFirestore(snap.id, snap.data()) : null;
   },
   async update(id: string, patch: Partial<NannyRow>): Promise<void> {
     if (useMock()) {
@@ -874,17 +899,6 @@ export const FamilyService = {
     await updateDoc(doc(db!, 'families', id), { blocked: false });
   },
 };
-
-function toDateOrUndef(raw: unknown): Date | undefined {
-  if (raw && typeof (raw as { toDate?: () => Date }).toDate === 'function') {
-    return (raw as { toDate: () => Date }).toDate();
-  }
-  if (typeof raw === 'string') {
-    const d = new Date(raw);
-    if (!isNaN(d.getTime())) return d;
-  }
-  return undefined;
-}
 
 function parseSub(v: unknown): FamilyRow['subscription'] {
   const s = (v ?? {}) as Record<string, unknown>;

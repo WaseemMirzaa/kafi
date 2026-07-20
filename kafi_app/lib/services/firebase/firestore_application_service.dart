@@ -46,9 +46,14 @@ class FirestoreApplicationService implements IApplicationService {
     // (Spec §14 J3). This also keeps apply idempotent against retries.
     final id = '${jobId}_$nannyId';
     final ref = _apps.doc(id);
-    final existing = await ref.get();
-    if (existing.exists &&
-        existing.data()?['status'] != ApplicationStatus.withdrawn.name) {
+    // Reading a not-yet-created application doc is denied by Firestore rules
+    // because the read rule keys off existing document ownership. Query the
+    // nanny's own applications instead, which the rules explicitly allow.
+    final prior = (await getApplicationsForNanny(nannyId))
+        .where((app) => app.jobPostId == jobId)
+        .cast<ApplicationModel?>()
+        .firstWhere((app) => app != null, orElse: () => null);
+    if (prior != null && prior.status != ApplicationStatus.withdrawn) {
       throw Exception('already_applied');
     }
 
@@ -58,8 +63,10 @@ class FirestoreApplicationService implements IApplicationService {
     final nannySnap =
         await FirebaseFirestore.instance.collection('nannies').doc(nannyId).get();
 
-    // Real attribute-based match (Spec §9 / MatchService) computed from the
-    // stored job + nanny docs, not a hardcoded placeholder.
+    // Do not read the private family profile here: nannies are allowed to read
+    // jobs, but not the corresponding `families/{id}` document. Fetching it
+    // causes the apply flow to fail with Firestore permission errors. The
+    // application score therefore uses the job post + nanny profile only.
     final matchScore = (jobData != null && nannySnap.data() != null)
         ? MatchService().calculateJobMatch(
             nannyModelFromMap(nannyId, nannySnap.data()!),

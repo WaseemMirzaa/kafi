@@ -506,14 +506,11 @@ void main() {
         nationalityPreference: nationalityPref,
       );
 
-  group('calculateCardMatch / cardMatchPercent', () {
-    test('a fully-aligned card scores 100 raw', () {
+  group('calculateCardMatch (mock fallback)', () {
+    test('a fully-aligned card scores 100', () {
       expect(svc.calculateCardMatch(makeCard(), makeCardJob()), 100);
     });
-    test('the friendly display range caps the top at 99', () {
-      expect(svc.cardMatchPercent(makeCard(), makeCardJob()), 99);
-    });
-    test('a poorly-aligned card is floored at 35 for display', () {
+    test('a poorly-aligned card scores below 35 without display clamping', () {
       final card = makeCard(
           jobType: 'Live-in',
           city: 'Sharjah',
@@ -521,9 +518,16 @@ void main() {
           yearsExp: 0,
           availableNow: false);
       final job = makeCardJob(required: const ['English', 'Arabic'], experienceYears: 5);
-      // Raw score ≈ 25, but display never dips below the floor.
       expect(svc.calculateCardMatch(card, job), lessThan(35));
-      expect(svc.cardMatchPercent(card, job), 35);
+    });
+  });
+
+  group('rankNannies', () {
+    test('uses the canonical full scorer for browse cards', () {
+      final job = makeJob();
+      final nanny = makeNanny();
+      final ranked = svc.rankNannies([nanny], job);
+      expect(ranked.single.matchPercent, 100);
     });
   });
 
@@ -536,8 +540,7 @@ void main() {
           id: 'C', jobType: 'Live-in', city: 'Sharjah', tags: const [], availableNow: false);
       final ranked = svc.rankCards([c, a, b], job);
       expect(ranked.map((e) => e.id).toList(), ['A', 'B', 'C']);
-      // Ranking stamps each card's computed display score.
-      expect(ranked.first.matchPercent, 99);
+      expect(ranked.first.matchPercent, 100);
     });
 
     test('nationality preference only breaks near-ties', () {
@@ -554,8 +557,8 @@ void main() {
       // X (preferred-nationality? no) is a perfect match; Y matches the
       // preferred nationality but scores far lower → X still ranks first.
       final job = makeCardJob(nationalityPref: const ['Filipino']);
-      final x = makeCard(id: 'X', nationality: 'Indian'); // ~99
-      final y = makeCard(id: 'Y', nationality: 'Filipino', city: 'Sharjah'); // ~86
+      final x = makeCard(id: 'X', nationality: 'Indian'); // 100 on card fallback
+      final y = makeCard(id: 'Y', nationality: 'Filipino', city: 'Sharjah'); // lower
       final ranked = svc.rankCards([y, x], job);
       expect(ranked.first.id, 'X');
     });

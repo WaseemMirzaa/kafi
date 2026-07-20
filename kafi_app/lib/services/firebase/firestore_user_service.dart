@@ -141,15 +141,32 @@ class FirestoreUserService implements IUserService {
     final ref = FirebaseFirestore.instance
         .collection('contactReveals')
         .doc('${familyId}_$nannyId');
-    // Create the request only once — the rules allow create, not update, and a
-    // deterministic id means an already-resolved reveal is just read back.
-    if (!(await ref.get()).exists) {
-      await ref.set({
-        'familyId': familyId,
-        'nannyId': nannyId,
-        'requestedAt': FieldValue.serverTimestamp(),
-      });
+    try {
+      final existing = await ref.get();
+      if (!existing.exists) {
+        await ref.set({
+          'familyId': familyId,
+          'nannyId': nannyId,
+          'requestedAt': FieldValue.serverTimestamp(),
+        });
+      }
+    } on FirebaseException catch (e) {
+      // If the reveal doc does not exist yet, the rules deny the initial read.
+      // Fall back to a create-only write in that case.
+      if (e.code == 'permission-denied') {
+        await ref.set({
+          'familyId': familyId,
+          'nannyId': nannyId,
+          'requestedAt': FieldValue.serverTimestamp(),
+        });
+        return await _awaitRevealResult(ref);
+      }
+      if (e.code != 'permission-denied') rethrow;
     }
+    return _awaitRevealResult(ref);
+  }
+
+  Future<String?> _awaitRevealResult(DocumentReference<Map<String, dynamic>> ref) async {
     try {
       final snap = await ref
           .snapshots()

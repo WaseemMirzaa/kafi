@@ -23,6 +23,8 @@ import {
   onReviewCreated,
 } from './triggers/stats';
 import { onContactRevealRequested } from './triggers/contact';
+import { bootstrapFirstAdmin } from './bootstrapAdmin';
+import { syncMockSubscription } from './mockSubscription';
 
 admin.initializeApp();
 
@@ -47,4 +49,6 @@ export {
   onProfileViewed,
   onReviewCreated,
   onContactRevealRequested,
+  bootstrapFirstAdmin,
+  syncMockSubscription,
 };

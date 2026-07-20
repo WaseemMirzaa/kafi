@@ -1,3 +1,4 @@
 {
-    "cmake.sourceDirectory": "/Users/macuser/Documents/projects/Nannies app/kafi_app/linux"
+    "cmake.sourceDirectory": "/Users/macuser/Documents/projects/Nannies app/kafi_app/linux",
+    "dart.flutterSdkPath": "/Users/macuser/fvm/versions/3.35.7"
 }

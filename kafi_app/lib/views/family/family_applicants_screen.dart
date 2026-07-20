@@ -1,8 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/controllers/application_controller.dart';
+import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
+import 'package:kafi_app/models/nanny_card_model.dart';
+import 'package:kafi_app/services/interfaces/i_subscription_service.dart';
+import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/services/mock/mock_subscription_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
@@ -111,10 +117,7 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
         app.status == ApplicationStatus.viewed;
 
     return GestureDetector(
-      onTap: () {
-        // Tapping an unseen application marks it viewed (Spec: family review).
-        if (app.status == ApplicationStatus.pending) controller.markAsViewed(app.id);
-      },
+      onTap: () => _openApplicant(app),
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(10),
@@ -201,6 +204,30 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
         ),
       ),
     );
+  }
+
+  Future<void> _openApplicant(ApplicationModel app) async {
+    if (app.status == ApplicationStatus.pending) {
+      await controller.markAsViewed(app.id);
+    }
+    final subs = Get.find<SubscriptionController>();
+    await subs.recordViewIfAllowed(app.nannyId);
+    await _syncMockEntitlementsIfNeeded(app.familyId);
+    final nanny = await Get.find<IUserService>().getNanny(app.nannyId);
+    if (nanny == null) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.applicantProfileUnavailable.tr);
+      return;
+    }
+    final card =
+        NannyCardModel.fromNanny(nanny).copyWith(matchPercent: app.matchScore);
+    AppNavigation.openNannyProfile(card);
+  }
+
+  Future<void> _syncMockEntitlementsIfNeeded(String familyId) async {
+    if (!AppConfig.subscriptionUsesMock) return;
+    final service = Get.find<ISubscriptionService>();
+    if (service is! MockSubscriptionService) return;
+    await service.syncEntitlementsToFirestore(familyId);
   }
 
   Widget _smallBtn(String label, Color bg, Color fg, VoidCallback onTap) {

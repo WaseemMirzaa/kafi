@@ -1,19 +1,28 @@
+import 'dart:convert';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/notification_controller.dart';
-import 'package:kafi_app/views/shared/kafi_colors.dart';
 import 'package:kafi_app/models/notification_model.dart';
 import 'package:kafi_app/services/interfaces/i_notification_service.dart';
+import 'package:kafi_app/utils/constants/notification_constants.dart';
+import 'package:kafi_app/views/shared/kafi_colors.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class FcmNotificationService implements INotificationService {
   final _messaging = FirebaseMessaging.instance;
   final _notifications = FirebaseFirestore.instance.collection('notifications');
   final _users = FirebaseFirestore.instance.collection('users');
+  final _localNotifications = FlutterLocalNotificationsPlugin();
+  var _androidNotificationsReady = false;
 
   @override
   Future<void> initialize() async {
+    await _setupAndroidNotifications();
+
     // On web, FCM needs a service worker (web/firebase-messaging-sw.js) and a
     // VAPID key to obtain a token; neither is configured, so token retrieval
     // is intentionally skipped there. The listeners below are still safe to
@@ -45,6 +54,12 @@ class FcmNotificationService implements INotificationService {
         'data': message.data,
         'createdAt': DateTime.now().toIso8601String(),
       });
+
+      if (defaultTargetPlatform == TargetPlatform.android) {
+        _showAndroidForegroundNotification(message, notif);
+        return;
+      }
+
       Get.snackbar(
         title,
         body,
@@ -78,6 +93,86 @@ class FcmNotificationService implements INotificationService {
     });
   }
 
+  Future<void> _setupAndroidNotifications() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.android) return;
+    if (_androidNotificationsReady) return;
+
+    const androidInit = AndroidInitializationSettings('@mipmap/ic_launcher');
+    await _localNotifications.initialize(
+      const InitializationSettings(android: androidInit),
+      onDidReceiveNotificationResponse: (response) {
+        final payload = response.payload;
+        if (payload == null || payload.isEmpty) return;
+        if (!Get.isRegistered<NotificationController>()) return;
+        try {
+          final data = Map<String, dynamic>.from(jsonDecode(payload) as Map);
+          final notif = AppNotification.fromMap({
+            'id': data['notificationId']?.toString() ??
+                DateTime.now().millisecondsSinceEpoch.toString(),
+            'userId': data['userId']?.toString() ?? '',
+            'title': data['title']?.toString() ?? '',
+            'body': data['body']?.toString() ?? '',
+            'type': data['type']?.toString() ?? 'systemAnnouncement',
+            'createdAt': DateTime.now().toIso8601String(),
+            'data': data,
+          });
+          Get.find<NotificationController>().handleNotificationTap(notif);
+        } catch (e) {
+          debugPrint('FCM local notification tap parse failed: $e');
+        }
+      },
+    );
+
+    await _localNotifications
+        .resolvePlatformSpecificImplementation<
+            AndroidFlutterLocalNotificationsPlugin>()
+        ?.createNotificationChannel(
+          const AndroidNotificationChannel(
+            NotificationConstants.fcmChannelId,
+            NotificationConstants.fcmChannelName,
+            description: NotificationConstants.fcmChannelDescription,
+            importance: Importance.high,
+          ),
+        );
+
+    _androidNotificationsReady = true;
+  }
+
+  Future<void> _showAndroidForegroundNotification(
+    RemoteMessage message,
+    AppNotification notif,
+  ) async {
+    await _setupAndroidNotifications();
+
+    final title = notif.title;
+    final body = notif.body;
+    if (title.isEmpty && body.isEmpty) return;
+
+    final payload = jsonEncode({
+      ...notif.data,
+      'title': title,
+      'body': body,
+      'notificationId': notif.id,
+    });
+
+    await _localNotifications.show(
+      notif.id.hashCode,
+      title,
+      body,
+      const NotificationDetails(
+        android: AndroidNotificationDetails(
+          NotificationConstants.fcmChannelId,
+          NotificationConstants.fcmChannelName,
+          channelDescription: NotificationConstants.fcmChannelDescription,
+          importance: Importance.high,
+          priority: Priority.high,
+          icon: '@mipmap/ic_launcher',
+        ),
+      ),
+      payload: payload,
+    );
+  }
+
   void _handleOpenedFromBackground(RemoteMessage message) {
     if (!Get.isRegistered<NotificationController>()) return;
     final ctrl = Get.find<NotificationController>();
@@ -98,16 +193,50 @@ class FcmNotificationService implements INotificationService {
   @override
   Future<bool> requestPermission() async {
     try {
+      if (!kIsWeb && defaultTargetPlatform == TargetPlatform.android) {
+        await _setupAndroidNotifications();
+        final androidPlugin = _localNotifications
+            .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin>();
+        await androidPlugin?.requestNotificationsPermission();
+
+        final status = await Permission.notification.status;
+        if (!status.isGranted) {
+          await Permission.notification.request();
+        }
+
+        // Android can still obtain an FCM token even if notifications are denied.
+        await _messaging.requestPermission(alert: true, badge: true, sound: true);
+        return true;
+      }
+
       final settings = await _messaging.requestPermission(
         alert: true,
         badge: true,
         sound: true,
       );
-      return settings.authorizationStatus == AuthorizationStatus.authorized;
+      return settings.authorizationStatus == AuthorizationStatus.authorized ||
+          settings.authorizationStatus == AuthorizationStatus.provisional;
     } catch (e) {
       debugPrint('FCM requestPermission failed (non-fatal): $e');
-      return false;
+      return defaultTargetPlatform == TargetPlatform.android;
     }
+  }
+
+  /// iOS FCM tokens depend on APNS. `getToken()` throws
+  /// `firebase_messaging/apns-token-not-set` if called before the device token
+  /// arrives, so poll briefly after permission + remote-notification registration.
+  Future<void> _ensureApnsTokenReady() async {
+    if (kIsWeb || defaultTargetPlatform != TargetPlatform.iOS) return;
+
+    for (var attempt = 0;
+        attempt < NotificationConstants.iosApnsMaxAttempts;
+        attempt++) {
+      final apnsToken = await _messaging.getAPNSToken();
+      if (apnsToken != null) return;
+      await Future<void>.delayed(Duration(milliseconds: 250 + attempt * 200));
+    }
+    debugPrint('FCM APNS token still unavailable after retries');
   }
 
   @override
@@ -117,7 +246,22 @@ class FcmNotificationService implements INotificationService {
     // soft everywhere else so a missing/rotated token never crashes the app.
     if (kIsWeb) return null;
     try {
-      return await _messaging.getToken();
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        await _ensureApnsTokenReady();
+      } else if (defaultTargetPlatform == TargetPlatform.android) {
+        await _setupAndroidNotifications();
+      }
+
+      final maxAttempts = defaultTargetPlatform == TargetPlatform.android
+          ? NotificationConstants.androidTokenMaxAttempts
+          : 3;
+
+      for (var attempt = 0; attempt < maxAttempts; attempt++) {
+        final token = await _messaging.getToken();
+        if (token != null) return token;
+        await Future<void>.delayed(Duration(milliseconds: 200 + attempt * 150));
+      }
+      return null;
     } catch (e) {
       debugPrint('FCM getToken failed (non-fatal): $e');
       return null;

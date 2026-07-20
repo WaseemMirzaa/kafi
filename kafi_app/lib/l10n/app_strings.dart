@@ -387,6 +387,7 @@ abstract class AppStrings {
   static const familyApplicantsEmptySub = 'family_applicants_empty_sub';
   static const applicantShortlist = 'applicant_shortlist';
   static const applicantDecline = 'applicant_decline';
+  static const applicantProfileUnavailable = 'applicant_profile_unavailable';
   // Application status labels (shared)
   static const appStatusPending = 'app_status_pending';
   static const appStatusViewed = 'app_status_viewed';
@@ -516,6 +517,7 @@ abstract class AppStrings {
   static const chatTitle = 'chat_title';
   static const chatExpiredTitle = 'chat_expired_title';
   static const chatExpiredSub = 'chat_expired_sub';
+  static const chatUnavailable = 'chat_unavailable';
   static const chatExpiredBody = 'chat_expired_body';
   static const viewPlans = 'view_plans';
   static const chatHintActive = 'chat_hint_active';
@@ -675,6 +677,7 @@ abstract class AppStrings {
   static const authPhoneInvalid = 'auth_phone_invalid';
   static const authOtpIncorrect = 'auth_otp_incorrect';
   static const authOtpSendFailed = 'auth_otp_send_failed';
+  static const authSmsRegionDisabled = 'auth_sms_region_disabled';
   static const authOtpRateLimited = 'auth_otp_rate_limited';
   static const authOtpMaxAttempts = 'auth_otp_max_attempts';
   static const authNoAccount = 'auth_no_account';

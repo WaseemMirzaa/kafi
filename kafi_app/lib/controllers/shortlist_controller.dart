@@ -1,9 +1,11 @@
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
+import 'package:kafi_app/controllers/browse_controller.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/models/shortlist_model.dart';
 import 'package:kafi_app/services/interfaces/i_shortlist_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
 
 class ShortlistController extends GetxController {
@@ -14,6 +16,8 @@ class ShortlistController extends GetxController {
   final RxList<ShortlistItem> shortlistedNannies = <ShortlistItem>[].obs;
   final RxSet<String> shortlistedIds = <String>{}.obs;
   final RxBool isLoading = false.obs;
+  final RxnString loadError = RxnString();
+  Worker? _authWorker;
 
   /// Real browse cards for the shortlisted nannies, keyed by nannyId — loaded
   /// from Firestore so the shortlist shows the actual nanny (not seed data).
@@ -40,17 +44,35 @@ class ShortlistController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => loadShortlist());
     loadShortlist();
+  }
+
+  @override
+  void onClose() {
+    _authWorker?.dispose();
+    super.onClose();
   }
 
   Future<void> loadShortlist() async {
     isLoading.value = true;
+    loadError.value = null;
     try {
       final familyId = currentFamilyId(_auth);
-      if (familyId == null) return;
+      if (familyId == null) {
+        shortlistedNannies.clear();
+        shortlistedIds.clear();
+        cards.clear();
+        return;
+      }
       shortlistedNannies.value = await _shortlistService.getShortlist(familyId);
       shortlistedIds.assignAll(shortlistedNannies.map((s) => s.nannyId).toSet());
       await _loadCards();
+    } catch (e) {
+      loadError.value = e.toString();
+      shortlistedNannies.clear();
+      shortlistedIds.clear();
+      cards.clear();
     } finally {
       isLoading.value = false;
     }
@@ -59,9 +81,17 @@ class ShortlistController extends GetxController {
   /// Fetches the real nanny doc for each shortlisted id and builds a card.
   Future<void> _loadCards() async {
     final loaded = <String, NannyCardModel>{};
+    final matchJob =
+        Get.isRegistered<BrowseController>() ? Get.find<BrowseController>().matchJob : null;
+    final family =
+        Get.isRegistered<BrowseController>() ? Get.find<BrowseController>().familyContext : null;
+    final matcher = Get.isRegistered<MatchService>() ? Get.find<MatchService>() : MatchService();
     await Future.wait(shortlistedNannies.map((s) async {
       final n = await _userService.getNanny(s.nannyId);
-      if (n != null) loaded[s.nannyId] = NannyCardModel.fromNanny(n);
+      if (n == null) return;
+      loaded[s.nannyId] = matchJob != null
+          ? matcher.cardWithJobMatch(n, matchJob, family: family)
+          : NannyCardModel.fromNanny(n);
     }));
     cards.assignAll(loaded);
   }
@@ -78,10 +108,11 @@ class ShortlistController extends GetxController {
 
   Future<void> addToShortlist(String nannyId, {String? notes}) async {
     final familyId = currentFamilyId(_auth);
-    if (familyId == null) return;
+    if (familyId == null || shortlistedIds.contains(nannyId)) return;
     final item = await _shortlistService.add(familyId: familyId, nannyId: nannyId, notes: notes);
     shortlistedNannies.add(item);
     shortlistedIds.add(nannyId);
+    await _loadCards();
   }
 
   Future<void> removeFromShortlist(String nannyId) async {
@@ -90,6 +121,7 @@ class ShortlistController extends GetxController {
     await _shortlistService.remove(familyId: familyId, nannyId: nannyId);
     shortlistedNannies.removeWhere((s) => s.nannyId == nannyId);
     shortlistedIds.remove(nannyId);
+    cards.remove(nannyId);
   }
 
   Future<void> updateNotes(String nannyId, String notes) async {

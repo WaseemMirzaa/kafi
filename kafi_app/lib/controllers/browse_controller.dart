@@ -2,20 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
+import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
-import 'package:kafi_app/models/family_model.dart' show JobType;
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
+import 'package:kafi_app/services/interfaces/i_user_service.dart';
 
 class BrowseController extends GetxController {
   final IJobService _jobs = Get.find<IJobService>();
+  final IUserService _users = Get.find<IUserService>();
   final AuthController _auth = Get.find<AuthController>();
 
   final RxList<NannyCardModel> results = <NannyCardModel>[].obs;
   final RxString activeFilter = 'All'.obs;
   final RxString query = ''.obs;
   final RxBool isLoading = false.obs;
+  final RxnString loadError = RxnString();
   final searchCtrl = TextEditingController();
+
+  /// Cached household context for the canonical match scorer.
+  FamilyModel? familyContext;
 
   /// The family's posted jobs, used to filter Top Matches by a specific job.
   final RxList<JobPostModel> myJobs = <JobPostModel>[].obs;
@@ -49,16 +55,30 @@ class BrowseController extends GetxController {
 
   Future<void> refreshList() async {
     isLoading.value = true;
+    loadError.value = null;
     try {
-      // Load the family's posted jobs first so matches can be linked to a job.
-      final fid = _auth.currentUser.value?.id;
-      if (fid != null) {
-        myJobs.value = await _jobs.getJobsByFamily(fid);
+      final currentUser = _auth.currentUser.value;
+      if (currentUser == null || currentUser.isNanny) {
+        myJobs.clear();
+        results.clear();
+        familyContext = null;
+        return;
       }
+      // Load the family's posted jobs first so matches can be linked to a job.
+      final fid = currentUser.id;
+      myJobs.value = await _jobs.getJobsByFamily(fid);
+      familyContext = await _users.getFamily(fid);
       // Default to the family's most recent job so Top Matches is accurate even
       // before the user opens the filter; an explicit selection overrides it.
       final matchJob = selectedJob.value ?? (myJobs.isNotEmpty ? myJobs.first : null);
-      results.value = await _jobs.browseNannies(filter: activeFilter.value, matchJob: matchJob);
+      results.value = await _jobs.browseNannies(
+        filter: activeFilter.value,
+        matchJob: matchJob,
+        family: familyContext,
+      );
+    } catch (e) {
+      results.clear();
+      loadError.value = e.toString();
     } finally {
       isLoading.value = false;
     }

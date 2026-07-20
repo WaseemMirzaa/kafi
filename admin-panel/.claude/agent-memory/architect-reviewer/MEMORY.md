@@ -1,0 +1,3 @@
+- [Worktree base-mismatch merges](review_worktree_merge_risk.md) — when devs branch off an older commit than feature HEAD, verify the ort auto-merge for orphaned/duplicated/lost code
+- [Kafi admin revenue patterns](kafi_revenue_patterns.md) — recurring check points for Dashboard/Revenue work: live byPlan/vat mapping, ListControls reuse, mock fixture windows
+- [Unverified type deviations](review_unverified_type_deviation.md) — Sonnet drops planned wiring on a false "field/type doesn't exist" claim; verify interface+mapper+mock separately before accepting

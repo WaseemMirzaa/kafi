@@ -332,6 +332,7 @@ const Map<String, String> enUs = {
   AppStrings.chatTitle: 'Messages',
   AppStrings.chatExpiredTitle: 'Your subscription has expired',
   AppStrings.chatExpiredSub: 'Renew to view chats and contacts',
+  AppStrings.chatUnavailable: 'Chat is unavailable right now. Please try again shortly.',
   AppStrings.chatExpiredBody:
       'All your messages, shortlists, and contacts are saved and will be restored instantly when you renew.',
   AppStrings.viewPlans: 'View plans',
@@ -511,6 +512,7 @@ const Map<String, String> enUs = {
       "When nannies apply to your jobs, they'll show up here.",
   AppStrings.applicantShortlist: 'Shortlist',
   AppStrings.applicantDecline: 'Decline',
+  AppStrings.applicantProfileUnavailable: 'Could not load this applicant\'s profile.',
   AppStrings.appStatusPending: 'New',
   AppStrings.appStatusViewed: 'Viewed',
   AppStrings.appStatusShortlisted: 'Shortlisted',
@@ -663,6 +665,8 @@ const Map<String, String> enUs = {
   AppStrings.authPhoneInvalid: 'Please enter a valid phone number',
   AppStrings.authOtpIncorrect: 'Invalid code. Please check and try again.',
   AppStrings.authOtpSendFailed: "Couldn't send code. Check your number and try again.",
+  AppStrings.authSmsRegionDisabled:
+      "SMS isn't enabled for this country yet. Try a UAE (+971) number or ask support to enable your region in Firebase.",
   AppStrings.authOtpRateLimited: 'Too many attempts. Please try again later.',
   AppStrings.authOtpMaxAttempts: 'Too many wrong attempts. Please try again later.',
   AppStrings.authNoAccount: 'No account found with this number',

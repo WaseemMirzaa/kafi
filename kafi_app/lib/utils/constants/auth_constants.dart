@@ -7,6 +7,11 @@ class AuthConstants {
   static const minPasswordLength = 8;
   static const defaultCountryCode = '+971';
 
+  /// iOS Phone Auth reCAPTCHA callback scheme when `REVERSED_CLIENT_ID` is absent.
+  /// Format: `app-` + [GOOGLE_APP_ID] with `:` replaced by `-`.
+  static String iosPhoneAuthCallbackScheme(String googleAppId) =>
+      'app-${googleAppId.replaceAll(':', '-')}';
+
   /// Nanny-origin country codes per System Spec §1.5
   static const nannyCountryCodes = <String, String>{
     'UAE': '+971',

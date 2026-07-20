@@ -178,7 +178,7 @@ class NannyEditProfileScreen extends StatelessWidget {
           Obx(
             () => Switch(
               value: value.value,
-              activeThumbColor: KafiColors.roseD,
+              activeColor: KafiColors.roseD,
               onChanged: (v) => value.value = v,
             ),
           ),

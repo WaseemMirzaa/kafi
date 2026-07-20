@@ -50,13 +50,18 @@ class BrowseScreen extends GetView<BrowseController> {
                   }
                   final items = controller.filteredResults;
                   if (items.isEmpty) {
+                    final err = controller.loadError.value;
                     return Center(
                       child: Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Text(
-                            AppStrings.browseNoMatch.tr,
-                            style: KafiTheme.nunito(12, color: KafiColors.tm),
+                            err ?? AppStrings.browseNoMatch.tr,
+                            textAlign: TextAlign.center,
+                            style: KafiTheme.nunito(
+                              12,
+                              color: err != null ? KafiColors.roseD : KafiColors.tm,
+                            ),
                           ),
                           const SizedBox(height: 12),
                           TextButton(

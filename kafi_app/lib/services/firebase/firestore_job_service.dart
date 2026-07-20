@@ -3,6 +3,8 @@ import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
+import 'package:kafi_app/models/nanny_map_codec.dart';
+import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/localized_text.dart';
@@ -12,8 +14,16 @@ class FirestoreJobService implements IJobService {
   final _nannies = FirebaseFirestore.instance.collection('nannies');
 
   @override
-  Future<List<NannyCardModel>> browseNannies({String? filter, JobFilter? jobFilter, JobPostModel? matchJob}) async {
-    Query<Map<String, dynamic>> query = _nannies.where('status', isEqualTo: 'approved');
+  Future<List<NannyCardModel>> browseNannies({
+    String? filter,
+    JobFilter? jobFilter,
+    JobPostModel? matchJob,
+    FamilyModel? family,
+  }) async {
+    // Must mirror firestore.rules: families may read only approved + verified nannies.
+    Query<Map<String, dynamic>> query = _nannies
+        .where('status', isEqualTo: 'approved')
+        .where('isVerified', isEqualTo: true);
 
     if (filter != null && filter != 'All') {
       if (filter == 'Live-in') {
@@ -24,56 +34,34 @@ class FirestoreJobService implements IJobService {
     }
 
     final snap = await query.limit(50).get();
-    var cards = snap.docs.map((d) {
+    final nannies = <NannyModel>[];
+    for (final d in snap.docs) {
       final m = d.data();
-      final name = m['fullName'] ?? '';
-      final expCount = (m['experiences'] as List?)?.length ?? 0;
-      final stats = m['stats'] as Map<String, dynamic>?;
-      return NannyCardModel(
-        id: d.id,
-        initials: name.isNotEmpty ? name[0].toUpperCase() : 'N',
-        name: name,
-        nationality: m['nationality'] ?? '',
-        yearsExp: expCount,
-        jobType: m['jobTypePreference'] == 'liveIn' ? 'Live-in' : 'Live-out',
-        city: m['currentArea'] ?? 'Dubai',
-        // No job context yet → 0 (the card hides the match chip). When a
-        // matchJob is provided below, rankCards overwrites this with the real
-        // MatchService score (always ≥ 35), so 0 uniquely means "not ranked".
-        matchPercent: 0,
-        tags: List<String>.from(m['languages'] ?? []).take(3).toList(),
-        verified: m['isVerified'] ?? false,
-        availableNow: m['availability'] == 'availableNow',
-        averageRating: (stats?['averageRating'] as num?)?.toDouble(),
-        reviewsCount: (stats?['reviewsCount'] as num?)?.toInt() ?? 0,
-      );
-    }).toList();
+      if (m['blocked'] == true) continue;
+      nannies.add(nannyModelFromMap(d.id, m));
+    }
 
+    var eligible = nannies;
     if (filter != null && filter != 'All') {
       final f = filter.toLowerCase();
-      cards = cards
-          .where(
-            (n) =>
-                n.nationality.toLowerCase().contains(f) ||
-                n.jobType.toLowerCase().contains(f) ||
-                n.tags.any((t) => t.toLowerCase().contains(f)),
-          )
-          .toList();
+      eligible = nannies.where((n) {
+        final card = NannyCardModel.fromNanny(n);
+        return n.nationality.toLowerCase().contains(f) ||
+            card.jobType.toLowerCase().contains(f) ||
+            card.tags.any((t) => t.toLowerCase().contains(f));
+      }).toList();
     }
-    // Link nannies to the posted job via the single source of truth
-    // (MatchService): real, deterministic match % + ranking with the
-    // nationality tie-breaker.
+
     if (matchJob != null) {
-      cards = MatchService().rankCards(cards, matchJob);
+      return MatchService().rankNannies(eligible, matchJob, family: family);
     }
-    return cards;
+    return eligible.map(NannyCardModel.fromNanny).toList();
   }
 
   @override
   Future<void> saveJobPost(JobPostModel post) async {
     final ref = _jobs.doc(post.id);
     final exists = (await ref.get()).exists;
-    // Manage timestamps server-side (the model serializes these as null).
     final data = post.toMap()
       ..remove('createdAt')
       ..remove('expiresAt')

@@ -142,6 +142,32 @@
       "queryScope": "COLLECTION",
       "fields": [
         { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "isVerified", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "nannies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "isVerified", "order": "ASCENDING" },
+        { "fieldPath": "jobTypePreference", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "nannies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
+        { "fieldPath": "isVerified", "order": "ASCENDING" },
+        { "fieldPath": "nationality", "order": "ASCENDING" }
+      ]
+    },
+    {
+      "collectionGroup": "nannies",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "status", "order": "ASCENDING" },
         { "fieldPath": "introVideoStatus", "order": "ASCENDING" }
       ]
     }

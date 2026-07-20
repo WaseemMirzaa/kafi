@@ -38,12 +38,18 @@ const STATUSES = ['draft', 'pending', 'approved', 'rejected'];
 export default function AllNannies() {
   const [items, setItems] = useState<NannyRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [status, setStatus] = useState('all');
 
   useEffect(() => {
+    setLoadError(null);
     NannyService.list()
       .then(setItems)
+      .catch((e) => {
+        setItems([]);
+        setLoadError((e as Error).message || 'Failed to load nannies');
+      })
       .finally(() => setLoading(false));
   }, []);
 
@@ -148,9 +154,16 @@ export default function AllNannies() {
         </FilterBar>
 
         <TableCard title="All nannies">
-          {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
-          {!loading && lc.total === 0 && (
-            <div className="px-3 py-4 text-[10px] text-[#8090B0]">No nannies match your filters.</div>
+          {loading && (
+            <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>
+          )}
+          {!loading && loadError && (
+            <div className="px-3 py-4 text-[10px] font-bold text-rose-dark">{loadError}</div>
+          )}
+          {!loading && !loadError && lc.total === 0 && (
+            <div className="px-3 py-4 text-[10px] text-[#8090B0]">
+              No nannies in Firestore yet. Complete nanny signup in the mobile app first.
+            </div>
           )}
           {lc.pageItems.map((n) => (
             <Row key={n.id}>

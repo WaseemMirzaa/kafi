@@ -22,6 +22,7 @@ class FirebaseAuthService implements IAuthService {
     final completer = Completer<void>();
     await _auth.verifyPhoneNumber(
       phoneNumber: '$countryCode$phone',
+      timeout: const Duration(seconds: 60),
       verificationCompleted: (_) {
         if (!completer.isCompleted) completer.complete();
       },

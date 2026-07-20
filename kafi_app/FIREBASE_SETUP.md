@@ -22,12 +22,25 @@ Create / use a Firebase project and register an **Android** app and an **iOS** a
 ## 3. Enable Authentication
 
 - Firebase Console → **Authentication → Sign-in method → Phone**: enable.
+- **SMS region policy:** by default Firebase blocks many countries. If you see
+  `SMS unable to be sent until this region enabled`, open **Authentication →
+  Settings → SMS region policy** and either allow **Pakistan (+92)** / other
+  markets you need, or use **Allow all regions** for QA. For dev without SMS,
+  add numbers under Phone → *Phone numbers for testing* (fixed 6-digit code).
 - Add test numbers under Phone → *Phone numbers for testing* for QA without real SMS.
 - **Android:** add your app's **SHA-1** and **SHA-256** fingerprints
   (Project Settings → Your app) — required for phone-auth reCAPTCHA / Play Integrity.
 - **iOS:** upload an **APNs auth key** (Project Settings → Cloud Messaging) so phone
   auth + FCM work; ensure `Push Notifications` and `Background Modes → Remote
   notifications` capabilities are enabled in Xcode.
+- **iOS phone auth URL scheme:** `ios/Runner/Info.plist` must include a
+  `CFBundleURLSchemes` entry of `app-<GOOGLE_APP_ID with colons replaced by dashes>`
+  (e.g. `app-1-944877885594-ios-87503ec30e8d8fb8c52723` for bundle
+  `com.codetivelab.kafiApp`).
+  Without this, `verifyPhoneNumber` crashes on the simulator with a native
+  `PhoneAuthProvider` fatal error. If you regenerate `GoogleService-Info.plist`,
+  update the scheme to match the new `GOOGLE_APP_ID`. If you enable **Google**
+  sign-in and the plist gains `REVERSED_CLIENT_ID`, add that scheme too.
 
 ## 4. Firestore + Storage
 

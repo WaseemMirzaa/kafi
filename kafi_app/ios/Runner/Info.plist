@@ -2,6 +2,8 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<key>CADisableMinimumFrameDurationOnPhone</key>
+	<true/>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>$(DEVELOPMENT_LANGUAGE)</string>
 	<key>CFBundleDisplayName</key>
@@ -20,37 +22,21 @@
 	<string>$(FLUTTER_BUILD_NAME)</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>app-1-944877885594-ios-87503ec30e8d8fb8c52723</string>
+			</array>
+		</dict>
+	</array>
 	<key>CFBundleVersion</key>
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
-
-	<!-- ─── Camera & Microphone ──────────────────────────────────────── -->
-	<key>NSCameraUsageDescription</key>
-	<string>Kafi uses your camera to capture profile photos and intro videos.</string>
-	<key>NSMicrophoneUsageDescription</key>
-	<string>Kafi uses your microphone to record audio for your intro video.</string>
-
-	<!-- ─── Photo Library ────────────────────────────────────────────── -->
-	<key>NSPhotoLibraryUsageDescription</key>
-	<string>Kafi accesses your photo library to let you upload profile photos and documents.</string>
-	<key>NSPhotoLibraryAddUsageDescription</key>
-	<string>Kafi saves photos to your library after capture.</string>
-
-	<!-- ─── Location ─────────────────────────────────────────────────── -->
-	<key>NSLocationWhenInUseUsageDescription</key>
-	<string>Kafi uses your location to autofill your city and help find nearby opportunities.</string>
-	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-	<string>Kafi uses your location to autofill your city and help find nearby opportunities.</string>
-
-	<!-- ─── Push Notifications / FCM background ──────────────────────── -->
-	<key>UIBackgroundModes</key>
-	<array>
-		<string>remote-notification</string>
-		<string>fetch</string>
-	</array>
-
-	<!-- ─── App Transport Security ───────────────────────────────────── -->
 	<key>NSAppTransportSecurity</key>
 	<dict>
 		<key>NSAllowsArbitraryLoads</key>
@@ -58,7 +44,25 @@
 		<key>NSAllowsArbitraryLoadsInWebContent</key>
 		<true/>
 	</dict>
-
+	<key>NSCameraUsageDescription</key>
+	<string>Kafi uses your camera to capture profile photos and intro videos.</string>
+	<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+	<string>Kafi uses your location to autofill your city and help find nearby opportunities.</string>
+	<key>NSLocationWhenInUseUsageDescription</key>
+	<string>Kafi uses your location to autofill your city and help find nearby opportunities.</string>
+	<key>NSMicrophoneUsageDescription</key>
+	<string>Kafi uses your microphone to record audio for your intro video.</string>
+	<key>NSPhotoLibraryAddUsageDescription</key>
+	<string>Kafi saves photos to your library after capture.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Kafi accesses your photo library to let you upload profile photos and documents.</string>
+	<key>UIApplicationSupportsIndirectInputEvents</key>
+	<true/>
+	<key>UIBackgroundModes</key>
+	<array>
+		<string>remote-notification</string>
+		<string>fetch</string>
+	</array>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>
@@ -76,9 +80,5 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
-	<key>CADisableMinimumFrameDurationOnPhone</key>
-	<true/>
-	<key>UIApplicationSupportsIndirectInputEvents</key>
-	<true/>
 </dict>
 </plist>

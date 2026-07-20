@@ -47,14 +47,22 @@ class _RevealState extends State<_Reveal> {
 
   Future<void> _reveal() async {
     final familyId = Get.find<AuthController>().currentUser.value?.id;
-    final phone = familyId == null
-        ? null
-        : await Get.find<IUserService>().revealContact(familyId, widget.nannyId);
-    if (mounted) {
-      setState(() {
-        _phone = phone;
-        _loading = false;
-      });
+    try {
+      final phone = familyId == null
+          ? null
+          : await Get.find<IUserService>().revealContact(familyId, widget.nannyId);
+      if (mounted) {
+        setState(() {
+          _phone = phone;
+          _loading = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _loading = false);
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.contactLaunchFailed.tr,
+            snackPosition: SnackPosition.BOTTOM);
+      }
     }
   }
 

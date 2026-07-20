@@ -1,4 +1,5 @@
 import 'package:get/get.dart';
+import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
@@ -7,6 +8,7 @@ import 'package:kafi_app/models/subscription_plan.dart';
 import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/services/interfaces/i_subscription_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/services/mock/mock_subscription_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
 import 'package:kafi_app/utils/constants/subscription_constants.dart';
 
@@ -65,10 +67,18 @@ class SubscriptionController extends GetxController {
     if (id == null) return;
     state.value = await _subs.getState(id);
     activePlanId.value = hasActiveAccess ? await _subs.getActivePlanId(id) : null;
-    freeViewsUsed.value = await _subs.freeViewsUsed(id);
-    final fam = await _users.getFamily(id);
-    if (fam != null) {
-      viewedNannyIds.assignAll(fam.viewedProfiles);
+    if (AppConfig.subscriptionUsesMock) {
+      viewedNannyIds.assignAll(await _subs.viewedNannyIds(id));
+      freeViewsUsed.value = viewedNannyIds.length;
+      if (_subs is MockSubscriptionService) {
+        await (_subs as MockSubscriptionService).syncEntitlementsToFirestore(id);
+      }
+    } else {
+      freeViewsUsed.value = await _subs.freeViewsUsed(id);
+      final fam = await _users.getFamily(id);
+      if (fam != null) {
+        viewedNannyIds.assignAll(fam.viewedProfiles);
+      }
     }
     if (isExpired) {
       _applyLockdown();

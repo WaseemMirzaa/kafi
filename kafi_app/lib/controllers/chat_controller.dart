@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/notification_controller.dart';
@@ -12,6 +13,8 @@ import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
+import 'package:kafi_app/services/interfaces/i_subscription_service.dart';
+import 'package:kafi_app/services/mock/mock_subscription_service.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
@@ -32,10 +35,13 @@ class ChatController extends GetxController {
   final inputCtrl = TextEditingController();
   final RxBool isLoading = false.obs;
   final RxBool isLocked = false.obs;
+  final RxnString threadsError = RxnString();
 
   // Live Firestore subscriptions — threads list + the open thread's messages.
   StreamSubscription<List<ChatThread>>? _threadsSub;
   StreamSubscription<List<ChatMessage>>? _messagesSub;
+  Worker? _authWorker;
+  bool _pickingImage = false;
 
   String? _pendingThreadId;
   String? _pendingNannyId;
@@ -48,24 +54,29 @@ class ChatController extends GetxController {
   }
 
   Future<void> consumePendingOpen() async {
-    if (_pendingThreadId != null) {
-      final id = _pendingThreadId!;
-      _pendingThreadId = null;
-      await openThread(id);
-      return;
-    }
-    if (_pendingNannyId != null) {
-      final id = _pendingNannyId!;
-      final name = _pendingNannyName;
-      _pendingNannyId = null;
-      _pendingNannyName = null;
-      await openThreadForNanny(nannyId: id, nannyName: name);
+    try {
+      if (_pendingThreadId != null) {
+        final id = _pendingThreadId!;
+        _pendingThreadId = null;
+        await openThread(id);
+        return;
+      }
+      if (_pendingNannyId != null) {
+        final id = _pendingNannyId!;
+        final name = _pendingNannyName;
+        _pendingNannyId = null;
+        _pendingNannyName = null;
+        await openThreadForNanny(nannyId: id, nannyName: name);
+      }
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     }
   }
 
   bool get isSubscriptionExpired => _subs.isExpired;
   bool get isSubscribed => _subs.isSubscribed;
   bool get isNanny => _auth.currentUser.value?.isNanny ?? false;
+  bool get _skipSubscriptionGates => AppConfig.subscriptionUsesMock;
 
   /// Per docs §3.6 & §Subscription Lockdown:
   /// - Nanny users: always see all threads
@@ -79,6 +90,7 @@ class ChatController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => refreshThreads());
     refreshThreads();
     // Transfer notification deep-link queued before this controller existed.
     if (Get.isRegistered<NotificationController>()) {
@@ -102,10 +114,21 @@ class ChatController extends GetxController {
 
   @override
   void onClose() {
+    _authWorker?.dispose();
     _messagesSub?.cancel();
     _threadsSub?.cancel();
     inputCtrl.dispose();
     super.onClose();
+  }
+
+  Future<void> _syncFirestoreEntitlementsIfNeeded() async {
+    if (!AppConfig.subscriptionUsesMock) return;
+    final familyId = currentFamilyId(_auth);
+    if (familyId == null) return;
+    final subs = Get.find<ISubscriptionService>();
+    if (subs is MockSubscriptionService) {
+      await subs.syncEntitlementsToFirestore(familyId);
+    }
   }
 
   /// Binds the thread list to a live Firestore stream (new messages, unread
@@ -113,19 +136,34 @@ class ChatController extends GetxController {
   /// the first snapshot so callers that then open a thread see it populated.
   Future<void> refreshThreads() async {
     final id = currentUserId(_auth);
-    if (id == null) return;
+    if (id == null) {
+      threads.clear();
+      threadsError.value = null;
+      return;
+    }
     isLoading.value = true;
+    threadsError.value = null;
+    await _syncFirestoreEntitlementsIfNeeded();
+    try {
+      threads.value = await _chat.listThreads(id);
+    } catch (_) {
+      // Keep the stream path as the source of truth; this is only a bootstrap fallback.
+    }
     await _threadsSub?.cancel();
     final first = Completer<void>();
-    void done() {
+    void done([Object? error]) {
       isLoading.value = false;
+      if (error != null) {
+        threadsError.value = error.toString();
+      }
       if (!first.isCompleted) first.complete();
     }
 
     _threadsSub = _chat.watchThreads(id).listen((list) {
       threads.value = list;
+      threadsError.value = null;
       done();
-    }, onError: (_) => done());
+    }, onError: (e) => done(e));
     await first.future;
   }
 
@@ -155,7 +193,7 @@ class ChatController extends GetxController {
   }
 
   Future<void> openThread(String threadId) async {
-    if (!isNanny && _subs.isExpired) {
+    if (!_skipSubscriptionGates && !isNanny && _subs.isExpired) {
       final thread = threads.firstWhereOrNull((t) => t.id == threadId);
       if (thread == null || !thread.hasActiveTrial) {
         Get.toNamed(Routes.pricing, arguments: {
@@ -167,6 +205,11 @@ class ChatController extends GetxController {
     }
     activeThreadId.value = threadId;
     messages.clear();
+    try {
+      messages.value = await _chat.loadMessages(threadId);
+    } catch (_) {
+      // The stream below remains the live source of truth.
+    }
     await _messagesSub?.cancel();
     _messagesSub = _chat.watchMessages(threadId).listen((serverMsgs) {
       // Keep any optimistic messages the stream hasn't caught up to yet, so a
@@ -174,8 +217,12 @@ class ChatController extends GetxController {
       final serverIds = serverMsgs.map((m) => m.id).toSet();
       final pending = messages.where((m) => !serverIds.contains(m.id)).toList();
       messages.value = [...serverMsgs, ...pending];
-    });
-    await markAsRead(threadId);
+    }, onError: (_) {});
+    try {
+      await markAsRead(threadId);
+    } catch (_) {
+      // Read failures should not block opening the conversation in dev mode.
+    }
   }
 
   /// Finds (or creates) and opens the family↔nanny thread by nanny id.
@@ -190,28 +237,37 @@ class ChatController extends GetxController {
       return;
     }
     // Don't auto-create for free-tier families on expired sub (no contacts).
-    if (!isNanny && _subs.isExpired) {
+    if (!_skipSubscriptionGates && !isNanny && _subs.isExpired) {
       Get.toNamed(Routes.pricing, arguments: {'reason': 'chat_locked'});
       return;
     }
     // Free-tier families (never subscribed) can only message a nanny *after*
     // they've consumed a profile view for that nanny — per §8.4 (free contact
     // matrix). Subscribed and grace-period users skip this check.
-    if (!isNanny &&
+    if (!_skipSubscriptionGates &&
+        !isNanny &&
         _subs.state.value == SubscriptionState.free &&
         !_subs.viewedNannyIds.contains(nannyId)) {
       Get.toNamed(Routes.pricing,
           arguments: {'reason': 'chat_view_required', 'nannyId': nannyId});
       return;
     }
-    final thread = await _chat.findOrCreateThread(
-      familyId: familyId,
-      nannyId: nannyId,
-      nannyName: nannyName,
-      familyName: _auth.currentUser.value?.fullName,
-    );
-    await refreshThreads();
-    await openThread(thread.id);
+    try {
+      await _syncFirestoreEntitlementsIfNeeded();
+      final thread = await _chat.findOrCreateThread(
+        familyId: familyId,
+        nannyId: nannyId,
+        nannyName: nannyName,
+        familyName: _auth.currentUser.value?.fullName,
+      );
+      await refreshThreads();
+      await openThread(thread.id);
+    } catch (e) {
+      final msg = e.toString().contains('permission-denied')
+          ? AppStrings.chatUnavailable.tr
+          : e.toString();
+      Get.snackbar(AppStrings.errorTitle.tr, msg);
+    }
   }
 
   /// Per docs: Family with expired subscription cannot send messages
@@ -220,7 +276,7 @@ class ChatController extends GetxController {
     if (inputCtrl.text.trim().isEmpty || activeThreadId.value.isEmpty) return;
 
     // Check family subscription status before sending
-    if (!isNanny) {
+    if (!_skipSubscriptionGates && !isNanny) {
       final thread = threads.firstWhereOrNull((t) => t.id == activeThreadId.value);
       if (_subs.isExpired && !(thread?.hasActiveTrial ?? false)) {
         Get.snackbar('Subscription Required', 'Renew to send messages');
@@ -240,13 +296,23 @@ class ChatController extends GetxController {
     );
     messages.add(msg);
     inputCtrl.clear();
-    await _chat.sendMessage(activeThreadId.value, msg);
+    try {
+      await _syncFirestoreEntitlementsIfNeeded();
+      await _chat.sendMessage(activeThreadId.value, msg);
+    } catch (e) {
+      messages.removeWhere((m) => m.id == msg.id);
+      inputCtrl.text = msg.content;
+      final text = e.toString().contains('permission-denied')
+          ? AppStrings.chatUnavailable.tr
+          : e.toString();
+      Get.snackbar(AppStrings.errorTitle.tr, text);
+    }
   }
 
   Future<void> sendImage() async {
-    if (activeThreadId.value.isEmpty) return;
+    if (activeThreadId.value.isEmpty || _pickingImage) return;
 
-    if (!isNanny) {
+    if (!_skipSubscriptionGates && !isNanny) {
       final thread = threads.firstWhereOrNull((t) => t.id == activeThreadId.value);
       if (_subs.isExpired && !(thread?.hasActiveTrial ?? false)) {
         Get.snackbar(AppStrings.subscriptionRequired.tr, AppStrings.renewToSendImages.tr);
@@ -259,42 +325,56 @@ class ChatController extends GetxController {
       return;
     }
 
-    final picked = await ImagePicker().pickImage(
-      source: ImageSource.gallery,
-      imageQuality: 80,
-      maxWidth: 1200,
-    );
-    if (picked == null) return;
+    _pickingImage = true;
+    try {
+      final picked = await ImagePicker().pickImage(
+        source: ImageSource.gallery,
+        imageQuality: 80,
+        maxWidth: 1200,
+      );
+      if (picked == null) return;
 
-    final bytes = await picked.readAsBytes();
-    final userId = _auth.currentUser.value?.id ?? 'user';
-    final storage = Get.find<IStorageService>();
-    final url = await storage.uploadBytes(
-      path: 'chats/${activeThreadId.value}/$userId/${_uuid.v4()}.jpg',
-      bytes: bytes,
-      contentType: 'image/jpeg',
-    );
+      final bytes = await picked.readAsBytes();
+      final userId = _auth.currentUser.value?.id ?? 'user';
+      final storage = Get.find<IStorageService>();
+      final url = await storage.uploadBytes(
+        path: 'chats/${activeThreadId.value}/$userId/${_uuid.v4()}.jpg',
+        bytes: bytes,
+        contentType: 'image/jpeg',
+      );
 
-    final senderId = _auth.currentUser.value?.id ?? userId;
-    final senderType = isNanny ? 'nanny' : 'family';
-    final msg = ChatMessage(
-      id: _uuid.v4(),
-      threadId: activeThreadId.value,
-      senderId: senderId,
-      senderType: senderType,
-      content: '[image]',
-      createdAt: DateTime.now(),
-      type: MessageType.image,
-      attachments: [
-        Attachment(type: 'image', url: url, name: 'image.jpg'),
-      ],
-    );
-    messages.add(msg);
-    await _chat.sendMessage(activeThreadId.value, msg);
+      final senderId = _auth.currentUser.value?.id ?? userId;
+      final senderType = isNanny ? 'nanny' : 'family';
+      final msg = ChatMessage(
+        id: _uuid.v4(),
+        threadId: activeThreadId.value,
+        senderId: senderId,
+        senderType: senderType,
+        content: '[image]',
+        createdAt: DateTime.now(),
+        type: MessageType.image,
+        attachments: [
+          Attachment(type: 'image', url: url, name: 'image.jpg'),
+        ],
+      );
+      messages.add(msg);
+      try {
+        await _syncFirestoreEntitlementsIfNeeded();
+        await _chat.sendMessage(activeThreadId.value, msg);
+      } catch (e) {
+        messages.removeWhere((m) => m.id == msg.id);
+        final text = e.toString().contains('permission-denied')
+            ? AppStrings.chatUnavailable.tr
+            : e.toString();
+        Get.snackbar(AppStrings.errorTitle.tr, text);
+      }
+    } finally {
+      _pickingImage = false;
+    }
   }
 
   Future<void> sendTrialOffer(Map<String, dynamic> offerData) async {
-    if (!isNanny && _subs.isExpired) {
+    if (!_skipSubscriptionGates && !isNanny && _subs.isExpired) {
       Get.snackbar('Subscription Required', 'Renew to send trial offers');
       return;
     }
@@ -329,6 +409,7 @@ class ChatController extends GetxController {
   /// we only force-close the active thread when it does NOT have an active
   /// trial linked to it.
   void onSubscriptionLocked() {
+    if (_skipSubscriptionGates) return;
     isLocked.value = true;
     final open = activeThread;
     if (open == null || !open.hasActiveTrial) {

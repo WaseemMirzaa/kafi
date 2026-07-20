@@ -5,12 +5,9 @@ import 'package:kafi_app/models/nanny_model.dart';
 
 /// Best-match algorithm — see /MATCH_ALGORITHM.md for the full specification.
 ///
-/// This is the **single source of truth** for all match scoring in the app:
-/// - [calculateJobMatch] / [getMatchFactors] — the full 11-dimension scorer over
-///   a complete [NannyModel] (used on job detail & the Smart Match breakdown).
-/// - [cardMatchPercent] / [rankCards] — the browse-list scorer over the
-///   lightweight [NannyCardModel], using the same weights & formulas for the
-///   subset of dimensions a card carries.
+/// This is the **single source of truth** for all match scoring in the app.
+/// Every UI surface (browse cards, profile hero, smart match, applications)
+/// must use [calculateJobMatch] so the percentage is identical everywhere.
 ///
 /// All scores are deterministic: identical inputs always yield the same value.
 class MatchService {
@@ -28,11 +25,6 @@ class MatchService {
     'availability': 0.04,
     'visa': 0.04,
   };
-
-  /// Friendly display range used on browse cards (keeps the UI welcoming while
-  /// the true 0–100 score is used for ranking).
-  static const int _displayFloor = 35;
-  static const int _displayCeil = 99;
 
   // ════════════════════════ FULL SCORER (NannyModel) ════════════════════════
 
@@ -257,13 +249,51 @@ class MatchService {
     ];
   }
 
-  // ═══════════════════════ CARD SCORER (NannyCardModel) ══════════════════════
-  //
-  // The browse list works with lightweight cards that only carry a subset of
-  // fields. The card scorer reuses the SAME dimension weights & formulas for the
-  // dimensions a card supports (job type, location, languages, experience,
-  // availability) and renormalizes over just those weights, so browse ranking is
-  // consistent with the full scorer rather than a separate heuristic.
+  /// Build a browse card stamped with the canonical job match %.
+  NannyCardModel cardWithJobMatch(
+    NannyModel nanny,
+    JobPostModel job, {
+    FamilyModel? family,
+  }) =>
+      NannyCardModel.fromNanny(nanny).copyWith(
+        matchPercent: calculateJobMatch(nanny, job, family: family),
+      );
+
+  /// Score + sort nannies against a job using the canonical 11-dimension algorithm.
+  List<NannyCardModel> rankNannies(
+    List<NannyModel> nannies,
+    JobPostModel job, {
+    FamilyModel? family,
+  }) {
+    final scored = nannies
+        .map((n) => cardWithJobMatch(n, job, family: family))
+        .toList();
+    return _sortByMatchPercent(scored, job);
+  }
+
+  /// Legacy card-only ranking for mock seeds that lack full [NannyModel] data.
+  /// Prefer [rankNannies] whenever the full profile is available.
+  List<NannyCardModel> rankCards(List<NannyCardModel> cards, JobPostModel job) {
+    final scored = cards
+        .map((c) => c.copyWith(matchPercent: calculateCardMatch(c, job)))
+        .toList();
+    return _sortByMatchPercent(scored, job);
+  }
+
+  List<NannyCardModel> _sortByMatchPercent(List<NannyCardModel> scored, JobPostModel job) {
+    final prefs = job.nationalityPreference.map((e) => e.toLowerCase()).toSet();
+    scored.sort((a, b) {
+      final byScore = b.matchPercent.compareTo(a.matchPercent);
+      if ((a.matchPercent - b.matchPercent).abs() > 2) return byScore;
+      final aPref = prefs.contains(a.nationality.toLowerCase()) ? 1 : 0;
+      final bPref = prefs.contains(b.nationality.toLowerCase()) ? 1 : 0;
+      if (aPref != bPref) return bPref.compareTo(aPref);
+      return byScore;
+    });
+    return scored;
+  }
+
+  // ═══════════════════════ CARD SCORER (mock fallback only) ═════════════════
 
   static const _cardDims = ['jobType', 'location', 'language', 'experience', 'availability'];
 
@@ -283,32 +313,6 @@ class MatchService {
       weightSum += _weights[d]!;
     }
     return (weighted / weightSum * 100).round().clamp(0, 100);
-  }
-
-  /// Browse-card score clamped to the friendly display range [35, 99].
-  int cardMatchPercent(NannyCardModel card, JobPostModel job) =>
-      calculateCardMatch(card, job).clamp(_displayFloor, _displayCeil);
-
-  /// Score every card against the job and return them sorted best-first.
-  ///
-  /// Ranking is by score, with `job.nationalityPreference` used **only** as a
-  /// tie-breaker when two cards are within 2 points of each other (never to
-  /// lower a score).
-  List<NannyCardModel> rankCards(List<NannyCardModel> cards, JobPostModel job) {
-    final scored = cards
-        .map((c) => c.copyWith(matchPercent: cardMatchPercent(c, job)))
-        .toList();
-    final prefs = job.nationalityPreference.map((e) => e.toLowerCase()).toSet();
-    scored.sort((a, b) {
-      final byScore = b.matchPercent.compareTo(a.matchPercent);
-      if ((a.matchPercent - b.matchPercent).abs() > 2) return byScore;
-      // Near-tie: prefer a matching nationality, then fall back to score.
-      final aPref = prefs.contains(a.nationality.toLowerCase()) ? 1 : 0;
-      final bPref = prefs.contains(b.nationality.toLowerCase()) ? 1 : 0;
-      if (aPref != bPref) return bPref.compareTo(aPref);
-      return byScore;
-    });
-    return scored;
   }
 
   double _cardJobType(NannyCardModel card, JobPostModel job) {

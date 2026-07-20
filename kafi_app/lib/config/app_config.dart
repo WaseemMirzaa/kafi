@@ -7,10 +7,18 @@
 /// See kafi_app/FIREBASE_SETUP.md.
 class AppConfig {
   static const bool useMock = false;
+
+  /// When `true`, subscription state/plans/purchase flow use [MockSubscriptionService]
+  /// (local persistence) instead of Firestore/RevenueCat — all other services stay live.
+  static const bool useMockSubscription = true;
+
   static const String environment = 'prod';
   static const bool enableLogs = true;
 
   /// Mock-only OTP (6 digits to mirror a live Firebase SMS code length).
   static const String mockOtp = '123456';
   static const Duration mockDelay = Duration(milliseconds: 500);
+
+  /// Subscription reads/writes go through the mock service (see [useMockSubscription]).
+  static bool get subscriptionUsesMock => useMock || useMockSubscription;
 }

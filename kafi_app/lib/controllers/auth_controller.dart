@@ -218,8 +218,17 @@ class AuthController extends GetxController {
           return AppStrings.noInternet.tr;
         case 'requires-recent-login':
           return AppStrings.authReauthRequired.tr;
+        case 'operation-not-allowed':
+          if ((e.message ?? '').toLowerCase().contains('region')) {
+            return AppStrings.authSmsRegionDisabled.tr;
+          }
+          return AppStrings.authOtpSendFailed.tr;
         default:
-          return e.message ?? AppStrings.authOtpSendFailed.tr;
+          final msg = e.message ?? '';
+          if (msg.toLowerCase().contains('region enabled')) {
+            return AppStrings.authSmsRegionDisabled.tr;
+          }
+          return msg.isNotEmpty ? msg : AppStrings.authOtpSendFailed.tr;
       }
     }
     // Mock service throws Exception('invalid_otp' | 'verification_failed' | …).
@@ -227,6 +236,9 @@ class AuthController extends GetxController {
     if (s.contains('invalid_otp')) return AppStrings.authOtpIncorrect.tr;
     if (s.contains('no_verification_id') ||
         s.contains('verification_failed')) {
+      if (s.toLowerCase().contains('region')) {
+        return AppStrings.authSmsRegionDisabled.tr;
+      }
       return AppStrings.authOtpSendFailed.tr;
     }
     if (s.contains('password_too_weak')) return AppStrings.pwWeak.tr;

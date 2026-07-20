@@ -48,6 +48,8 @@ import 'package:kafi_app/services/session_monitor.dart';
 class InitialBinding extends Bindings {
   @override
   void dependencies() {
+    final mockSubscription = AppConfig.subscriptionUsesMock;
+
     if (AppConfig.useMock) {
       Get.put<IAuthService>(MockAuthService(), permanent: true);
       Get.put<IUserService>(MockUserService(), permanent: true);
@@ -69,7 +71,10 @@ class InitialBinding extends Bindings {
       Get.put<IChatService>(FirestoreChatService(), permanent: true);
       Get.put<ITrialService>(FirestoreTrialService(), permanent: true);
       Get.put<INotificationService>(FcmNotificationService(), permanent: true);
-      Get.put<ISubscriptionService>(FirestoreSubscriptionService(), permanent: true);
+      Get.put<ISubscriptionService>(
+        mockSubscription ? MockSubscriptionService() : FirestoreSubscriptionService(),
+        permanent: true,
+      );
       Get.put<IApplicationService>(FirestoreApplicationService(), permanent: true);
       Get.put<IShortlistService>(FirestoreShortlistService(), permanent: true);
       Get.put<IDisputeService>(FirestoreDisputeService(), permanent: true);
