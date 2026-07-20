@@ -363,6 +363,7 @@ abstract class AppStrings {
   static const settingsAccount = 'settings_account';
   static const settingsChangePassword = 'settings_change_password';
   static const settingsRestorePurchases = 'settings_restore_purchases';
+  static const settingsRestoreDone = 'settings_restore_done';
   static const settingsTerms = 'settings_terms';
   static const settingsPrivacyPolicy = 'settings_privacy_policy';
   static const settingsDangerZone = 'settings_danger_zone';
@@ -836,6 +837,7 @@ abstract class AppStrings {
   // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
   static const familyNationalityRequired = 'family_nationality_required';
   static const familyChildrenAgesRequired = 'family_children_ages_required';
+  static const familyChildrenInvalid = 'family_children_invalid';
   static const familyLanguagesRequired = 'family_languages_required';
   static const familyRolesRequired = 'family_roles_required';
   static const familyScheduleRequired = 'family_schedule_required';

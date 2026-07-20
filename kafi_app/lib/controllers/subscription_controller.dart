@@ -164,9 +164,17 @@ class SubscriptionController extends GetxController {
     }
   }
 
-  Future<void> restorePurchases() async {
-    // Call RevenueCat restore in production
-    await refreshAndEnforce();
+  /// Returns true when the restore succeeded so the caller only confirms on
+  /// success (was fire-and-forget with an unconditional "restored" toast).
+  Future<bool> restorePurchases() async {
+    try {
+      // Call RevenueCat restore in production
+      await refreshAndEnforce();
+      return true;
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      return false;
+    }
   }
 
   /// For testing lockdown flow

@@ -159,7 +159,9 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
           KafiTextField(
             label: AppStrings.fldChildrenAges.tr,
             controller: controller.childrenAgesCtrl,
-            hint: 'e.g. 2 & 5',
+            // Comma-separated to match the parser (was "2 & 5", which the
+            // comma-only split rejected) — FAM-5.
+            hint: 'e.g. 2, 5',
             purple: true,
           ),
           KafiTextField(
