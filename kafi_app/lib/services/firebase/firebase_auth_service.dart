@@ -5,6 +5,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/models/user_model.dart';
 import 'package:kafi_app/services/interfaces/i_auth_service.dart';
+import 'package:kafi_app/utils/validators.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 /// FirebaseAuth phone-OTP implementation per Technical Architecture §3.1.
 ///
@@ -14,14 +16,59 @@ import 'package:kafi_app/services/interfaces/i_auth_service.dart';
 class FirebaseAuthService implements IAuthService {
   final _auth = FirebaseAuth.instance;
   final _users = FirebaseFirestore.instance.collection('users');
+
+  // Held in memory for the happy path, but also mirrored to SharedPreferences so
+  // an interrupted signup survives an app kill: the verification id must outlive
+  // the gap between "code sent" and "code entered", and the chosen role must
+  // outlive the gap between OTP and finalisation (otherwise a Family who dies
+  // mid-signup gets written as the default `nanny`). Mirrors the mock's prefs
+  // persistence.
+  static const _keyVerificationId = 'auth_verification_id';
+  static const _keyPendingRole = 'auth_pending_role';
   String? _verificationId;
-  UserType _pendingRole = UserType.nanny;
+  UserType? _pendingRole;
+
+  Future<void> _persistVerificationId(String id) async {
+    _verificationId = id;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyVerificationId, id);
+  }
+
+  /// The role to write at finalisation: the in-memory choice, else the durable
+  /// one from a signup that was interrupted, else the `nanny` default.
+  Future<UserType> _resolveRole() async {
+    if (_pendingRole != null) return _pendingRole!;
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_keyPendingRole);
+    final role = UserType.values.firstWhere(
+      (t) => t.name == raw,
+      orElse: () => UserType.nanny,
+    );
+    _pendingRole = role;
+    return role;
+  }
+
+  Future<void> _clearSignupState() async {
+    _verificationId = null;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_keyVerificationId);
+    await prefs.remove(_keyPendingRole);
+  }
+
+  /// Builds the E.164 number from a raw national entry + dialing code, stripping
+  /// spaces/dashes/parentheses and a leading trunk `0` so Firebase never sees a
+  /// malformed number (a stray space is a `verificationFailed`).
+  String _toE164(String phone, String countryCode) {
+    final national = Validators.sanitizePhone(phone);
+    final ccDigits = countryCode.replaceAll(RegExp(r'[^0-9]'), '');
+    return '+$ccDigits$national';
+  }
 
   @override
   Future<void> sendOtp(String phone, String countryCode) async {
     final completer = Completer<void>();
     await _auth.verifyPhoneNumber(
-      phoneNumber: '$countryCode$phone',
+      phoneNumber: _toE164(phone, countryCode),
       timeout: const Duration(seconds: 60),
       verificationCompleted: (_) {
         if (!completer.isCompleted) completer.complete();
@@ -32,11 +79,13 @@ class FirebaseAuthService implements IAuthService {
         }
       },
       codeSent: (verificationId, _) {
-        _verificationId = verificationId;
+        // Fire-and-forget the durable write; the in-memory field is set
+        // synchronously inside so verifyOtp works even before the write lands.
+        _persistVerificationId(verificationId);
         if (!completer.isCompleted) completer.complete();
       },
       codeAutoRetrievalTimeout: (verificationId) {
-        _verificationId = verificationId;
+        _persistVerificationId(verificationId);
       },
     );
     await completer.future;
@@ -44,7 +93,12 @@ class FirebaseAuthService implements IAuthService {
 
   @override
   Future<void> verifyOtp(String code) async {
-    final id = _verificationId;
+    // Fall back to the durable id if the app was killed after the code was sent.
+    var id = _verificationId;
+    if (id == null) {
+      final prefs = await SharedPreferences.getInstance();
+      id = prefs.getString(_keyVerificationId);
+    }
     if (id == null) throw Exception('no_verification_id');
     final cred = PhoneAuthProvider.credential(verificationId: id, smsCode: code);
     await _auth.signInWithCredential(cred);
@@ -55,23 +109,28 @@ class FirebaseAuthService implements IAuthService {
     final user = _auth.currentUser;
     if (user == null) throw Exception('no_user');
 
+    final role = await _resolveRole();
     final phone = user.phoneNumber ?? '';
     // Idempotent merge — records the phone + role without clobbering an existing
     // returning-user document.
     await _users.doc(user.uid).set({
       'phone': phone,
-      'type': _pendingRole.name,
+      'type': role.name,
     }, SetOptions(merge: true));
 
-    await _ensureProfileSkeleton(user.uid);
+    await _ensureProfileSkeleton(user.uid, role);
+
+    // Signup is complete and the role is now durable in Firestore — drop the
+    // transient prefs so a later fresh signup can't inherit this one's role.
+    await _clearSignupState();
   }
 
   /// Creates the role-specific profile skeleton **only if it does not already
   /// exist**. Re-running registration (e.g. a returning user who signs in via
   /// OTP, or a re-tap of "verify") must never reset an approved nanny back to
   /// `draft` or wipe a family's subscription/usage counters.
-  Future<void> _ensureProfileSkeleton(String uid) async {
-    if (_pendingRole == UserType.family) {
+  Future<void> _ensureProfileSkeleton(String uid, UserType role) async {
+    if (role == UserType.family) {
       final ref = FirebaseFirestore.instance.collection('families').doc(uid);
       if ((await ref.get()).exists) return;
       await ref.set({
@@ -117,6 +176,10 @@ class FirebaseAuthService implements IAuthService {
   @override
   Future<void> setUserRole(UserType type) async {
     _pendingRole = type;
+    // Persist the choice durably so a signup interrupted before finalisation
+    // resumes with the right role instead of the `nanny` default.
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_keyPendingRole, type.name);
     final uid = _auth.currentUser?.uid;
     if (uid != null) {
       await _users.doc(uid).set({'type': type.name}, SetOptions(merge: true));
@@ -124,7 +187,11 @@ class FirebaseAuthService implements IAuthService {
   }
 
   @override
-  Future<void> logout() => _auth.signOut();
+  Future<void> logout() async {
+    await _clearSignupState();
+    _pendingRole = null;
+    await _auth.signOut();
+  }
 
   @override
   Future<void> deleteAccount(String reason) async {
@@ -152,5 +219,7 @@ class FirebaseAuthService implements IAuthService {
       // Ignore — the function will clean up auth via admin SDK.
     }
     await _users.doc(user.uid).delete();
+    await _clearSignupState();
+    _pendingRole = null;
   }
 }
