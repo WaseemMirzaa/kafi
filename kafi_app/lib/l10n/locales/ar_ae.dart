@@ -274,6 +274,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.disputeStatusInvestigating: 'قيد المراجعة',
     AppStrings.disputeStatusResolved: 'تم الحل',
     AppStrings.disputeStatusDismissed: 'مرفوض',
+    AppStrings.legalLastUpdated: 'آخر تحديث: مايو 2026',
     AppStrings.reportProblemTitle: 'الإبلاغ عن مشكلة',
     AppStrings.reportProblemSub: 'أخبر فريقنا بما حدث — نراجع كل بلاغ.',
     AppStrings.reportProblemCategory: 'ما نوع المشكلة؟',
