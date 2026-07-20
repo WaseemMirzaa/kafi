@@ -117,7 +117,8 @@ class ApplicationDetailScreen extends StatelessWidget {
                   if (Get.isRegistered<ChatController>()) {
                     Get.find<ChatController>().setPendingOpen(nannyId: app.nannyId);
                   }
-                  AppNavigation.nannyGoToTab(3);
+                  // Messages is tab 2 (tab 3 is Settings).
+                  AppNavigation.nannyGoToTab(2);
                 },
               ),
               const SizedBox(height: 8),
@@ -136,17 +137,30 @@ class ApplicationDetailScreen extends StatelessWidget {
             child: KafiPrimaryButton(
               label: 'View in Messages',
               icon: Icons.chat_bubble_outline,
-              onPressed: () => AppNavigation.nannyGoToTab(3),
+              onPressed: () {
+                if (Get.isRegistered<ChatController>()) {
+                  Get.find<ChatController>().setPendingOpen(nannyId: app.nannyId);
+                }
+                AppNavigation.nannyGoToTab(2);
+              },
             ),
           );
         }
         return _actionBar(child: _trialActions(trial));
       case ApplicationStatus.hired:
+        // Hired → the ongoing relationship lives in Messages (hire badge +
+        // chat). "View Active Trial" was wrong (a hire is not a trial, and
+        // there is no nanny trials tab).
         return _actionBar(
           child: KafiPrimaryButton(
-            label: 'View Active Trial',
-            icon: Icons.play_circle_outline,
-            onPressed: () => AppNavigation.nannyGoToTab(2),
+            label: '💬 ${AppStrings.appDetailMessageFamily.tr}',
+            icon: Icons.chat_bubble_outline,
+            onPressed: () {
+              if (Get.isRegistered<ChatController>()) {
+                Get.find<ChatController>().setPendingOpen(nannyId: app.nannyId);
+              }
+              AppNavigation.nannyGoToTab(2);
+            },
           ),
         );
       case ApplicationStatus.declined:

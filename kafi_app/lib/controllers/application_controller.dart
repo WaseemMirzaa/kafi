@@ -15,6 +15,7 @@ class ApplicationController extends GetxController {
   final RxList<ApplicationModel> myApplications = <ApplicationModel>[].obs;
   final RxList<ApplicationModel> receivedApplications = <ApplicationModel>[].obs;
   final RxBool isLoading = false.obs;
+  final RxnString loadError = RxnString();
 
   // Search queries for the applicants (family) and my-applications (nanny) lists.
   final RxString receivedQuery = ''.obs;
@@ -56,6 +57,7 @@ class ApplicationController extends GetxController {
 
   Future<void> loadApplications() async {
     isLoading.value = true;
+    loadError.value = null;
     try {
       final userId = currentUserId(_auth);
       if (userId == null) {
@@ -71,6 +73,9 @@ class ApplicationController extends GetxController {
         receivedApplications.value = await _appService.getApplicationsForFamily(userId);
         myApplications.clear();
       }
+    } catch (e) {
+      // A live read failure must surface as an error, not an empty inbox.
+      loadError.value = e.toString();
     } finally {
       isLoading.value = false;
     }
@@ -120,9 +125,17 @@ class ApplicationController extends GetxController {
     }
   }
 
-  Future<void> withdrawApplication(String appId) async {
-    await _appService.withdraw(appId);
-    myApplications.removeWhere((a) => a.id == appId);
+  /// Withdraws an application. Returns true on success; shows an error on
+  /// failure so a live write error isn't silently dropped.
+  Future<bool> withdrawApplication(String appId) async {
+    try {
+      await _appService.withdraw(appId);
+      myApplications.removeWhere((a) => a.id == appId);
+      return true;
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      return false;
+    }
   }
 
   Future<void> markAsViewed(String appId) async {

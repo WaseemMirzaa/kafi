@@ -174,10 +174,20 @@ class FirestoreUserService implements IUserService {
             final st = s.data()?['status'];
             return st == 'revealed' || st == 'denied';
           })
-          .timeout(const Duration(seconds: 10));
+          // 15s tolerates a cold-started onContactRevealRequested function.
+          .timeout(const Duration(seconds: 15));
       final d = snap.data();
       return d?['status'] == 'revealed' ? (d?['phone'] as String?) : null;
     } catch (_) {
+      // The stream timed out or errored. A cold/slow function may have resolved
+      // the reveal just after the timeout — do one final direct read before
+      // giving up, so a slow function isn't misread as a denial.
+      try {
+        final d = (await ref.get()).data();
+        if (d?['status'] == 'revealed') return d?['phone'] as String?;
+      } catch (_) {
+        // Give up quietly; the caller shows a generic "unavailable" message.
+      }
       return null;
     }
   }

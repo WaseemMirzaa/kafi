@@ -130,7 +130,8 @@ class NannyEditProfileScreen extends StatelessWidget {
                 label: AppStrings.save.tr,
                 loading: ctrl.isLoading.value,
                 onPressed: () async {
-                  await ctrl.saveProfileDraft();
+                  final ok = await ctrl.saveProfileDraft();
+                  if (!ok) return; // stay on the screen; error already shown
                   Get.snackbar(
                     AppStrings.successTitle.tr,
                     AppStrings.profileUpdated.tr,

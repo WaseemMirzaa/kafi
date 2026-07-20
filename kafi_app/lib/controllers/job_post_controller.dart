@@ -11,6 +11,7 @@ class JobPostController extends GetxController {
   final RxList<JobPostModel> myJobs = <JobPostModel>[].obs;
   final Rx<JobPostModel?> currentJob = Rx<JobPostModel?>(null);
   final RxBool isLoading = false.obs;
+  final RxnString loadError = RxnString();
   final RxString searchQuery = ''.obs;
   final Rx<JobFilter> filter = JobFilter().obs;
 
@@ -22,6 +23,7 @@ class JobPostController extends GetxController {
 
   Future<void> loadJobs() async {
     isLoading.value = true;
+    loadError.value = null;
     try {
       final user = _auth.currentUser.value;
       if (user?.isNanny ?? false) {
@@ -31,6 +33,10 @@ class JobPostController extends GetxController {
         if (familyId == null) return;
         myJobs.value = await _jobService.getJobsByFamily(familyId);
       }
+    } catch (e) {
+      // A live read failure (undeployed index / permission / network) must not
+      // crash uncaught and masquerade as "no results".
+      loadError.value = e.toString();
     } finally {
       isLoading.value = false;
     }

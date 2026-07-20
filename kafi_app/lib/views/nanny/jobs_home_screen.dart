@@ -244,6 +244,9 @@ class JobsHomeScreen extends GetView<JobPostController> {
         return const Center(child: CircularProgressIndicator(color: KafiColors.roseD));
       }
       final jobs = controller.filteredJobs;
+      if (controller.loadError.value != null && controller.allJobs.isEmpty) {
+        return _errorState();
+      }
       if (jobs.isEmpty) {
         return _emptyState();
       }
@@ -268,6 +271,33 @@ class JobsHomeScreen extends GetView<JobPostController> {
         itemBuilder: (_, i) => _jobCard(scored[i].$1, scored[i].$2),
       );
     });
+  }
+
+  Widget _errorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 48, color: KafiColors.roseD.withValues(alpha: 0.7)),
+          const SizedBox(height: 12),
+          Text(AppStrings.loadErrorTitle.tr,
+              style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w700)),
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(AppStrings.loadErrorSub.tr,
+                textAlign: TextAlign.center,
+                style: KafiTheme.nunito(10, color: KafiColors.ts)),
+          ),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: controller.loadJobs,
+            child: Text(AppStrings.retry.tr,
+                style: KafiTheme.fredoka(12, color: KafiColors.roseD, w: FontWeight.w700)),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _emptyState() {

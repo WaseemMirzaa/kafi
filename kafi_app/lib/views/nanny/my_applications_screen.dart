@@ -31,6 +31,9 @@ class MyApplicationsScreen extends GetView<ApplicationController> {
                 if (controller.isLoading.value) {
                   return const Center(child: CircularProgressIndicator(color: KafiColors.roseD));
                 }
+                if (controller.loadError.value != null && controller.myApplications.isEmpty) {
+                  return _errorState();
+                }
                 if (controller.myApplications.isEmpty) {
                   return _emptyState();
                 }
@@ -70,6 +73,33 @@ class MyApplicationsScreen extends GetView<ApplicationController> {
           ),
           Expanded(
             child: Text(AppStrings.nannyMyApplications.tr, style: KafiTheme.pacifico(17)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _errorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 48, color: KafiColors.roseD.withValues(alpha: 0.7)),
+          const SizedBox(height: 12),
+          Text(AppStrings.loadErrorTitle.tr,
+              style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w700)),
+          const SizedBox(height: 5),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 40),
+            child: Text(AppStrings.loadErrorSub.tr,
+                textAlign: TextAlign.center,
+                style: KafiTheme.nunito(10, color: KafiColors.ts)),
+          ),
+          const SizedBox(height: 14),
+          TextButton(
+            onPressed: controller.loadApplications,
+            child: Text(AppStrings.retry.tr,
+                style: KafiTheme.fredoka(12, color: KafiColors.roseD, w: FontWeight.w700)),
           ),
         ],
       ),
@@ -169,7 +199,7 @@ class MyApplicationsScreen extends GetView<ApplicationController> {
                 const Spacer(),
                 if (app.status == ApplicationStatus.pending)
                   GestureDetector(
-                    onTap: () => controller.withdrawApplication(app.id),
+                    onTap: () => _confirmWithdraw(app.id),
                     child: Text(AppStrings.nannyWithdraw.tr,
                         style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700)),
                   ),
@@ -229,5 +259,25 @@ class MyApplicationsScreen extends GetView<ApplicationController> {
     if (diff.inDays > 0) return '${diff.inDays}d ago';
     if (diff.inHours > 0) return '${diff.inHours}h ago';
     return '${diff.inMinutes}m ago';
+  }
+
+  /// Confirm before withdrawing (the in-card action was previously
+  /// fire-and-forget with no confirm or error feedback).
+  void _confirmWithdraw(String appId) {
+    Get.dialog(AlertDialog(
+      title: Text(AppStrings.nannyWithdraw.tr),
+      content: Text(AppStrings.appDetailWithdrawConfirm.tr),
+      actions: [
+        TextButton(onPressed: () => Get.back(), child: Text(AppStrings.cancel.tr)),
+        TextButton(
+          onPressed: () async {
+            Get.back();
+            await controller.withdrawApplication(appId);
+          },
+          child: Text(AppStrings.appDetailWithdrawYes.tr,
+              style: const TextStyle(color: KafiColors.redD)),
+        ),
+      ],
+    ));
   }
 }
