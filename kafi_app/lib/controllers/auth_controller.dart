@@ -33,7 +33,16 @@ class AuthController extends GetxController {
   final phoneController = TextEditingController();
 
   Timer? _otpTimer;
+  Timer? _resendTimer;
   StreamSubscription<bool>? _blockSub;
+
+  /// Non-null when the startup bootstrap failed (offline / timeout) so the
+  /// splash can show a retry instead of spinning forever.
+  final RxnString startupError = RxnString();
+
+  /// Seconds left on the short resend cooldown — separate from the 5-minute OTP
+  /// expiry, it throttles re-requests without forcing a full expiry wait.
+  final RxInt otpResendLeft = 0.obs;
 
   String get formattedPhone =>
       '${countryCode.value} ${phoneController.text.trim()}';
@@ -47,6 +56,7 @@ class AuthController extends GetxController {
   @override
   void onClose() {
     _otpTimer?.cancel();
+    _resendTimer?.cancel();
     _blockSub?.cancel();
     phoneController.dispose();
     super.onClose();
@@ -57,13 +67,23 @@ class AuthController extends GetxController {
   /// blocked screen; otherwise home / pending-approval / the next unfinished
   /// onboarding step.
   Future<void> bootstrapStartup() async {
-    final user = await _authService.getCurrentUser();
-    if (user == null) {
-      Get.offAllNamed(Routes.welcome);
-      return;
+    startupError.value = null;
+    try {
+      final user = await _authService
+          .getCurrentUser()
+          .timeout(const Duration(seconds: 10));
+      if (user == null) {
+        Get.offAllNamed(Routes.welcome);
+        return;
+      }
+      currentUser.value = user;
+      await _routeForUser(user);
+    } catch (e) {
+      // Offline or a slow/failed startup must never hang the splash forever;
+      // surface a retry (see SplashScreen) instead of an infinite spinner.
+      Get.log('bootstrapStartup failed: $e', isError: true);
+      startupError.value = e.toString();
     }
-    currentUser.value = user;
-    await _routeForUser(user);
   }
 
   void prepareNannyLogin() {
@@ -121,8 +141,14 @@ class AuthController extends GetxController {
     if (sent) await Get.toNamed(Routes.otpVerify);
   }
 
-  /// Re-issue OTP from the verify screen. Disabled until timer expires.
-  bool get canResendOtp => otpSecondsLeft.value <= 0;
+  /// Re-issue OTP from the verify screen. Disabled during the short resend
+  /// cooldown and while a send is already in flight.
+  bool get canResendOtp => otpResendLeft.value <= 0 && !isLoading.value;
+
+  /// Resend link label — "Resend" when available, else a live countdown.
+  String get otpResendLabel => canResendOtp
+      ? AppStrings.otpResendShort.tr
+      : AppStrings.otpResendIn.trParams({'sec': '${otpResendLeft.value}s'});
 
   Future<void> resendOtp() async {
     if (!canResendOtp) return;
@@ -165,6 +191,7 @@ class AuthController extends GetxController {
       return;
     }
     _otpTimer?.cancel();
+    _resendTimer?.cancel();
     otpError.value = '';
     // Persist phone + role and create the profile skeleton immediately. This is
     // an idempotent merge that never resets an existing profile, so a returning
@@ -253,6 +280,22 @@ class AuthController extends GetxController {
         t.cancel();
       } else {
         otpSecondsLeft.value--;
+      }
+    });
+    _startResendCooldown();
+  }
+
+  /// Starts the short resend cooldown after every OTP send. Runs alongside the
+  /// 5-minute expiry timer but throttles re-requests to
+  /// [AuthConstants.otpResendCooldownSeconds].
+  void _startResendCooldown() {
+    _resendTimer?.cancel();
+    otpResendLeft.value = AuthConstants.otpResendCooldownSeconds;
+    _resendTimer = Timer.periodic(const Duration(seconds: 1), (t) {
+      if (otpResendLeft.value <= 0) {
+        t.cancel();
+      } else {
+        otpResendLeft.value--;
       }
     });
   }
