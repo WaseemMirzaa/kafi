@@ -526,6 +526,7 @@ const Map<String, String> enUs = {
   AppStrings.familyApplicants: 'Applicants',
   AppStrings.familyApplicantsSub: 'Nannies who applied to your jobs',
   AppStrings.familyApplicantsEmpty: 'No applicants yet',
+  AppStrings.applicantsNoMatch: 'No applicants match your search.',
   AppStrings.familyApplicantsEmptySub:
       "When nannies apply to your jobs, they'll show up here.",
   AppStrings.applicantShortlist: 'Shortlist',

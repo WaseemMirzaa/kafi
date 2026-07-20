@@ -58,6 +58,8 @@ class FamilyJobsController extends GetxController {
     try {
       await _jobs.updateJobStatus(jobId, status);
       await load();
+      // Confirm the pause/reopen, like delete/edit already do (HIRE-8).
+      Get.snackbar(AppStrings.successTitle.tr, AppStrings.jobUpdatedToast.tr);
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     }
