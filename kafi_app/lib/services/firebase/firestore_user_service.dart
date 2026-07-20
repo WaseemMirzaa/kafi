@@ -77,7 +77,16 @@ class FirestoreUserService implements IUserService {
 
   @override
   Future<void> saveNanny(NannyModel nanny) async {
-    await _col.doc(nanny.id).set(nanny.toMap(), SetOptions(merge: true));
+    // Strip server-owned fields from a nanny's own profile write, mirroring
+    // saveFamily. `stats` (profileViews/shortlists/hiresCount/averageRating) and
+    // `profileScore` are maintained by the stats Cloud Functions, and the client
+    // freezes them at launch (the profile watch is cancelled at approval) — so a
+    // post-approval edit would otherwise clobber the live server values with a
+    // stale snapshot and regress the dashboard counters.
+    final data = nanny.toMap()
+      ..remove('stats')
+      ..remove('profileScore');
+    await _col.doc(nanny.id).set(data, SetOptions(merge: true));
   }
 
   @override

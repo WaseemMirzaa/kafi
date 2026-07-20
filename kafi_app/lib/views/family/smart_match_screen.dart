@@ -9,6 +9,7 @@ import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/smart_match.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
 enum _CkState { pass, fail, warn }
 
@@ -353,7 +354,19 @@ class SmartMatchScreen extends GetView<ApplicationController> {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.smartJobMissing.tr);
       return;
     }
-    final ok = await controller.applyToJob(job.id);
+    // Collect an optional cover message before submitting — it's stored on the
+    // application and shown to the family (previously never captured).
+    final cover = await Get.bottomSheet<String>(
+      const _ApplyCoverSheet(),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+    if (cover == null) return; // sheet dismissed → don't apply
+    final trimmed = cover.trim();
+    final ok = await controller.applyToJob(
+      job.id,
+      coverMessage: trimmed.isEmpty ? null : trimmed,
+    );
     if (ok) _showSuccessDialog();
   }
 
@@ -425,6 +438,89 @@ class SmartMatchScreen extends GetView<ApplicationController> {
         ),
       ),
       barrierDismissible: false,
+    );
+  }
+}
+
+/// Optional cover-message sheet shown when a nanny applies to a job. Returns the
+/// entered text via `Get.back(result:)` (empty string = send with no note); a
+/// dismiss returns null so the caller skips the application.
+class _ApplyCoverSheet extends StatefulWidget {
+  const _ApplyCoverSheet();
+
+  @override
+  State<_ApplyCoverSheet> createState() => _ApplyCoverSheetState();
+}
+
+class _ApplyCoverSheetState extends State<_ApplyCoverSheet> {
+  final _ctrl = TextEditingController();
+
+  @override
+  void dispose() {
+    _ctrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: EdgeInsets.only(
+        left: 16,
+        right: 16,
+        top: 16,
+        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
+      ),
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Center(
+            child: Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(
+                color: KafiColors.cardBorder,
+                borderRadius: BorderRadius.circular(2),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(AppStrings.applyCoverTitle.tr, style: KafiTheme.pacifico(16, color: KafiColors.roseD)),
+          const SizedBox(height: 4),
+          Text(AppStrings.applyCoverSub.tr, style: KafiTheme.nunito(10.5, color: KafiColors.ts)),
+          const SizedBox(height: 12),
+          TextField(
+            controller: _ctrl,
+            minLines: 3,
+            maxLines: 5,
+            maxLength: 500,
+            style: KafiTheme.nunito(12, color: KafiColors.td),
+            decoration: InputDecoration(
+              hintText: AppStrings.applyCoverHint.tr,
+              hintStyle: KafiTheme.nunito(11, color: KafiColors.ts),
+              filled: true,
+              fillColor: const Color(0xFFFDF2F6),
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12),
+                borderSide: BorderSide.none,
+              ),
+            ),
+          ),
+          SizedBox(
+            width: double.infinity,
+            child: KafiPrimaryButton(
+              label: AppStrings.applyCoverSend.tr,
+              onPressed: () => Get.back<String>(result: _ctrl.text),
+            ),
+          ),
+          const SizedBox(height: 6),
+        ],
+      ),
     );
   }
 }
