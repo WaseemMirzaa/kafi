@@ -468,7 +468,12 @@ class TrialController extends GetxController {
     // Once a family completes a trial, invite them to rate the nanny (no-ops
     // for nannies or if they've already reviewed her). Feeds stats.averageRating.
     if (s == TrialStatus.completed && isFamily) {
-      await showReviewDialog(nannyId: t.nannyId, trialId: t.id);
+      await showReviewDialog(
+        revieweeId: t.nannyId,
+        revieweeType: 'nanny',
+        revieweeName: nannyCards[t.nannyId]?.name,
+        trialId: t.id,
+      );
     }
   }
 

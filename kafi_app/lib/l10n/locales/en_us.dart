@@ -124,6 +124,7 @@ const Map<String, String> enUs = {
   AppStrings.reviewTitle: 'How was @name?',
   AppStrings.reviewSubtitle: 'Your rating helps other families.',
   AppStrings.reviewYourNanny: 'your nanny',
+  AppStrings.reviewYourFamily: 'this family',
   AppStrings.reviewCommentHint: 'Add a comment (optional)',
   AppStrings.reviewSubmit: 'Submit review',
   AppStrings.reviewSkip: 'Skip',

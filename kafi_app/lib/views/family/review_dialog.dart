@@ -6,29 +6,49 @@ import 'package:kafi_app/models/review_model.dart';
 import 'package:kafi_app/services/interfaces/i_review_service.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
-/// Prompts the signed-in family to rate [nannyId] (e.g. after a completed
-/// trial). No-ops silently if they've already reviewed this nanny.
+/// Prompts the signed-in user to rate the other party — a family rating a
+/// nanny, or a nanny rating a family (e.g. after a completed trial or an ended
+/// hire). No-ops silently if they've already reviewed this counterparty.
+/// [revieweeType] is `'nanny'` or `'family'`.
 Future<void> showReviewDialog({
-  required String nannyId,
-  String? nannyName,
+  required String revieweeId,
+  required String revieweeType,
+  String? revieweeName,
   String? trialId,
 }) async {
   final reviews = Get.find<IReviewService>();
   final me = Get.find<AuthController>().currentUser.value;
-  if (me == null) return;
-  if (await reviews.hasReviewed(me.id, nannyId)) return;
+  if (me == null || revieweeId.isEmpty) return;
+  // Never let a failed lookup throw into the caller (which may be a hire-end
+  // flow that already succeeded); if we can't verify, skip the prompt.
+  try {
+    if (await reviews.hasReviewed(me.id, revieweeId)) return;
+  } catch (_) {
+    return;
+  }
 
   await Get.dialog(
-    _ReviewDialog(nannyId: nannyId, nannyName: nannyName, trialId: trialId),
+    _ReviewDialog(
+      revieweeId: revieweeId,
+      revieweeType: revieweeType,
+      revieweeName: revieweeName,
+      trialId: trialId,
+    ),
     barrierDismissible: true,
   );
 }
 
 class _ReviewDialog extends StatefulWidget {
-  const _ReviewDialog({required this.nannyId, this.nannyName, this.trialId});
+  const _ReviewDialog({
+    required this.revieweeId,
+    required this.revieweeType,
+    this.revieweeName,
+    this.trialId,
+  });
 
-  final String nannyId;
-  final String? nannyName;
+  final String revieweeId;
+  final String revieweeType;
+  final String? revieweeName;
   final String? trialId;
 
   @override
@@ -55,9 +75,9 @@ class _ReviewDialogState extends State<_ReviewDialog> {
         ReviewModel(
           id: '', // service assigns a deterministic reviewerId_revieweeId id
           reviewerId: me.id,
-          reviewerType: 'family',
-          revieweeId: widget.nannyId,
-          revieweeType: 'nanny',
+          reviewerType: me.isNanny ? 'nanny' : 'family',
+          revieweeId: widget.revieweeId,
+          revieweeType: widget.revieweeType,
           trialId: widget.trialId,
           rating: _rating,
           comment: _comment.text.trim().isEmpty ? null : _comment.text.trim(),
@@ -76,9 +96,11 @@ class _ReviewDialogState extends State<_ReviewDialog> {
 
   @override
   Widget build(BuildContext context) {
-    final name = (widget.nannyName?.trim().isNotEmpty ?? false)
-        ? widget.nannyName!.trim()
-        : AppStrings.reviewYourNanny.tr;
+    final name = (widget.revieweeName?.trim().isNotEmpty ?? false)
+        ? widget.revieweeName!.trim()
+        : (widget.revieweeType == 'family'
+            ? AppStrings.reviewYourFamily.tr
+            : AppStrings.reviewYourNanny.tr);
     return Dialog(
       backgroundColor: Colors.white,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

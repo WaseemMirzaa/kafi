@@ -128,6 +128,8 @@ class FamilyStats {
     this.totalApplicationsReceived = 0,
     this.trialsCount = 0,
     this.hiresCount = 0,
+    this.averageRating,
+    this.reviewsCount = 0,
   });
 
   final int jobPostsCount;
@@ -136,12 +138,19 @@ class FamilyStats {
   final int trialsCount;
   final int hiresCount;
 
+  /// Rating a family receives from nannies (two-way reviews); maintained
+  /// server-side by the onReviewCreated function.
+  final double? averageRating;
+  final int reviewsCount;
+
   Map<String, dynamic> toMap() => {
         'jobPostsCount': jobPostsCount,
         'activeJobPosts': activeJobPosts,
         'totalApplicationsReceived': totalApplicationsReceived,
         'trialsCount': trialsCount,
         'hiresCount': hiresCount,
+        'averageRating': averageRating,
+        'reviewsCount': reviewsCount,
       };
 
   factory FamilyStats.fromMap(Map<String, dynamic>? m) => FamilyStats(
@@ -150,6 +159,8 @@ class FamilyStats {
         totalApplicationsReceived: (m?['totalApplicationsReceived'] as num?)?.toInt() ?? 0,
         trialsCount: (m?['trialsCount'] as num?)?.toInt() ?? 0,
         hiresCount: (m?['hiresCount'] as num?)?.toInt() ?? 0,
+        averageRating: (m?['averageRating'] as num?)?.toDouble(),
+        reviewsCount: (m?['reviewsCount'] as num?)?.toInt() ?? 0,
       );
 }
 
