@@ -381,6 +381,11 @@ class AuthController extends GetxController {
     await _authService.deleteAccount(reason);
     currentUser.value = null;
     _otpTimer?.cancel();
+    _resendTimer?.cancel();
+    // Stop the block watcher too — otherwise it keeps listening on the just-
+    // deleted role doc (mirrors signOut).
+    _blockSub?.cancel();
+    _blockSub = null;
     phoneController.clear();
     // The delete-account screen navigates to /welcome via `offAllNamed`, so
     // ephemeral controllers get torn down with their bindings. Permanent

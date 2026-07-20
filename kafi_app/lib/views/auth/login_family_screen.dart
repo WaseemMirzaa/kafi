@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/utils/constants/auth_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_logo.dart';
 import 'package:kafi_app/views/widgets/kafi_phone_input.dart';
@@ -41,7 +42,25 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
           child: SingleChildScrollView(
             child: Column(
               children: [
-                const SizedBox(height: 28),
+                const SizedBox(height: 12),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: GestureDetector(
+                      onTap: Get.back,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.arrow_back_ios_new, size: 14, color: KafiColors.pur),
+                          Text(AppStrings.back.tr,
+                              style: KafiTheme.nunito(12, color: KafiColors.pur)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 10),
                 const KafiLogo(size: 24, purple: true),
                 const SizedBox(height: 14),
                 _banner(),
@@ -72,14 +91,8 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
                           controller: controller.phoneController,
                           countryCode: controller.countryCode.value,
                           onCountryChanged: (c) => controller.countryCode.value = c,
-                          // Family country codes per System Spec §1.5.
-                          countryOptions: const [
-                            '🇦🇪 +971', '🇸🇦 +966', '🇰🇼 +965', '🇶🇦 +974', '🇧🇭 +973',
-                            '🇴🇲 +968', '🇪🇬 +20', '🇱🇧 +961', '🇯🇴 +962', '🇲🇦 +212',
-                            '🇬🇧 +44', '🇮🇪 +353', '🇫🇷 +33', '🇩🇪 +49', '🇮🇹 +39',
-                            '🇪🇸 +34', '🇳🇱 +31', '🇨🇭 +41', '🇺🇸 +1', '🇨🇦 +1',
-                            '🇮🇳 +91', '🇵🇰 +92', '🇸🇬 +65', '🇦🇺 +61', '🇳🇿 +64',
-                          ],
+                          // Sourced from the shared constant (System Spec §1.5).
+                          countryOptions: AuthConstants.familyCountryOptions,
                         ),
                       ),
                       Obx(

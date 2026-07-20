@@ -175,9 +175,24 @@ class _BigOtpBoxesState extends State<_BigOtpBoxes> {
   static const _len = 6;
   final _controllers = List.generate(_len, (_) => TextEditingController());
   final _focusNodes = List.generate(_len, (_) => FocusNode());
+  Worker? _clearWorker;
+
+  @override
+  void initState() {
+    super.initState();
+    // Clear the boxes when the controller resets the code (e.g. on Resend, which
+    // sets otpCode to '') so stale digits don't linger while the model is empty.
+    _clearWorker = ever<String>(Get.find<AuthController>().otpCode, (code) {
+      if (code.isEmpty && _controllers.any((c) => c.text.isNotEmpty)) {
+        for (final c in _controllers) { c.clear(); }
+        _focusNodes.first.requestFocus();
+      }
+    });
+  }
 
   @override
   void dispose() {
+    _clearWorker?.dispose();
     for (final c in _controllers) { c.dispose(); }
     for (final f in _focusNodes) { f.dispose(); }
     super.dispose();
