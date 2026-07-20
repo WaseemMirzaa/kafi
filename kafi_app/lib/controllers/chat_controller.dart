@@ -43,6 +43,27 @@ class ChatController extends GetxController {
   /// employment relationship. Null when there is no active hire.
   HireModel? activeHireFor(ChatThread t) =>
       _activeHires[isNanny ? t.familyId : t.nannyId];
+
+  /// Ends the active hire on [t] — the family terminates, the nanny resigns
+  /// (role-aware reason). Refreshes so the "Hired" badge clears. The caller
+  /// (chat header) confirms first.
+  Future<void> endActiveHire(ChatThread t) async {
+    final hire = activeHireFor(t);
+    if (hire == null) return;
+    try {
+      await _hire.endHire(
+        hire.id,
+        reason: isNanny ? HireEndReason.resigned : HireEndReason.terminated,
+      );
+      await refreshThreads();
+      Get.snackbar(
+        AppStrings.successTitle.tr,
+        isNanny ? AppStrings.hireResignedToast.tr : AppStrings.hireEndedToast.tr,
+      );
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    }
+  }
   final RxList<ChatMessage> messages = <ChatMessage>[].obs;
   final RxString activeThreadId = ''.obs;
   final inputCtrl = TextEditingController();

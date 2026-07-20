@@ -609,6 +609,16 @@ const Map<String, String> enUs = {
   AppStrings.cancel: 'Cancel',
   AppStrings.confirm: 'Confirm',
   AppStrings.goBack: 'Go Back',
+  AppStrings.hireResignAction: 'Resign',
+  AppStrings.hireResignTitle: 'Resign from this job?',
+  AppStrings.hireResignBody: 'This ends your current employment with this family.',
+  AppStrings.hireResignedToast: "You've resigned from this job",
+  AppStrings.hireEndAction: 'End employment',
+  AppStrings.hireEndTitle: 'End employment?',
+  AppStrings.hireEndBody: "This ends the current hire. You can't undo this.",
+  AppStrings.hireEndedToast: 'Employment ended',
+  AppStrings.hireActiveBanner: 'Employment active',
+  AppStrings.nannyJobCapReached: 'You can hold up to 2 jobs at a time. End one first.',
 
   // Edit profile
   AppStrings.editProfile: 'Edit Profile',

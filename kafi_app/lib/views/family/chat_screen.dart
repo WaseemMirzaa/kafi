@@ -601,7 +601,10 @@ class _ChatScreenState extends State<ChatScreen> {
       children: [
         _chatTopbar(name),
         _contactStrip(),
-        if (thread?.hasActiveTrial ?? false) _trialBanner(),
+        if (thread?.hasActiveTrial ?? false)
+          _trialBanner()
+        else if (thread != null && controller.activeHireFor(thread) != null)
+          _hireBanner(thread),
         Expanded(
           child: Container(
             decoration: BoxDecoration(
@@ -774,6 +777,65 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
       ),
     );
+  }
+
+  // Shown when the two parties have an active hire — the family can end the
+  // employment, the nanny can resign (role-aware label + reason).
+  Widget _hireBanner(ChatThread thread) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(colors: [KafiColors.purL, Color(0xFFEDE4FF)]),
+        border: Border(bottom: BorderSide(color: Color(0xFFD9C7FA), width: 1)),
+      ),
+      child: Row(
+        children: [
+          const Text('🎉', style: TextStyle(fontSize: 14)),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(AppStrings.hireActiveBanner.tr,
+                style: KafiTheme.fredoka(10, color: KafiColors.purpD, w: FontWeight.w700)),
+          ),
+          GestureDetector(
+            onTap: () => _confirmEndHire(thread),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: KafiColors.redL,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Text(
+                controller.isNanny
+                    ? AppStrings.hireResignAction.tr
+                    : AppStrings.hireEndAction.tr,
+                style: KafiTheme.fredoka(9.5, color: KafiColors.redD, w: FontWeight.w700),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmEndHire(ChatThread thread) {
+    final isNanny = controller.isNanny;
+    Get.dialog(AlertDialog(
+      title: Text(isNanny ? AppStrings.hireResignTitle.tr : AppStrings.hireEndTitle.tr),
+      content: Text(isNanny ? AppStrings.hireResignBody.tr : AppStrings.hireEndBody.tr),
+      actions: [
+        TextButton(onPressed: () => Get.back(), child: Text(AppStrings.cancel.tr)),
+        TextButton(
+          onPressed: () {
+            Get.back();
+            controller.endActiveHire(thread);
+          },
+          child: Text(
+            isNanny ? AppStrings.hireResignAction.tr : AppStrings.hireEndAction.tr,
+            style: const TextStyle(color: KafiColors.redD),
+          ),
+        ),
+      ],
+    ));
   }
 
   Widget _contactStrip() {

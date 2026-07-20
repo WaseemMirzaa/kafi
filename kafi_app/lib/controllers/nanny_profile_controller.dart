@@ -223,6 +223,20 @@ class NannyProfileController extends GetxController {
     }
   }
 
+  /// Nanny resigns from her current hire (ends the employment). The dashboard
+  /// confirms first; this performs the write and refreshes the status card.
+  Future<void> resignHire() async {
+    final hire = activeHire.value;
+    if (hire == null) return;
+    try {
+      await _hireService.endHire(hire.id, reason: HireEndReason.resigned);
+      await loadEmploymentStatus();
+      Get.snackbar(AppStrings.successTitle.tr, AppStrings.hireResignedToast.tr);
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    }
+  }
+
   void _startApprovalWatch() {
     final user = _auth.currentUser.value;
     if (user == null || user.type != UserType.nanny) return;
