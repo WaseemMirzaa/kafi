@@ -9,6 +9,7 @@ import 'package:kafi_app/controllers/settings_controller.dart';
 import 'package:kafi_app/controllers/shortlist_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/controllers/ticket_controller.dart';
+import 'package:kafi_app/controllers/dispute_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 
 class FamilyBinding extends Bindings {
@@ -26,6 +27,7 @@ class FamilyBinding extends Bindings {
     Get.put(FamilyProfileController(), permanent: true);
     Get.put(FamilyJobsController(), permanent: true);
     Get.put(TicketController(), permanent: true);
+    Get.put(DisputeController(), permanent: true);
     Get.put(SettingsController(), permanent: true);
   }
 }

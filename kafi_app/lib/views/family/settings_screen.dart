@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
+import 'package:kafi_app/controllers/dispute_controller.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/settings_controller.dart' show SettingsController;
 import 'package:kafi_app/models/user_model.dart' show UserSettings;
@@ -116,6 +117,15 @@ class SettingsScreen extends GetView<SettingsController> {
             Icons.support_agent,
             AppStrings.settingsSupport.tr,
             () => Get.toNamed(Routes.support),
+          ),
+          // My reports (disputes filed about another user) — both roles.
+          _actionTile(
+            Icons.flag_outlined,
+            AppStrings.settingsMyReports.tr,
+            () {
+              Get.find<DisputeController>().loadDisputes();
+              Get.toNamed(Routes.disputes);
+            },
           ),
           // Restore purchases is family-only (nannies have no paid subscription).
           if (!_isNanny)

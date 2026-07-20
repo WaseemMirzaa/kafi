@@ -681,6 +681,23 @@ const Map<String, String> enUs = {
   AppStrings.supportStatusResolved: 'Resolved',
   AppStrings.supportStatusClosed: 'Closed',
 
+  // Disputes / reports
+  AppStrings.settingsMyReports: 'My reports',
+  AppStrings.disputesTitle: 'My reports',
+  AppStrings.disputesSubtitle: 'Issues you reported to Kafi',
+  AppStrings.disputesEmpty: 'No reports yet',
+  AppStrings.disputesEmptySub: 'When you report a problem during a trial or hire, the conversation with our team appears here.',
+  AppStrings.disputeResolutionLabel: 'Resolution',
+  AppStrings.disputeCatFraud: 'Fraud',
+  AppStrings.disputeCatAbuse: 'Abuse',
+  AppStrings.disputeCatNoShow: 'No-show',
+  AppStrings.disputeCatPayment: 'Payment',
+  AppStrings.disputeCatOther: 'Other',
+  AppStrings.disputeStatusOpen: 'Open',
+  AppStrings.disputeStatusInvestigating: 'Investigating',
+  AppStrings.disputeStatusResolved: 'Resolved',
+  AppStrings.disputeStatusDismissed: 'Dismissed',
+
   // Edit profile
   AppStrings.editProfile: 'Edit Profile',
   AppStrings.editBio: 'About me',

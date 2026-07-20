@@ -12,6 +12,8 @@ import 'package:kafi_app/views/family/family_applicants_screen.dart';
 import 'package:kafi_app/views/family/my_jobs_screen.dart';
 import 'package:kafi_app/views/support/support_screen.dart';
 import 'package:kafi_app/views/support/support_ticket_screen.dart';
+import 'package:kafi_app/views/support/disputes_screen.dart';
+import 'package:kafi_app/views/support/dispute_chat_screen.dart';
 import 'package:kafi_app/views/family/family_edit_screen.dart';
 import 'package:kafi_app/views/family/family_form_screen.dart';
 import 'package:kafi_app/views/family/notifications_screen.dart';
@@ -67,6 +69,8 @@ abstract class Routes {
   static const familyMyJobs = '/family-my-jobs';
   static const support = '/support';
   static const supportTicket = '/support-ticket';
+  static const disputes = '/disputes';
+  static const disputeChat = '/dispute-chat';
   static const browse = '/browse';
   static const profileLocked = '/profile-locked';
   static const profileRelocked = '/profile-relocked';
@@ -115,6 +119,10 @@ class AppRoutes {
     // role binding is already active (family/nanny shell), like notifications.
     GetPage(name: Routes.support, page: () => const SupportScreen()),
     GetPage(name: Routes.supportTicket, page: () => const SupportTicketScreen()),
+    // Disputes (reports about another user) reuse the active role binding's
+    // DisputeController, same as support tickets.
+    GetPage(name: Routes.disputes, page: () => const DisputesScreen()),
+    GetPage(name: Routes.disputeChat, page: () => const DisputeChatScreen()),
     GetPage(name: Routes.browse, page: () => const FamilyShellScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.profileLocked, page: () => const ProfileLockedScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.profileRelocked, page: () => const ProfileRelockedScreen(), binding: FamilyBinding()),
