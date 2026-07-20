@@ -121,6 +121,7 @@ abstract class AppStrings {
   static const reviewTitle = 'review_title';
   static const reviewSubtitle = 'review_subtitle';
   static const reviewYourNanny = 'review_your_nanny';
+  static const reviewYourFamily = 'review_your_family';
   static const reviewCommentHint = 'review_comment_hint';
   static const reviewSubmit = 'review_submit';
   static const reviewSkip = 'review_skip';

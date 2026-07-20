@@ -22,15 +22,21 @@ class FirestoreReviewService implements IReviewService {
 
   @override
   Future<List<ReviewModel>> getReviewsFor(String revieweeId) async {
-    // Filter on revieweeId only (no composite index needed); sort client-side.
-    final snap = await _reviews.where('revieweeId', isEqualTo: revieweeId).get();
+    // Constrain the query to public reviews so a third-party viewer's read
+    // matches the security rules (a non-party may only read where
+    // `isPublic == true`; a client-side filter would be rejected before it
+    // runs). Both are equality filters, so no composite index is needed; sort
+    // client-side.
+    final snap = await _reviews
+        .where('revieweeId', isEqualTo: revieweeId)
+        .where('isPublic', isEqualTo: true)
+        .get();
     final list = snap.docs
         .map((d) => ReviewModel.fromMap({
               ...d.data(),
               'id': d.id,
               'createdAt': _iso(d.data()['createdAt']),
             }))
-        .where((r) => r.isPublic)
         .toList()
       ..sort((a, b) => b.createdAt.compareTo(a.createdAt));
     return list;

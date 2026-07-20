@@ -20,6 +20,7 @@ import 'package:kafi_app/services/mock/mock_subscription_service.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
+import 'package:kafi_app/views/family/review_dialog.dart';
 import 'package:uuid/uuid.dart';
 
 /// Chat controller per Technical Architecture §3.6
@@ -60,6 +61,14 @@ class ChatController extends GetxController {
         AppStrings.successTitle.tr,
         isNanny ? AppStrings.hireResignedToast.tr : AppStrings.hireEndedToast.tr,
       );
+      // Invite the party who ended it to rate the other (no-op if already done).
+      if (isNanny) {
+        await showReviewDialog(
+            revieweeId: hire.familyId, revieweeType: 'family', revieweeName: hire.familyName);
+      } else {
+        await showReviewDialog(
+            revieweeId: hire.nannyId, revieweeType: 'nanny', revieweeName: hire.nannyName);
+      }
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     }

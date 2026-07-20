@@ -103,17 +103,28 @@ export const onHireCreated = onDocumentCreated('hires/{hireId}', async (event) =
     .set({ stats: { hiresCount: admin.firestore.FieldValue.increment(1) } }, { merge: true });
 });
 
-/// A review of a nanny folds into her server-owned rating aggregate. The rules
-/// forbid a reviewer from writing the reviewee's doc, so this trigger owns
-/// nannies/{id}.stats.averageRating / reviewsCount.
+/// Maps a review's `revieweeType` to the collection whose `stats` aggregate it
+/// folds into. Pure so the two-way routing can be unit-tested.
+export function revieweeCollection(revieweeType: unknown): 'nannies' | 'families' | undefined {
+  if (revieweeType === 'nanny') return 'nannies';
+  if (revieweeType === 'family') return 'families';
+  return undefined;
+}
+
+/// A review folds into the reviewee's server-owned rating aggregate. Reviews
+/// are two-way — a family reviews a nanny (`revieweeType: 'nanny'`) or a nanny
+/// reviews a family (`revieweeType: 'family'`). The rules forbid a reviewer
+/// from writing the reviewee's doc, so this trigger owns
+/// {nannies|families}/{id}.stats.averageRating / reviewsCount.
 export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (event) => {
   const review = event.data?.data();
-  if (!review || review.revieweeType !== 'nanny') return;
-  const nannyId = review.revieweeId as string | undefined;
+  if (!review) return;
+  const collection = revieweeCollection(review.revieweeType);
+  const revieweeId = review.revieweeId as string | undefined;
   const rating = typeof review.rating === 'number' ? review.rating : Number(review.rating);
-  if (!nannyId || !Number.isFinite(rating)) return;
+  if (!collection || !revieweeId || !Number.isFinite(rating)) return;
 
-  const ref = admin.firestore().collection('nannies').doc(nannyId);
+  const ref = admin.firestore().collection(collection).doc(revieweeId);
   await admin.firestore().runTransaction(async (tx) => {
     const snap = await tx.get(ref);
     const stats = (snap.data()?.stats ?? {}) as {

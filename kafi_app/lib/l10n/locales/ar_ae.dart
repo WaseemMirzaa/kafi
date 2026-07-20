@@ -37,6 +37,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.reviewTitle: 'كيف كانت @name؟',
     AppStrings.reviewSubtitle: 'تقييمك يساعد العائلات الأخرى.',
     AppStrings.reviewYourNanny: 'مربيتك',
+    AppStrings.reviewYourFamily: 'هذه العائلة',
     AppStrings.reviewCommentHint: 'أضف تعليقًا (اختياري)',
     AppStrings.reviewSubmit: 'إرسال التقييم',
     AppStrings.reviewSkip: 'تخطي',

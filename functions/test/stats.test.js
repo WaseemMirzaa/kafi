@@ -1,7 +1,7 @@
 'use strict';
 const { test } = require('node:test');
 const assert = require('node:assert');
-const { flooredCount, nextAverage } = require('../lib/triggers/stats.js');
+const { flooredCount, nextAverage, revieweeCollection } = require('../lib/triggers/stats.js');
 
 // flooredCount backs the onShortlistDeleted decrement — it must never let a
 // server-owned counter go negative, even on out-of-order or duplicate events.
@@ -41,4 +41,16 @@ test('nextAverage: folds into an existing average and rounds to 2dp', () => {
 
 test('nextAverage: tolerates garbage current values', () => {
   assert.deepStrictEqual(nextAverage(null, 'x', 5), { averageRating: 5, reviewsCount: 1 });
+});
+
+// revieweeCollection routes two-way reviews to the right aggregate doc.
+test('revieweeCollection maps nanny/family to their collections', () => {
+  assert.strictEqual(revieweeCollection('nanny'), 'nannies');
+  assert.strictEqual(revieweeCollection('family'), 'families');
+});
+
+test('revieweeCollection returns undefined for unknown types', () => {
+  assert.strictEqual(revieweeCollection('admin'), undefined);
+  assert.strictEqual(revieweeCollection(undefined), undefined);
+  assert.strictEqual(revieweeCollection(''), undefined);
 });
