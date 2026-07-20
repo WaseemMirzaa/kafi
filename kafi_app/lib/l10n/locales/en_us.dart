@@ -409,6 +409,7 @@ const Map<String, String> enUs = {
 
   // Nanny Jobs
   AppStrings.nannyJobsTitle: 'Find your perfect job 🌸',
+  AppStrings.jobDetailsTitle: 'Job Details',
   AppStrings.nannyJobsMatching: 'jobs matching your profile',
   AppStrings.dashboardGreeting: 'Welcome 👋',
   AppStrings.nannyJobsSearch: 'Search by location, job type, salary...',

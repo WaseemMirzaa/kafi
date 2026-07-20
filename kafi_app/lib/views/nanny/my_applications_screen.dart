@@ -144,9 +144,15 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
 
   Widget _applicationCard(ApplicationModel app) {
     final job = Get.find<JobPostController>().allJobs.firstWhereOrNull((j) => j.id == app.jobPostId);
-    final initial = job?.familyName.isNotEmpty == true ? job!.familyName[0].toUpperCase() : 'F';
-    final typeLabel = job?.jobType.name == 'liveOut' ? 'Live-out' : 'Live-in';
-    final city = job?.city ?? 'Dubai';
+    // Prefer the denormalized fields on the application so a job that isn't in
+    // the browse set doesn't fall back to fabricated 'Dubai'/'Live-in' (NAP-12).
+    final famName = (app.familyName?.isNotEmpty ?? false) ? app.familyName! : (job?.familyName ?? '');
+    final initial = famName.isNotEmpty ? famName[0].toUpperCase() : 'F';
+    final title = (app.jobTitle?.isNotEmpty ?? false)
+        ? app.jobTitle!
+        : job != null
+            ? '${job.jobType.name == 'liveOut' ? 'Live-out' : 'Live-in'} Nanny${job.city.isNotEmpty ? ' · ${job.city}' : ''}'
+            : AppStrings.nannyMyApplications.tr;
 
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.nannyApplicationDetail, arguments: app),
@@ -186,7 +192,7 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('$typeLabel Nanny · $city',
+                      Text(title,
                           style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
                       Text('Applied ${_formatDate(app.createdAt)}',
                           style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
@@ -216,7 +222,8 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                       style: KafiTheme.fredoka(9, color: const Color(0xFF2A8A50), w: FontWeight.w700)),
                 ),
                 const Spacer(),
-                if (app.status == ApplicationStatus.pending)
+                if (app.status == ApplicationStatus.pending ||
+                    app.status == ApplicationStatus.viewed)
                   GestureDetector(
                     onTap: () => _confirmWithdraw(app.id),
                     child: Text(AppStrings.nannyWithdraw.tr,
