@@ -226,6 +226,22 @@ service cloud.firestore {
                 || existing().reportedUserId == request.auth.uid));
       allow create: if isSignedIn() && incoming().reporterId == request.auth.uid;
       allow update, delete: if isAdmin();
+
+      // Support chat about this dispute, between an admin and the person who
+      // filed it (the reporter). The reported user is NOT a participant. A
+      // non-admin may only post as sender type 'user' — never impersonate
+      // 'admin'/Support.
+      match /messages/{msgId} {
+        function isReporter() {
+          return isSignedIn()
+            && get(/databases/$(database)/documents/disputes/$(disputeId)).data.reporterId
+                == request.auth.uid;
+        }
+        allow read: if isAdmin() || isReporter();
+        allow create: if isAdmin()
+          || (isReporter() && incoming().senderType == 'user');
+        allow update, delete: if isAdmin();
+      }
     }
 
     // ---------- admin config ----------
