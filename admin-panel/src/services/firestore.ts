@@ -54,8 +54,6 @@ export interface NannyStatsRow {
   applicationsCount?: number;
   trialsCount?: number;
   hiresCount?: number;
-  averageRating?: number;
-  reviewsCount?: number;
 }
 
 export interface NannyRow {
@@ -248,20 +246,6 @@ export interface ApplicationRow {
   coverMessage?: string;
   createdAt: Date;
   respondedAt?: Date;
-}
-
-// ── Reviews / ratings ──
-export interface ReviewRow {
-  id: string;
-  reviewerId: string;
-  reviewerName?: string;
-  reviewerType: 'family' | 'nanny';
-  revieweeId: string;
-  revieweeType: 'family' | 'nanny';
-  trialId?: string;
-  rating: number; // 1-5
-  comment?: string;
-  createdAt: Date;
 }
 
 // ── Chat threads & messages (nanny ↔ family) ──
@@ -634,15 +618,6 @@ const mockApplications: ApplicationRow[] = [
   { id: 'a4', jobPostId: 'j3', jobTitle: 'Live-out nanny (English-speaking)', nannyId: 'n2', nannyName: 'Priya Sharma', familyId: 'f2', familyName: 'James & Sarah K.', status: 'declined', matchScore: 58, createdAt: new Date(Date.now() - 11 * 86400000), respondedAt: new Date(Date.now() - 9 * 86400000) },
   { id: 'a5', jobPostId: 'j5', jobTitle: 'Live-in nanny & housekeeper', nannyId: 'n4', nannyName: 'Grace Nkemelu', familyId: 'f4', familyName: 'Mohammed Al Rashid', status: 'hired', matchScore: 88, createdAt: new Date(Date.now() - 35 * 86400000), respondedAt: new Date(Date.now() - 30 * 86400000) },
   { id: 'a6', jobPostId: 'j4', jobTitle: 'Caregiver — special needs experience', nannyId: 'n4', nannyName: 'Grace Nkemelu', familyId: 'f3', familyName: 'Lin Chen', status: 'pending', matchScore: 79, createdAt: new Date(Date.now() - 3 * 86400000) },
-];
-
-// ── Reviews / ratings ──
-const mockReviews: ReviewRow[] = [
-  { id: 'rv1', reviewerId: 'f1', reviewerName: 'Al Mansoori Family', reviewerType: 'family', revieweeId: 'n1', revieweeType: 'nanny', trialId: 't3', rating: 5, comment: 'Wonderful with our children, highly recommended.', createdAt: new Date(Date.now() - 18 * 86400000) },
-  { id: 'rv2', reviewerId: 'f4', reviewerName: 'Mohammed Al Rashid', reviewerType: 'family', revieweeId: 'n1', revieweeType: 'nanny', rating: 4, comment: 'Reliable and punctual.', createdAt: new Date(Date.now() - 60 * 86400000) },
-  { id: 'rv3', reviewerId: 'n1', reviewerName: 'Sarah Reyes', reviewerType: 'nanny', revieweeId: 'f1', revieweeType: 'family', trialId: 't3', rating: 5, comment: 'Kind and respectful family, great accommodation.', createdAt: new Date(Date.now() - 17 * 86400000) },
-  { id: 'rv4', reviewerId: 'f3', reviewerName: 'Lin Chen', reviewerType: 'family', revieweeId: 'n4', revieweeType: 'nanny', rating: 5, comment: 'Very patient and experienced.', createdAt: new Date(Date.now() - 5 * 86400000) },
-  { id: 'rv5', reviewerId: 'n4', reviewerName: 'Grace Nkemelu', reviewerType: 'nanny', revieweeId: 'f4', revieweeType: 'family', rating: 4, comment: 'Good family, busy household.', createdAt: new Date(Date.now() - 28 * 86400000) },
 ];
 
 // ── Chat threads & messages (nanny ↔ family) ──
@@ -1183,39 +1158,6 @@ export const ApplicationService = {
     if (useMock()) return mockApplications.filter((a) => a.nannyId === nannyId);
     const snap = await getDocs(query(collection(db!, 'applications'), where('nannyId', '==', nannyId), limit(200)));
     return snap.docs.map((d) => parseApplication(d.id, d.data() as Record<string, unknown>));
-  },
-};
-
-// ─────────────────────────────────────────────────────────
-// Reviews / ratings service (admin read-only)
-// ─────────────────────────────────────────────────────────
-function parseReview(id: string, data: Record<string, unknown>): ReviewRow {
-  return {
-    id,
-    reviewerId: (data.reviewerId as string) ?? '',
-    reviewerName: data.reviewerName as string | undefined,
-    reviewerType: (data.reviewerType as 'family' | 'nanny') ?? 'family',
-    revieweeId: (data.revieweeId as string) ?? '',
-    revieweeType: (data.revieweeType as 'family' | 'nanny') ?? 'nanny',
-    trialId: data.trialId as string | undefined,
-    rating: (data.rating as number) ?? 0,
-    comment: data.comment as string | undefined,
-    createdAt: parseTimestamp(data.createdAt),
-  };
-}
-
-export const ReviewService = {
-  async listForReviewee(userId: string): Promise<ReviewRow[]> {
-    if (useMock()) return mockReviews.filter((r) => r.revieweeId === userId);
-    const snap = await getDocs(query(collection(db!, 'reviews'), where('revieweeId', '==', userId), limit(200)));
-    return snap.docs.map((d) => parseReview(d.id, d.data() as Record<string, unknown>));
-  },
-  /** Average rating + count for a given reviewee (nanny or family). */
-  async averageFor(userId: string): Promise<{ average: number | null; count: number }> {
-    const reviews = await this.listForReviewee(userId);
-    if (reviews.length === 0) return { average: null, count: 0 };
-    const sum = reviews.reduce((s, r) => s + r.rating, 0);
-    return { average: sum / reviews.length, count: reviews.length };
   },
 };
 

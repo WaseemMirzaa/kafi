@@ -304,14 +304,6 @@ export function NannyProfileView({
             <Field label="Applications" value={String(nanny.stats.applicationsCount ?? 0)} />
             <Field label="Trials" value={String(nanny.stats.trialsCount ?? 0)} />
             <Field label="Hires" value={String(nanny.stats.hiresCount ?? 0)} />
-            <Field
-              label="Average rating"
-              value={
-                nanny.stats.averageRating != null
-                  ? `${nanny.stats.averageRating.toFixed(1)} ★ (${nanny.stats.reviewsCount ?? 0})`
-                  : '—'
-              }
-            />
           </FieldGrid>
         </Section>
       )}

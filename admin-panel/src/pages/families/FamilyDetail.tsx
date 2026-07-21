@@ -21,8 +21,6 @@ import {
   ApplicationRow,
   TrialService,
   TrialAdminRow,
-  ReviewService,
-  ReviewRow,
   ChatService,
   ChatThreadRow,
 } from '../../services/firestore';
@@ -98,8 +96,6 @@ export default function FamilyDetail() {
   const [jobs, setJobs] = useState<JobPostRow[]>([]);
   const [apps, setApps] = useState<ApplicationRow[]>([]);
   const [trials, setTrials] = useState<TrialAdminRow[]>([]);
-  const [reviews, setReviews] = useState<ReviewRow[]>([]);
-  const [rating, setRating] = useState<{ average: number | null; count: number }>({ average: null, count: 0 });
   const [threads, setThreads] = useState<ChatThreadRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -110,21 +106,17 @@ export default function FamilyDetail() {
     setLoading(true);
     setError(null);
     try {
-      const [f, j, a, t, rv, avg, th] = await Promise.all([
+      const [f, j, a, t, th] = await Promise.all([
         FamilyService.get(id),
         JobPostService.listByFamily(id),
         ApplicationService.listByFamily(id),
         TrialService.listByFamily(id),
-        ReviewService.listForReviewee(id),
-        ReviewService.averageFor(id),
         ChatService.listThreadsForFamily(id),
       ]);
       setFamily(f);
       setJobs(j);
       setApps(a);
       setTrials(t);
-      setReviews(rv);
-      setRating(avg);
       setThreads(th);
     } catch (e) {
       // Without this the page hangs on "Loading…" forever on any read failure.
@@ -243,12 +235,6 @@ export default function FamilyDetail() {
           <ColStat num={String(trials.length)} label="Trials" change={`${completedTrials} completed`} />
           <ColStat num={String(cancelledTrials)} label="Cancelled" change="trials" numColor="#FF5C8A" />
           <ColStat num={String(family.stats?.hiresCount ?? 0)} label="Hires" change="↑ total" />
-          <ColStat
-            num={rating.average != null ? `${rating.average.toFixed(1)}★` : '—'}
-            label="Avg rating"
-            change={`${rating.count} reviews`}
-            numColor="#FFB347"
-          />
         </div>
 
         {/* Family profile */}
@@ -344,26 +330,6 @@ export default function FamilyDetail() {
                     </div>
                   </div>
                   <StatusBadge variant={trialStatusVariant(String(t.status))}>{String(t.status)}</StatusBadge>
-                </div>
-              ))}
-            </div>
-          )}
-        </Section>
-
-        {/* Reviews */}
-        <Section title={`Reviews (${reviews.length})`}>
-          {reviews.length === 0 ? (
-            <div className="text-[10px] text-[#8090B0] mt-2">No reviews yet.</div>
-          ) : (
-            <div className="flex flex-col gap-1.5 mt-2">
-              {reviews.map((r) => (
-                <div key={r.id} className="rounded-lg border border-[#EBEEF8] px-2.5 py-2">
-                  <div className="flex items-center justify-between">
-                    <div className="text-[10px] font-extrabold text-navy">{r.reviewerName ?? r.reviewerId}</div>
-                    <div className="text-[10px] font-bold text-[#FFB347]">{'★'.repeat(r.rating)}</div>
-                  </div>
-                  {r.comment && <div className="text-[9px] text-navy/70 mt-0.5">{r.comment}</div>}
-                  <div className="text-[8px] font-semibold text-[#A0ADC8] mt-0.5">{fmtDate(r.createdAt)}</div>
                 </div>
               ))}
             </div>
