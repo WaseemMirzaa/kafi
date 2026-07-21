@@ -128,6 +128,13 @@ abstract class AppStrings {
   static const reviewThanks = 'review_thanks';
   static const reviewFailed = 'review_failed';
 
+  // Rate-the-app prompt (replaces the retired peer review dialog)
+  static const rateAppTitle = 'rate_app_title';
+  static const rateAppSubtitle = 'rate_app_subtitle';
+  static const rateAppCta = 'rate_app_cta';
+  static const rateAppLater = 'rate_app_later';
+  static const rateAppThanks = 'rate_app_thanks';
+
   // Contact reveal
   static const contactUnavailable = 'contact_unavailable';
   static const contactLaunchFailed = 'contact_launch_failed';

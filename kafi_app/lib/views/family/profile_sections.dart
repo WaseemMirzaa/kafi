@@ -10,18 +10,13 @@ import 'package:kafi_app/views/shared/kafi_theme.dart';
 class ProfileSections {
   const ProfileSections._();
 
-  // ── Stats row (Years exp · Rating · Reviews) ──────────────────────────────
+  // ── Stats row (Years exp) ─────────────────────────────────────────────────
+  // Peer ratings/reviews were retired in favour of app-store ratings, so the
+  // rating and reviews-count stats were removed here.
   static Widget statsRow(NannyCardModel card) {
-    final hasReviews = card.reviewsCount > 0 && card.averageRating != null;
     return Row(
       children: [
         Expanded(child: _statBox('${card.yearsExp}', AppStrings.yearsExp.tr)),
-        const SizedBox(width: 6),
-        Expanded(
-            child: _statBox(hasReviews ? '${card.averageRating!.toStringAsFixed(1)}★' : '—',
-                AppStrings.rating.tr)),
-        const SizedBox(width: 6),
-        Expanded(child: _statBox('${card.reviewsCount}', AppStrings.reviews.tr)),
       ],
     );
   }
