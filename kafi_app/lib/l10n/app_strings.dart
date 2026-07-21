@@ -117,17 +117,6 @@ abstract class AppStrings {
   static const nextDocs = 'next_docs';
   static const submitReview = 'submit_review';
 
-  // Family → nanny reviews (post-trial rating)
-  static const reviewTitle = 'review_title';
-  static const reviewSubtitle = 'review_subtitle';
-  static const reviewYourNanny = 'review_your_nanny';
-  static const reviewYourFamily = 'review_your_family';
-  static const reviewCommentHint = 'review_comment_hint';
-  static const reviewSubmit = 'review_submit';
-  static const reviewSkip = 'review_skip';
-  static const reviewThanks = 'review_thanks';
-  static const reviewFailed = 'review_failed';
-
   // Rate-the-app prompt (replaces the retired peer review dialog)
   static const rateAppTitle = 'rate_app_title';
   static const rateAppSubtitle = 'rate_app_subtitle';
@@ -514,8 +503,6 @@ abstract class AppStrings {
   static const profileLockedTitle = 'profile_locked_title';
   static const profileLockedSub = 'profile_locked_sub';
   static const yearsExp = 'years_exp';
-  static const rating = 'rating';
-  static const reviews = 'reviews';
   static const skillsSpecialties = 'skills_specialties';
   static const contactLocked = 'contact_locked';
   static const contactUnlocked = 'contact_unlocked';

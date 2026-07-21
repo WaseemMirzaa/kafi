@@ -22,7 +22,6 @@ import {
   onShortlistCreated,
   onShortlistDeleted,
   onProfileViewed,
-  onReviewCreated,
   onHireCreated,
 } from './triggers/stats';
 import { onContactRevealRequested } from './triggers/contact';
@@ -53,7 +52,6 @@ export {
   onShortlistCreated,
   onShortlistDeleted,
   onProfileViewed,
-  onReviewCreated,
   onHireCreated,
   onContactRevealRequested,
   bootstrapFirstAdmin,

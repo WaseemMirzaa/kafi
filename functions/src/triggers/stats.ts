@@ -8,22 +8,6 @@ export function flooredCount(current: unknown, delta: number): number {
   return Math.max(0, n + delta);
 }
 
-/// Folds a new rating into a running average. Tolerates missing/garbage current
-/// values and rounds to 2 dp. Pure so the math can be unit-tested.
-export function nextAverage(
-  currentAvg: unknown,
-  currentCount: unknown,
-  rating: number,
-): { averageRating: number; reviewsCount: number } {
-  const count =
-    typeof currentCount === 'number' && currentCount > 0 ? Math.floor(currentCount) : 0;
-  const avg =
-    typeof currentAvg === 'number' && Number.isFinite(currentAvg) ? currentAvg : 0;
-  const reviewsCount = count + 1;
-  const averageRating = (avg * count + rating) / reviewsCount;
-  return { averageRating: Math.round(averageRating * 100) / 100, reviewsCount };
-}
-
 /// Nanny aggregate stats (`nannies/{id}.stats.*`) are read on the nanny
 /// dashboard but must be **server-owned**: the security rules only let a nanny
 /// (or admin) write her own doc, so a family shortlisting a nanny cannot touch
@@ -101,38 +85,4 @@ export const onHireCreated = onDocumentCreated('hires/{hireId}', async (event) =
     .collection('nannies')
     .doc(nannyId)
     .set({ stats: { hiresCount: admin.firestore.FieldValue.increment(1) } }, { merge: true });
-});
-
-/// Maps a review's `revieweeType` to the collection whose `stats` aggregate it
-/// folds into. Pure so the two-way routing can be unit-tested.
-export function revieweeCollection(revieweeType: unknown): 'nannies' | 'families' | undefined {
-  if (revieweeType === 'nanny') return 'nannies';
-  if (revieweeType === 'family') return 'families';
-  return undefined;
-}
-
-/// A review folds into the reviewee's server-owned rating aggregate. Reviews
-/// are two-way — a family reviews a nanny (`revieweeType: 'nanny'`) or a nanny
-/// reviews a family (`revieweeType: 'family'`). The rules forbid a reviewer
-/// from writing the reviewee's doc, so this trigger owns
-/// {nannies|families}/{id}.stats.averageRating / reviewsCount.
-export const onReviewCreated = onDocumentCreated('reviews/{reviewId}', async (event) => {
-  const review = event.data?.data();
-  if (!review) return;
-  const collection = revieweeCollection(review.revieweeType);
-  const revieweeId = review.revieweeId as string | undefined;
-  const rating = typeof review.rating === 'number' ? review.rating : Number(review.rating);
-  if (!collection || !revieweeId || !Number.isFinite(rating)) return;
-
-  const ref = admin.firestore().collection(collection).doc(revieweeId);
-  await admin.firestore().runTransaction(async (tx) => {
-    const snap = await tx.get(ref);
-    const stats = (snap.data()?.stats ?? {}) as {
-      averageRating?: unknown;
-      reviewsCount?: unknown;
-    };
-    tx.set(ref, { stats: nextAverage(stats.averageRating, stats.reviewsCount, rating) }, {
-      merge: true,
-    });
-  });
 });
