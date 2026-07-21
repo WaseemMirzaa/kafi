@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/support/report_user_sheet.dart';
 
 class ProfileHero extends StatelessWidget {
   const ProfileHero({super.key, required this.card});
@@ -34,6 +35,15 @@ class ProfileHero extends StatelessWidget {
             right: 12,
             child: _circleBtn(Icons.favorite, () => AppNavigation.toggleShortlist(card),
                 filled: true),
+          ),
+          // Report this nanny — files a support ticket to the admin team.
+          Positioned(
+            top: 11,
+            right: 45,
+            child: _circleBtn(
+              Icons.flag_outlined,
+              () => showReportUserSheet(reportedUserId: card.id, reportedUserName: card.name),
+            ),
           ),
           Padding(
             padding: const EdgeInsets.fromLTRB(15, 34, 15, 13),

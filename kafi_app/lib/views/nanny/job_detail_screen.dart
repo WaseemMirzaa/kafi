@@ -9,6 +9,7 @@ import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/string_format.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/support/report_user_sheet.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
 class JobDetailScreen extends StatelessWidget {
@@ -34,7 +35,7 @@ class JobDetailScreen extends StatelessWidget {
         bottom: false,
         child: Column(
           children: [
-            _hero(),
+            _hero(job),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
@@ -64,7 +65,7 @@ class JobDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _hero() {
+  Widget _hero(JobPostModel job) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -85,8 +86,15 @@ class JobDetailScreen extends StatelessWidget {
             ),
           ),
           Expanded(child: Text(AppStrings.jobDetailsTitle.tr, style: KafiTheme.pacifico(17))),
-          // Share / Save were unimplemented stubs that surfaced literal "(mock)"
-          // text in production — removed until built (NAP-9).
+          // Report this family — files a support ticket to the admin team.
+          GestureDetector(
+            onTap: () => showReportUserSheet(
+                reportedUserId: job.familyId, reportedUserName: job.familyName),
+            child: const Padding(
+              padding: EdgeInsets.only(left: 8),
+              child: Icon(Icons.flag_outlined, color: KafiColors.roseD, size: 20),
+            ),
+          ),
         ],
       ),
     );
