@@ -90,6 +90,17 @@ class FirestoreUserService implements IUserService {
   }
 
   @override
+  Future<void> touchNannyActive(String nannyId) async {
+    // Server-owned presence stamp for the admin inactivity filter. Written on
+    // its own so a stale profile snapshot never clobbers it (lastActiveAt is
+    // excluded from NannyModel.toMap for the same reason).
+    await _col.doc(nannyId).set(
+      {'lastActiveAt': FieldValue.serverTimestamp()},
+      SetOptions(merge: true),
+    );
+  }
+
+  @override
   Future<void> saveNannyDocumentUrls(
       String nannyId, Map<DocumentType, String> urls) async {
     if (urls.isEmpty) return;

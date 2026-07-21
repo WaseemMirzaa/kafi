@@ -680,6 +680,9 @@ const mockSettings = {
   jobPostVisibilityDays: 30,
   plans: { weekly: 89, monthly: 239, twoMonths: 369 },
   vatRate: 0.05,
+  // When true, the app hides nannies who haven't opened the app in 2+ weeks
+  // from family listings (see kafi_app browseNannies + nannies/{id}.lastActiveAt).
+  hideInactiveNannies: false,
 };
 
 function toDateOrUndef(raw: unknown): Date | undefined {

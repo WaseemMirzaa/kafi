@@ -7,6 +7,11 @@ abstract class IUserService {
   Future<void> submitNannyForReview(String id);
   Stream<NannyModel?> watchNanny(String id);
 
+  /// Records the nanny as active "now" (server timestamp) on her `nannies/{id}`
+  /// doc, for the admin "hide inactive nannies" filter. Best-effort — callers
+  /// ignore failures.
+  Future<void> touchNannyActive(String nannyId);
+
   /// Persists sensitive document download URLs to the **private**
   /// `nannies/{id}/documents/{type}` subcollection (owner/admin only) instead of
   /// the world-readable parent doc (C5). The admin panel reads these to review.

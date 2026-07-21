@@ -313,6 +313,9 @@ class AuthController extends GetxController {
     }
     if (user.isNanny) {
       final nanny = await userService.getNanny(user.id);
+      // Presence stamp for the admin "hide inactive nannies" filter — records
+      // "last opened the app". Best-effort, non-blocking.
+      unawaited(userService.touchNannyActive(user.id));
       Get.offAllNamed(_nannyStartRoute(nanny));
     } else {
       // A family reaches the home screen only after posting at least one job.

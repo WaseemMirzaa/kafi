@@ -18,6 +18,7 @@ import SupportTickets from './pages/support/SupportTickets';
 import SupportTicketDetail from './pages/support/SupportTicketDetail';
 import AllTrials from './pages/trials/AllTrials';
 import TrialDetail from './pages/trials/TrialDetail';
+import Settings from './pages/Settings';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuthStore();
@@ -55,6 +56,7 @@ export default function App() {
                 <Route path="/support/:id" element={<SupportTicketDetail />} />
                 <Route path="/revenue" element={<Revenue />} />
                 <Route path="/broadcast" element={<Broadcast />} />
+                <Route path="/settings" element={<Settings />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
