@@ -20,7 +20,7 @@ import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
-import 'package:kafi_app/views/family/review_dialog.dart';
+import 'package:kafi_app/views/shared/rate_app_dialog.dart';
 import 'package:uuid/uuid.dart';
 
 class TrialController extends GetxController {
@@ -527,15 +527,10 @@ class TrialController extends GetxController {
     }
     selected.value = null;
     await refreshAll();
-    // Once a family completes a trial, invite them to rate the nanny (no-ops
-    // for nannies or if they've already reviewed her). Feeds stats.averageRating.
-    if (s == TrialStatus.completed && isFamily) {
-      await showReviewDialog(
-        revieweeId: t.nannyId,
-        revieweeType: 'nanny',
-        revieweeName: nannyCards[t.nannyId]?.name,
-        trialId: t.id,
-      );
+    // Peer reviews were retired — invite the user to rate the app after a
+    // completed trial instead (throttled; no-ops if recently shown or rated).
+    if (s == TrialStatus.completed) {
+      await RateAppPrompt.maybeShow();
     }
   }
 

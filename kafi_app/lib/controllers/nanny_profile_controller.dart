@@ -22,7 +22,7 @@ import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/utils/validators.dart';
-import 'package:kafi_app/views/family/review_dialog.dart';
+import 'package:kafi_app/views/shared/rate_app_dialog.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:uuid/uuid.dart';
 import 'package:video_player/video_player.dart';
@@ -235,12 +235,8 @@ class NannyProfileController extends GetxController {
       await _hireService.endHire(hire.id, reason: HireEndReason.resigned);
       await loadEmploymentStatus();
       Get.snackbar(AppStrings.successTitle.tr, AppStrings.hireResignedToast.tr);
-      // Invite the nanny to rate the family she just left (no-op if done).
-      await showReviewDialog(
-        revieweeId: hire.familyId,
-        revieweeType: 'family',
-        revieweeName: hire.familyName,
-      );
+      // Peer reviews were retired — invite the nanny to rate the app instead.
+      await RateAppPrompt.maybeShow();
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     }

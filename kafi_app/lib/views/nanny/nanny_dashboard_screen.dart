@@ -159,13 +159,11 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
           // Stats row
           Obx(() {
             final stats = controller.nanny.value?.stats;
-            final rating = stats?.averageRating;
+            // "Your rating" cell removed — peer ratings retired for app-store ratings.
             return Row(
               children: [
                 _statCell('${stats?.shortlists ?? 0}', 'Shortlists'),
                 _statCell('${stats?.profileViews ?? 0}', 'Profile views'),
-                _statCell(rating != null ? '${rating.toStringAsFixed(1)}★' : '—',
-                    'Your rating'),
               ],
             );
           }),
