@@ -146,4 +146,5 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
       profileScore: (m['profileScore'] as num?)?.toInt() ?? 0,
       stats: _statsFromMap(m['stats'] as Map<String, dynamic>?),
       i18n: i18nMapsFrom(m, const ['bio', 'healthConditions', 'religiousNotes']),
+      lastActiveAt: _parseDate(m['lastActiveAt']),
     );

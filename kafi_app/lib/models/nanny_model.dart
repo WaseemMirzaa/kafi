@@ -245,6 +245,7 @@ class NannyModel {
     this.profileScore = 0,
     this.stats = const NannyStats(),
     this.i18n = const {},
+    this.lastActiveAt,
   });
 
   final String id;
@@ -327,6 +328,11 @@ class NannyModel {
   /// `{'bio': {'en': …, 'ar': …}}`. Populated from the `<field>_i18n` keys by
   /// the `translate*` Cloud Functions; server-owned, so [toMap] never writes it.
   final Map<String, Map<String, String>> i18n;
+
+  /// Last time the nanny was active in the app (server-owned, written by a
+  /// throttled presence heartbeat). Drives the admin "hide nannies inactive for
+  /// 2 weeks" filter. Never written by [toMap] — set only by the presence write.
+  final DateTime? lastActiveAt;
 
   int? get age {
     if (dateOfBirth == null) return null;
@@ -448,6 +454,7 @@ class NannyModel {
     int? profileScore,
     NannyStats? stats,
     Map<String, Map<String, String>>? i18n,
+    DateTime? lastActiveAt,
   }) =>
       NannyModel(
         id: id,
@@ -513,6 +520,7 @@ class NannyModel {
         profileScore: profileScore ?? this.profileScore,
         stats: stats ?? this.stats,
         i18n: i18n ?? this.i18n,
+        lastActiveAt: lastActiveAt ?? this.lastActiveAt,
       );
 
   Map<String, dynamic> toMap() => {

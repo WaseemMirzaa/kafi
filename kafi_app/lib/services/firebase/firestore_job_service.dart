@@ -12,6 +12,7 @@ import 'package:kafi_app/utils/localized_text.dart';
 class FirestoreJobService implements IJobService {
   final _jobs = FirebaseFirestore.instance.collection('jobs');
   final _nannies = FirebaseFirestore.instance.collection('nannies');
+  final _settings = FirebaseFirestore.instance.collection('settings');
 
   @override
   Future<List<NannyCardModel>> browseNannies({
@@ -34,11 +35,20 @@ class FirestoreJobService implements IJobService {
     }
 
     final snap = await query.limit(50).get();
+    // Admin toggle: when on, drop nannies inactive for 2+ weeks. A nanny with no
+    // recorded lastActiveAt is still shown (unknown ≠ inactive), so enabling the
+    // toggle never mass-hides nannies who simply predate the presence heartbeat.
+    final hideInactive = await _hideInactiveEnabled();
+    final cutoff = DateTime.now().subtract(const Duration(days: 14));
     final nannies = <NannyModel>[];
     for (final d in snap.docs) {
       final m = d.data();
       if (m['blocked'] == true) continue;
-      nannies.add(nannyModelFromMap(d.id, m));
+      final n = nannyModelFromMap(d.id, m);
+      if (hideInactive && n.lastActiveAt != null && n.lastActiveAt!.isBefore(cutoff)) {
+        continue;
+      }
+      nannies.add(n);
     }
 
     var eligible = nannies;
@@ -56,6 +66,17 @@ class FirestoreJobService implements IJobService {
       return MatchService().rankNannies(eligible, matchJob, family: family);
     }
     return eligible.map(NannyCardModel.fromNanny).toList();
+  }
+
+  /// Reads the admin `settings/global.hideInactiveNannies` toggle. Defaults to
+  /// false (show everyone) on a missing doc or read error.
+  Future<bool> _hideInactiveEnabled() async {
+    try {
+      final doc = await _settings.doc('global').get();
+      return doc.data()?['hideInactiveNannies'] == true;
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
