@@ -389,8 +389,12 @@ class NannyModel {
   /// — used by both the match scorer and the profile cards so they never
   /// diverge (a card must not show job *count* where the scorer sums durations).
   int get totalExperienceYears => experiences.fold<int>(0, (sum, e) {
-        final years = e.toDate.year - e.fromDate.year;
-        return sum + years.clamp(0, 20);
+        // Use actual elapsed months, not the calendar-year delta: the old
+        // `toDate.year - fromDate.year` counted a 2-month Dec→Feb job as a full
+        // year while an 11-month same-year job counted as zero.
+        final months = (e.toDate.year - e.fromDate.year) * 12 +
+            (e.toDate.month - e.fromDate.month);
+        return sum + (months ~/ 12).clamp(0, 20);
       });
 
   NannyModel copyWith({

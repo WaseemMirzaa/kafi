@@ -6,6 +6,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/validators.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
 
@@ -415,11 +416,20 @@ class _JobEditSheetState extends State<_JobEditSheet> {
   }
 
   void _save() {
+    final min = int.tryParse(_salaryMin.text.trim()) ?? widget.job.salaryMin;
+    final max = int.tryParse(_salaryMax.text.trim()) ?? widget.job.salaryMax;
+    // Guard the quick-edit the same way the full job form does — otherwise an
+    // inverted range (min 5000 / max 1000) saves and renders oddly to nannies.
+    final salaryError = Validators.salaryRange(min, max);
+    if (salaryError != null) {
+      Get.snackbar(AppStrings.errorTitle.tr, salaryError.tr);
+      return;
+    }
     final updated = widget.job.copyWith(
       jobTitle: _title.text.trim(),
       schedule: _schedule.text.trim(),
-      salaryMin: int.tryParse(_salaryMin.text.trim()) ?? widget.job.salaryMin,
-      salaryMax: int.tryParse(_salaryMax.text.trim()) ?? widget.job.salaryMax,
+      salaryMin: min,
+      salaryMax: max,
     );
     Get.back();
     widget.onSave(updated);
