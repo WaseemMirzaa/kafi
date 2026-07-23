@@ -139,7 +139,9 @@ class NotificationController extends GetxController {
     // for them); the real kind + target id ride in `data`. Route these to the
     // relevant thread so the tap isn't a dead end on the no-op default branch.
     final dataType = notif.data['type'] as String?;
-    if (dataType == 'support_reply') {
+    if (dataType == 'support_reply' ||
+        dataType == 'support_resolved' ||
+        dataType == 'support_closed') {
       _openTicketThread(notif.data['ticketId'] as String?);
       return;
     }
