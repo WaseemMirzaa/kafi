@@ -2,8 +2,12 @@ import { onDocumentDeleted } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
 import { getStorage } from 'firebase-admin/storage';
 
-/// Per System Spec §6.9 — when a user document is deleted, cascade-delete
-/// chats, trials, applications, and shortlists belonging to that user.
+/// Per System Spec §6.9 — when a user document is deleted, cascade-delete every
+/// collection that references the user: chat threads, trials, applications,
+/// shortlists, job posts, notifications, disputes (+messages), support tickets
+/// (+messages), hires, profileViews and contactReveals, plus the profile docs,
+/// Auth account and Storage folders. (`deletionAudits` is intentionally retained
+/// — it is the admin-readable record of why the user left.)
 export const onUserDeleted = onDocumentDeleted(
   'users/{userId}',
   async (event) => {
@@ -22,14 +26,14 @@ export const onUserDeleted = onDocumentDeleted(
         .collection('chatThreads')
         .where('familyId', '==', userId)
         .get()
-        .then((s) => Promise.all(s.docs.map((d) => _deleteThread(d.ref))))
+        .then((s) => Promise.all(s.docs.map((d) => _deleteWithMessages(d.ref))))
     );
     tasks.push(
       db
         .collection('chatThreads')
         .where('nannyId', '==', userId)
         .get()
-        .then((s) => Promise.all(s.docs.map((d) => _deleteThread(d.ref))))
+        .then((s) => Promise.all(s.docs.map((d) => _deleteWithMessages(d.ref))))
     );
 
     // Delete trials.
@@ -98,18 +102,77 @@ export const onUserDeleted = onDocumentDeleted(
         .then((s) => _batchDelete(s.docs.map((d) => d.ref)))
     );
 
-    // Delete reviews authored by or about the user.
+    // Delete disputes filed BY or ABOUT the user, plus their support-chat
+    // messages (reporter description + chat are PII that must not survive the
+    // account, and orphaned rows clutter the admin safety queue).
     tasks.push(
       db
-        .collection('reviews')
-        .where('reviewerId', '==', userId)
+        .collection('disputes')
+        .where('reporterId', '==', userId)
+        .get()
+        .then((s) => Promise.all(s.docs.map((d) => _deleteWithMessages(d.ref))))
+    );
+    tasks.push(
+      db
+        .collection('disputes')
+        .where('reportedUserId', '==', userId)
+        .get()
+        .then((s) => Promise.all(s.docs.map((d) => _deleteWithMessages(d.ref))))
+    );
+
+    // Delete support tickets the user opened, plus their message subcollection.
+    tasks.push(
+      db
+        .collection('tickets')
+        .where('openerId', '==', userId)
+        .get()
+        .then((s) => Promise.all(s.docs.map((d) => _deleteWithMessages(d.ref))))
+    );
+
+    // Delete employment (hire) records for either side.
+    tasks.push(
+      db
+        .collection('hires')
+        .where('familyId', '==', userId)
         .get()
         .then((s) => _batchDelete(s.docs.map((d) => d.ref)))
     );
     tasks.push(
       db
-        .collection('reviews')
-        .where('revieweeId', '==', userId)
+        .collection('hires')
+        .where('nannyId', '==', userId)
+        .get()
+        .then((s) => _batchDelete(s.docs.map((d) => d.ref)))
+    );
+
+    // Delete free-contact accounting (profileViews) for either side.
+    tasks.push(
+      db
+        .collection('profileViews')
+        .where('familyId', '==', userId)
+        .get()
+        .then((s) => _batchDelete(s.docs.map((d) => d.ref)))
+    );
+    tasks.push(
+      db
+        .collection('profileViews')
+        .where('nannyId', '==', userId)
+        .get()
+        .then((s) => _batchDelete(s.docs.map((d) => d.ref)))
+    );
+
+    // Delete gated phone-reveal events for either side.
+    tasks.push(
+      db
+        .collection('contactReveals')
+        .where('familyId', '==', userId)
+        .get()
+        .then((s) => _batchDelete(s.docs.map((d) => d.ref)))
+    );
+    tasks.push(
+      db
+        .collection('contactReveals')
+        .where('nannyId', '==', userId)
         .get()
         .then((s) => _batchDelete(s.docs.map((d) => d.ref)))
     );
@@ -130,7 +193,7 @@ export const onUserDeleted = onDocumentDeleted(
   }
 );
 
-async function _deleteThread(ref: FirebaseFirestore.DocumentReference) {
+async function _deleteWithMessages(ref: FirebaseFirestore.DocumentReference) {
   const messages = await ref.collection('messages').get();
   await _batchDelete(messages.docs.map((d) => d.ref));
   await ref.delete().catch(() => {});
