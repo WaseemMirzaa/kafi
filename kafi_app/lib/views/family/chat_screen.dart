@@ -603,7 +603,7 @@ class _ChatScreenState extends State<ChatScreen> {
         _chatTopbar(name),
         _contactStrip(),
         if (thread?.hasActiveTrial ?? false)
-          _trialBanner()
+          _trialBanner(thread!)
         else if (thread != null && controller.activeHireFor(thread) != null)
           _hireBanner(thread),
         Expanded(
@@ -767,9 +767,13 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // Entry point to the Trial System screen when this thread has an active trial.
-  Widget _trialBanner() {
+  // Passes THIS thread's trialId so the trial screen opens the correct trial —
+  // without it, a nanny (or family) with two active trials always landed on the
+  // first one, and could e.g. upload day-proof against the wrong family.
+  Widget _trialBanner(ChatThread thread) {
     return GestureDetector(
-      onTap: () => Get.toNamed(Routes.trial),
+      onTap: () =>
+          Get.toNamed(Routes.trial, arguments: {'trialId': thread.trialId}),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
         decoration: const BoxDecoration(
