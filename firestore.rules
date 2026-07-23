@@ -49,7 +49,17 @@ service cloud.firestore {
       allow read: if isUser(uid) || isAdmin();
       allow create: if isUser(uid);
       allow update: if isUser(uid) || isAdmin();
-      allow delete: if isAdmin();
+      // A user may delete their own account doc — this fires `onUserDeleted`,
+      // which cascades all of their data and removes the Auth account.
+      allow delete: if isUser(uid) || isAdmin();
+    }
+
+    // ---------- deletionAudits ----------
+    // A user records why they left as they delete their own account. The audit
+    // is retained (admin-readable) after the account and its data are gone.
+    match /deletionAudits/{uid} {
+      allow create: if isUser(uid);
+      allow read, update, delete: if isAdmin();
     }
 
     // ---------- nannies ----------
