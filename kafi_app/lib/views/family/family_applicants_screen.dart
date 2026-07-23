@@ -9,6 +9,7 @@ import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/services/interfaces/i_subscription_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/services/mock/mock_subscription_service.dart';
+import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_search_field.dart';
@@ -261,7 +262,14 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
         await controller.markAsViewed(app.id);
       }
       final subs = Get.find<SubscriptionController>();
-      await subs.recordViewIfAllowed(app.nannyId);
+      final allowed = await subs.recordViewIfAllowed(app.nannyId);
+      if (!allowed) {
+        // Out of free views (or expired viewing a new profile) — nudge to
+        // pricing rather than opening a profile the family can't unlock, the
+        // same as the browse flow does.
+        Get.toNamed(Routes.pricing);
+        return;
+      }
       await _syncMockEntitlementsIfNeeded(app.familyId);
       final nanny = await Get.find<IUserService>().getNanny(app.nannyId);
       if (nanny == null) {
