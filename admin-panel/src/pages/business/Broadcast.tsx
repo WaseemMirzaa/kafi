@@ -25,6 +25,7 @@ export default function Broadcast() {
   const [busy, setBusy] = useState(false);
   const [ok, setOk] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [confirming, setConfirming] = useState(false);
   const [recent, setRecent] = useState<{ id: string; audience: string; title: string; message: string; createdAt: Date }[]>([]);
 
   const load = async () => {
@@ -40,6 +41,7 @@ export default function Broadcast() {
 
   const send = async () => {
     if (!title.trim() || !message.trim()) return;
+    setConfirming(false);
     setBusy(true);
     setOk(null);
     setError(null);
@@ -96,7 +98,12 @@ export default function Broadcast() {
             />
           </div>
           <div className="flex items-center gap-2">
-            <button type="button" className="qa-btn qa-r" disabled={!title.trim() || !message.trim() || busy} onClick={send}>
+            <button
+              type="button"
+              className="qa-btn qa-r"
+              disabled={!title.trim() || !message.trim() || busy}
+              onClick={() => setConfirming(true)}
+            >
               {busy ? 'Sending…' : 'Send broadcast'}
             </button>
             {ok && <span className="text-[10px] font-bold text-[#2A8A50]">{ok}</span>}
@@ -122,6 +129,31 @@ export default function Broadcast() {
           </TableCard>
         </div>
       </PageContent>
+
+      {confirming && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4"
+          onClick={() => setConfirming(false)}
+        >
+          <div className="admin-card w-full max-w-sm p-4" onClick={(e) => e.stopPropagation()}>
+            <div className="text-[12px] font-extrabold text-navy mb-1.5">Send this broadcast?</div>
+            <div className="text-[10px] font-semibold text-[#8090B0] leading-relaxed mb-3">
+              This sends a push notification titled{' '}
+              <span className="font-bold text-navy">“{title.trim()}”</span> to{' '}
+              <span className="font-bold text-navy">{audienceLabel[audience]}</span> right away.
+              Push notifications can’t be recalled once sent.
+            </div>
+            <div className="flex items-center justify-end gap-2">
+              <button type="button" className="qa-btn qa-n" onClick={() => setConfirming(false)}>
+                Cancel
+              </button>
+              <button type="button" className="qa-btn qa-r" disabled={busy} onClick={send}>
+                {busy ? 'Sending…' : 'Send now'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </PageShell>
   );
 }
