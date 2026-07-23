@@ -45,11 +45,22 @@ class FirestoreHireService implements IHireService {
     required HireEndReason reason,
     String? note,
   }) async {
-    await _hires.doc(hireId).update({
-      'status': HireStatus.ended.name,
-      'endReason': reason.name,
-      'endNote': note,
-      'endedAt': FieldValue.serverTimestamp(),
+    final ref = _hires.doc(hireId);
+    // First-end-wins: both parties can end a hire, so read-then-write in a
+    // transaction and no-op if it is already ended. Without this, a family
+    // terminating a moment after the nanny resigned would overwrite the reason
+    // (and re-fire the counterparty notification) — the earlier end must stand.
+    await FirebaseFirestore.instance.runTransaction((tx) async {
+      final snap = await tx.get(ref);
+      final status =
+          (snap.data()?['status'] as String?) ?? HireStatus.active.name;
+      if (status == HireStatus.ended.name) return;
+      tx.update(ref, {
+        'status': HireStatus.ended.name,
+        'endReason': reason.name,
+        'endNote': note,
+        'endedAt': FieldValue.serverTimestamp(),
+      });
     });
   }
 
