@@ -53,6 +53,7 @@ export default function DisputeDetail() {
   const [resolution, setResolution] = useState('');
   const [decision, setDecision] = useState<'resolved' | 'dismissed'>('resolved');
   const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
   // Dispute details start collapsed so the support chat is front and centre.
   const [detailsOpen, setDetailsOpen] = useState(false);
 
@@ -105,20 +106,38 @@ export default function DisputeDetail() {
 
   const send = async (text: string) => {
     setSending(true);
-    await DisputeService.sendMessage(dispute.id, text);
-    const [d, m] = await Promise.all([DisputeService.get(dispute.id), DisputeService.listMessages(dispute.id)]);
-    setDispute(d);
-    setMessages(m);
-    setSending(false);
+    setActionError(null);
+    try {
+      await DisputeService.sendMessage(dispute.id, text);
+      const [d, m] = await Promise.all([
+        DisputeService.get(dispute.id),
+        DisputeService.listMessages(dispute.id),
+      ]);
+      setDispute(d);
+      setMessages(m);
+    } catch (e) {
+      // Surface the failure and keep the composer usable instead of leaving it
+      // spinning forever with the reply silently lost.
+      setActionError((e as Error).message || 'Failed to send reply — try again.');
+    } finally {
+      setSending(false);
+    }
   };
 
   const resolve = async () => {
     if (!resolution.trim()) return;
     setBusy(true);
-    await DisputeService.resolve(dispute.id, resolution.trim(), decision);
-    setResolution('');
-    setBusy(false);
-    load();
+    setActionError(null);
+    try {
+      await DisputeService.resolve(dispute.id, resolution.trim(), decision);
+      setResolution('');
+      await load();
+    } catch (e) {
+      // Preserve the typed resolution so the admin can retry.
+      setActionError((e as Error).message || 'Failed to submit resolution — try again.');
+    } finally {
+      setBusy(false);
+    }
   };
 
   const closed = dispute.status === 'resolved' || dispute.status === 'dismissed';
@@ -177,6 +196,12 @@ export default function DisputeDetail() {
           )}
         </DetailCard>
 
+        {actionError && (
+          <div className="mx-2 mb-2 p-2 bg-rose-pale text-rose-dark text-[10px] font-bold rounded-lg">
+            {actionError}
+          </div>
+        )}
+
         <Section title="Support chat">
           <p className="text-[9px] font-semibold text-[#8090B0] mb-1">
             Conversation between support (you) and {dispute.reporterName ?? 'the reporting user'}.
@@ -217,7 +242,7 @@ export default function DisputeDetail() {
               rows={3}
               value={resolution}
               onChange={(e) => setResolution(e.target.value)}
-              placeholder="Resolution notes (visible to both parties)"
+              placeholder="Resolution notes (shared with the reporter)"
               className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none resize-none"
             />
             <div className="flex justify-end mt-2">

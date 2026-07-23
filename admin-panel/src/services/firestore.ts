@@ -1333,6 +1333,15 @@ export const DisputeService = {
       content,
       createdAt: serverTimestamp(),
     });
+    // First admin reply moves an untouched dispute from "open" to
+    // "investigating", so the ops board can tell in-progress reports from
+    // unopened ones (previously only the mock did this, making 'investigating'
+    // unreachable and permanently 0 in production).
+    const disputeRef = doc(db!, 'disputes', disputeId);
+    const dsnap = await getDoc(disputeRef);
+    if (dsnap.exists() && (dsnap.data().status as string) === 'open') {
+      await updateDoc(disputeRef, { status: 'investigating' });
+    }
     return { id: ref.id, disputeId, senderType: 'admin', senderName, content, createdAt: new Date() };
   },
 };
@@ -1401,11 +1410,16 @@ export const TicketService = {
       content,
       createdAt: serverTimestamp(),
     });
-    // Bump the ticket's last-message preview so the queue sorts (status is
-    // changed explicitly via updateStatus).
-    await updateDoc(doc(db!, 'tickets', ticketId), {
+    // Bump the last-message preview and, on the first admin reply, advance an
+    // untouched ticket from "open" to "investigating" (previously only the mock
+    // did this, so the live "In progress" count never moved on a reply).
+    const ticketRef = doc(db!, 'tickets', ticketId);
+    const tsnap = await getDoc(ticketRef);
+    const advance = tsnap.exists() && (tsnap.data().status as string) === 'open';
+    await updateDoc(ticketRef, {
       lastMessage: content,
       lastMessageAt: serverTimestamp(),
+      ...(advance ? { status: 'investigating' } : {}),
     });
     return { id: ref.id, ticketId, senderType: 'admin', senderName, content, createdAt: new Date() };
   },
