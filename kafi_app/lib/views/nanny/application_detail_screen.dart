@@ -145,7 +145,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                 // Pops the pushed detail/list routes to root THEN opens the
                 // Messages tab, so the CTA visibly navigates (nannyGoToTab alone
                 // left the pushed route covering the shell → button looked dead).
-                onPressed: () => AppNavigation.openChat(nannyId: app.nannyId),
+                onPressed: () => AppNavigation.openChatWithFamily(familyId: app.familyId, familyName: app.familyName),
               ),
               const SizedBox(height: 8),
               _destructiveOutlineButton(
@@ -163,7 +163,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
             child: KafiPrimaryButton(
               label: 'View in Messages',
               icon: Icons.chat_bubble_outline,
-              onPressed: () => AppNavigation.openChat(nannyId: app.nannyId),
+              onPressed: () => AppNavigation.openChatWithFamily(familyId: app.familyId, familyName: app.familyName),
             ),
           );
         }
@@ -176,7 +176,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
           child: KafiPrimaryButton(
             label: '💬 ${AppStrings.appDetailMessageFamily.tr}',
             icon: Icons.chat_bubble_outline,
-            onPressed: () => AppNavigation.openChat(nannyId: app.nannyId),
+            onPressed: () => AppNavigation.openChatWithFamily(familyId: app.familyId, familyName: app.familyName),
           ),
         );
       case ApplicationStatus.declined:

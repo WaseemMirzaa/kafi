@@ -70,6 +70,24 @@ class AppNavigation {
     }
   }
 
+  /// Nanny-side chat entry: opens (or creates) the thread with the counterparty
+  /// **family**. Mirrors [openChat] but is keyed on the family id, so a nanny
+  /// engaged with several families never lands in the wrong conversation.
+  static void openChatWithFamily({required String familyId, String? familyName}) {
+    if (familyId.isNotEmpty && Get.isRegistered<ChatController>()) {
+      Get.find<ChatController>().setPendingOpen(familyId: familyId, familyName: familyName);
+    }
+    if (Get.isRegistered<NannyShellController>()) {
+      Get.until((route) => route.isFirst);
+      Get.find<NannyShellController>().goToTab(2);
+    } else if (Get.isRegistered<FamilyShellController>()) {
+      Get.until((route) => route.isFirst);
+      Get.find<FamilyShellController>().goToTab(2);
+    } else {
+      Get.toNamed(Routes.chat);
+    }
+  }
+
   static Future<void> toggleShortlist(NannyCardModel card) async {
     if (!Get.isRegistered<ShortlistController>()) {
       Get.put(ShortlistController());
