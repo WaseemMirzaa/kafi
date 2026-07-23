@@ -26,11 +26,14 @@ export const onBroadcastCreated = onDocumentCreated(
     const recipientIds: string[] = [];
 
     if (audience === 'subscribers') {
-      // Subscribers = families with an active subscription. Resolve via the
-      // `families` collection, then join to user fcmTokens.
+      // Subscribers = families that still have access: 'active' OR 'cancelled'
+      // (cancelled means auto-renew off but paid through the period — the rules'
+      // familyHasAccess and every admin surface count these as subscribed, so a
+      // "Subscribers" broadcast must include them too). Resolve via `families`,
+      // then join to user fcmTokens.
       const famSnap = await db
         .collection('families')
-        .where('subscription.status', '==', 'active')
+        .where('subscription.status', 'in', ['active', 'cancelled'])
         .get();
       const userIds = famSnap.docs.map((d) => (d.data().userId as string) || d.id);
       // Firestore `in` queries cap at 30 ids — batch them.
