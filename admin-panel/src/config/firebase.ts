@@ -19,6 +19,23 @@ let db: Firestore | null = null;
 let storage: FirebaseStorage | null = null;
 
 if (!AppConfig.useMock) {
+  // Fail fast on a misconfigured live deploy. Without this, the placeholder
+  // 'mock-api-key'/'kafi-mock' fallbacks above let initializeApp succeed against
+  // a nonexistent project, so every query silently fails and the panel "looks
+  // up" but never loads.
+  const env = import.meta.env as Record<string, string | undefined>;
+  const missing = [
+    'VITE_FIREBASE_API_KEY',
+    'VITE_FIREBASE_AUTH_DOMAIN',
+    'VITE_FIREBASE_PROJECT_ID',
+    'VITE_FIREBASE_APP_ID',
+  ].filter((k) => !env[k]);
+  if (missing.length) {
+    throw new Error(
+      `Firebase env vars missing in live mode: ${missing.join(', ')}. ` +
+        'Set them or enable mock mode (VITE_USE_MOCK=true).',
+    );
+  }
   app = initializeApp(firebaseConfig);
   auth = getAuth(app);
   db = getFirestore(app);

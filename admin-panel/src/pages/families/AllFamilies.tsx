@@ -51,6 +51,10 @@ export default function AllFamilies() {
         await FamilyService.block(f.id);
       }
       setItems((prev) => prev.map((x) => x.id === f.id ? { ...x, blocked: !x.blocked } : x));
+    } catch (e) {
+      // Without this the failure was swallowed — the admin assumed the block
+      // took when it didn't. Surface it (NannyDetail uses the same alert).
+      alert((e as Error).message || 'Block toggle failed');
     } finally {
       setBusyId(null);
     }
