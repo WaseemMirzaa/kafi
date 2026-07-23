@@ -83,11 +83,21 @@ class ChatController extends GetxController {
   String? _pendingThreadId;
   String? _pendingNannyId;
   String? _pendingNannyName;
+  String? _pendingFamilyId;
+  String? _pendingFamilyName;
 
-  void setPendingOpen({String? threadId, String? nannyId, String? nannyName}) {
+  void setPendingOpen({
+    String? threadId,
+    String? nannyId,
+    String? nannyName,
+    String? familyId,
+    String? familyName,
+  }) {
     if (threadId != null && threadId.isNotEmpty) _pendingThreadId = threadId;
     if (nannyId != null && nannyId.isNotEmpty) _pendingNannyId = nannyId;
     _pendingNannyName = nannyName;
+    if (familyId != null && familyId.isNotEmpty) _pendingFamilyId = familyId;
+    _pendingFamilyName = familyName;
   }
 
   Future<void> consumePendingOpen() async {
@@ -96,6 +106,14 @@ class ChatController extends GetxController {
         final id = _pendingThreadId!;
         _pendingThreadId = null;
         await openThread(id);
+        return;
+      }
+      if (_pendingFamilyId != null) {
+        final id = _pendingFamilyId!;
+        final name = _pendingFamilyName;
+        _pendingFamilyId = null;
+        _pendingFamilyName = null;
+        await openThreadForFamily(familyId: id, familyName: name);
         return;
       }
       if (_pendingNannyId != null) {
@@ -313,6 +331,36 @@ class ChatController extends GetxController {
         nannyId: nannyId,
         nannyName: nannyName,
         familyName: _auth.currentUser.value?.fullName,
+      );
+      await refreshThreads();
+      await openThread(thread.id);
+    } catch (e) {
+      final msg = e.toString().contains('permission-denied')
+          ? AppStrings.chatUnavailable.tr
+          : e.toString();
+      Get.snackbar(AppStrings.errorTitle.tr, msg);
+    }
+  }
+
+  /// Nanny-side counterpart to [openThreadForNanny]: finds (or creates) and
+  /// opens the thread with the counterparty **family** ([familyId]). Resolving
+  /// by familyId — never the nanny's own id — is what stops a nanny engaged
+  /// with several families from landing in the wrong conversation. Nannies are
+  /// never subscription-gated.
+  Future<void> openThreadForFamily({required String familyId, String? familyName}) async {
+    final me = _auth.currentUser.value;
+    if (me == null || familyId.isEmpty) return;
+    final existing = threads.firstWhereOrNull((t) => t.familyId == familyId);
+    if (existing != null) {
+      await openThread(existing.id);
+      return;
+    }
+    try {
+      final thread = await _chat.findOrCreateThread(
+        familyId: familyId,
+        nannyId: me.id,
+        nannyName: me.fullName,
+        familyName: familyName,
       );
       await refreshThreads();
       await openThread(thread.id);
