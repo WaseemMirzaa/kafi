@@ -1024,7 +1024,12 @@ class NannyProfileController extends GetxController {
       await _uploadStagedDocs(n.id);
       final updated = (nanny.value ?? n).copyWith(
         documents: documents.values
-            .map((d) => d.status == DocumentStatus.uploaded
+            // Send freshly-uploaded docs AND previously-rejected ones back to
+            // review on resubmit — otherwise a doc the admin rejected (and the
+            // nanny didn't re-pick) stayed 'rejected' while the profile flipped
+            // to pending, leaving it stuck and never re-examined.
+            .map((d) => (d.status == DocumentStatus.uploaded ||
+                    d.status == DocumentStatus.rejected)
                 ? d.copyWith(status: DocumentStatus.reviewing)
                 : d)
             .toList(),
