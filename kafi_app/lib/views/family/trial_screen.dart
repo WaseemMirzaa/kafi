@@ -252,8 +252,18 @@ class TrialScreen extends GetView<TrialController> {
 
   // ── Green header: status badge + timer + parties ──────────────────────────
   Widget _header(TrialModel t) {
-    final famUser = Get.isRegistered<AuthController>() ? Get.find<AuthController>().currentUser.value : null;
-    final famName = (famUser?.fullName?.isNotEmpty == true) ? famUser!.fullName! : 'Your family';
+    // The "Family" card must identify the FAMILY. When a nanny views the trial,
+    // currentUser is her — so use the family name the controller resolved from
+    // the trial's familyId; the family viewer still sees its own name.
+    final String famName;
+    if (_isNanny) {
+      final resolved = controller.familyDisplayName.value;
+      famName = (resolved != null && resolved.isNotEmpty) ? resolved : 'The family';
+    } else {
+      final famUser =
+          Get.isRegistered<AuthController>() ? Get.find<AuthController>().currentUser.value : null;
+      famName = (famUser?.fullName?.isNotEmpty == true) ? famUser!.fullName! : 'Your family';
+    }
     final nanny = controller.nannyCardFor(t.nannyId);
 
     return Container(

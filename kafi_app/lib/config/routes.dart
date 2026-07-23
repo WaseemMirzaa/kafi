@@ -2,6 +2,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/bindings/auth_binding.dart';
 import 'package:kafi_app/bindings/family_binding.dart';
 import 'package:kafi_app/bindings/nanny_binding.dart';
+import 'package:kafi_app/bindings/trial_binding.dart';
 import 'package:kafi_app/views/auth/login_family_screen.dart';
 import 'package:kafi_app/views/auth/login_nanny_screen.dart';
 import 'package:kafi_app/views/auth/otp_verify_screen.dart';
@@ -129,7 +130,7 @@ class AppRoutes {
     GetPage(name: Routes.profileUnlocked, page: () => const ProfileUnlockedScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.chat, page: () => const FamilyShellScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.smartMatch, page: () => const SmartMatchScreen(), binding: NannyBinding()),
-    GetPage(name: Routes.trial, page: () => const TrialScreen(), binding: FamilyBinding()),
+    GetPage(name: Routes.trial, page: () => const TrialScreen(), binding: TrialBinding()),
     GetPage(name: Routes.pricing, page: () => const PricingScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.shortlist, page: () => const ShortlistScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.trialOffer, page: () => const TrialOfferScreen(), binding: FamilyBinding()),
