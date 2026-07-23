@@ -74,6 +74,39 @@ export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (even
   const after = event.data?.after.data();
   if (!before || !after || before.status === after.status) return;
 
+  const trialId = event.params.trialId;
+
+  // A response to the nanny's COUNTER offer is the FAMILY acting, so it must be
+  // attributed to the family and delivered to the NANNY — the mirror image of a
+  // first-round nanny response. Handle it before the nanny-response table, which
+  // would otherwise (wrongly) tell the family "Nanny accepted your offer!".
+  if (
+    before.status === 'countered' &&
+    (after.status === 'accepted' || after.status === 'declined')
+  ) {
+    const [family, nanny] = await Promise.all([
+      getFamily(after.familyId),
+      getUser(after.nannyId),
+    ]);
+    const accepted = after.status === 'accepted';
+    const famName = family.fullName || 'The family';
+    const title = accepted ? '✅ Counter accepted' : 'Counter declined';
+    const body = accepted
+      ? `${famName} accepted your counter offer!`
+      : `${famName} declined your counter offer`;
+    const data = { type: `trial_counter_${after.status}`, trialId };
+    await writeInbox(
+      after.nannyId as string,
+      accepted ? 'trialAccepted' : 'trialDeclined',
+      title,
+      body,
+      data,
+    );
+    await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
+    if (accepted) await recomputeActiveTrialNannyIds(after.familyId as string);
+    return;
+  }
+
   const family = await getFamily(after.familyId);
   const nanny = await getUser(after.nannyId);
 
@@ -136,12 +169,46 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
     'subscription.lastTrialEndedAt': admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  if (after.status === 'completed') {
-    const family = await getFamily(familyId);
-    const title = 'Trial completed';
-    const body = 'Evaluate the nanny in your trial.';
-    const data = { type: 'trial_completed', trialId: event.params.trialId };
-    await writeInbox(familyId, 'trialCompleted', title, body, data);
-    await sendNotification((family.fcmTokens as string[]) ?? [], { title, body, data });
+  // Both terminal outcomes must reach BOTH parties. Previously only 'completed'
+  // fired, only to the family, with stale "evaluate the nanny" copy — and
+  // 'cancelled' notified nobody despite the UI promising "both parties will be
+  // notified".
+  if (after.status === 'completed' || after.status === 'cancelled') {
+    const nannyId = after.nannyId as string | undefined;
+    const [family, nanny] = await Promise.all([
+      getFamily(familyId),
+      nannyId ? getUser(nannyId) : Promise.resolve({} as Record<string, unknown>),
+    ]);
+    const data = { type: `trial_${after.status}`, trialId: event.params.trialId };
+
+    if (after.status === 'completed') {
+      const famTitle = '✅ Trial completed';
+      const famBody = 'The trial is complete — decide whether to hire.';
+      const nanTitle = '✅ Trial completed';
+      const nanBody = 'Your trial is complete. The family will confirm next steps.';
+      await writeInbox(familyId, 'trialCompleted', famTitle, famBody, data);
+      await sendNotification((family.fcmTokens as string[]) ?? [], {
+        title: famTitle,
+        body: famBody,
+        data,
+      });
+      if (nannyId) {
+        await writeInbox(nannyId, 'trialCompleted', nanTitle, nanBody, data);
+        await sendNotification((nanny.fcmTokens as string[]) ?? [], {
+          title: nanTitle,
+          body: nanBody,
+          data,
+        });
+      }
+    } else {
+      const title = 'Trial cancelled';
+      const body = 'The trial has been cancelled.';
+      await writeInbox(familyId, 'systemAnnouncement', title, body, data);
+      await sendNotification((family.fcmTokens as string[]) ?? [], { title, body, data });
+      if (nannyId) {
+        await writeInbox(nannyId, 'systemAnnouncement', title, body, data);
+        await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
+      }
+    }
   }
 });

@@ -8,6 +8,12 @@ export const onNewMessage = onDocumentCreated(
     const message = event.data?.data();
     if (!message) return;
 
+    // Trial/system bubbles (offer, accept, decline, counter, system) each have
+    // their own dedicated trial notification; without this guard the recipient
+    // gets a second, redundant "New message" push for the same event.
+    const messageType = (message.type as string | undefined) ?? 'text';
+    if (messageType !== 'text' && messageType !== 'image') return;
+
     const threadSnap = await admin
       .firestore()
       .collection('chatThreads')
