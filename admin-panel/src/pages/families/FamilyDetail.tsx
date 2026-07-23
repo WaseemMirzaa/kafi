@@ -23,6 +23,7 @@ import {
   TrialAdminRow,
   ChatService,
   ChatThreadRow,
+  SettingsService,
 } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
 import { Section } from '../../components/nanny/NannyProfileView';
@@ -100,24 +101,27 @@ export default function FamilyDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [freeLimit, setFreeLimit] = useState(5);
 
   const load = async () => {
     if (!id) return;
     setLoading(true);
     setError(null);
     try {
-      const [f, j, a, t, th] = await Promise.all([
+      const [f, j, a, t, th, s] = await Promise.all([
         FamilyService.get(id),
         JobPostService.listByFamily(id),
         ApplicationService.listByFamily(id),
         TrialService.listByFamily(id),
         ChatService.listThreadsForFamily(id),
+        SettingsService.get(),
       ]);
       setFamily(f);
       setJobs(j);
       setApps(a);
       setTrials(t);
       setThreads(th);
+      setFreeLimit(s.freeContactLimit ?? 5);
     } catch (e) {
       // Without this the page hangs on "Loading…" forever on any read failure.
       setError((e as Error).message || 'Failed to load family');
@@ -269,7 +273,7 @@ export default function FamilyDetail() {
             <Field label="Ends" value={fmtDate(sub.endDate)} />
             <Field label="Auto-renew" value={yesNo(sub.autoRenew)} />
             <Field label="Has ever subscribed" value={yesNo(sub.hasEverSubscribed)} />
-            <Field label="Free contacts used" value={`${family.freeContactsUsed ?? 0} / 5`} />
+            <Field label="Free contacts used" value={`${family.freeContactsUsed ?? 0} / ${freeLimit}`} />
             <Field label="Active trials" value={String(family.activeTrialNannyIds?.length ?? 0)} />
           </FieldGrid>
         </Section>
