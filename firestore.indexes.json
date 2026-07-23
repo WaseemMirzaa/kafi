@@ -154,6 +154,14 @@
       ]
     },
     {
+      "collectionGroup": "families",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "subscription.status", "order": "ASCENDING" },
+        { "fieldPath": "subscription.endDate", "order": "ASCENDING" }
+      ]
+    },
+    {
       "collectionGroup": "nannies",
       "queryScope": "COLLECTION",
       "fields": [

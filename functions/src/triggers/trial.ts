@@ -2,6 +2,27 @@ import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/fire
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getUser, getNanny, getFamily } from '../utils/notifications';
 
+/// Recomputes `families/{familyId}.activeTrialNannyIds` from the family's trials
+/// currently in an entitling state (accepted/active). This server-owned list is
+/// what the security rules' `hasActiveTrialWith` reads to let a family without a
+/// subscription chat with a nanny during a trial, so it must be refreshed
+/// whenever a trial ENTERS that set (accept) as well as when it leaves (end) —
+/// previously only the end transition recomputed it, so an accepted trial never
+/// unlocked the chat for a free family.
+async function recomputeActiveTrialNannyIds(familyId: string): Promise<void> {
+  if (!familyId) return;
+  const db = admin.firestore();
+  const snap = await db
+    .collection('trials')
+    .where('familyId', '==', familyId)
+    .where('status', 'in', ['active', 'accepted'])
+    .get();
+  const activeIds = Array.from(
+    new Set(snap.docs.map((d) => d.data().nannyId as string).filter(Boolean)),
+  );
+  await db.collection('families').doc(familyId).update({ activeTrialNannyIds: activeIds });
+}
+
 export const onNewApplication = onDocumentCreated(
   'applications/{appId}',
   async (event) => {
@@ -84,6 +105,12 @@ export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (even
     body: entry.body,
     data,
   });
+
+  // Acceptance unlocks trial-chat: refresh the family's entitlement list so a
+  // free family can immediately message this nanny (the gate reads it).
+  if (after.status === 'accepted') {
+    await recomputeActiveTrialNannyIds(after.familyId as string);
+  }
 });
 
 /// Per Technical Architecture §10.2 — when a trial transitions to a terminal
@@ -102,16 +129,10 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
   const familyId = after.familyId as string;
   if (!familyId) return;
 
-  const db = admin.firestore();
-  const trialsSnap = await db
-    .collection('trials')
-    .where('familyId', '==', familyId)
-    .where('status', 'in', ['active', 'accepted'])
-    .get();
-
-  const activeIds = trialsSnap.docs.map((d) => d.data().nannyId as string);
-  await db.collection('families').doc(familyId).update({
-    activeTrialNannyIds: activeIds,
+  // A trial left the entitling set — recompute the list (shared with the accept
+  // path) and stamp when the last trial ended.
+  await recomputeActiveTrialNannyIds(familyId);
+  await admin.firestore().collection('families').doc(familyId).update({
     'subscription.lastTrialEndedAt': admin.firestore.FieldValue.serverTimestamp(),
   });
 
