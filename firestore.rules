@@ -177,14 +177,23 @@ service cloud.firestore {
           || (isSignedIn()
               && (get(/databases/$(database)/documents/chatThreads/$(threadId)).data.familyId == request.auth.uid
                   || get(/databases/$(database)/documents/chatThreads/$(threadId)).data.nannyId == request.auth.uid));
-        // Family must have access OR thread has active trial.
+        // A sender may only post AS THEMSELVES: senderId must be their uid and
+        // senderType must match their side of the thread — otherwise a family
+        // with access could forge a message as the nanny (senderId=nannyId,
+        // senderType='nanny') that the nanny would then see in-thread.
+        // Family also still needs subscription access OR an active trial.
         allow create: if isAdmin() || (
-          isSignedIn() && (
-            // Nannies always allowed
-            get(/databases/$(database)/documents/chatThreads/$(threadId)).data.nannyId == request.auth.uid
+          isSignedIn()
+          && incoming().senderId == request.auth.uid
+          && (
+            (
+              get(/databases/$(database)/documents/chatThreads/$(threadId)).data.nannyId == request.auth.uid
+              && incoming().senderType == 'nanny'
+            )
             ||
             (
               get(/databases/$(database)/documents/chatThreads/$(threadId)).data.familyId == request.auth.uid
+              && incoming().senderType == 'family'
               && (
                 familyHasAccess(request.auth.uid)
                 || familyHasMockDevAccess(request.auth.uid)
@@ -324,6 +333,16 @@ service cloud.firestore {
     match /broadcasts/{id} {
       allow read: if isAdmin();
       allow write: if isAdmin();
+    }
+
+    // ---------- transactions (billing) ----------
+    // Populated only by the RevenueCat webhook via the admin SDK (which bypasses
+    // rules). The admin revenue/VAT dashboard reads it; no client may read or
+    // write. Without this rule, admin reads would be default-denied the moment
+    // billing goes live and starts writing the collection.
+    match /transactions/{id} {
+      allow read: if isAdmin();
+      allow write: if false;
     }
   }
 }
