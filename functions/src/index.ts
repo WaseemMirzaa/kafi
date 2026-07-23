@@ -23,6 +23,7 @@ import {
   onShortlistDeleted,
   onProfileViewed,
   onHireCreated,
+  onHireEnded,
 } from './triggers/stats';
 import { onContactRevealRequested } from './triggers/contact';
 import { bootstrapFirstAdmin } from './bootstrapAdmin';
@@ -53,6 +54,7 @@ export {
   onShortlistDeleted,
   onProfileViewed,
   onHireCreated,
+  onHireEnded,
   onContactRevealRequested,
   bootstrapFirstAdmin,
   syncMockSubscription,

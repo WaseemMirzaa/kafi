@@ -1,5 +1,10 @@
-import { onDocumentCreated, onDocumentDeleted } from 'firebase-functions/v2/firestore';
+import {
+  onDocumentCreated,
+  onDocumentDeleted,
+  onDocumentUpdated,
+} from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
+import { sendNotification, writeInbox, getUser } from '../utils/notifications';
 
 /// Clamps a counter to `>= 0` after applying a delta, tolerating a missing or
 /// non-numeric current value. Pure so the floor behaviour can be unit-tested.
@@ -76,13 +81,69 @@ export const onProfileViewed = onDocumentCreated('profileViews/{viewId}', async 
 
 /// A family creates `hires/{hireId}` when it hires a nanny. The rules forbid
 /// the family from writing the nanny's doc, so this trigger owns the nanny's
-/// server-side `stats.hiresCount`.
+/// server-side `stats.hiresCount`. It also notifies the nanny she was hired —
+/// previously the hire happened entirely on the family side and the nanny got
+/// no signal at all.
 export const onHireCreated = onDocumentCreated('hires/{hireId}', async (event) => {
-  const nannyId = event.data?.data()?.nannyId as string | undefined;
+  const hire = event.data?.data();
+  const nannyId = hire?.nannyId as string | undefined;
   if (!nannyId) return;
+
+  // Server-owned nanny aggregate (rules deny cross-client nanny-doc writes).
   await admin
     .firestore()
     .collection('nannies')
     .doc(nannyId)
     .set({ stats: { hiresCount: admin.firestore.FieldValue.increment(1) } }, { merge: true });
+
+  // Tell the nanny. The ongoing relationship lives in Messages (matching the
+  // app's own convention), so route the tap there.
+  const familyName = (hire?.familyName as string | undefined) || 'A family';
+  const nanny = await getUser(nannyId);
+  const title = '🎉 You’ve been hired!';
+  const body = `${familyName} hired you. Continue in Messages.`;
+  const data = { type: 'hired', hireId: event.params.hireId, route: '/chat' };
+
+  // Durable inbox record first (survives a missing FCM token), then the push.
+  await writeInbox(nannyId, 'hired', title, body, data);
+  await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
+});
+
+/// Ending a hire (nanny resigns / family terminates / contract completes) was
+/// invisible to the other party. This fires once on the transition **into** the
+/// ended state (first-end-wins — a re-write of an already-ended hire never
+/// re-notifies) and tells whichever side did NOT trigger the end.
+export const onHireEnded = onDocumentUpdated('hires/{hireId}', async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after) return;
+  if (before.status === 'ended' || after.status !== 'ended') return;
+
+  const reason = after.endReason as string | undefined;
+  const data = { type: 'hire_ended', hireId: event.params.hireId, route: '/chat' };
+
+  if (reason === 'resigned') {
+    // The nanny resigned → notify the family.
+    const familyId = after.familyId as string | undefined;
+    if (!familyId) return;
+    const nannyName = (after.nannyName as string | undefined) || 'Your nanny';
+    const family = await getUser(familyId);
+    const title = 'Nanny resigned';
+    const body = `${nannyName} has ended the hire.`;
+    await writeInbox(familyId, 'systemAnnouncement', title, body, data);
+    await sendNotification((family.fcmTokens as string[]) ?? [], { title, body, data });
+  } else {
+    // The family terminated, or the hire completed → notify the nanny.
+    const nannyId = after.nannyId as string | undefined;
+    if (!nannyId) return;
+    const familyName = (after.familyName as string | undefined) || 'The family';
+    const nanny = await getUser(nannyId);
+    const title = reason === 'completed' ? 'Hire completed' : 'Hire ended';
+    const body =
+      reason === 'completed'
+        ? `Your hire with ${familyName} has been completed.`
+        : `${familyName} has ended the hire.`;
+    await writeInbox(nannyId, 'systemAnnouncement', title, body, data);
+    await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
+  }
 });
