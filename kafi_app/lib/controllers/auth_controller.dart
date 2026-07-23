@@ -78,7 +78,10 @@ class AuthController extends GetxController {
         return;
       }
       currentUser.value = user;
-      await _routeForUser(user);
+      // Guard the routing step too — if a Firestore read inside it stalls, the
+      // splash would otherwise spin forever with no retry (only getCurrentUser
+      // was previously time-boxed).
+      await _routeForUser(user).timeout(const Duration(seconds: 10));
     } catch (e) {
       // Offline or a slow/failed startup must never hang the splash forever;
       // surface a retry (see SplashScreen) instead of an infinite spinner.
@@ -179,10 +182,9 @@ class AuthController extends GetxController {
       otpError.value = AppStrings.authOtpIncorrect.tr;
       return;
     }
-    if (otpSecondsLeft.value <= 0) {
-      otpError.value = AppStrings.otpExpiredMessage.tr;
-      return;
-    }
+    // No client-side expiry pre-check: a correct code entered just after the
+    // local countdown hits 0 is still accepted by Firebase, so let the server be
+    // the authority and surface a real "expired" only if verifyOtp rejects it.
     isLoading.value = true;
     try {
       await _authService.verifyOtp(otpCode.value);
