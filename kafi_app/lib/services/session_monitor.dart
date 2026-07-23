@@ -21,6 +21,17 @@ class SessionMonitor extends GetxService {
   static const _maxInactiveDays = 90;
   static const _kLastActivity = 'kafi.session.lastActivityAt';
 
+  /// Set just before a deliberate, user-initiated sign-out (logout / account
+  /// deletion). The resulting `authStateChanges(null)` is then an EXPECTED
+  /// sign-out, not a dropped session — without this it fired the alarming
+  /// "Session expired" snackbar and a second redirect on every normal logout.
+  bool _intentionalSignOut = false;
+
+  /// AuthController calls this before signing out / deleting the account.
+  void beginIntentionalSignOut() {
+    _intentionalSignOut = true;
+  }
+
   @override
   void onInit() {
     super.onInit();
@@ -58,9 +69,17 @@ class SessionMonitor extends GetxService {
   static const _noUserRoutes = {Routes.splash, Routes.welcome, Routes.blocked};
 
   void _onAuthStateChanged(User? user) {
-    if (user == null && !_noUserRoutes.contains(Get.currentRoute)) {
-      _handleSessionExpired();
-    } else if (user != null) {
+    if (user == null) {
+      // A deliberate logout/deletion manages its own navigation — consume the
+      // flag and stay silent instead of flashing "Session expired".
+      if (_intentionalSignOut) {
+        _intentionalSignOut = false;
+        return;
+      }
+      if (!_noUserRoutes.contains(Get.currentRoute)) {
+        _handleSessionExpired();
+      }
+    } else {
       touch();
     }
   }
