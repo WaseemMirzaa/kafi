@@ -13,6 +13,7 @@ import 'package:kafi_app/services/interfaces/i_auth_service.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_notification_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/services/session_monitor.dart';
 import 'package:kafi_app/utils/constants/auth_constants.dart';
 import 'package:kafi_app/utils/constants/mock_constants.dart';
 import 'package:kafi_app/utils/validators.dart';
@@ -366,6 +367,11 @@ class AuthController extends GetxController {
   }
 
   Future<void> signOut() async {
+    // Tell the session monitor this null-user transition is intentional so it
+    // doesn't flash "Session expired" and double-redirect on a normal logout.
+    if (Get.isRegistered<SessionMonitor>()) {
+      Get.find<SessionMonitor>().beginIntentionalSignOut();
+    }
     final uid = currentUser.value?.id;
     if (uid != null && Get.isRegistered<INotificationService>()) {
       final token = await Get.find<INotificationService>().getToken();
@@ -381,6 +387,9 @@ class AuthController extends GetxController {
   }
 
   Future<void> deleteAccount(String reason) async {
+    if (Get.isRegistered<SessionMonitor>()) {
+      Get.find<SessionMonitor>().beginIntentionalSignOut();
+    }
     await _authService.deleteAccount(reason);
     currentUser.value = null;
     _otpTimer?.cancel();
