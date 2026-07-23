@@ -23,11 +23,13 @@ const STATUSES = ['pending', 'countered', 'accepted', 'active', 'completed', 'de
 export default function AllTrials() {
   const [items, setItems] = useState<TrialAdminRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState('all');
 
   useEffect(() => {
     TrialService.listAll()
       .then(setItems)
+      .catch((e) => setError((e as Error).message || 'Failed to load trials'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -110,7 +112,10 @@ export default function AllTrials() {
 
         <TableCard title="Trials">
           {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
-          {!loading && lc.total === 0 && (
+          {!loading && error && (
+            <div className="px-3 py-4 text-[10px] font-bold text-rose-dark">{error}</div>
+          )}
+          {!loading && !error && lc.total === 0 && (
             <div className="px-3 py-4 text-[10px] text-[#8090B0]">No trials match your filters.</div>
           )}
           {lc.pageItems.map((t) => {

@@ -29,10 +29,12 @@ const categoryLabel: Record<DisputeRow['category'], string> = {
 export default function Disputes() {
   const [items, setItems] = useState<DisputeRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     DisputeService.list()
       .then(setItems)
+      .catch((e) => setError((e as Error).message || 'Failed to load disputes'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -55,7 +57,10 @@ export default function Disputes() {
 
         <TableCard title="Reports queue">
           {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
-          {!loading && items.length === 0 && (
+          {!loading && error && (
+            <div className="px-3 py-4 text-[10px] font-bold text-rose-dark">{error}</div>
+          )}
+          {!loading && !error && items.length === 0 && (
             <div className="px-3 py-4 text-[10px] text-[#8090B0]">No disputes filed.</div>
           )}
           {items.map((d) => (

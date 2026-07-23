@@ -48,6 +48,7 @@ export default function DisputeDetail() {
   const [dispute, setDispute] = useState<DisputeRow | null>(null);
   const [messages, setMessages] = useState<DisputeMessageRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
   const [resolution, setResolution] = useState('');
   const [decision, setDecision] = useState<'resolved' | 'dismissed'>('resolved');
@@ -58,10 +59,16 @@ export default function DisputeDetail() {
   const load = async () => {
     if (!id) return;
     setLoading(true);
-    const [d, m] = await Promise.all([DisputeService.get(id), DisputeService.listMessages(id)]);
-    setDispute(d);
-    setMessages(m);
-    setLoading(false);
+    setError(null);
+    try {
+      const [d, m] = await Promise.all([DisputeService.get(id), DisputeService.listMessages(id)]);
+      setDispute(d);
+      setMessages(m);
+    } catch (e) {
+      setError((e as Error).message || 'Failed to load dispute');
+    } finally {
+      setLoading(false);
+    }
   };
 
   useEffect(() => {
@@ -73,6 +80,15 @@ export default function DisputeDetail() {
       <PageShell>
         <PageContent>
           <div className="text-[10px] text-[#8090B0]">Loading…</div>
+        </PageContent>
+      </PageShell>
+    );
+  }
+  if (error) {
+    return (
+      <PageShell>
+        <PageContent>
+          <div className="text-[10px] font-bold text-rose-dark">{error}</div>
         </PageContent>
       </PageShell>
     );
