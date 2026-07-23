@@ -197,28 +197,38 @@ class FirebaseAuthService implements IAuthService {
   Future<void> deleteAccount(String reason) async {
     final user = _auth.currentUser;
     if (user == null) throw Exception('no_user');
+    final uid = user.uid;
 
-    // Record the deletion request in an audit log BEFORE wiping the doc so we
-    // retain why the user left (per System Spec §21).
-    await FirebaseFirestore.instance
-        .collection('deletionAudits')
-        .doc(user.uid)
-        .set({
-      'userId': user.uid,
-      'reason': reason,
-      'deletedAt': FieldValue.serverTimestamp(),
-    });
+    // Best-effort audit of why the user left (System Spec §21). This must NEVER
+    // block the deletion — a failure here previously threw before anything was
+    // deleted, so the whole flow silently did nothing.
+    try {
+      await FirebaseFirestore.instance.collection('deletionAudits').doc(uid).set({
+        'userId': uid,
+        'reason': reason,
+        'deletedAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Audit is non-critical; proceed with deletion.
+    }
 
-    // Deleting the user doc fires `onUserDeleted` which cascades chats,
-    // trials, applications, shortlists, jobs, notifications, reviews and the
-    // Auth account. We still call `user.delete()` first so the client side
-    // is signed out immediately if the function is delayed.
+    // Authoritative step: deleting the user doc fires `onUserDeleted`, which
+    // cascades all of the user's data AND removes the Auth account via the
+    // admin SDK. If this throws, deletion genuinely failed — let it propagate
+    // so the UI surfaces an error instead of a false success.
+    await _users.doc(uid).delete();
+
+    // Sign the client out immediately (best-effort; the function also removes
+    // the Auth account). `requires-recent-login` is expected on old sessions —
+    // the server-side cascade still completes regardless.
     try {
       await user.delete();
     } catch (_) {
-      // Ignore — the function will clean up auth via admin SDK.
+      // Handled server-side by onUserDeleted.
     }
-    await _users.doc(user.uid).delete();
+    try {
+      await _auth.signOut();
+    } catch (_) {}
     await _clearSignupState();
     _pendingRole = null;
   }
