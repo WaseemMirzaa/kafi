@@ -556,9 +556,10 @@ class TrialController extends GetxController {
     }
     selected.value = null;
     await refreshAll();
-    // Peer reviews were retired — invite the user to rate the app after a
-    // completed trial instead (throttled; no-ops if recently shown or rated).
-    if (s == TrialStatus.completed) {
+    // Invite the user to rate the app only after a POSITIVE outcome (a hire) —
+    // prompting right after a "Not this time" rejection is poor timing.
+    // (Throttled; no-ops if recently shown or already rated.)
+    if (s == TrialStatus.completed && outcomeLabel == 'hired') {
       await RateAppPrompt.maybeShow();
     }
   }
