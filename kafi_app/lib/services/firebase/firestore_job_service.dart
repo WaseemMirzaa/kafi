@@ -58,6 +58,9 @@ class FirestoreJobService implements IJobService {
         final card = NannyCardModel.fromNanny(n);
         return n.nationality.toLowerCase().contains(f) ||
             card.jobType.toLowerCase().contains(f) ||
+            // Match the full languages list, not just card.tags (first 3), so a
+            // nanny who lists e.g. Arabic 4th isn't excluded from that filter.
+            n.languages.any((l) => l.toLowerCase().contains(f)) ||
             card.tags.any((t) => t.toLowerCase().contains(f));
       }).toList();
     }
