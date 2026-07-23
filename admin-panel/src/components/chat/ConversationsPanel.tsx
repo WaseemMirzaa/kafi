@@ -45,13 +45,16 @@ export function ConversationsPanel({
   const [open, setOpen] = useState<ChatThreadRow | null>(null);
   const [messages, setMessages] = useState<ChatMessageRow[]>([]);
   const [loading, setLoading] = useState(false);
+  const [msgError, setMsgError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!open) return;
     setLoading(true);
     setMessages([]);
+    setMsgError(null);
     ChatService.listMessages(open.id)
       .then(setMessages)
+      .catch((e) => setMsgError((e as Error).message || 'Failed to load messages'))
       .finally(() => setLoading(false));
   }, [open]);
 
@@ -121,6 +124,8 @@ export function ConversationsPanel({
             <div className="flex-1 min-h-0 flex flex-col px-3 py-2 bg-[#FBFCFF]">
               {loading ? (
                 <div className="text-[10px] text-[#8090B0] px-2 py-4">Loading messages…</div>
+              ) : msgError ? (
+                <div className="text-[10px] font-bold text-rose-dark px-2 py-4">{msgError}</div>
               ) : (
                 <MessageThread messages={toThreadMessages(messages, open)} fill />
               )}

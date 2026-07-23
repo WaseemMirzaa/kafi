@@ -62,6 +62,8 @@ export default function AllNannies() {
         await NannyService.block(n.id);
       }
       setItems((prev) => prev.map((x) => x.id === n.id ? { ...x, blocked: !x.blocked } : x));
+    } catch (e) {
+      alert((e as Error).message || 'Block toggle failed');
     } finally {
       setBusyId(null);
     }

@@ -18,7 +18,11 @@ import { DocThumb } from '../../components/nanny/DocFilePreview';
 import { FilterBar, FilterSelect, Pagination } from '../../components/ui/ListControls';
 import { useListControls } from '../../hooks/useListControls';
 
-const DOC_STATUSES = ['approved', 'rejected', 'resubmitted', 'uploaded', 'pending', 'missing'];
+// Mirrors the app's real DocumentStatus enum (nanny_model.dart): missing,
+// uploaded, reviewing, approved, rejected. The old list offered 'resubmitted'
+// and 'pending' (mock-only labels that never match a real doc) and omitted
+// 'reviewing', so those filters were always empty.
+const DOC_STATUSES = ['missing', 'uploaded', 'reviewing', 'approved', 'rejected'];
 
 const docLabel: Record<string, string> = {
   passport: 'Passport',
@@ -31,8 +35,8 @@ const docLabel: Record<string, string> = {
 function docVariant(status: string): string {
   if (status === 'approved') return 'verified';
   if (status === 'rejected' || status === 'missing') return 'rejected';
-  if (status === 'resubmitted') return 'new';
-  return 'verify';
+  if (status === 'reviewing') return 'new';
+  return 'verify'; // uploaded (awaiting review)
 }
 
 export default function VerifyDocuments() {

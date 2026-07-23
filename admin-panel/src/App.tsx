@@ -57,6 +57,9 @@ export default function App() {
                 <Route path="/revenue" element={<Revenue />} />
                 <Route path="/broadcast" element={<Broadcast />} />
                 <Route path="/settings" element={<Settings />} />
+                {/* Unknown paths (typos, stale bookmarks, deleted-entity links)
+                    redirect home instead of rendering a blank content area. */}
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </Layout>
           </ProtectedRoute>
