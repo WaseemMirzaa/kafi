@@ -13,10 +13,21 @@ const ADMIN_PERMISSIONS = [
   'editSettings',
 ];
 
+/// The first admin's password MUST be supplied out-of-band via the
+/// `KAFI_ADMIN_BOOTSTRAP_PASSWORD` env var. There is deliberately no fallback:
+/// `bootstrapFirstAdmin` is a public endpoint, so a hardcoded default would let
+/// anyone who reaches it while `admins` is empty create a superAdmin with a
+/// publicly-known password. If the env var is missing/weak the bootstrap fails
+/// loudly (surfaced as a 500 to the caller) rather than minting a weak admin.
 function resolvePassword(): string {
   const fromEnv = process.env.KAFI_ADMIN_BOOTSTRAP_PASSWORD?.trim();
-  if (fromEnv && fromEnv.length >= 8) return fromEnv;
-  return 'Kafi@Admin2026!';
+  if (!fromEnv || fromEnv.length < 8) {
+    throw new Error(
+      'KAFI_ADMIN_BOOTSTRAP_PASSWORD must be set to a strong value ' +
+        '(at least 8 characters) before the first admin can be bootstrapped.',
+    );
+  }
+  return fromEnv;
 }
 
 export async function ensureFirstAdmin(): Promise<{
