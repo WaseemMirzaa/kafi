@@ -63,6 +63,11 @@ class TrialController extends GetxController {
   final Rx<TrialModel?> selected = Rx<TrialModel?>(null);
   final RxList<TrialModel> all = <TrialModel>[].obs;
 
+  /// The counterparty family's display name, resolved for the NANNY's view (the
+  /// family already sees its own name via currentUser). Kept observable so the
+  /// trial header updates when the async lookup lands.
+  final RxnString familyDisplayName = RxnString();
+
   /// Trial shown on Screen 18 — deep-linked trial wins over `active`.
   TrialModel? get displayed => selected.value ?? active.value;
   final RxBool isLoading = false.obs;
@@ -95,6 +100,7 @@ class TrialController extends GetxController {
   Future<void> openTrialById(String trialId) async {
     final t = await getTrial(trialId);
     selected.value = t;
+    await _resolveFamilyName();
     // Seed the evaluation checklist from any already-recorded evaluation so the
     // family resumes where it left off (and switching trials never carries a
     // stale draft over).
@@ -111,6 +117,28 @@ class TrialController extends GetxController {
       'cookingFamilyFood': e?.cookingFamilyFood ?? false,
       'honestyAndTrustworthiness': e?.honestyAndTrustworthiness ?? false,
     };
+  }
+
+  /// Resolves the counterparty family's name for the nanny's trial view. The
+  /// family viewer already sees its own name (currentUser), so this only runs
+  /// for a nanny and reads the family profile by the displayed trial's familyId.
+  Future<void> _resolveFamilyName() async {
+    if (_auth.currentUser.value?.isNanny != true) {
+      familyDisplayName.value = null;
+      return;
+    }
+    final fid = displayed?.familyId;
+    if (fid == null || fid.isEmpty) {
+      familyDisplayName.value = null;
+      return;
+    }
+    try {
+      final fam = await _users.getFamily(fid);
+      familyDisplayName.value = fam?.fullName;
+    } catch (_) {
+      // Non-critical — the header falls back to a neutral label.
+      familyDisplayName.value = null;
+    }
   }
 
   Future<void> refreshAll() async {
@@ -131,6 +159,7 @@ class TrialController extends GetxController {
       active.value = act;
     }
     await _loadNannyCards();
+    await _resolveFamilyName();
     final d = displayed;
     if (d != null) await loadDayProofs(d.id);
   }
