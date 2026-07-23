@@ -15,6 +15,10 @@ yarn-debug.log*
 yarn-error.log*
 .eslintcache
 .vite/
+# tsc -b (admin-panel build) incremental cache + emitted vite config
+*.tsbuildinfo
+admin-panel/vite.config.js
+admin-panel/vite.config.d.ts
 
 # Environment files (keep .env.example committed)
 .env

@@ -369,7 +369,7 @@ const mockNannies: NannyRow[] = [
       { type: 'trainingCert', status: 'approved', url: 'https://picsum.photos/seed/n1cert/640/420' },
       { type: 'policeClearance', status: 'approved', url: 'https://picsum.photos/seed/n1police/640/420' },
     ],
-    stats: { profileViews: 412, shortlists: 38, applicationsCount: 12, trialsCount: 4, hiresCount: 2, averageRating: 4.8, reviewsCount: 6 },
+    stats: { profileViews: 412, shortlists: 38, applicationsCount: 12, trialsCount: 4, hiresCount: 2 },
   },
   {
     id: 'n2', fullName: 'Priya Sharma', nationality: 'Indian', city: 'Abu Dhabi', currentArea: 'Khalidiya',
@@ -400,7 +400,7 @@ const mockNannies: NannyRow[] = [
       { type: 'visa', status: 'approved', url: 'https://picsum.photos/seed/n2visa/640/420' },
       { type: 'emiratesId', status: 'approved', url: 'https://picsum.photos/seed/n2eid/640/420' },
     ],
-    stats: { profileViews: 287, shortlists: 21, applicationsCount: 8, trialsCount: 2, hiresCount: 1, averageRating: 4.6, reviewsCount: 3 },
+    stats: { profileViews: 287, shortlists: 21, applicationsCount: 8, trialsCount: 2, hiresCount: 1 },
   },
   {
     id: 'n3', fullName: 'Amara Kebede', nationality: 'Ethiopian', city: 'Sharjah', currentArea: 'Al Nahda',
@@ -429,7 +429,7 @@ const mockNannies: NannyRow[] = [
       { type: 'emiratesId', status: 'missing' },
       { type: 'trainingCert', status: 'rejected', url: 'https://picsum.photos/seed/n3cert/640/420', rejectionReason: 'Certificate is expired — please upload a current one.' },
     ],
-    stats: { profileViews: 96, shortlists: 7, applicationsCount: 3, trialsCount: 0, hiresCount: 0, reviewsCount: 0 },
+    stats: { profileViews: 96, shortlists: 7, applicationsCount: 3, trialsCount: 0, hiresCount: 0 },
   },
   {
     id: 'n4', fullName: 'Grace Nkemelu', nationality: 'Ghanaian', city: 'Dubai', currentArea: 'Al Barsha',
@@ -461,7 +461,7 @@ const mockNannies: NannyRow[] = [
       { type: 'visa', status: 'uploaded', url: 'https://picsum.photos/seed/n4visa/640/420' },
       { type: 'policeClearance', status: 'rejected', url: 'https://picsum.photos/seed/n4police/640/420', rejectionReason: 'Document not clearly legible.' },
     ],
-    stats: { profileViews: 154, shortlists: 12, applicationsCount: 5, trialsCount: 1, hiresCount: 0, averageRating: 4.9, reviewsCount: 2 },
+    stats: { profileViews: 154, shortlists: 12, applicationsCount: 5, trialsCount: 1, hiresCount: 0 },
   },
   {
     id: 'n5', fullName: 'Kezia Wanjiru', nationality: 'Kenyan', city: 'Dubai', currentArea: 'JLT',
@@ -493,7 +493,7 @@ const mockNannies: NannyRow[] = [
       { type: 'visa', status: 'resubmitted', url: 'https://picsum.photos/seed/n5visa/640/420' },
       { type: 'policeClearance', status: 'uploaded', url: 'https://picsum.photos/seed/n5police/640/420' },
     ],
-    stats: { profileViews: 188, shortlists: 15, applicationsCount: 6, trialsCount: 1, hiresCount: 0, reviewsCount: 0 },
+    stats: { profileViews: 188, shortlists: 15, applicationsCount: 6, trialsCount: 1, hiresCount: 0 },
   },
 ];
 
