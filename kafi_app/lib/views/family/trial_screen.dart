@@ -349,7 +349,8 @@ class TrialScreen extends GetView<TrialController> {
               ),
               Expanded(
                 child: _partyCard(nanny.name, 'Nanny · ${nanny.nationality}',
-                    const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)]),
+                    const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
+                    showRevealed: true),
               ),
             ],
           ),
@@ -358,7 +359,8 @@ class TrialScreen extends GetView<TrialController> {
     );
   }
 
-  Widget _partyCard(String name, String role, List<Color> avColors) {
+  Widget _partyCard(String name, String role, List<Color> avColors,
+      {bool showRevealed = false}) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     return Container(
       padding: const EdgeInsets.all(9),
@@ -389,15 +391,20 @@ class TrialScreen extends GetView<TrialController> {
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: KafiTheme.nunito(8.5, color: KafiColors.ts, w: FontWeight.w600)),
-          const SizedBox(height: 3),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.call, color: KafiColors.grnD, size: 9),
-              const SizedBox(width: 2),
-              Text('Revealed', style: KafiTheme.nunito(9.5, color: KafiColors.grnD, w: FontWeight.w700)),
-            ],
-          ),
+          // Only the nanny's contact is ever revealed (family -> nanny), so
+          // show "Revealed" on her card only. Showing it on the family card
+          // wrongly implied the nanny could call the family, which she can't.
+          if (showRevealed) ...[
+            const SizedBox(height: 3),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.call, color: KafiColors.grnD, size: 9),
+                const SizedBox(width: 2),
+                Text('Revealed', style: KafiTheme.nunito(9.5, color: KafiColors.grnD, w: FontWeight.w700)),
+              ],
+            ),
+          ],
         ],
       ),
     );
@@ -499,6 +506,10 @@ class TrialScreen extends GetView<TrialController> {
         ),
       );
     }
+    // The family can only record an outcome (Hire / Not this time) once the
+    // trial is actually ACTIVE — not during an accepted-but-not-yet-started
+    // trial, and not after it has already been resolved.
+    if (!t.isActive) return const SizedBox.shrink();
     return SafeArea(
       top: false,
       child: Container(
