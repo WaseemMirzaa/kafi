@@ -430,6 +430,8 @@ abstract class AppStrings {
   static const nannyRequiredDocsMissing = 'nanny_required_docs_missing';
   static const subGraceBanner = 'sub_grace_banner';
   static const subFixNow = 'sub_fix_now';
+  static const subGraceTitle = 'sub_grace_title';
+  static const subGraceBody = 'sub_grace_body';
   static const familyNameRequired = 'family_name_required';
   static const familyCityRequired = 'family_city_required';
   static const familyEditTitle = 'family_edit_title';

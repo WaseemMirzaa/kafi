@@ -557,6 +557,8 @@ const Map<String, String> enUs = {
   AppStrings.nannyRequiredDocsMissing: 'Passport and visa documents are required.',
   AppStrings.subGraceBanner: 'Payment failed — fix to keep your subscription active.',
   AppStrings.subFixNow: 'Fix now',
+  AppStrings.subGraceTitle: 'Payment issue',
+  AppStrings.subGraceBody: 'Update payment to avoid losing access.',
   AppStrings.familyNameRequired: 'Please enter your family name.',
   AppStrings.familyCityRequired: 'Please choose your city.',
   AppStrings.familyEditTitle: 'Edit family profile',
