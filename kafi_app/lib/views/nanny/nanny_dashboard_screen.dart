@@ -603,29 +603,9 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                           'AED ${job.salaryMin}–${job.salaryMax}/mo · ${job.familyName}',
                           style: KafiTheme.nunito(9, color: KafiColors.ts,
                               w: FontWeight.w600)),
-                      if (matchScore != null) ...[
-                        const SizedBox(height: 3),
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                              horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: matchScore >= 85
-                                ? const Color(0xFFE8F8EE)
-                                : KafiColors.ambL,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Text(
-                            matchScore >= 85
-                                ? '⭐ $matchScore% match'
-                                : '$matchScore% match',
-                            style: KafiTheme.fredoka(9,
-                                color: matchScore >= 85
-                                    ? const Color(0xFF2A8A50)
-                                    : const Color(0xFFC07A10),
-                                w: FontWeight.w700),
-                          ),
-                        ),
-                      ],
+                      // Nanny-side numeric "% match" suppressed (M8) — see the
+                      // jobs feed for the rationale. Jobs stay ranked best-first
+                      // and the hot-match highlight (no number) remains.
                     ],
                   ),
                 ),

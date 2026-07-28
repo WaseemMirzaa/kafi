@@ -429,8 +429,8 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                         style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w900)),
                     Text('$family · $city',
                         style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
-                    const SizedBox(height: 4),
-                    _matchChip(app.matchScore),
+                    // Nanny-side "% match" suppressed (M8) — the canonical match
+                    // is the family's household+job score the nanny can't compute.
                   ],
                 ),
               ),
@@ -469,22 +469,6 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
           Text(label,
               style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700)),
         ],
-      ),
-    );
-  }
-
-  Widget _matchChip(int score) {
-    final isGood = score >= 80;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-      decoration: BoxDecoration(
-        color: isGood ? const Color(0xFFE8F8EE) : KafiColors.ambL,
-        borderRadius: BorderRadius.circular(14),
-      ),
-      child: Text(
-        isGood ? '⭐ $score% match' : '$score% match',
-        style: KafiTheme.fredoka(9,
-            color: isGood ? const Color(0xFF2A8A50) : KafiColors.ambD, w: FontWeight.w700),
       ),
     );
   }

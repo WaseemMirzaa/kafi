@@ -212,15 +212,9 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
             const SizedBox(height: 7),
             Row(
               children: [
-                Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFFE8F8EE),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Text('⭐ ${app.matchScore}% match',
-                      style: KafiTheme.fredoka(9, color: const Color(0xFF2A8A50), w: FontWeight.w700)),
-                ),
+                // Nanny-side "% match" suppressed (M8): the canonical match is
+                // scored from the family's household + job, which the nanny
+                // can't compute — a job-only number here would just diverge.
                 const Spacer(),
                 if (app.status == ApplicationStatus.pending ||
                     app.status == ApplicationStatus.viewed)
