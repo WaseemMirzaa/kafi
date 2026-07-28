@@ -129,6 +129,7 @@ const Map<String, String> enUs = {
   AppStrings.contactUnavailable: 'Not available',
   AppStrings.contactLaunchFailed: 'Could not open. The number has been noted.',
   AppStrings.contactLoadFailed: "Couldn't load the contact. Please try again.",
+  AppStrings.contactRevealing: 'Revealing number…',
   AppStrings.addAnother: '+ Add another',
   AppStrings.removeItem: 'Remove',
 
