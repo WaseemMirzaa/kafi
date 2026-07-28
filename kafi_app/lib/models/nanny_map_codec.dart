@@ -124,6 +124,7 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
               ?.map((e) => _experienceFromMap(Map<String, dynamic>.from(e as Map)))
               .toList() ??
           const [],
+      experienceCompleted: m['experienceCompleted'] == true,
       hasReferences: m['hasReferences'] == true,
       commitsToShare: m['commitsToShare'] == true,
       numberOfReferences: (m['numberOfReferences'] as num?)?.toInt() ?? 0,
@@ -131,6 +132,7 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
               ?.map((e) => _referenceFromMap(Map<String, dynamic>.from(e as Map)))
               .toList() ??
           const [],
+      referencesCompleted: m['referencesCompleted'] == true,
       documents: (m['documents'] as List?)
               ?.map((e) => _documentFromMap(Map<String, dynamic>.from(e as Map)))
               .toList() ??
