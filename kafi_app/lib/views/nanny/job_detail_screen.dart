@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
+import 'package:kafi_app/controllers/application_controller.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/services/match_service.dart';
@@ -339,10 +341,23 @@ class JobDetailScreen extends StatelessWidget {
         top: false,
         child: Padding(
           padding: const EdgeInsets.fromLTRB(18, 14, 18, 16),
-          child: KafiPrimaryButton(
-            label: AppStrings.nannyJobApply.tr,
-            onPressed: () => Get.toNamed(Routes.smartMatch, arguments: job),
-          ),
+          child: Obx(() {
+            // Reflect the already-applied state up front instead of letting the
+            // nanny run the whole smart-match + cover flow only to be blocked by
+            // the duplicate guard at the end.
+            final applied = Get.isRegistered<ApplicationController>() &&
+                Get.find<ApplicationController>().myApplications.any((a) =>
+                    a.jobPostId == job.id &&
+                    a.status != ApplicationStatus.withdrawn);
+            return KafiPrimaryButton(
+              label: applied
+                  ? AppStrings.nannyJobAlreadyApplied.tr
+                  : AppStrings.nannyJobApply.tr,
+              onPressed: applied
+                  ? null
+                  : () => Get.toNamed(Routes.smartMatch, arguments: job),
+            );
+          }),
         ),
       ),
     );

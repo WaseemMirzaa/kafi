@@ -284,6 +284,7 @@ abstract class AppStrings {
   static const nannyJobsEmpty = 'nanny_jobs_empty';
   static const nannyJobsEmptySub = 'nanny_jobs_empty_sub';
   static const nannyJobApply = 'nanny_job_apply';
+  static const nannyJobAlreadyApplied = 'nanny_job_already_applied';
   static const nannyMyApplications = 'nanny_my_applications';
   static const nannyNoApplications = 'nanny_no_applications';
   static const nannyNoApplicationsSub = 'nanny_no_applications_sub';
