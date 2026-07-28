@@ -27,6 +27,12 @@ class SessionMonitor extends GetxService {
   /// "Session expired" snackbar and a second redirect on every normal logout.
   bool _intentionalSignOut = false;
 
+  /// True once the startup inactivity gate has run. Until then the auth-state
+  /// listener must NOT stamp activity: the initial `authStateChanges` emission
+  /// would otherwise reset the clock before [enforceInactivityAtStartup] can
+  /// read the previous session's stamp, defeating the 90-day logout (NAN-1).
+  bool _startupHandled = false;
+
   /// AuthController calls this before signing out / deleting the account.
   void beginIntentionalSignOut() {
     _intentionalSignOut = true;
@@ -38,8 +44,46 @@ class SessionMonitor extends GetxService {
     if (!AppConfig.useMock) {
       _authSub = FirebaseAuth.instance.authStateChanges().listen(_onAuthStateChanged);
     }
-    touch();
-    _inactivityTimer = Timer.periodic(const Duration(minutes: 30), (_) => _enforceInactivity());
+    // The startup activity stamp is intentionally NOT written here. Startup
+    // routing (bootstrapStartup) awaits [enforceInactivityAtStartup] BEFORE it
+    // reads the current user; that method reads the PREVIOUS session's stamp to
+    // enforce the inactivity logout and only then stamps fresh activity. A
+    // touch() here would reset the clock on every launch, so the 90-day logout
+    // could never fire (NAN-1).
+    _inactivityTimer =
+        Timer.periodic(const Duration(minutes: 30), (_) => _enforceInactivity());
+  }
+
+  /// Startup-time inactivity gate. Reads the activity stamp persisted by the
+  /// PREVIOUS session; if it is older than [_maxInactiveDays] the session is
+  /// signed out, otherwise fresh activity is stamped for this launch. Returns
+  /// true when it signed the user out. [bootstrapStartup] awaits this BEFORE it
+  /// reads the current user, so an idle-expired session lands on welcome instead
+  /// of silently resuming (NAN-1).
+  Future<bool> enforceInactivityAtStartup() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final last = prefs.getInt(_kLastActivity);
+      if (last != null) {
+        final ageDays = DateTime.now()
+            .difference(DateTime.fromMillisecondsSinceEpoch(last))
+            .inDays;
+        if (ageDays >= _maxInactiveDays) {
+          if (!AppConfig.useMock) {
+            await FirebaseAuth.instance.signOut();
+          }
+          await prefs.remove(_kLastActivity); // next session starts a fresh clock
+          _startupHandled = true;
+          return true;
+        }
+      }
+      await touch(); // valid session (or first-ever launch) — stamp this launch
+    } catch (_) {
+      // A prefs/sign-out failure must never block startup — fall through as
+      // "not expired" and let normal routing proceed.
+    }
+    _startupHandled = true;
+    return false;
   }
 
   /// Call on user activity (route changes, taps, controller events).
@@ -80,7 +124,10 @@ class SessionMonitor extends GetxService {
         _handleSessionExpired();
       }
     } else {
-      touch();
+      // Skip the initial startup emission — enforceInactivityAtStartup() owns
+      // the first stamp (and may sign out). Stamp only genuine later re-auths,
+      // so the startup emission can't reset the inactivity clock first (NAN-1).
+      if (_startupHandled) touch();
     }
   }
 
