@@ -1580,7 +1580,9 @@ export const RevenueService = {
       };
     });
   },
-  async summary(): Promise<RevenueSummary> {
+  // Accepts an already-fetched families list so callers that also render the
+  // family list (Dashboard, Subscriptions) don't fetch `families` twice.
+  async summary(prefetchedFamilies?: FamilyRow[]): Promise<RevenueSummary> {
     if (useMock()) {
       return {
         monthly: 10800,
@@ -1596,7 +1598,7 @@ export const RevenueService = {
     const now = new Date();
     const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
     const [families, txSnap] = await Promise.all([
-      FamilyService.list(),
+      prefetchedFamilies ?? FamilyService.list(),
       getDocs(query(collection(db!, 'transactions'), where('createdAt', '>=', Timestamp.fromDate(trendStart)))),
     ]);
     const trendTxns = txSnap.docs.map((d) => {
