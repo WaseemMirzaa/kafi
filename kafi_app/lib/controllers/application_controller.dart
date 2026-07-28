@@ -6,6 +6,9 @@ import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/services/interfaces/i_application_service.dart';
+import 'package:kafi_app/services/interfaces/i_job_service.dart';
+import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
 
 class ApplicationController extends GetxController {
@@ -70,7 +73,8 @@ class ApplicationController extends GetxController {
         myApplications.value = await _appService.getApplicationsForNanny(userId);
         receivedApplications.clear();
       } else {
-        receivedApplications.value = await _appService.getApplicationsForFamily(userId);
+        final apps = await _appService.getApplicationsForFamily(userId);
+        receivedApplications.value = await _withCanonicalMatch(apps, userId);
         myApplications.clear();
       }
     } catch (e) {
@@ -82,6 +86,47 @@ class ApplicationController extends GetxController {
   }
 
   /// Returns true when the application was submitted.
+  /// The stored applicant `matchScore` was computed at apply time WITHOUT the
+  /// family's household — a nanny can't read the family doc, so 3 of the match
+  /// dimensions (religion / household comfort / household load) defaulted to
+  /// neutral. The viewing family CAN read its own household, so recompute each
+  /// applicant's score against the canonical family + job context for the inbox.
+  ///
+  /// Best-effort: any missing model or failure leaves that application's stored
+  /// score untouched. Costs one nanny read per applicant (fetched in parallel,
+  /// bounded by the applicant count) — acceptable for the inbox load.
+  Future<List<ApplicationModel>> _withCanonicalMatch(
+      List<ApplicationModel> apps, String familyId) async {
+    if (apps.isEmpty) return apps;
+    try {
+      // Resolved lazily (not as fields) so constructing the controller doesn't
+      // require these services — only the family recompute path needs them.
+      final users = Get.find<IUserService>();
+      final jobs = Get.find<IJobService>();
+      final family = await users.getFamily(familyId);
+      if (family == null) return apps;
+      final jobById = {
+        for (final j in await jobs.getJobsByFamily(familyId)) j.id: j,
+      };
+      final matcher = MatchService();
+      return await Future.wait(apps.map((app) async {
+        try {
+          final job = jobById[app.jobPostId];
+          if (job == null) return app;
+          final nanny = await users.getNanny(app.nannyId);
+          if (nanny == null) return app;
+          return app.copyWith(
+              matchScore: matcher.calculateJobMatch(nanny, job, family: family));
+        } catch (_) {
+          return app; // one bad applicant keeps its stored score; others recompute
+        }
+      }));
+    } catch (e) {
+      Get.log('applicant match recompute failed: $e', isError: true);
+      return apps;
+    }
+  }
+
   Future<bool> applyToJob(String jobId, {String? coverMessage}) async {
     isLoading.value = true;
     try {
