@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/dispute_controller.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
+import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/controllers/settings_controller.dart' show SettingsController;
 import 'package:kafi_app/models/user_model.dart' show UserSettings;
 import 'package:kafi_app/controllers/subscription_controller.dart';
@@ -44,8 +45,12 @@ class SettingsScreen extends GetView<SettingsController> {
           ] else if (Get.find<AuthController>().currentUser.value?.isFamily == true) ...[
             _actionTile(Icons.people_alt_outlined, AppStrings.familyApplicants.tr,
                 () => Get.toNamed(Routes.familyApplicants)),
-            _actionTile(Icons.edit_outlined, AppStrings.familyEditTitle.tr,
-                () => Get.toNamed(Routes.familyEdit)),
+            _actionTile(Icons.edit_outlined, AppStrings.familyEditTitle.tr, () {
+              // Generic edit → clear any job-specific target so it edits the
+              // most-recent post, not one previously chosen from My Jobs (M6).
+              Get.find<FamilyProfileController>().startJobEdit(null);
+              Get.toNamed(Routes.familyEdit);
+            }),
             _actionTile(Icons.workspace_premium_outlined, AppStrings.settingsSubscription.tr,
                 () => Get.toNamed(Routes.pricing)),
             const SizedBox(height: 8),
@@ -246,7 +251,10 @@ class SettingsScreen extends GetView<SettingsController> {
                   ),
                   if (isFamily)
                     GestureDetector(
-                      onTap: () => Get.toNamed(Routes.familyEdit),
+                      onTap: () {
+                        Get.find<FamilyProfileController>().startJobEdit(null);
+                        Get.toNamed(Routes.familyEdit);
+                      },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                         decoration: BoxDecoration(

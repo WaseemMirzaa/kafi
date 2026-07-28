@@ -246,6 +246,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.jobDeletedToast: 'تم حذف الوظيفة',
     AppStrings.jobUpdatedToast: 'تم تحديث الوظيفة',
     AppStrings.jobEditTitle: 'تعديل الوظيفة',
+    AppStrings.jobEditFullDetails: 'تعديل كل التفاصيل (الأدوار، المهام، المزايا) ←',
     AppStrings.jobFieldTitle: 'عنوان الوظيفة',
     AppStrings.jobFieldSchedule: 'الجدول',
     AppStrings.jobFieldSalaryMin: 'الحد الأدنى للراتب (درهم)',

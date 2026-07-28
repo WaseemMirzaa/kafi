@@ -687,6 +687,7 @@ abstract class AppStrings {
   static const jobDeletedToast = 'job_deleted_toast';
   static const jobUpdatedToast = 'job_updated_toast';
   static const jobEditTitle = 'job_edit_title';
+  static const jobEditFullDetails = 'job_edit_full_details';
   static const jobFieldTitle = 'job_field_title';
   static const jobFieldSchedule = 'job_field_schedule';
   static const jobFieldSalaryMin = 'job_field_salary_min';
