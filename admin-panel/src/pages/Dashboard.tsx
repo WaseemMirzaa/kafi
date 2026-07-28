@@ -172,11 +172,13 @@ export default function Dashboard() {
     setLoading(true);
     setError(null);
     try {
-      const [allN, pend, fams, rev, trials] = await Promise.all([
+      // Fetch families once and hand them to summary() so it doesn't re-list
+      // them (it derives MRR/plan split from the same set).
+      const fams = await FamilyService.list();
+      const [allN, pend, rev, trials] = await Promise.all([
         NannyService.list(),
         NannyService.listPendingDocs(),
-        FamilyService.list(),
-        RevenueService.summary(),
+        RevenueService.summary(fams),
         TrialService.listActive(),
       ]);
       setNannies(allN);

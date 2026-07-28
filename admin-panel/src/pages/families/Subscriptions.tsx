@@ -22,11 +22,12 @@ export default function Subscriptions() {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    Promise.all([FamilyService.list(), RevenueService.summary()])
-      .then(([f, r]) => {
+    // Fetch families once and pass them to summary() (avoids a duplicate list).
+    FamilyService.list()
+      .then((f) => RevenueService.summary(f).then((r) => {
         setFamilies(f);
         setRevenue(r);
-      })
+      }))
       // Without .catch/.finally the page hangs on "Loading…" on any read failure.
       .catch((e) => setError((e as Error).message || 'Failed to load subscriptions'))
       .finally(() => setLoading(false));
