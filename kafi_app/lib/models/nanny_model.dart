@@ -230,10 +230,12 @@ class NannyModel {
     this.photoUrls = const [],
     this.introVideoUrl,
     this.experiences = const [],
+    this.experienceCompleted = false,
     this.hasReferences = false,
     this.commitsToShare = false,
     this.numberOfReferences = 0,
     this.references = const [],
+    this.referencesCompleted = false,
     this.documents = const [],
     this.status = NannyOnboardingStatus.draft,
     this.rejectionReason,
@@ -298,6 +300,11 @@ class NannyModel {
   final List<String> photoUrls;
   final String? introVideoUrl;
   final List<WorkExperience> experiences;
+
+  /// The nanny finished (tapped Next on) the Experience step. A distinct signal
+  /// from `experiences.isEmpty`, because a first-job nanny legitimately has no
+  /// entries — so resume routing must not treat an empty list as "not done".
+  final bool experienceCompleted;
   final bool hasReferences;
 
   /// The nanny has explicitly agreed to share her reference contacts with
@@ -305,6 +312,10 @@ class NannyModel {
   final bool commitsToShare;
   final int numberOfReferences;
   final List<ReferenceContact> references;
+
+  /// The nanny finished (tapped Next on) the References step. Distinct from
+  /// `hasReferences`, which records her yes/no answer, not step completion.
+  final bool referencesCompleted;
   final List<NannyDocument> documents;
   final NannyOnboardingStatus status;
 
@@ -443,10 +454,12 @@ class NannyModel {
     List<String>? photoUrls,
     String? introVideoUrl,
     List<WorkExperience>? experiences,
+    bool? experienceCompleted,
     bool? hasReferences,
     bool? commitsToShare,
     int? numberOfReferences,
     List<ReferenceContact>? references,
+    bool? referencesCompleted,
     List<NannyDocument>? documents,
     NannyOnboardingStatus? status,
     String? rejectionReason,
@@ -508,10 +521,12 @@ class NannyModel {
         photoUrls: photoUrls ?? this.photoUrls,
         introVideoUrl: introVideoUrl ?? this.introVideoUrl,
         experiences: experiences ?? this.experiences,
+        experienceCompleted: experienceCompleted ?? this.experienceCompleted,
         hasReferences: hasReferences ?? this.hasReferences,
         commitsToShare: commitsToShare ?? this.commitsToShare,
         numberOfReferences: numberOfReferences ?? this.numberOfReferences,
         references: references ?? this.references,
+        referencesCompleted: referencesCompleted ?? this.referencesCompleted,
         documents: documents ?? this.documents,
         status: status ?? this.status,
         rejectionReason: rejectionReason ?? this.rejectionReason,
@@ -575,10 +590,12 @@ class NannyModel {
         'photoUrls': photoUrls,
         'introVideoUrl': introVideoUrl,
         'experiences': experiences.map((e) => e.toMap()).toList(),
+        'experienceCompleted': experienceCompleted,
         'hasReferences': hasReferences,
         'commitsToShare': commitsToShare,
         'numberOfReferences': numberOfReferences,
         'references': references.map((r) => r.toMap()).toList(),
+        'referencesCompleted': referencesCompleted,
         'documents': documents.map((d) => d.toMap()).toList(),
         'status': status.name,
         'isVerified': isVerified,

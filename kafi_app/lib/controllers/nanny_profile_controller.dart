@@ -712,7 +712,11 @@ class NannyProfileController extends GetxController {
     }
     isLoading.value = true;
     try {
-      final updated = n.copyWith(experiences: List.of(experiences));
+      // Mark the Experience step finished so resume routing won't skip it — an
+      // empty experiences list is valid (first-job nanny), so completion needs
+      // its own flag (NAN-2).
+      final updated = n.copyWith(
+          experiences: List.of(experiences), experienceCompleted: true);
       await _userService.saveNanny(updated);
       nanny.value = updated;
       if (!advance) {
@@ -777,6 +781,7 @@ class NannyProfileController extends GetxController {
         references: List.of(references),
         hasReferences: hasReferences.value,
         commitsToShare: commitsToShare.value,
+        referencesCompleted: true, // step finished — resume must not skip it (NAN-2)
       );
       await _userService.saveNanny(updated);
       nanny.value = updated;

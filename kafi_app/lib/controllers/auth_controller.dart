@@ -355,13 +355,23 @@ class AuthController extends GetxController {
       NannyOnboardingStatus.pending ||
       NannyOnboardingStatus.rejected =>
         Routes.nannyPending,
-      // Draft — resume at the first onboarding step still missing data.
-      // Personal info + media done → documents (upload the rest and submit).
+      // Draft — resume at the first onboarding step still unfinished, walking
+      // the full chain Info → Media → Experience → References → Documents.
+      // Experience and References carry explicit "completed" flags (an empty
+      // experiences list or a "no references" answer are both valid, so they
+      // can't double as completion signals); previously this jumped straight to
+      // Documents and let a resuming nanny skip those two steps (NAN-2). Drafts
+      // predating the flags default to not-completed and simply re-walk the two
+      // steps (pre-filled with any saved data).
       NannyOnboardingStatus.draft => !nanny.hasPersonalInfo
           ? Routes.nannyInfo
           : !nanny.hasMedia
               ? Routes.nannyMedia
-              : Routes.nannyDocs,
+              : !nanny.experienceCompleted
+                  ? Routes.nannyExp
+                  : !nanny.referencesCompleted
+                      ? Routes.nannyRefs
+                      : Routes.nannyDocs,
     };
   }
 
