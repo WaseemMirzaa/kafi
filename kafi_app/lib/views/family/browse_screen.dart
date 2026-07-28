@@ -171,15 +171,16 @@ class BrowseScreen extends GetView<BrowseController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Payment issue', style: KafiTheme.nunito(11, color: const Color(0xFF7A4A00), w: FontWeight.w800)),
-                Text('Update payment to avoid losing access.',
+                Text(AppStrings.subGraceTitle.tr,
+                    style: KafiTheme.nunito(11, color: const Color(0xFF7A4A00), w: FontWeight.w800)),
+                Text(AppStrings.subGraceBody.tr,
                     style: KafiTheme.nunito(10, color: const Color(0xFF7A4A00), w: FontWeight.w400)),
               ],
             ),
           ),
           TextButton(
             onPressed: () => Get.toNamed(Routes.pricing),
-            child: Text('Fix now', style: KafiTheme.fredoka(10, color: KafiColors.roseD)),
+            child: Text(AppStrings.subFixNow.tr, style: KafiTheme.fredoka(10, color: KafiColors.roseD)),
           ),
         ],
       ),
