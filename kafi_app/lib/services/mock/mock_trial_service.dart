@@ -42,6 +42,15 @@ class MockTrialService implements ITrialService {
   }
 
   @override
+  Future<Set<String>> activeTrialNannyIds() async {
+    await Future<void>.delayed(AppConfig.mockDelay);
+    return _trials.values
+        .where((t) => t.isAcceptedOrActive)
+        .map((t) => t.nannyId)
+        .toSet();
+  }
+
+  @override
   Future<void> sendOffer(TrialModel trial) async {
     await Future<void>.delayed(AppConfig.mockDelay);
     _trials[trial.id] = trial;

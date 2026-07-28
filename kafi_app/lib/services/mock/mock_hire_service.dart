@@ -39,6 +39,12 @@ class MockHireService implements IHireService {
   }
 
   @override
+  Future<Set<String>> activeHiredNannyIds() async {
+    await Future.delayed(const Duration(milliseconds: 100));
+    return _hires.where((h) => h.isActive).map((h) => h.nannyId).toSet();
+  }
+
+  @override
   Future<void> endHire(
     String hireId, {
     required HireEndReason reason,
