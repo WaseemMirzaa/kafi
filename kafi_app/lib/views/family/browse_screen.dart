@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/browse_controller.dart';
+import 'package:kafi_app/controllers/family_jobs_controller.dart';
 import 'package:kafi_app/controllers/notification_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/models/family_model.dart';
@@ -206,7 +207,16 @@ class BrowseScreen extends GetView<BrowseController> {
               Text(AppStrings.appName.tr, style: KafiTheme.pacifico(18, color: const Color(0xFF5A2090))),
               const Spacer(),
               GestureDetector(
-                onTap: () => Get.toNamed(Routes.familyMyJobs),
+                onTap: () {
+                  // Refresh jobs + active hires before opening My Jobs so the
+                  // per-job "Hired" pill reflects a hire made elsewhere since
+                  // this permanent controller last loaded (M9). Fire-and-forget:
+                  // the screen shows its current list while the refresh lands.
+                  if (Get.isRegistered<FamilyJobsController>()) {
+                    Get.find<FamilyJobsController>().load();
+                  }
+                  Get.toNamed(Routes.familyMyJobs);
+                },
                 child: Container(
                   width: 30,
                   height: 30,
