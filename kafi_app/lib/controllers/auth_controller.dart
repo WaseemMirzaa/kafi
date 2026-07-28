@@ -70,6 +70,19 @@ class AuthController extends GetxController {
   Future<void> bootstrapStartup() async {
     startupError.value = null;
     try {
+      // Enforce the 90-day inactivity logout using the PREVIOUS session's
+      // activity stamp BEFORE reading the current user, so an idle-expired
+      // session resolves to welcome instead of resuming (NAN-1). Time-boxed
+      // like the reads below so a stalled sign-out can't hang the splash.
+      if (Get.isRegistered<SessionMonitor>()) {
+        final expired = await Get.find<SessionMonitor>()
+            .enforceInactivityAtStartup()
+            .timeout(const Duration(seconds: 10));
+        if (expired) {
+          Get.offAllNamed(Routes.welcome);
+          return;
+        }
+      }
       final user = await _authService
           .getCurrentUser()
           .timeout(const Duration(seconds: 10));
