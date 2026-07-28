@@ -5,7 +5,9 @@ import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
+import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
+import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 
 class BrowseController extends GetxController {
@@ -74,11 +76,17 @@ class BrowseController extends GetxController {
       // Default to the family's most recent job so Top Matches is accurate even
       // before the user opens the filter; an explicit selection overrides it.
       final matchJob = selectedJob.value ?? (myJobs.isNotEmpty ? myJobs.first : null);
-      results.value = await _jobs.browseNannies(
+      final ranked = await _jobs.browseNannies(
         filter: activeFilter.value,
         matchJob: matchJob,
         family: familyContext,
       );
+      // Hide nannies who are currently employed or mid-trial from discovery
+      // (M5) — a hired/on-trial nanny isn't available to take on a new family.
+      final engaged = await _engagedNannyIds();
+      results.value = engaged.isEmpty
+          ? ranked
+          : ranked.where((c) => !engaged.contains(c.id)).toList();
     } catch (e) {
       // Log the raw error; the UI surfaces a friendly localized message (DISC-1).
       Get.log('browse load failed: $e', isError: true);
@@ -92,6 +100,22 @@ class BrowseController extends GetxController {
   void onFilterTap(String f) {
     activeFilter.value = f;
     refreshList();
+  }
+
+  /// User ids of nannies to hide from browse because they are currently hired
+  /// or on an accepted/active trial (M5). Two bounded queries fetched in
+  /// parallel; any failure degrades to hiding nobody so browse still loads.
+  Future<Set<String>> _engagedNannyIds() async {
+    try {
+      final sets = await Future.wait([
+        Get.find<IHireService>().activeHiredNannyIds(),
+        Get.find<ITrialService>().activeTrialNannyIds(),
+      ]);
+      return sets.expand((s) => s).toSet();
+    } catch (e) {
+      Get.log('engaged-nanny browse filter failed: $e', isError: true);
+      return const <String>{};
+    }
   }
 
   /// Re-rank Top Matches against [job] (null = back to the default job).
