@@ -19,5 +19,18 @@ NannyCardModel resolveNannyCard([dynamic arguments]) {
       }
     }
   }
-  return mockNannyCards.first;
+  // No resolvable card (e.g. a deep-link with an unknown id) — return an
+  // explicit EMPTY card rather than a fabricated seed nanny, so a real user is
+  // never shown a fake profile. Callers can detect this via the empty id.
+  return const NannyCardModel(
+    id: '',
+    initials: '?',
+    name: '',
+    nationality: '',
+    yearsExp: 0,
+    jobType: '',
+    city: '',
+    matchPercent: 0,
+    tags: [],
+  );
 }

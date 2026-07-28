@@ -413,6 +413,7 @@ const Map<String, String> enUs = {
   AppStrings.nannyJobsEmpty: 'No jobs found',
   AppStrings.nannyJobsEmptySub: 'Try adjusting your filters',
   AppStrings.nannyJobApply: 'Apply for this job',
+  AppStrings.nannyJobAlreadyApplied: 'Already applied',
   AppStrings.nannyMyApplications: 'My Applications',
   AppStrings.nannyNoApplications: 'No applications yet',
   AppStrings.nannyNoApplicationsSub: 'Browse jobs and apply to get started',
