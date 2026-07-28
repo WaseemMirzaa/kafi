@@ -595,6 +595,34 @@ abstract class AppStrings {
   static const pricingVatNote = 'pricing_vat_note';
   static const pricingChoose = 'pricing_choose';
   static const pricingPopular = 'pricing_popular';
+  static const pricingUpgradeTitle = 'pricing_upgrade_title';
+  static const pricingUpgradePlan = 'pricing_upgrade_plan';
+  static const pricingHeroSub = 'pricing_hero_sub';
+  static const pricingFeatContacts = 'pricing_feat_contacts';
+  static const pricingFeatVideos = 'pricing_feat_videos';
+  static const pricingFeatCvs = 'pricing_feat_cvs';
+  static const pricingFeatSmartMatch = 'pricing_feat_smart_match';
+  static const pricingFeatTrials = 'pricing_feat_trials';
+  static const pricingFeatChat = 'pricing_feat_chat';
+  static const pricingFeatCallWa = 'pricing_feat_call_wa';
+  static const pricingFeatPosts = 'pricing_feat_posts';
+  static const pricingAllInclude = 'pricing_all_include';
+  static const pricingOnlyDiff = 'pricing_only_diff';
+  static const pricingDescMonthly = 'pricing_desc_monthly';
+  static const pricingDescWeekly = 'pricing_desc_weekly';
+  static const pricingJobHighlighted = 'pricing_job_highlighted';
+  static const pricingCurrentPlan = 'pricing_current_plan';
+  static const pricingTrustUae = 'pricing_trust_uae';
+  static const pricingTrust5Star = 'pricing_trust_5star';
+  static const pricingDaysAccess = 'pricing_days_access';
+  static const pricingDescValue = 'pricing_desc_value';
+  static const pricingValidDays = 'pricing_valid_days';
+  static const pricingVatLine = 'pricing_vat_line';
+  static const pricingSelectPlan = 'pricing_select_plan';
+  static const pricingPeriodMonth = 'pricing_period_month';
+  static const pricingPeriodWeek = 'pricing_period_week';
+  static const pricingPeriod2Months = 'pricing_period_2months';
+  static const subscriptionActiveMsg = 'subscription_active_msg';
 
   // Legal
   static const legalTermsTitle = 'legal_terms_title';

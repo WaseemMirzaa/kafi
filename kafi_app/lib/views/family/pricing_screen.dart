@@ -42,7 +42,7 @@ class PricingScreen extends GetView<SubscriptionController> {
               ),
               const SizedBox(height: 8),
               Text(
-                '+5% UAE VAT · Nannies always free · Cancel anytime',
+                AppStrings.pricingVatNote.tr,
                 textAlign: TextAlign.center,
                 style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600).copyWith(height: 1.5),
               ),
@@ -95,14 +95,16 @@ class PricingScreen extends GetView<SubscriptionController> {
             TextSpan(
               style: KafiTheme.nunito(15, color: KafiColors.td, w: FontWeight.w900),
               children: [
-                const TextSpan(text: 'Upgrade your '),
-                TextSpan(text: 'plan', style: TextStyle(color: KafiColors.roseD)),
+                TextSpan(text: AppStrings.pricingUpgradeTitle.tr),
+                TextSpan(
+                    text: AppStrings.pricingUpgradePlan.tr,
+                    style: const TextStyle(color: KafiColors.roseD)),
               ],
             ),
           ),
           const SizedBox(height: 3),
           Text(
-            'Unlimited contacts · CVs · Videos · Smart matching\nNannies always 100% free · No hidden fees',
+            AppStrings.pricingHeroSub.tr,
             textAlign: TextAlign.center,
             style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600).copyWith(height: 1.5),
           ),
@@ -113,9 +115,11 @@ class PricingScreen extends GetView<SubscriptionController> {
 
   // ── "All plans include everything" (.plans-wrap green box) ─────────────────
   Widget _includedBox() {
-    const features = [
-      'Unlimited contacts', 'All videos', 'Full CVs', 'Smart match %',
-      'Trial offers', 'Chat', 'Call & WhatsApp', 'Unlimited posts',
+    final features = [
+      AppStrings.pricingFeatContacts.tr, AppStrings.pricingFeatVideos.tr,
+      AppStrings.pricingFeatCvs.tr, AppStrings.pricingFeatSmartMatch.tr,
+      AppStrings.pricingFeatTrials.tr, AppStrings.pricingFeatChat.tr,
+      AppStrings.pricingFeatCallWa.tr, AppStrings.pricingFeatPosts.tr,
     ];
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 11),
@@ -126,7 +130,7 @@ class PricingScreen extends GetView<SubscriptionController> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('All plans include everything:',
+          Text(AppStrings.pricingAllInclude.tr,
               style: KafiTheme.nunito(10.5, color: KafiColors.grnD, w: FontWeight.w800)),
           const SizedBox(height: 7),
           GridView.count(
@@ -154,7 +158,7 @@ class PricingScreen extends GetView<SubscriptionController> {
           ),
           const SizedBox(height: 6),
           Center(
-            child: Text('Only difference is how long access lasts',
+            child: Text(AppStrings.pricingOnlyDiff.tr,
                 style: KafiTheme.nunito(8.5, color: const Color(0xFF4AAA70), w: FontWeight.w700)),
           ),
         ],
@@ -188,7 +192,7 @@ class PricingScreen extends GetView<SubscriptionController> {
       priceColor = Colors.white;
       periodColor = Colors.white.withValues(alpha: 0.7);
       vatColor = Colors.white.withValues(alpha: 0.6);
-      periodWord = 'month';
+      periodWord = AppStrings.pricingPeriodMonth.tr;
     } else if (weekly) {
       cardBg = const Color(0xFFFFF8EE);
       cardGradient = null;
@@ -202,7 +206,7 @@ class PricingScreen extends GetView<SubscriptionController> {
       priceColor = KafiColors.td;
       periodColor = KafiColors.ts;
       vatColor = KafiColors.ts;
-      periodWord = 'week';
+      periodWord = AppStrings.pricingPeriodWeek.tr;
     } else {
       cardBg = const Color(0xFFF0FFF8);
       cardGradient = null;
@@ -216,15 +220,17 @@ class PricingScreen extends GetView<SubscriptionController> {
       priceColor = KafiColors.td;
       periodColor = KafiColors.ts;
       vatColor = KafiColors.ts;
-      periodWord = '2 months';
+      periodWord = AppStrings.pricingPeriod2Months.tr;
     }
 
-    final name = '${p.durationDays} days access';
+    final name =
+        AppStrings.pricingDaysAccess.trParams({'days': '${p.durationDays}'});
     final desc = monthly
-        ? 'Best for most families'
+        ? AppStrings.pricingDescMonthly.tr
         : weekly
-            ? 'Try it — find your nanny fast'
-            : 'Best value · AED ${(p.priceAed / p.durationDays).toStringAsFixed(2)}/day';
+            ? AppStrings.pricingDescWeekly.tr
+            : AppStrings.pricingDescValue.trParams(
+                {'price': (p.priceAed / p.durationDays).toStringAsFixed(2)});
 
     final card = Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -279,9 +285,15 @@ class PricingScreen extends GetView<SubscriptionController> {
                       ],
                     ),
                   ),
-                  Text('valid ${p.durationDays} days',
+                  Text(
+                      AppStrings.pricingValidDays
+                          .trParams({'days': '${p.durationDays}'}),
                       style: KafiTheme.nunito(9, color: periodColor, w: FontWeight.w600)),
-                  Text('+AED ${vat.toStringAsFixed(2)} VAT = AED ${total.toStringAsFixed(2)}',
+                  Text(
+                      AppStrings.pricingVatLine.trParams({
+                        'vat': vat.toStringAsFixed(2),
+                        'total': total.toStringAsFixed(2),
+                      }),
                       style: KafiTheme.nunito(8, color: vatColor, w: FontWeight.w600)),
                 ],
               ),
@@ -297,7 +309,7 @@ class PricingScreen extends GetView<SubscriptionController> {
                   const Text('✓', style: TextStyle(fontSize: 10, color: Color(0xFF1A6A40), fontWeight: FontWeight.w800)),
                   const SizedBox(width: 5),
                   Expanded(
-                    child: Text('Job post highlighted at top of search',
+                    child: Text(AppStrings.pricingJobHighlighted.tr,
                         style: KafiTheme.nunito(9, color: const Color(0xFF1A6A40), w: FontWeight.w700)),
                   ),
                 ],
@@ -316,7 +328,10 @@ class PricingScreen extends GetView<SubscriptionController> {
                 border: selected ? Border.all(color: KafiColors.grnD, width: 1.5) : null,
               ),
               child: Text(
-                selected ? '✓ Current plan' : 'Select · AED ${p.priceAed} / $periodWord',
+                selected
+                    ? AppStrings.pricingCurrentPlan.tr
+                    : AppStrings.pricingSelectPlan
+                        .trParams({'price': '${p.priceAed}', 'period': periodWord}),
                 style: KafiTheme.fredoka(11.5, color: selected ? KafiColors.grnD : btnText, w: FontWeight.w700),
               ),
             ),
@@ -375,9 +390,9 @@ class PricingScreen extends GetView<SubscriptionController> {
       children: [
         item('🛡️', 'SSL'),
         const SizedBox(width: 12),
-        item('❤️', 'UAE trusted'),
+        item('❤️', AppStrings.pricingTrustUae.tr),
         const SizedBox(width: 12),
-        item('⭐', '5-star'),
+        item('⭐', AppStrings.pricingTrust5Star.tr),
       ],
     );
   }
@@ -385,7 +400,7 @@ class PricingScreen extends GetView<SubscriptionController> {
   Future<void> _select(SubscriptionPlan p) async {
     final ok = await controller.subscribe(p.id);
     if (!ok) return; // the controller already surfaced the error
-    Get.snackbar(AppStrings.subscribeNow.tr, 'Subscription active');
+    Get.snackbar(AppStrings.subscribeNow.tr, AppStrings.subscriptionActiveMsg.tr);
     // Return to wherever the paywall was hit from — including the (now
     // unlockable) locked profile — instead of always resetting to browse
     // (DISC-15). Fall back to browse only when there's nothing to pop.
