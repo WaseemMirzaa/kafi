@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/family_jobs_controller.dart';
+import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
@@ -407,6 +408,21 @@ class _JobEditSheetState extends State<_JobEditSheet> {
               onPressed: _save,
               child: Text(AppStrings.save.tr,
                   style: KafiTheme.fredoka(13, color: Colors.white, w: FontWeight.w700)),
+            ),
+          ),
+          const SizedBox(height: 4),
+          Center(
+            // Bridge to the full editor for THIS job (roles, duties, benefits,
+            // trial, visa). startJobEdit targets it by id so a family with more
+            // than one post edits the intended one, not always the first (M6).
+            child: TextButton(
+              onPressed: () {
+                Get.find<FamilyProfileController>().startJobEdit(widget.job.id);
+                Get.back();
+                Get.toNamed(Routes.familyEdit);
+              },
+              child: Text(AppStrings.jobEditFullDetails.tr,
+                  style: KafiTheme.fredoka(11, color: KafiColors.pur, w: FontWeight.w700)),
             ),
           ),
           const SizedBox(height: 6),

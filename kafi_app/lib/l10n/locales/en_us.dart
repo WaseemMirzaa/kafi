@@ -683,6 +683,7 @@ const Map<String, String> enUs = {
   AppStrings.jobDeletedToast: 'Job deleted',
   AppStrings.jobUpdatedToast: 'Job updated',
   AppStrings.jobEditTitle: 'Edit job',
+  AppStrings.jobEditFullDetails: 'Edit full details (roles, duties, benefits) →',
   AppStrings.jobFieldTitle: 'Job title',
   AppStrings.jobFieldSchedule: 'Schedule',
   AppStrings.jobFieldSalaryMin: 'Min salary (AED)',
