@@ -13,8 +13,6 @@ import 'package:kafi_app/utils/auth_scope.dart';
 
 class ApplicationController extends GetxController {
   final IApplicationService _appService = Get.find<IApplicationService>();
-  final IUserService _users = Get.find<IUserService>();
-  final IJobService _jobs = Get.find<IJobService>();
   final AuthController _auth = Get.find<AuthController>();
 
   final RxList<ApplicationModel> myApplications = <ApplicationModel>[].obs;
@@ -101,17 +99,21 @@ class ApplicationController extends GetxController {
       List<ApplicationModel> apps, String familyId) async {
     if (apps.isEmpty) return apps;
     try {
-      final family = await _users.getFamily(familyId);
+      // Resolved lazily (not as fields) so constructing the controller doesn't
+      // require these services — only the family recompute path needs them.
+      final users = Get.find<IUserService>();
+      final jobs = Get.find<IJobService>();
+      final family = await users.getFamily(familyId);
       if (family == null) return apps;
       final jobById = {
-        for (final j in await _jobs.getJobsByFamily(familyId)) j.id: j,
+        for (final j in await jobs.getJobsByFamily(familyId)) j.id: j,
       };
       final matcher = MatchService();
       return await Future.wait(apps.map((app) async {
         try {
           final job = jobById[app.jobPostId];
           if (job == null) return app;
-          final nanny = await _users.getNanny(app.nannyId);
+          final nanny = await users.getNanny(app.nannyId);
           if (nanny == null) return app;
           return app.copyWith(
               matchScore: matcher.calculateJobMatch(nanny, job, family: family));
