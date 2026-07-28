@@ -63,6 +63,7 @@ class ApplicationModel {
     DateTime? viewedAt,
     DateTime? respondedAt,
     DateTime? withdrawnAt,
+    int? matchScore,
   }) =>
       ApplicationModel(
         id: id,
@@ -70,7 +71,7 @@ class ApplicationModel {
         nannyId: nannyId,
         familyId: familyId,
         status: status ?? this.status,
-        matchScore: matchScore,
+        matchScore: matchScore ?? this.matchScore,
         coverMessage: coverMessage,
         createdAt: createdAt,
         viewedAt: viewedAt ?? this.viewedAt,
