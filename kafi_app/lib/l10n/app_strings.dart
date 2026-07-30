@@ -598,11 +598,24 @@ abstract class AppStrings {
   static const smartApplyingSub = 'smart_applying_sub';
   static const smartScoreSubGood = 'smart_score_sub_good';
   static const smartScoreSubLow = 'smart_score_sub_low';
-  static const smartCheckLang = 'smart_check_lang';
-  static const smartCheckExp = 'smart_check_exp';
-  static const smartCheckRole = 'smart_check_role';
-  static const smartCheckVisa = 'smart_check_visa';
-  static const smartCheckSalary = 'smart_check_salary';
+  // Smart-match contextual checklist (pass/fail rows with live job data).
+  static const smartLangFallback = 'smart_lang_fallback';
+  static const smartLangPass = 'smart_lang_pass';
+  static const smartLangFail = 'smart_lang_fail';
+  static const smartExpYears = 'smart_exp_years';
+  static const smartExpFallback = 'smart_exp_fallback';
+  static const smartExpPass = 'smart_exp_pass';
+  static const smartExpFail = 'smart_exp_fail';
+  static const smartRoleLiveOut = 'smart_role_live_out';
+  static const smartRoleLiveIn = 'smart_role_live_in';
+  static const smartRoleMatches = 'smart_role_matches';
+  static const smartRoleNoMatch = 'smart_role_no_match';
+  static const smartRoleLine = 'smart_role_line';
+  static const smartVisaPass = 'smart_visa_pass';
+  static const smartVisaFail = 'smart_visa_fail';
+  static const smartSalaryPass = 'smart_salary_pass';
+  static const smartSalaryFail = 'smart_salary_fail';
+  static const smartJobSummary = 'smart_job_summary';
   static const browseNoMatch = 'browse_no_match';
 
   // Trial
