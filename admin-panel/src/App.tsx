@@ -6,6 +6,7 @@ import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import AllNannies from './pages/nannies/AllNannies';
 import VerifyDocuments from './pages/nannies/VerifyDocuments';
+import VerifyVideos from './pages/nannies/VerifyVideos';
 import NannyDetail from './pages/nannies/NannyDetail';
 import AllFamilies from './pages/families/AllFamilies';
 import Subscriptions from './pages/families/Subscriptions';
@@ -44,6 +45,7 @@ export default function App() {
                 <Route path="/" element={<Dashboard />} />
                 <Route path="/nannies" element={<AllNannies />} />
                 <Route path="/nannies/verify" element={<VerifyDocuments />} />
+                <Route path="/nannies/verify-videos" element={<VerifyVideos />} />
                 <Route path="/nannies/:id" element={<NannyDetail />} />
                 <Route path="/families" element={<AllFamilies />} />
                 <Route path="/families/subscriptions" element={<Subscriptions />} />
