@@ -4,6 +4,7 @@ import { onNewTicketMessage, onTicketStatusChanged } from './triggers/ticket';
 import { onNewDisputeMessage, onDisputeResolved } from './triggers/dispute';
 import {
   onNewApplication,
+  onApplicationUpdated,
   onTrialEnded,
   onTrialOffered,
   onTrialResponse,
@@ -38,6 +39,7 @@ export {
   onNewDisputeMessage,
   onDisputeResolved,
   onNewApplication,
+  onApplicationUpdated,
   onTrialOffered,
   onTrialResponse,
   onTrialEnded,

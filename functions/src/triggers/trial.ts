@@ -54,6 +54,47 @@ export const onNewApplication = onDocumentCreated(
   }
 );
 
+// Notify the nanny when a family VIEWS or DECLINES her application. The
+// applicationViewed / applicationDeclined inbox types and their app routing
+// already exist; only this producer was missing. Fires once, on the transition
+// INTO 'viewed'/'declined' (guards against no-op writes and other statuses).
+export const onApplicationUpdated = onDocumentUpdated(
+  'applications/{appId}',
+  async (event) => {
+    const before = event.data?.before.data();
+    const after = event.data?.after.data();
+    if (!before || !after || before.status === after.status) return;
+    if (after.status !== 'viewed' && after.status !== 'declined') return;
+
+    const [nanny, family] = await Promise.all([
+      getNanny(after.nannyId),
+      getFamily(after.familyId),
+    ]);
+    const famName = family.fullName || 'A family';
+    const jobTitle = after.jobTitle || 'your application';
+    const viewed = after.status === 'viewed';
+
+    const title = viewed ? '👀 Application viewed' : 'Application update';
+    const body = viewed
+      ? `${famName} viewed your application for ${jobTitle}`
+      : `${famName} passed on your application for ${jobTitle}`;
+    const data = {
+      type: viewed ? 'application_viewed' : 'application_declined',
+      applicationId: event.params.appId,
+    };
+
+    // Durable inbox first (survives a missing FCM token), then the push.
+    await writeInbox(
+      after.nannyId as string,
+      viewed ? 'applicationViewed' : 'applicationDeclined',
+      title,
+      body,
+      data,
+    );
+    await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
+  }
+);
+
 export const onTrialOffered = onDocumentCreated('trials/{trialId}', async (event) => {
   const trial = event.data?.data();
   if (!trial || trial.status !== 'pending') return;
