@@ -49,14 +49,21 @@ export default function SupportTicketDetail() {
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const [actionError, setActionError] = useState<string | null>(null);
 
   const load = async () => {
     if (!id) return;
     setLoading(true);
+    setError(null);
     try {
       const [t, m] = await Promise.all([TicketService.get(id), TicketService.listMessages(id)]);
       setTicket(t);
       setMessages(m);
+    } catch (e) {
+      // A read failure previously fell through to the "Not found." branch,
+      // misleading the admin; surface it as an error instead.
+      setError((e as Error).message || 'Failed to load ticket');
     } finally {
       setLoading(false);
     }
@@ -76,6 +83,15 @@ export default function SupportTicketDetail() {
       </PageShell>
     );
   }
+  if (error && !ticket) {
+    return (
+      <PageShell>
+        <PageContent>
+          <div className="text-[10px] font-bold text-rose-dark">{error}</div>
+        </PageContent>
+      </PageShell>
+    );
+  }
   if (!ticket) {
     return (
       <PageShell>
@@ -88,6 +104,7 @@ export default function SupportTicketDetail() {
 
   const send = async (text: string) => {
     setSending(true);
+    setActionError(null);
     try {
       await TicketService.sendMessage(ticket.id, text);
       const [t, m] = await Promise.all([
@@ -96,6 +113,10 @@ export default function SupportTicketDetail() {
       ]);
       setTicket(t);
       setMessages(m);
+    } catch (e) {
+      // Keep the composer usable instead of leaving it spinning with the reply
+      // silently lost.
+      setActionError((e as Error).message || 'Failed to send reply — try again.');
     } finally {
       setSending(false);
     }
@@ -103,12 +124,15 @@ export default function SupportTicketDetail() {
 
   const setStatus = async (status: TicketRow['status']) => {
     setBusy(true);
+    setActionError(null);
     try {
       await TicketService.updateStatus(ticket.id, status);
+      await load();
+    } catch (e) {
+      setActionError((e as Error).message || 'Failed to update status — try again.');
     } finally {
       setBusy(false);
     }
-    load();
   };
 
   const closed = ticket.status === 'resolved' || ticket.status === 'closed';
@@ -140,6 +164,10 @@ export default function SupportTicketDetail() {
             <Field label="Opened on" value={ticket.createdAt.toLocaleDateString()} />
           </FieldGrid>
         </DetailCard>
+
+        {actionError && (
+          <div className="text-[10px] font-bold text-rose-dark">{actionError}</div>
+        )}
 
         <Section title="Conversation">
           <p className="text-[9px] font-semibold text-[#8090B0] mb-1">

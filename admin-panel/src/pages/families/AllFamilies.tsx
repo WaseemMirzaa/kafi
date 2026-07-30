@@ -33,12 +33,15 @@ const statusLabel: Record<string, string> = {
 export default function AllFamilies() {
   const [items, setItems] = useState<FamilyRow[]>([]);
   const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
   useEffect(() => {
+    setLoadError(null);
     FamilyService.list()
       .then(setItems)
+      .catch((e) => setLoadError((e as Error).message || 'Failed to load families'))
       .finally(() => setLoading(false));
   }, []);
 
@@ -114,7 +117,10 @@ export default function AllFamilies() {
 
         <TableCard title="Family accounts">
           {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
-          {!loading && filtered.length === 0 && (
+          {!loading && loadError && (
+            <div className="px-3 py-4 text-[10px] font-bold text-rose-dark">{loadError}</div>
+          )}
+          {!loading && !loadError && filtered.length === 0 && (
             <div className="px-3 py-4 text-[10px] text-[#8090B0]">No families found.</div>
           )}
           {filtered.map((f) => (

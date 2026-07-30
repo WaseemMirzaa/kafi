@@ -699,6 +699,14 @@ function toDateOrUndef(raw: unknown): Date | undefined {
 /** Normalise a Firestore nanny doc for admin tables (defaults + timestamps). */
 function mapNannyFromFirestore(id: string, data: Record<string, unknown>): NannyRow {
   const row = { id, ...(data as Omit<NannyRow, 'id'>) };
+  // The doc is spread in untyped, so a wrong-typed nested field (e.g. an object
+  // where an array is expected) would throw at render when the UI maps over it,
+  // white-screening the panel. Coerce the collection/object fields defensively:
+  // missing stays optional (undefined); wrong-typed collapses to a safe shape.
+  const asArr = (v: unknown): unknown[] | undefined =>
+    v === undefined ? undefined : Array.isArray(v) ? v : [];
+  const asObj = (v: unknown): Record<string, unknown> | undefined =>
+    v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
   return {
     ...row,
     fullName: row.fullName?.trim() || 'Unnamed nanny',
@@ -707,6 +715,13 @@ function mapNannyFromFirestore(id: string, data: Record<string, unknown>): Nanny
     status: row.status ?? 'draft',
     isVerified: row.isVerified ?? false,
     createdAt: toDateOrUndef(data.createdAt) ?? row.createdAt,
+    documents: asArr(row.documents) as NannyRow['documents'],
+    experiences: asArr(row.experiences) as NannyRow['experiences'],
+    references: asArr(row.references) as NannyRow['references'],
+    languages: asArr(row.languages) as string[] | undefined,
+    photoUrls: asArr(row.photoUrls) as string[] | undefined,
+    workEmirates: asArr(row.workEmirates) as NannyRow['workEmirates'],
+    stats: asObj(row.stats) as NannyRow['stats'],
   };
 }
 
