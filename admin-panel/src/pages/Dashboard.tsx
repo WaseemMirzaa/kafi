@@ -1,6 +1,17 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { FamilyService, NannyService, NannyRow, FamilyRow, RevenueService, TrialService, TrialAdminRow } from '../services/firestore';
+import {
+  FamilyService,
+  NannyService,
+  NannyRow,
+  FamilyRow,
+  RevenueService,
+  TrialService,
+  TrialAdminRow,
+  SettingsService,
+  DEFAULT_PLAN_PRICES,
+  DEFAULT_VAT_RATE,
+} from '../services/firestore';
 import { gradientFor, initials } from '../utils/avatar';
 import { useAuthStore } from '../hooks/useAuth';
 import { exportCsv } from '../utils/csv';
@@ -141,11 +152,13 @@ function Row({ children, highlight }: { children: React.ReactNode; highlight?: b
   );
 }
 
-// Fixed business constants: plan keys → display label + color
-const planMeta: Record<string, { label: string; color: string }> = {
-  weekly:    { label: 'Weekly · AED 89',    color: '#FFB347' },
-  monthly:   { label: 'Monthly · AED 239',  color: '#9B6EDB' },
-  twoMonths: { label: '2 months · AED 369', color: '#2E9A58' },
+// Plan display metadata: name + color (design constants). Prices are NOT baked
+// in here — they come from admin settings and are formatted into the label at
+// render time, so a price change on the Settings page flows through.
+const planMeta: Record<string, { name: string; color: string }> = {
+  weekly:    { name: 'Weekly',   color: '#FFB347' },
+  monthly:   { name: 'Monthly',  color: '#9B6EDB' },
+  twoMonths: { name: '2 months', color: '#2E9A58' },
 };
 
 export default function Dashboard() {
@@ -164,6 +177,9 @@ export default function Dashboard() {
   const [monthlyRevenue, setMonthlyRevenue] = useState<number>(0);
   const [monthlyVat, setMonthlyVat] = useState<number>(0);
   const [byPlan, setByPlan] = useState<{ plan: string; subs: number; revenue: number }[]>([]);
+  // Plan prices + VAT rate from admin settings (defaults until loaded).
+  const [plans, setPlans] = useState<Record<string, number>>(DEFAULT_PLAN_PRICES);
+  const [vatRate, setVatRate] = useState(DEFAULT_VAT_RATE);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [actingId, setActingId] = useState<string | null>(null);
@@ -175,11 +191,12 @@ export default function Dashboard() {
       // Fetch families once and hand them to summary() so it doesn't re-list
       // them (it derives MRR/plan split from the same set).
       const fams = await FamilyService.list();
-      const [allN, pend, rev, trials] = await Promise.all([
+      const [allN, pend, rev, trials, settings] = await Promise.all([
         NannyService.list(),
         NannyService.listPendingDocs(),
         RevenueService.summary(fams),
         TrialService.listActive(),
+        SettingsService.get(),
       ]);
       setNannies(allN);
       setPendingDocs(pend);
@@ -188,6 +205,8 @@ export default function Dashboard() {
       setMonthlyVat(rev.vat);
       setByPlan(rev.byPlan);
       setActiveTrials(trials);
+      setPlans(settings.plans);
+      setVatRate(settings.vatRate);
     } catch (e) {
       setError((e as Error).message || 'Failed to load dashboard');
     } finally {
@@ -296,7 +315,7 @@ export default function Dashboard() {
           return (
             <RevCard
               key={key}
-              label={meta.label}
+              label={`${meta.name} · AED ${plans[key] ?? 0}`}
               amount={loading ? '—' : `AED ${(p?.revenue ?? 0).toLocaleString()}`}
               sub={loading ? '' : `${p?.subs ?? 0} active`}
               pct={Math.round(((p?.revenue ?? 0) / maxRevenue) * 100)}
@@ -305,7 +324,7 @@ export default function Dashboard() {
           );
         })}
         <RevCard
-          label="VAT (5%)"
+          label={`VAT (${Math.round(vatRate * 100)}%)`}
           amount={loading ? '—' : `AED ${monthlyVat.toLocaleString()}`}
           sub="Due to FTA"
           pct={100}
@@ -532,9 +551,9 @@ export default function Dashboard() {
                   )
                 }
               >
-                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">Weekly · AED 89/wk</div><BarRow pct={Math.round(((planCounts.weekly ?? 0) / max) * 100)} label={`${planCounts.weekly ?? 0} subs`} color="#FFB347" /></Row>
-                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">Monthly · AED 239/mo</div><BarRow pct={Math.round(((planCounts.monthly ?? 0) / max) * 100)} label={`${planCounts.monthly ?? 0} subs`} color="#9B6EDB" /></Row>
-                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">2-months · AED 369</div><BarRow pct={Math.round(((planCounts.twoMonths ?? 0) / max) * 100)} label={`${planCounts.twoMonths ?? 0} subs`} color="#6DBF8A" /></Row>
+                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">Weekly · AED {plans.weekly ?? 0}/wk</div><BarRow pct={Math.round(((planCounts.weekly ?? 0) / max) * 100)} label={`${planCounts.weekly ?? 0} subs`} color="#FFB347" /></Row>
+                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">Monthly · AED {plans.monthly ?? 0}/mo</div><BarRow pct={Math.round(((planCounts.monthly ?? 0) / max) * 100)} label={`${planCounts.monthly ?? 0} subs`} color="#9B6EDB" /></Row>
+                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">2-months · AED {plans.twoMonths ?? 0}</div><BarRow pct={Math.round(((planCounts.twoMonths ?? 0) / max) * 100)} label={`${planCounts.twoMonths ?? 0} subs`} color="#6DBF8A" /></Row>
                 <Row highlight>
                   <div className="flex-1 text-[10.5px] font-extrabold text-[#8090B0]">Not subscribed</div>
                   <BarRow pct={Math.round((freeCount2 / max) * 100)} label={`${freeCount2} users`} color="#FFD8E8" />

@@ -10,7 +10,7 @@ import {
   TopStat,
 } from '../../components/ui/AdminUI';
 import { FilterBar, FilterSelect } from '../../components/ui/ListControls';
-import { RevenueService, RevenueTransaction } from '../../services/firestore';
+import { RevenueService, RevenueTransaction, SettingsService, DEFAULT_VAT_RATE } from '../../services/firestore';
 import { exportCsv } from '../../utils/csv';
 
 const txVariant: Record<RevenueTransaction['status'], string> = {
@@ -108,12 +108,20 @@ export default function Revenue() {
   const [from, setFrom] = useState(defaultRange.from);
   const [to, setTo] = useState(defaultRange.to);
   const [txnQuery, setTxnQuery] = useState('');
+  // VAT rate from admin settings (defaults if unset/unreachable — non-critical,
+  // so a settings hiccup never blocks the revenue page).
+  const [vatRate, setVatRate] = useState(DEFAULT_VAT_RATE);
 
   useEffect(() => {
     RevenueService.allTransactions()
       .then(setTxns)
       .catch((e: unknown) => setError((e as Error).message || 'Failed to load revenue'))
       .finally(() => setLoading(false));
+    SettingsService.get()
+      .then((s) => setVatRate(s.vatRate))
+      .catch(() => {
+        /* keep the default rate */
+      });
   }, []);
 
   /** All transactions whose createdAt falls within [from, to] (inclusive day). */
@@ -132,7 +140,7 @@ export default function Revenue() {
   const derived = useMemo(() => {
     const paid = inRange.filter((t) => t.status === 'paid');
     const total = paid.reduce((s, t) => s + t.amount, 0);
-    const vat = Math.round(total * 0.05);
+    const vat = Math.round(total * vatRate);
 
     // Plan revenue split from paid txns in range
     const map: Record<string, { subs: number; revenue: number }> = {};
@@ -148,7 +156,7 @@ export default function Revenue() {
     const hasTrendData = trend.some((b) => b.amount > 0);
 
     return { paid, total, vat, byPlan, trend, hasTrendData };
-  }, [inRange, from, to]);
+  }, [inRange, from, to, vatRate]);
 
   /** Recent transactions filtered by txnQuery (familyName or plan). */
   const visibleTxns = useMemo(() => {
@@ -281,7 +289,7 @@ export default function Revenue() {
           />
           <TopStat
             num={`AED ${derived.vat.toLocaleString()}`}
-            label="VAT 5%"
+            label={`VAT ${Math.round(vatRate * 100)}%`}
             change="→ FTA"
             numClass="!text-[13px]"
           />
