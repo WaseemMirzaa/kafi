@@ -1,5 +1,6 @@
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
+import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 
@@ -84,9 +85,9 @@ class JobPostController extends GetxController {
     try {
       await _jobService.saveJobPost(job);
       await loadJobs();
-      Get.snackbar('Success', 'Job posted!');
+      Get.snackbar(AppStrings.successTitle.tr, AppStrings.jobPostedToast.tr);
     } catch (e) {
-      Get.snackbar('Error', e.toString());
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     } finally {
       isLoading.value = false;
     }

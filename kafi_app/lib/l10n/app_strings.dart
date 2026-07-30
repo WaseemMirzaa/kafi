@@ -588,6 +588,36 @@ abstract class AppStrings {
   static const trialHire = 'trial_hire';
   static const trialNotThisTime = 'trial_not_this_time';
 
+  // Trial screen — active-trial detail (header, eval, empty, payment, dialogs)
+  static const trialFamilyGeneric = 'trial_family_generic';
+  static const trialYourFamily = 'trial_your_family';
+  static const trialSummaryLine = 'trial_summary_line';
+  static const trialPartyFamilyRole = 'trial_party_family_role';
+  static const trialUaeFallback = 'trial_uae_fallback';
+  static const trialPartyNannyRole = 'trial_party_nanny_role';
+  static const trialRevealed = 'trial_revealed';
+  static const trialEvalChildInteraction = 'trial_eval_child_interaction';
+  static const trialEvalPunctuality = 'trial_eval_punctuality';
+  static const trialEvalInstructions = 'trial_eval_instructions';
+  static const trialEvalCommunication = 'trial_eval_communication';
+  static const trialEvalCooking = 'trial_eval_cooking';
+  static const trialEvalHonesty = 'trial_eval_honesty';
+  static const trialCancelAction = 'trial_cancel_action';
+  static const trialEmptyTitle = 'trial_empty_title';
+  static const trialEmptySub = 'trial_empty_sub';
+  static const trialBrowseNannies = 'trial_browse_nannies';
+  static const trialPaymentConfirmed = 'trial_payment_confirmed';
+  static const trialIssueReportedBanner = 'trial_issue_reported_banner';
+  static const trialReportIssue = 'trial_report_issue';
+  static const trialConfirmPayment = 'trial_confirm_payment';
+  static const trialCancelConfirmTitle = 'trial_cancel_confirm_title';
+  static const trialCancelConfirmBody = 'trial_cancel_confirm_body';
+  static const trialCancelReasonHint = 'trial_cancel_reason_hint';
+  static const trialKeep = 'trial_keep';
+  static const trialReportIssueTitle = 'trial_report_issue_title';
+  static const trialReportIssueHint = 'trial_report_issue_hint';
+  static const trialSendReport = 'trial_send_report';
+
   // Pricing
   static const pricingTitle = 'pricing_title';
   static const pricingFreeBanner = 'pricing_free_banner';
@@ -686,6 +716,7 @@ abstract class AppStrings {
   static const jobDeleteBody = 'job_delete_body';
   static const jobDeletedToast = 'job_deleted_toast';
   static const jobUpdatedToast = 'job_updated_toast';
+  static const jobPostedToast = 'job_posted_toast';
   static const jobEditTitle = 'job_edit_title';
   static const jobEditFullDetails = 'job_edit_full_details';
   static const jobFieldTitle = 'job_field_title';
@@ -804,6 +835,7 @@ abstract class AppStrings {
   static const permissionPermanentlyDeniedBody = 'permission_permanently_denied_body';
   static const permissionOpenSettings = 'permission_open_settings';
   static const renewToSendImages = 'renew_to_send_images';
+  static const renewToSendMessages = 'renew_to_send_messages';
   static const freeViewsRemaining = 'free_views_remaining';
   static const noFreeViewsLeft = 'no_free_views_left';
 
