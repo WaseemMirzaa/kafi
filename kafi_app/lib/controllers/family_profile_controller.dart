@@ -19,6 +19,11 @@ class FamilyProfileController extends GetxController {
   final LocationService _location = Get.find<LocationService>();
   final _uuid = const Uuid();
 
+  /// The specific post the edit form targets (a family may hold one full-time
+  /// and one part-time post). Null = the generic edit, which uses the most
+  /// recent post. Set via [startJobEdit] (M6).
+  String? _editJobId;
+
   final Rx<FamilyModel?> family = Rx<FamilyModel?>(null);
   final RxBool isLoading = false.obs;
   final RxBool detectingCity = false.obs;
@@ -92,10 +97,12 @@ class FamilyProfileController extends GetxController {
         houseRulesCtrl.text = fam.houseRules ?? '';
         aboutFamilyCtrl.text = fam.aboutFamily ?? '';
       }
-      // Reuse the most recent job post for role/duties/benefits/visa.
+      // Load the targeted post (see [_selectEditPost]) for role/duties/
+      // benefits/visa — not a bare posts.first, which ignores which job the
+      // family chose to edit.
       final posts = await _jobs.getJobsByFamily(user.id);
       if (posts.isNotEmpty) {
-        final p = posts.first;
+        final p = _selectEditPost(posts);
         roles.value = List<String>.from(p.rolesNeeded);
         jobType.value = p.jobType;
         employmentType.value = p.employmentType;
@@ -115,6 +122,30 @@ class FamilyProfileController extends GetxController {
     } finally {
       isLoading.value = false;
     }
+  }
+
+  /// Re-hydrates the edit form for a SPECIFIC job so a family with more than
+  /// one post (e.g. one full-time + one part-time) edits the intended one
+  /// instead of always the first — pass null for the generic Settings edit,
+  /// which targets the most-recent post (M6).
+  Future<void> startJobEdit(String? jobId) async {
+    _editJobId = jobId;
+    await _hydrateFromCurrentUser();
+  }
+
+  /// The post the edit form loads and saves against: the one matching
+  /// [_editJobId] when set and still present, else the most-recently created.
+  /// (getJobsByFamily has no server ordering, so a bare `posts.first` is
+  /// arbitrary — this makes the fallback deterministic.)
+  JobPostModel _selectEditPost(List<JobPostModel> posts) {
+    if (_editJobId != null) {
+      final match = posts.firstWhereOrNull((p) => p.id == _editJobId);
+      if (match != null) return match;
+    }
+    return posts.reduce((a, b) =>
+        (a.createdAt ?? DateTime(1970)).isAfter(b.createdAt ?? DateTime(1970))
+            ? a
+            : b);
   }
 
   /// Auto-fills [city] from the device GPS location on first load, unless the
@@ -244,7 +275,9 @@ class FamilyProfileController extends GetxController {
       final existingPosts = await _jobs.getJobsByFamily(fid);
       String? existingPostId;
       if (reuseExistingPost) {
-        if (existingPosts.isNotEmpty) existingPostId = existingPosts.first.id;
+        // Save back to the SAME post the form was hydrated from (M6), so
+        // editing the second post doesn't overwrite the first.
+        if (existingPosts.isNotEmpty) existingPostId = _selectEditPost(existingPosts).id;
       } else {
         final clash = existingPosts.any((j) =>
             j.status == JobPostStatus.active &&

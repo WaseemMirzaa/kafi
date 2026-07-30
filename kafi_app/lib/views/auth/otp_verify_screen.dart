@@ -173,71 +173,104 @@ class _BigOtpBoxes extends StatefulWidget {
 
 class _BigOtpBoxesState extends State<_BigOtpBoxes> {
   static const _len = 6;
-  final _controllers = List.generate(_len, (_) => TextEditingController());
-  final _focusNodes = List.generate(_len, (_) => FocusNode());
+  // One real (visually hidden) field backs the six boxes. This lets paste,
+  // SMS / one-time-code autofill and backspace-across-boxes all work natively,
+  // instead of the six single-char controllers that fought each of those
+  // (maxLength:1 truncated a pasted/autofilled code, and an empty box swallowed
+  // backspace) — NAN-6.
+  final _controller = TextEditingController();
+  final _focusNode = FocusNode();
   Worker? _clearWorker;
 
   @override
   void initState() {
     super.initState();
-    // Clear the boxes when the controller resets the code (e.g. on Resend, which
-    // sets otpCode to '') so stale digits don't linger while the model is empty.
+    _controller.addListener(_syncFromField);
+    _focusNode.addListener(_repaint);
+    // Clear when the controller resets the code (e.g. on Resend, which sets
+    // otpCode to '') so stale digits don't linger while the model is empty.
     _clearWorker = ever<String>(Get.find<AuthController>().otpCode, (code) {
-      if (code.isEmpty && _controllers.any((c) => c.text.isNotEmpty)) {
-        for (final c in _controllers) { c.clear(); }
-        _focusNodes.first.requestFocus();
+      if (code.isEmpty && _controller.text.isNotEmpty) {
+        _controller.clear(); // fires _syncFromField → repaints + notifies
       }
     });
   }
 
+  void _syncFromField() {
+    widget.onChanged(_controller.text);
+    setState(() {});
+  }
+
+  void _repaint() => setState(() {});
+
   @override
   void dispose() {
     _clearWorker?.dispose();
-    for (final c in _controllers) { c.dispose(); }
-    for (final f in _focusNodes) { f.dispose(); }
+    _controller.removeListener(_syncFromField);
+    _focusNode.removeListener(_repaint);
+    _controller.dispose();
+    _focusNode.dispose();
     super.dispose();
   }
 
-  void _notify() => widget.onChanged(_controllers.map((c) => c.text).join());
-
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: List.generate(_len, (i) {
-        return Container(
-          width: 42,
-          height: 52,
-          margin: EdgeInsets.only(right: i < _len - 1 ? 6 : 0),
-          child: TextField(
-            controller: _controllers[i],
-            focusNode: _focusNodes[i],
-            textAlign: TextAlign.center,
-            maxLength: 1,
-            keyboardType: TextInputType.number,
-            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-            style: KafiTheme.nunito(22, color: KafiColors.td, w: FontWeight.w900),
-            decoration: InputDecoration(
-              counterText: '',
-              filled: true,
-              fillColor: Colors.white,
-              contentPadding: EdgeInsets.zero,
-              enabledBorder: OutlineInputBorder(
+    final text = _controller.text;
+    final focused = _focusNode.hasFocus;
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: List.generate(_len, (i) {
+            // Highlight the box being filled next while the field is focused,
+            // mirroring the old per-field focus ring.
+            final active = focused && i == text.length;
+            return Container(
+              width: 42,
+              height: 52,
+              margin: EdgeInsets.only(right: i < _len - 1 ? 6 : 0),
+              alignment: Alignment.center,
+              decoration: BoxDecoration(
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: KafiColors.roseL, width: 2),
+                border: Border.all(
+                  color: active ? KafiColors.roseD : KafiColors.roseL,
+                  width: active ? 2.5 : 2,
+                ),
               ),
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: const BorderSide(color: KafiColors.roseD, width: 2.5),
+              child: Text(
+                i < text.length ? text[i] : '',
+                style: KafiTheme.nunito(22, color: KafiColors.td, w: FontWeight.w900),
+              ),
+            );
+          }),
+        ),
+        // Transparent full-bleed field that actually captures input. Its text
+        // and cursor are transparent (not Opacity/Visibility, which can drop
+        // interactivity), so a tap anywhere on the boxes focuses it and the
+        // digits render in the boxes above.
+        Positioned.fill(
+          child: AutofillGroup(
+            child: TextField(
+              controller: _controller,
+              focusNode: _focusNode,
+              keyboardType: TextInputType.number,
+              maxLength: _len,
+              autofillHints: const [AutofillHints.oneTimeCode],
+              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+              showCursor: false,
+              cursorColor: Colors.transparent,
+              style: const TextStyle(color: Colors.transparent),
+              decoration: const InputDecoration(
+                counterText: '',
+                border: InputBorder.none,
+                contentPadding: EdgeInsets.zero,
               ),
             ),
-            onChanged: (v) {
-              if (v.isNotEmpty && i < _len - 1) _focusNodes[i + 1].requestFocus();
-              _notify();
-            },
           ),
-        );
-      }),
+        ),
+      ],
     );
   }
 }

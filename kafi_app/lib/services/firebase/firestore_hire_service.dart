@@ -40,6 +40,21 @@ class FirestoreHireService implements IHireService {
   }
 
   @override
+  Future<Set<String>> activeHiredNannyIds() async {
+    // Single-field `status` filter (auto-indexed, no composite index). Bounded
+    // so a large platform never reads unboundedly on every browse; if this cap
+    // is ever hit, move to a denormalized "engaged" flag on the nanny doc.
+    final snap = await _hires
+        .where('status', isEqualTo: HireStatus.active.name)
+        .limit(1000)
+        .get();
+    return snap.docs
+        .map((d) => (d.data()['nannyId'] as String?) ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+  }
+
+  @override
   Future<void> endHire(
     String hireId, {
     required HireEndReason reason,

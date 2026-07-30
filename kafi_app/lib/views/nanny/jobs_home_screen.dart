@@ -383,28 +383,12 @@ class JobsHomeScreen extends GetView<JobPostController> {
                           style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
                       Text('AED ${job.salaryMin}–${job.salaryMax}/mo · ${job.familyName}',
                           style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
-                      if (matchScore != null) ...[
-                        const SizedBox(height: 3),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: matchScore >= 85
-                                ? const Color(0xFFE8F8EE)
-                                : KafiColors.ambL,
-                            borderRadius: BorderRadius.circular(14),
-                          ),
-                          child: Text(
-                            matchScore >= 85
-                                ? '⭐ $matchScore% match'
-                                : '$matchScore% match',
-                            style: KafiTheme.fredoka(9,
-                                color: matchScore >= 85
-                                    ? const Color(0xFF2A8A50)
-                                    : const Color(0xFFC07A10),
-                                w: FontWeight.w700),
-                          ),
-                        ),
-                      ],
+                      // The nanny-side numeric "% match" is suppressed (M8): the
+                      // canonical match is scored from the FAMILY's household +
+                      // job, which the nanny can't compute — so a job-only number
+                      // here would diverge from what the family sees. Jobs are
+                      // still ranked best-fit-first and the hot-match highlight
+                      // (no number) remains.
                     ],
                   ),
                 ),

@@ -30,7 +30,8 @@ Future<void> _launchContact(Uri uri) async {
 class _Reveal extends StatefulWidget {
   const _Reveal({required this.nannyId, required this.builder});
   final String nannyId;
-  final Widget Function(String? phone, bool loading) builder;
+  final Widget Function(String? phone, bool loading, bool failed, VoidCallback retry)
+      builder;
   @override
   State<_Reveal> createState() => _RevealState();
 }
@@ -38,6 +39,7 @@ class _Reveal extends StatefulWidget {
 class _RevealState extends State<_Reveal> {
   String? _phone;
   bool _loading = true;
+  bool _failed = false;
 
   @override
   void initState() {
@@ -46,6 +48,15 @@ class _RevealState extends State<_Reveal> {
   }
 
   Future<void> _reveal() async {
+    // On a retry the widget is no longer in its initial loading state, so flip
+    // back into it before re-fetching. Guarded so the first (initState) call
+    // never calls setState before the first build.
+    if (!_loading || _failed) {
+      setState(() {
+        _loading = true;
+        _failed = false;
+      });
+    }
     final familyId = Get.find<AuthController>().currentUser.value?.id;
     try {
       final phone = familyId == null
@@ -55,21 +66,25 @@ class _RevealState extends State<_Reveal> {
         setState(() {
           _phone = phone;
           _loading = false;
+          _failed = false;
         });
       }
     } catch (_) {
+      // A reveal FETCH failure (not a dialer-launch failure). Surface it inline
+      // with a Retry affordance rather than a transient snackbar (FAM-7), so the
+      // family can re-attempt without leaving the profile.
       if (mounted) {
-        setState(() => _loading = false);
-        // This is a reveal FETCH failure, not a dialer-launch failure — use a
-        // message that matches (DISC-12).
-        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.contactLoadFailed.tr,
-            snackPosition: SnackPosition.BOTTOM);
+        setState(() {
+          _loading = false;
+          _failed = true;
+        });
       }
     }
   }
 
   @override
-  Widget build(BuildContext context) => widget.builder(_phone, _loading);
+  Widget build(BuildContext context) =>
+      widget.builder(_phone, _loading, _failed, _reveal);
 }
 
 class ProfileUnlockedScreen extends StatelessWidget {
@@ -111,8 +126,9 @@ class ProfileUnlockedScreen extends StatelessWidget {
                         ? _contactsLockedBanner()
                         : _Reveal(
                             nannyId: card.id,
-                            builder: (phone, loading) =>
-                                _contactBlock(card, firstName, phone, loading),
+                            builder: (phone, loading, failed, retry) =>
+                                _contactBlock(
+                                    card, firstName, phone, loading, failed, retry),
                           )),
                     const SizedBox(height: 10),
                     _bottomActions(card),
@@ -128,10 +144,10 @@ class ProfileUnlockedScreen extends StatelessWidget {
 
   // Green "contact fully unlocked" box, followed by the WhatsApp/Email rows
   // and the download-CV button (which sit below the box, as in the design).
-  Widget _contactBlock(
-      NannyCardModel card, String firstName, String? phone, bool loading) {
+  Widget _contactBlock(NannyCardModel card, String firstName, String? phone,
+      bool loading, bool failed, VoidCallback retry) {
     final phoneText = loading
-        ? '…'
+        ? AppStrings.contactRevealing.tr
         : (phone != null && phone.isNotEmpty ? phone : AppStrings.contactUnavailable.tr);
     final digits = (phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
     final canContact = !loading && digits.isNotEmpty;
@@ -197,9 +213,7 @@ class ProfileUnlockedScreen extends StatelessWidget {
                     Text('📞 $firstName\'s direct number',
                         style: KafiTheme.fredoka(8.5, color: KafiColors.grnD, w: FontWeight.w700)),
                     const SizedBox(height: 3),
-                    Text(phoneText,
-                        style: KafiTheme.nunito(17, color: const Color(0xFF1A4A30), w: FontWeight.w900)
-                            .copyWith(letterSpacing: 0.6)),
+                    _revealValue(loading, failed, phone, retry),
                   ],
                 ),
               ),
@@ -242,6 +256,64 @@ class ProfileUnlockedScreen extends StatelessWidget {
             'Chat', KafiColors.grnD, KafiColors.grnL, whatsapp),
       ],
     );
+  }
+
+  // The direct-number line: a spinner while revealing, an inline error + Retry
+  // if the gated reveal failed, otherwise the number itself (FAM-7).
+  Widget _revealValue(bool loading, bool failed, String? phone, VoidCallback retry) {
+    if (loading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 3),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 15,
+              height: 15,
+              child: CircularProgressIndicator(strokeWidth: 2, color: KafiColors.grnD),
+            ),
+            const SizedBox(width: 8),
+            Text(AppStrings.contactRevealing.tr,
+                style: KafiTheme.nunito(12, color: KafiColors.grnD, w: FontWeight.w700)),
+          ],
+        ),
+      );
+    }
+    if (failed) {
+      return Row(
+        children: [
+          Expanded(
+            child: Text(AppStrings.contactLoadFailed.tr,
+                style: KafiTheme.nunito(11, color: const Color(0xFF1A4A30), w: FontWeight.w700)),
+          ),
+          const SizedBox(width: 8),
+          GestureDetector(
+            onTap: retry,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+              decoration: BoxDecoration(
+                color: KafiColors.grnD,
+                borderRadius: BorderRadius.circular(9),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Icon(Icons.refresh, color: Colors.white, size: 13),
+                  const SizedBox(width: 4),
+                  Text(AppStrings.retry.tr,
+                      style: KafiTheme.fredoka(11, color: Colors.white, w: FontWeight.w700)),
+                ],
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    final text = (phone != null && phone.isNotEmpty)
+        ? phone
+        : AppStrings.contactUnavailable.tr;
+    return Text(text,
+        style: KafiTheme.nunito(17, color: const Color(0xFF1A4A30), w: FontWeight.w900)
+            .copyWith(letterSpacing: 0.6));
   }
 
   Widget _gridBtn(String emoji, String label, List<Color> colors, VoidCallback onTap,

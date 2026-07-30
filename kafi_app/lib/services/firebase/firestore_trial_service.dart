@@ -46,6 +46,20 @@ class FirestoreTrialService implements ITrialService {
   }
 
   @override
+  Future<Set<String>> activeTrialNannyIds() async {
+    // Single-field `status` filter (auto-indexed). Bounded like the hire
+    // equivalent — if ever exceeded, denormalize an "engaged" flag instead.
+    final snap = await _trials
+        .where('status', whereIn: ['active', 'accepted'])
+        .limit(1000)
+        .get();
+    return snap.docs
+        .map((d) => (d.data()['nannyId'] as String?) ?? '')
+        .where((id) => id.isNotEmpty)
+        .toSet();
+  }
+
+  @override
   Future<void> sendOffer(TrialModel trial) async {
     // Persist startDate as a Timestamp so the scheduled "trial starts tomorrow"
     // reminder (a Timestamp range query in functions) can actually match it.

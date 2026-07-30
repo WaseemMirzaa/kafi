@@ -128,6 +128,7 @@ abstract class AppStrings {
   static const contactUnavailable = 'contact_unavailable';
   static const contactLaunchFailed = 'contact_launch_failed';
   static const contactLoadFailed = 'contact_load_failed';
+  static const contactRevealing = 'contact_revealing';
   static const addAnother = 'add_another';
   static const removeItem = 'remove_item';
 
@@ -284,6 +285,7 @@ abstract class AppStrings {
   static const nannyJobsEmpty = 'nanny_jobs_empty';
   static const nannyJobsEmptySub = 'nanny_jobs_empty_sub';
   static const nannyJobApply = 'nanny_job_apply';
+  static const nannyJobAlreadyApplied = 'nanny_job_already_applied';
   static const nannyMyApplications = 'nanny_my_applications';
   static const nannyNoApplications = 'nanny_no_applications';
   static const nannyNoApplicationsSub = 'nanny_no_applications_sub';
@@ -428,6 +430,8 @@ abstract class AppStrings {
   static const nannyRequiredDocsMissing = 'nanny_required_docs_missing';
   static const subGraceBanner = 'sub_grace_banner';
   static const subFixNow = 'sub_fix_now';
+  static const subGraceTitle = 'sub_grace_title';
+  static const subGraceBody = 'sub_grace_body';
   static const familyNameRequired = 'family_name_required';
   static const familyCityRequired = 'family_city_required';
   static const familyEditTitle = 'family_edit_title';
@@ -487,6 +491,30 @@ abstract class AppStrings {
   static const spResidence = 'sp_residence';
   static const spNone = 'sp_none';
   static const spCommit = 'sp_commit';
+
+  // Family form — hardcoded chrome (labels, hints, prompts). Data values
+  // (religion names, pet types) stay untranslated like the other constant chips.
+  static const familyNameHint = 'family_name_hint';
+  static const familyYourNationality = 'family_your_nationality';
+  static const familyChildrenAgesHint = 'family_children_ages_hint';
+  static const familyHomeCameras = 'family_home_cameras';
+  static const familyHasCameras = 'family_has_cameras';
+  static const familyNoCameras = 'family_no_cameras';
+  static const familyPets = 'family_pets';
+  static const familyAboutPrompt = 'family_about_prompt';
+  static const familyAboutLabel = 'family_about_label';
+  static const familyAboutHint = 'family_about_hint';
+  static const familyReligionBanner = 'family_religion_banner';
+  static const familyReligionLabel = 'family_religion_label';
+  static const familyReligionPrefPrompt = 'family_religion_pref_prompt';
+  static const familyReligionPrefNone = 'family_religion_pref_none';
+  static const familyReligionPrefMuslim = 'family_religion_pref_muslim';
+  static const familyReligionPrefSame = 'family_religion_pref_same';
+  static const familyReligionPrefOpen = 'family_religion_pref_open';
+  static const familyHouseRulesLabel = 'family_house_rules_label';
+  static const familyHouseRulesHint = 'family_house_rules_hint';
+  static const familyScheduleHint = 'family_schedule_hint';
+  static const familyTrialDaysN = 'family_trial_days_n';
 
   // Browse
   static const browseGoodMorning = 'browse_good_morning';
@@ -570,11 +598,24 @@ abstract class AppStrings {
   static const smartApplyingSub = 'smart_applying_sub';
   static const smartScoreSubGood = 'smart_score_sub_good';
   static const smartScoreSubLow = 'smart_score_sub_low';
-  static const smartCheckLang = 'smart_check_lang';
-  static const smartCheckExp = 'smart_check_exp';
-  static const smartCheckRole = 'smart_check_role';
-  static const smartCheckVisa = 'smart_check_visa';
-  static const smartCheckSalary = 'smart_check_salary';
+  // Smart-match contextual checklist (pass/fail rows with live job data).
+  static const smartLangFallback = 'smart_lang_fallback';
+  static const smartLangPass = 'smart_lang_pass';
+  static const smartLangFail = 'smart_lang_fail';
+  static const smartExpYears = 'smart_exp_years';
+  static const smartExpFallback = 'smart_exp_fallback';
+  static const smartExpPass = 'smart_exp_pass';
+  static const smartExpFail = 'smart_exp_fail';
+  static const smartRoleLiveOut = 'smart_role_live_out';
+  static const smartRoleLiveIn = 'smart_role_live_in';
+  static const smartRoleMatches = 'smart_role_matches';
+  static const smartRoleNoMatch = 'smart_role_no_match';
+  static const smartRoleLine = 'smart_role_line';
+  static const smartVisaPass = 'smart_visa_pass';
+  static const smartVisaFail = 'smart_visa_fail';
+  static const smartSalaryPass = 'smart_salary_pass';
+  static const smartSalaryFail = 'smart_salary_fail';
+  static const smartJobSummary = 'smart_job_summary';
   static const browseNoMatch = 'browse_no_match';
 
   // Trial
@@ -584,6 +625,36 @@ abstract class AppStrings {
   static const trialHire = 'trial_hire';
   static const trialNotThisTime = 'trial_not_this_time';
 
+  // Trial screen — active-trial detail (header, eval, empty, payment, dialogs)
+  static const trialFamilyGeneric = 'trial_family_generic';
+  static const trialYourFamily = 'trial_your_family';
+  static const trialSummaryLine = 'trial_summary_line';
+  static const trialPartyFamilyRole = 'trial_party_family_role';
+  static const trialUaeFallback = 'trial_uae_fallback';
+  static const trialPartyNannyRole = 'trial_party_nanny_role';
+  static const trialRevealed = 'trial_revealed';
+  static const trialEvalChildInteraction = 'trial_eval_child_interaction';
+  static const trialEvalPunctuality = 'trial_eval_punctuality';
+  static const trialEvalInstructions = 'trial_eval_instructions';
+  static const trialEvalCommunication = 'trial_eval_communication';
+  static const trialEvalCooking = 'trial_eval_cooking';
+  static const trialEvalHonesty = 'trial_eval_honesty';
+  static const trialCancelAction = 'trial_cancel_action';
+  static const trialEmptyTitle = 'trial_empty_title';
+  static const trialEmptySub = 'trial_empty_sub';
+  static const trialBrowseNannies = 'trial_browse_nannies';
+  static const trialPaymentConfirmed = 'trial_payment_confirmed';
+  static const trialIssueReportedBanner = 'trial_issue_reported_banner';
+  static const trialReportIssue = 'trial_report_issue';
+  static const trialConfirmPayment = 'trial_confirm_payment';
+  static const trialCancelConfirmTitle = 'trial_cancel_confirm_title';
+  static const trialCancelConfirmBody = 'trial_cancel_confirm_body';
+  static const trialCancelReasonHint = 'trial_cancel_reason_hint';
+  static const trialKeep = 'trial_keep';
+  static const trialReportIssueTitle = 'trial_report_issue_title';
+  static const trialReportIssueHint = 'trial_report_issue_hint';
+  static const trialSendReport = 'trial_send_report';
+
   // Pricing
   static const pricingTitle = 'pricing_title';
   static const pricingFreeBanner = 'pricing_free_banner';
@@ -591,6 +662,34 @@ abstract class AppStrings {
   static const pricingVatNote = 'pricing_vat_note';
   static const pricingChoose = 'pricing_choose';
   static const pricingPopular = 'pricing_popular';
+  static const pricingUpgradeTitle = 'pricing_upgrade_title';
+  static const pricingUpgradePlan = 'pricing_upgrade_plan';
+  static const pricingHeroSub = 'pricing_hero_sub';
+  static const pricingFeatContacts = 'pricing_feat_contacts';
+  static const pricingFeatVideos = 'pricing_feat_videos';
+  static const pricingFeatCvs = 'pricing_feat_cvs';
+  static const pricingFeatSmartMatch = 'pricing_feat_smart_match';
+  static const pricingFeatTrials = 'pricing_feat_trials';
+  static const pricingFeatChat = 'pricing_feat_chat';
+  static const pricingFeatCallWa = 'pricing_feat_call_wa';
+  static const pricingFeatPosts = 'pricing_feat_posts';
+  static const pricingAllInclude = 'pricing_all_include';
+  static const pricingOnlyDiff = 'pricing_only_diff';
+  static const pricingDescMonthly = 'pricing_desc_monthly';
+  static const pricingDescWeekly = 'pricing_desc_weekly';
+  static const pricingJobHighlighted = 'pricing_job_highlighted';
+  static const pricingCurrentPlan = 'pricing_current_plan';
+  static const pricingTrustUae = 'pricing_trust_uae';
+  static const pricingTrust5Star = 'pricing_trust_5star';
+  static const pricingDaysAccess = 'pricing_days_access';
+  static const pricingDescValue = 'pricing_desc_value';
+  static const pricingValidDays = 'pricing_valid_days';
+  static const pricingVatLine = 'pricing_vat_line';
+  static const pricingSelectPlan = 'pricing_select_plan';
+  static const pricingPeriodMonth = 'pricing_period_month';
+  static const pricingPeriodWeek = 'pricing_period_week';
+  static const pricingPeriod2Months = 'pricing_period_2months';
+  static const subscriptionActiveMsg = 'subscription_active_msg';
 
   // Legal
   static const legalTermsTitle = 'legal_terms_title';
@@ -654,7 +753,9 @@ abstract class AppStrings {
   static const jobDeleteBody = 'job_delete_body';
   static const jobDeletedToast = 'job_deleted_toast';
   static const jobUpdatedToast = 'job_updated_toast';
+  static const jobPostedToast = 'job_posted_toast';
   static const jobEditTitle = 'job_edit_title';
+  static const jobEditFullDetails = 'job_edit_full_details';
   static const jobFieldTitle = 'job_field_title';
   static const jobFieldSchedule = 'job_field_schedule';
   static const jobFieldSalaryMin = 'job_field_salary_min';
@@ -771,6 +872,7 @@ abstract class AppStrings {
   static const permissionPermanentlyDeniedBody = 'permission_permanently_denied_body';
   static const permissionOpenSettings = 'permission_open_settings';
   static const renewToSendImages = 'renew_to_send_images';
+  static const renewToSendMessages = 'renew_to_send_messages';
   static const freeViewsRemaining = 'free_views_remaining';
   static const noFreeViewsLeft = 'no_free_views_left';
 

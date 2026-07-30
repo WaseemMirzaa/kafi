@@ -675,15 +675,28 @@ const mockTickets: TicketRow[] = [
   { id: 'tk2', openerId: 'n3', openerName: 'Amara Kebede', openerType: 'nanny', subject: 'How to upload daily trial proof', category: 'trial', status: 'open', lastMessage: 'How do I upload my proof photo for day 2 of the trial?', createdAt: new Date(Date.now() - 3 * 3600000), lastMessageAt: new Date(Date.now() - 3 * 3600000) },
 ];
 
+// Canonical business-config DEFAULTS. This is the single source for plan prices,
+// VAT rate, and limits: `mockSettings` (hence SettingsService, which merges the
+// `settings/global` override on top) and the revenue math below both derive from
+// these, so a default lives in exactly one place. The Settings page overrides
+// them at runtime via `settings/global`.
+export const DEFAULT_PLAN_PRICES: Record<string, number> = { weekly: 89, monthly: 239, twoMonths: 369 };
+export const DEFAULT_VAT_RATE = 0.05;
+export const DEFAULT_FREE_CONTACT_LIMIT = 5;
+export const DEFAULT_JOB_POST_VISIBILITY_DAYS = 30;
+
 const mockSettings = {
-  freeContactLimit: 5,
-  jobPostVisibilityDays: 30,
-  plans: { weekly: 89, monthly: 239, twoMonths: 369 },
-  vatRate: 0.05,
+  freeContactLimit: DEFAULT_FREE_CONTACT_LIMIT,
+  jobPostVisibilityDays: DEFAULT_JOB_POST_VISIBILITY_DAYS,
+  plans: { ...DEFAULT_PLAN_PRICES },
+  vatRate: DEFAULT_VAT_RATE,
   // When true, the app hides nannies who haven't opened the app in 2+ weeks
   // from family listings (see kafi_app browseNannies + nannies/{id}.lastActiveAt).
   hideInactiveNannies: false,
 };
+
+/** Shape of the app-wide settings doc (`settings/global`), merged over defaults. */
+export type AppSettings = typeof mockSettings;
 
 function toDateOrUndef(raw: unknown): Date | undefined {
   if (raw && typeof (raw as { toDate?: () => Date }).toDate === 'function') {
@@ -699,6 +712,14 @@ function toDateOrUndef(raw: unknown): Date | undefined {
 /** Normalise a Firestore nanny doc for admin tables (defaults + timestamps). */
 function mapNannyFromFirestore(id: string, data: Record<string, unknown>): NannyRow {
   const row = { id, ...(data as Omit<NannyRow, 'id'>) };
+  // The doc is spread in untyped, so a wrong-typed nested field (e.g. an object
+  // where an array is expected) would throw at render when the UI maps over it,
+  // white-screening the panel. Coerce the collection/object fields defensively:
+  // missing stays optional (undefined); wrong-typed collapses to a safe shape.
+  const asArr = (v: unknown): unknown[] | undefined =>
+    v === undefined ? undefined : Array.isArray(v) ? v : [];
+  const asObj = (v: unknown): Record<string, unknown> | undefined =>
+    v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
   return {
     ...row,
     fullName: row.fullName?.trim() || 'Unnamed nanny',
@@ -707,6 +728,13 @@ function mapNannyFromFirestore(id: string, data: Record<string, unknown>): Nanny
     status: row.status ?? 'draft',
     isVerified: row.isVerified ?? false,
     createdAt: toDateOrUndef(data.createdAt) ?? row.createdAt,
+    documents: asArr(row.documents) as NannyRow['documents'],
+    experiences: asArr(row.experiences) as NannyRow['experiences'],
+    references: asArr(row.references) as NannyRow['references'],
+    languages: asArr(row.languages) as string[] | undefined,
+    photoUrls: asArr(row.photoUrls) as string[] | undefined,
+    workEmirates: asArr(row.workEmirates) as NannyRow['workEmirates'],
+    stats: asObj(row.stats) as NannyRow['stats'],
   };
 }
 
@@ -1580,7 +1608,9 @@ export const RevenueService = {
       };
     });
   },
-  async summary(): Promise<RevenueSummary> {
+  // Accepts an already-fetched families list so callers that also render the
+  // family list (Dashboard, Subscriptions) don't fetch `families` twice.
+  async summary(prefetchedFamilies?: FamilyRow[]): Promise<RevenueSummary> {
     if (useMock()) {
       return {
         monthly: 10800,
@@ -1595,9 +1625,12 @@ export const RevenueService = {
     }
     const now = new Date();
     const trendStart = new Date(now.getFullYear(), now.getMonth() - 5, 1);
-    const [families, txSnap] = await Promise.all([
-      FamilyService.list(),
+    // Plan prices + VAT come from the admin-configured settings so MRR reflects
+    // what admins set on the Settings page (defaults apply when unset).
+    const [families, txSnap, settings] = await Promise.all([
+      prefetchedFamilies ?? FamilyService.list(),
       getDocs(query(collection(db!, 'transactions'), where('createdAt', '>=', Timestamp.fromDate(trendStart)))),
+      SettingsService.get(),
     ]);
     const trendTxns = txSnap.docs.map((d) => {
       const data = d.data() as Record<string, unknown>;
@@ -1607,7 +1640,7 @@ export const RevenueService = {
         createdAt: parseTimestamp(data.createdAt),
       };
     });
-    const planPrices: Record<string, number> = { weekly: 89, monthly: 239, twoMonths: 369 };
+    const planPrices = settings.plans;
     const byPlanMap: Record<string, { subs: number; revenue: number }> = {};
     families.forEach((f) => {
       if (f.subscription.status === 'active' && f.subscription.plan) {
@@ -1622,7 +1655,7 @@ export const RevenueService = {
     const monthly = Object.values(byPlanMap).reduce((s, x) => s + x.revenue, 0);
     return {
       monthly,
-      vat: Math.round(monthly * 0.05),
+      vat: Math.round(monthly * settings.vatRate),
       byPlan: Object.entries(byPlanMap).map(([plan, v]) => ({ plan, ...v })),
       trend: buildTrend(trendTxns),
     };

@@ -25,11 +25,13 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
     ('Buddhist', '☸️'), ('Jewish', '✡️'), ('Other', '🌍'),
   ];
 
-  static const List<(NannyReligionPreference, String)> _religionPrefs = [
-    (NannyReligionPreference.noPreference, 'No — nanny can be of any religion'),
-    (NannyReligionPreference.preferMuslim, 'We prefer a Muslim nanny (halal diet, prayer respect)'),
-    (NannyReligionPreference.preferSame, 'We prefer a nanny of the same religion as ours'),
-    (NannyReligionPreference.openWithRespect, 'We are open — but nanny must respect our home rules'),
+  // Labels are localized at read time, so this can't be `const`. The enum in
+  // each tuple is the stored value; only the second element is display text.
+  List<(NannyReligionPreference, String)> get _religionPrefs => [
+    (NannyReligionPreference.noPreference, AppStrings.familyReligionPrefNone.tr),
+    (NannyReligionPreference.preferMuslim, AppStrings.familyReligionPrefMuslim.tr),
+    (NannyReligionPreference.preferSame, AppStrings.familyReligionPrefSame.tr),
+    (NannyReligionPreference.openWithRespect, AppStrings.familyReligionPrefOpen.tr),
   ];
 
   @override
@@ -132,16 +134,16 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
         KafiTextField(
           label: AppStrings.fldFullName.tr,
           controller: controller.fullNameCtrl,
-          hint: 'e.g. Al Rashid Family',
+          hint: AppStrings.familyNameHint.tr,
           purple: true,
         ),
-        _label('Your nationality'),
+        _label(AppStrings.familyYourNationality.tr),
         const SizedBox(height: 4),
         Obx(() => KafiSearchablePicker(
               value: controller.nationality.value,
               options: NannyConstants.nationalities,
-              title: 'Your nationality',
-              hint: 'Your nationality',
+              title: AppStrings.familyYourNationality.tr,
+              hint: AppStrings.familyYourNationality.tr,
               icon: Icons.flag_outlined,
               purple: true,
               onSelected: (v) => controller.nationality.value = v,
@@ -177,9 +179,9 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
           ],
         ),
         KafiTextField(
-          label: "Children's ages",
+          label: AppStrings.fldChildrenAges.tr,
           controller: controller.childrenAgesCtrl,
-          hint: 'e.g. 6 months, 3 years, 7 years',
+          hint: AppStrings.familyChildrenAgesHint.tr,
           purple: true,
         ),
         _label(AppStrings.fldHomeLanguages.tr),
@@ -197,13 +199,13 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
                   .toList(),
             )),
         const SizedBox(height: 8),
-        _label('Home cameras?'),
+        _label(AppStrings.familyHomeCameras.tr),
         const SizedBox(height: 4),
         Obx(() => Row(
               children: [
                 Expanded(
                   child: KafiToggleTile(
-                    label: 'Yes, we have cameras',
+                    label: AppStrings.familyHasCameras.tr,
                     icon: Icons.videocam_outlined,
                     purple: true,
                     selected: controller.hasCameras.value,
@@ -213,7 +215,7 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
                 const SizedBox(width: 6),
                 Expanded(
                   child: KafiToggleTile(
-                    label: 'No cameras',
+                    label: AppStrings.familyNoCameras.tr,
                     icon: Icons.videocam_off_outlined,
                     purple: true,
                     selected: !controller.hasCameras.value,
@@ -223,7 +225,7 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
               ],
             )),
         const SizedBox(height: 8),
-        _label('Pets?'),
+        _label(AppStrings.familyPets.tr),
         const SizedBox(height: 4),
         Obx(() => Row(
               children: [
@@ -266,18 +268,16 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
   // ── About your family (free-text introduction) ──────────────────────────────
   Widget _aboutFamily() {
     return KafiSection(
-      title: 'About Your Family',
+      title: AppStrings.fldAboutFamily.tr,
       icon: Icons.favorite_border,
       accent: KafiSectionAccent.purple,
       children: [
-        _label('Tell nannies a little about your family'),
+        _label(AppStrings.familyAboutPrompt.tr),
         const SizedBox(height: 5),
         KafiTextField(
-          label: 'Family information',
+          label: AppStrings.familyAboutLabel.tr,
           controller: controller.aboutFamilyCtrl,
-          hint: 'e.g. We are a warm family of four in Dubai. Both parents work. '
-              'We value kindness, routine and good communication. Our home is '
-              'smoke-free and we love weekend outings with the kids.',
+          hint: AppStrings.familyAboutHint.tr,
           maxLines: 5,
           purple: true,
         ),
@@ -287,7 +287,7 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
 
   Widget _religion() {
     return KafiSection(
-      title: 'Religion & Household Culture',
+      title: AppStrings.familySectionReligion.tr,
       icon: Icons.shield_outlined,
       accent: KafiSectionAccent.purple,
       children: [
@@ -299,12 +299,12 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
             borderRadius: BorderRadius.circular(11),
           ),
           child: Text(
-            'This helps us match you with nannies whose lifestyle and practices are compatible with your home. All information is treated with full respect and privacy.',
+            AppStrings.familyReligionBanner.tr,
             style: KafiTheme.nunito(9.5, color: const Color(0xFF4A2080), w: FontWeight.w600).copyWith(height: 1.5),
           ),
         ),
         const SizedBox(height: 10),
-        _label("Your family's religion (optional)"),
+        _label(AppStrings.familyReligionLabel.tr),
         const SizedBox(height: 5),
         Obx(() => GridView.count(
               shrinkWrap: true,
@@ -318,7 +318,7 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
                   .toList(),
             )),
         const SizedBox(height: 8),
-        _label('Do you require the nanny to follow any religious practices?'),
+        _label(AppStrings.familyReligionPrefPrompt.tr),
         const SizedBox(height: 5),
         Obx(() => Column(
               children: _religionPrefs
@@ -331,9 +331,9 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
             )),
         const SizedBox(height: 4),
         KafiTextField(
-          label: 'Any faith-related house rules to mention? (optional)',
+          label: AppStrings.familyHouseRulesLabel.tr,
           controller: controller.houseRulesCtrl,
-          hint: 'e.g. Halal food only · No pork · Prayer times respected · No alcohol',
+          hint: AppStrings.familyHouseRulesHint.tr,
           maxLines: 2,
           purple: true,
         ),
@@ -407,7 +407,7 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
       icon: Icons.work_outline,
       accent: KafiSectionAccent.purple,
       children: [
-        _label('Role(s) needed'),
+        _label(AppStrings.fldRoles.tr),
         const SizedBox(height: 4),
         Obx(() => Wrap(
               spacing: 4,
@@ -477,7 +477,7 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
         KafiTextField(
           label: AppStrings.fldSchedule.tr,
           controller: controller.scheduleCtrl,
-          hint: 'e.g. Sun–Thu, 8am–6pm or 6 days/week',
+          hint: AppStrings.familyScheduleHint.tr,
           purple: true,
         ),
       ],
@@ -665,7 +665,10 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
         child: DropdownButton<int>(
           isExpanded: true,
           value: value,
-          items: items.map((d) => DropdownMenuItem(value: d, child: Text('$d days'))).toList(),
+          items: items
+              .map((d) => DropdownMenuItem(
+                  value: d, child: Text(AppStrings.familyTrialDaysN.trParams({'n': '$d'}))))
+              .toList(),
           onChanged: onChanged,
         ),
       ),

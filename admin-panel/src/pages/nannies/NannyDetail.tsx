@@ -50,7 +50,9 @@ export default function NannyDetail() {
         if (n) setForm({ fullName: n.fullName, nationality: n.nationality, city: n.city });
       })
       .finally(() => setLoading(false));
-    ChatService.listThreadsForNanny(id).then(setThreads);
+    // Guard the fetch — an unhandled rejection here previously bubbled up; a
+    // thread-load failure should just leave the conversations panel empty.
+    ChatService.listThreadsForNanny(id).then(setThreads).catch(() => setThreads([]));
   }, [id]);
 
   if (loading) {

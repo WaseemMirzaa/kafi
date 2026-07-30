@@ -49,30 +49,38 @@ class SmartMatchScreen extends GetView<ApplicationController> {
     final reqYears = job?.experienceYears ?? 0;
     final langs = (job?.languagesRequired ?? const <String>[]).join(' + ');
     // Contextual checklist with pass / fail / warn states (mirrors the web .ck rows).
+    // Composite rows are built from localized templates + live job data (@tokens).
+    final langLabel = langs.isNotEmpty ? langs : AppStrings.smartLangFallback.tr;
+    final expLabel = reqYears > 0
+        ? AppStrings.smartExpYears.trParams({'n': '$reqYears'})
+        : AppStrings.smartExpFallback.tr;
     final checks = <(_CkState, String)>[
       (
         match.language ? _CkState.pass : _CkState.fail,
         match.language
-            ? '${langs.isNotEmpty ? langs : 'Languages'} — matches perfectly'
-            : '${langs.isNotEmpty ? langs : 'Languages'} required — not all on your profile',
+            ? AppStrings.smartLangPass.trParams({'langs': langLabel})
+            : AppStrings.smartLangFail.trParams({'langs': langLabel}),
       ),
       (
         match.experience ? _CkState.pass : _CkState.fail,
         match.experience
-            ? '${reqYears > 0 ? '$reqYears+ yrs exp' : 'Experience'} — requirement met'
-            : 'Needs $reqYears+ years — more than your profile shows',
+            ? AppStrings.smartExpPass.trParams({'exp': expLabel})
+            : AppStrings.smartExpFail.trParams({'n': '$reqYears'}),
       ),
       (
         match.role ? _CkState.pass : _CkState.fail,
-        '${liveOut ? 'Live-out' : 'Live-in'} availability — ${match.role ? 'matches' : "doesn't match"}',
+        AppStrings.smartRoleLine.trParams({
+          'type': liveOut ? AppStrings.smartRoleLiveOut.tr : AppStrings.smartRoleLiveIn.tr,
+          'status': match.role ? AppStrings.smartRoleMatches.tr : AppStrings.smartRoleNoMatch.tr,
+        }),
       ),
       (
         match.visa ? _CkState.pass : _CkState.fail,
-        match.visa ? 'Visa status — aligned with the family' : 'Visa requirement — not aligned',
+        match.visa ? AppStrings.smartVisaPass.tr : AppStrings.smartVisaFail.tr,
       ),
       (
         match.salary ? _CkState.pass : _CkState.warn,
-        match.salary ? 'Salary range — within your expectation' : 'Salary slightly above range — discuss',
+        match.salary ? AppStrings.smartSalaryPass.tr : AppStrings.smartSalaryFail.tr,
       ),
     ];
     final failCount = checks.where((c) => c.$1 != _CkState.pass).length;
@@ -162,7 +170,12 @@ class SmartMatchScreen extends GetView<ApplicationController> {
                   ),
                   const SizedBox(height: 1),
                   Text(
-                    '${job.experienceYears}+ yrs · ${job.languagesRequired.join(' + ')} · AED ${job.salaryMin}–${job.salaryMax}/mo',
+                    AppStrings.smartJobSummary.trParams({
+                      'years': '${job.experienceYears}',
+                      'langs': job.languagesRequired.join(' + '),
+                      'min': '${job.salaryMin}',
+                      'max': '${job.salaryMax}',
+                    }),
                     style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600),
                   ),
                 ],
@@ -178,25 +191,22 @@ class SmartMatchScreen extends GetView<ApplicationController> {
   Widget _scoreBlock(int score, bool good, Color color, int failCount) {
     return Column(
       children: [
+        // The numeric match score is intentionally hidden on the nanny side
+        // (M8): a job-only score (the nanny can't read the family household)
+        // can't equal the family's canonical match, so a divergent number here
+        // would mislead. A qualitative icon + the "Great/Low match" label below
+        // convey fit without a number.
         SizedBox(
           width: 84,
           height: 84,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 84,
-                height: 84,
-                child: CircularProgressIndicator(
-                  value: score / 100,
-                  strokeWidth: 7,
-                  strokeCap: StrokeCap.round,
-                  backgroundColor: const Color(0xFFFFE8EF),
-                  color: color,
-                ),
-              ),
-              Text('$score%', style: KafiTheme.nunito(21, color: color, w: FontWeight.w900)),
-            ],
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withValues(alpha: 0.12),
+              border: Border.all(color: color, width: 3),
+            ),
+            child: Icon(good ? Icons.thumb_up_alt_rounded : Icons.info_outline,
+                color: color, size: 34),
           ),
         ),
         const SizedBox(height: 6),

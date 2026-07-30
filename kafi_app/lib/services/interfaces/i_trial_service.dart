@@ -5,6 +5,10 @@ abstract class ITrialService {
   Future<List<TrialModel>> listTrialsForNanny(String nannyId);
   Future<TrialModel?> getTrial(String trialId);
   Future<TrialModel?> activeTrial(String familyId);
+
+  /// Nanny ids currently on an accepted or active trial (with any family). Used
+  /// to hide nannies mid-trial from family browse/search (M5).
+  Future<Set<String>> activeTrialNannyIds();
   Future<void> sendOffer(TrialModel trial);
   Future<void> updateStatus(String trialId, TrialStatus status);
   Future<void> respondAccept(String trialId);

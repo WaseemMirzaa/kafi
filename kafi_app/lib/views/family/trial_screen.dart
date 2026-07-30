@@ -258,11 +258,11 @@ class TrialScreen extends GetView<TrialController> {
     final String famName;
     if (_isNanny) {
       final resolved = controller.familyDisplayName.value;
-      famName = (resolved != null && resolved.isNotEmpty) ? resolved : 'The family';
+      famName = (resolved != null && resolved.isNotEmpty) ? resolved : AppStrings.trialFamilyGeneric.tr;
     } else {
       final famUser =
           Get.isRegistered<AuthController>() ? Get.find<AuthController>().currentUser.value : null;
-      famName = (famUser?.fullName?.isNotEmpty == true) ? famUser!.fullName! : 'Your family';
+      famName = (famUser?.fullName?.isNotEmpty == true) ? famUser!.fullName! : AppStrings.trialYourFamily.tr;
     }
     final nanny = controller.nannyCardFor(t.nannyId);
 
@@ -328,7 +328,11 @@ class TrialScreen extends GetView<TrialController> {
                     style: KafiTheme.nunito(26, color: KafiColors.td, w: FontWeight.w900).copyWith(height: 1)),
                 const SizedBox(height: 3),
                 Text(
-                  '${t.durationDays}-day paid trial · AED ${t.dailyRate}/day · Ends ${_fmtEnd(t.endDate)}',
+                  AppStrings.trialSummaryLine.trParams({
+                    'days': '${t.durationDays}',
+                    'rate': '${t.dailyRate}',
+                    'end': _fmtEnd(t.endDate),
+                  }),
                   textAlign: TextAlign.center,
                   style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600),
                 ),
@@ -340,7 +344,11 @@ class TrialScreen extends GetView<TrialController> {
           Row(
             children: [
               Expanded(
-                child: _partyCard(famName, 'Family · ${t.location.isNotEmpty ? t.location : 'UAE'}',
+                child: _partyCard(
+                    famName,
+                    AppStrings.trialPartyFamilyRole.trParams({
+                      'location': t.location.isNotEmpty ? t.location : AppStrings.trialUaeFallback.tr,
+                    }),
                     const [KafiColors.pur, Color(0xFFC084FC)]),
               ),
               const Padding(
@@ -348,7 +356,9 @@ class TrialScreen extends GetView<TrialController> {
                 child: Text('↔', style: TextStyle(fontSize: 16, color: KafiColors.grn, fontWeight: FontWeight.w700)),
               ),
               Expanded(
-                child: _partyCard(nanny.name, 'Nanny · ${nanny.nationality}',
+                child: _partyCard(
+                    nanny.name,
+                    AppStrings.trialPartyNannyRole.trParams({'nationality': nanny.nationality}),
                     const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
                     showRevealed: true),
               ),
@@ -401,7 +411,7 @@ class TrialScreen extends GetView<TrialController> {
               children: [
                 const Icon(Icons.call, color: KafiColors.grnD, size: 9),
                 const SizedBox(width: 2),
-                Text('Revealed', style: KafiTheme.nunito(9.5, color: KafiColors.grnD, w: FontWeight.w700)),
+                Text(AppStrings.trialRevealed.tr, style: KafiTheme.nunito(9.5, color: KafiColors.grnD, w: FontWeight.w700)),
               ],
             ),
           ],
@@ -415,12 +425,12 @@ class TrialScreen extends GetView<TrialController> {
     // (TrialEvaluation field key, label). The family ticks these before
     // recording an outcome; the nanny sees the recorded result read-only.
     final items = <(String, String)>[
-      ('childInteractionAndPatience', 'Child interaction & patience'),
-      ('punctualityAndReliability', 'Punctuality & reliability'),
-      ('followingInstructions', 'Following instructions'),
-      ('communicationAndLanguage', 'Communication & language'),
-      ('cookingFamilyFood', 'Cooking (family food)'),
-      ('honestyAndTrustworthiness', 'Honesty & trustworthiness'),
+      ('childInteractionAndPatience', AppStrings.trialEvalChildInteraction.tr),
+      ('punctualityAndReliability', AppStrings.trialEvalPunctuality.tr),
+      ('followingInstructions', AppStrings.trialEvalInstructions.tr),
+      ('communicationAndLanguage', AppStrings.trialEvalCommunication.tr),
+      ('cookingFamilyFood', AppStrings.trialEvalCooking.tr),
+      ('honestyAndTrustworthiness', AppStrings.trialEvalHonesty.tr),
     ];
     final editable = !_isNanny;
     return Padding(
@@ -501,7 +511,7 @@ class TrialScreen extends GetView<TrialController> {
           child: TextButton.icon(
             onPressed: () => _confirmCancel(context, t),
             icon: const Icon(Icons.cancel_outlined, size: 16, color: Color(0xFFCC3344)),
-            label: const Text('Cancel trial', style: TextStyle(color: Color(0xFFCC3344))),
+            label: Text(AppStrings.trialCancelAction.tr, style: const TextStyle(color: Color(0xFFCC3344))),
           ),
         ),
       );
@@ -585,10 +595,10 @@ class TrialScreen extends GetView<TrialController> {
               child: const Icon(Icons.handshake_outlined, color: KafiColors.grnD, size: 30),
             ),
             const SizedBox(height: 14),
-            Text('No active trial yet',
+            Text(AppStrings.trialEmptyTitle.tr,
                 style: KafiTheme.nunito(14, color: KafiColors.grnD, w: FontWeight.w800)),
             const SizedBox(height: 5),
-            Text('Send a trial offer to a nanny you like',
+            Text(AppStrings.trialEmptySub.tr,
                 style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600)),
             const SizedBox(height: 20),
             KafiPrimaryButton(
@@ -599,7 +609,7 @@ class TrialScreen extends GetView<TrialController> {
             const SizedBox(height: 8),
             GestureDetector(
               onTap: () => AppNavigation.familyGoToTab(0),
-              child: Text('Browse nannies',
+              child: Text(AppStrings.trialBrowseNannies.tr,
                   style: KafiTheme.nunito(11, color: KafiColors.grnD, w: FontWeight.w700)),
             ),
           ],
@@ -611,10 +621,10 @@ class TrialScreen extends GetView<TrialController> {
   // ── Nanny-only payment block (preserved) ───────────────────────────────────
   Widget _paymentBlock(BuildContext context, TrialModel t) {
     if (t.nannyConfirmedPayment) {
-      return _banner(KafiColors.grnL, KafiColors.grnD, Icons.check_circle, 'Payment confirmed');
+      return _banner(KafiColors.grnL, KafiColors.grnD, Icons.check_circle, AppStrings.trialPaymentConfirmed.tr);
     }
     if (t.paymentIssueReported) {
-      return _banner(KafiColors.ambL, KafiColors.ambD, Icons.warning_amber, 'Issue reported — admin will follow up');
+      return _banner(KafiColors.ambL, KafiColors.ambD, Icons.warning_amber, AppStrings.trialIssueReportedBanner.tr);
     }
     return Row(
       children: [
@@ -622,13 +632,13 @@ class TrialScreen extends GetView<TrialController> {
           child: OutlinedButton(
             onPressed: () => _reportIssueDialog(context, t),
             style: OutlinedButton.styleFrom(foregroundColor: KafiColors.amb),
-            child: const Text('Report issue'),
+            child: Text(AppStrings.trialReportIssue.tr),
           ),
         ),
         const SizedBox(width: 8),
         Expanded(
           child: KafiPrimaryButton(
-            label: 'Confirm payment',
+            label: AppStrings.trialConfirmPayment.tr,
             variant: KafiButtonVariant.green,
             onPressed: () => controller.confirmPaymentReceived(t.id),
           ),
@@ -681,18 +691,20 @@ class TrialScreen extends GetView<TrialController> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Cancel trial?'),
+        title: Text(AppStrings.trialCancelConfirmTitle.tr),
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            const Text('Both parties will be notified.'),
+            Text(AppStrings.trialCancelConfirmBody.tr),
             const SizedBox(height: 8),
-            TextField(controller: reasonCtrl, decoration: const InputDecoration(hintText: 'Reason (optional)')),
+            TextField(
+                controller: reasonCtrl,
+                decoration: InputDecoration(hintText: AppStrings.trialCancelReasonHint.tr)),
           ],
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('Keep')),
-          ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('Cancel trial')),
+          TextButton(onPressed: () => Get.back(result: false), child: Text(AppStrings.trialKeep.tr)),
+          ElevatedButton(onPressed: () => Get.back(result: true), child: Text(AppStrings.trialCancelAction.tr)),
         ],
       ),
     );
@@ -706,15 +718,15 @@ class TrialScreen extends GetView<TrialController> {
     final ok = await showDialog<bool>(
       context: context,
       builder: (_) => AlertDialog(
-        title: const Text('Report payment issue'),
+        title: Text(AppStrings.trialReportIssueTitle.tr),
         content: TextField(
           controller: descCtrl,
           maxLines: 3,
-          decoration: const InputDecoration(hintText: 'Describe the issue…'),
+          decoration: InputDecoration(hintText: AppStrings.trialReportIssueHint.tr),
         ),
         actions: [
-          TextButton(onPressed: () => Get.back(result: false), child: const Text('Cancel')),
-          ElevatedButton(onPressed: () => Get.back(result: true), child: const Text('Send report')),
+          TextButton(onPressed: () => Get.back(result: false), child: Text(AppStrings.cancel.tr)),
+          ElevatedButton(onPressed: () => Get.back(result: true), child: Text(AppStrings.trialSendReport.tr)),
         ],
       ),
     );

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/browse_controller.dart';
+import 'package:kafi_app/controllers/family_jobs_controller.dart';
 import 'package:kafi_app/controllers/notification_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/models/family_model.dart';
@@ -171,15 +172,16 @@ class BrowseScreen extends GetView<BrowseController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Payment issue', style: KafiTheme.nunito(11, color: const Color(0xFF7A4A00), w: FontWeight.w800)),
-                Text('Update payment to avoid losing access.',
+                Text(AppStrings.subGraceTitle.tr,
+                    style: KafiTheme.nunito(11, color: const Color(0xFF7A4A00), w: FontWeight.w800)),
+                Text(AppStrings.subGraceBody.tr,
                     style: KafiTheme.nunito(10, color: const Color(0xFF7A4A00), w: FontWeight.w400)),
               ],
             ),
           ),
           TextButton(
             onPressed: () => Get.toNamed(Routes.pricing),
-            child: Text('Fix now', style: KafiTheme.fredoka(10, color: KafiColors.roseD)),
+            child: Text(AppStrings.subFixNow.tr, style: KafiTheme.fredoka(10, color: KafiColors.roseD)),
           ),
         ],
       ),
@@ -205,7 +207,16 @@ class BrowseScreen extends GetView<BrowseController> {
               Text(AppStrings.appName.tr, style: KafiTheme.pacifico(18, color: const Color(0xFF5A2090))),
               const Spacer(),
               GestureDetector(
-                onTap: () => Get.toNamed(Routes.familyMyJobs),
+                onTap: () {
+                  // Refresh jobs + active hires before opening My Jobs so the
+                  // per-job "Hired" pill reflects a hire made elsewhere since
+                  // this permanent controller last loaded (M9). Fire-and-forget:
+                  // the screen shows its current list while the refresh lands.
+                  if (Get.isRegistered<FamilyJobsController>()) {
+                    Get.find<FamilyJobsController>().load();
+                  }
+                  Get.toNamed(Routes.familyMyJobs);
+                },
                 child: Container(
                   width: 30,
                   height: 30,

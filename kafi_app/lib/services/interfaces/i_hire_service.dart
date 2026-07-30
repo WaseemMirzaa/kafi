@@ -18,6 +18,10 @@ abstract class IHireService {
   /// The nanny's current active hire, if any.
   Future<HireModel?> activeHireForNanny(String nannyId);
 
+  /// User ids of all nannies who currently have an ACTIVE hire. Used to hide
+  /// employed nannies from family browse/search (M5).
+  Future<Set<String>> activeHiredNannyIds();
+
   /// Ends a hire with a reason (resigned / terminated / completed).
   Future<void> endHire(
     String hireId, {
