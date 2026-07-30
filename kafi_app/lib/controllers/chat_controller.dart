@@ -381,7 +381,7 @@ class ChatController extends GetxController {
     if (!_skipSubscriptionGates && !isNanny) {
       final thread = threads.firstWhereOrNull((t) => t.id == activeThreadId.value);
       if (_subs.isExpired && !(thread?.hasActiveTrial ?? false)) {
-        Get.snackbar('Subscription Required', 'Renew to send messages');
+        Get.snackbar(AppStrings.subscriptionRequired.tr, AppStrings.renewToSendMessages.tr);
         return;
       }
     }
