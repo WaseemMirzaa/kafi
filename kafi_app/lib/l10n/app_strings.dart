@@ -492,6 +492,30 @@ abstract class AppStrings {
   static const spNone = 'sp_none';
   static const spCommit = 'sp_commit';
 
+  // Family form — hardcoded chrome (labels, hints, prompts). Data values
+  // (religion names, pet types) stay untranslated like the other constant chips.
+  static const familyNameHint = 'family_name_hint';
+  static const familyYourNationality = 'family_your_nationality';
+  static const familyChildrenAgesHint = 'family_children_ages_hint';
+  static const familyHomeCameras = 'family_home_cameras';
+  static const familyHasCameras = 'family_has_cameras';
+  static const familyNoCameras = 'family_no_cameras';
+  static const familyPets = 'family_pets';
+  static const familyAboutPrompt = 'family_about_prompt';
+  static const familyAboutLabel = 'family_about_label';
+  static const familyAboutHint = 'family_about_hint';
+  static const familyReligionBanner = 'family_religion_banner';
+  static const familyReligionLabel = 'family_religion_label';
+  static const familyReligionPrefPrompt = 'family_religion_pref_prompt';
+  static const familyReligionPrefNone = 'family_religion_pref_none';
+  static const familyReligionPrefMuslim = 'family_religion_pref_muslim';
+  static const familyReligionPrefSame = 'family_religion_pref_same';
+  static const familyReligionPrefOpen = 'family_religion_pref_open';
+  static const familyHouseRulesLabel = 'family_house_rules_label';
+  static const familyHouseRulesHint = 'family_house_rules_hint';
+  static const familyScheduleHint = 'family_schedule_hint';
+  static const familyTrialDaysN = 'family_trial_days_n';
+
   // Browse
   static const browseGoodMorning = 'browse_good_morning';
   static const browseHello = 'browse_hello';

@@ -296,6 +296,31 @@ const Map<String, String> enUs = {
   AppStrings.spResidence: 'Only for nannies with valid UAE residence',
   AppStrings.spNone: 'No — nanny must have own visa',
   AppStrings.spCommit: 'I agree to honor the offer if hire is made',
+  AppStrings.familyNameHint: 'e.g. Al Rashid Family',
+  AppStrings.familyYourNationality: 'Your nationality',
+  AppStrings.familyChildrenAgesHint: 'e.g. 6 months, 3 years, 7 years',
+  AppStrings.familyHomeCameras: 'Home cameras?',
+  AppStrings.familyHasCameras: 'Yes, we have cameras',
+  AppStrings.familyNoCameras: 'No cameras',
+  AppStrings.familyPets: 'Pets?',
+  AppStrings.familyAboutPrompt: 'Tell nannies a little about your family',
+  AppStrings.familyAboutLabel: 'Family information',
+  AppStrings.familyAboutHint:
+      'e.g. We are a warm family of four in Dubai. Both parents work. '
+      'We value kindness, routine and good communication. Our home is '
+      'smoke-free and we love weekend outings with the kids.',
+  AppStrings.familyReligionBanner:
+      'This helps us match you with nannies whose lifestyle and practices are compatible with your home. All information is treated with full respect and privacy.',
+  AppStrings.familyReligionLabel: "Your family's religion (optional)",
+  AppStrings.familyReligionPrefPrompt: 'Do you require the nanny to follow any religious practices?',
+  AppStrings.familyReligionPrefNone: 'No — nanny can be of any religion',
+  AppStrings.familyReligionPrefMuslim: 'We prefer a Muslim nanny (halal diet, prayer respect)',
+  AppStrings.familyReligionPrefSame: 'We prefer a nanny of the same religion as ours',
+  AppStrings.familyReligionPrefOpen: 'We are open — but nanny must respect our home rules',
+  AppStrings.familyHouseRulesLabel: 'Any faith-related house rules to mention? (optional)',
+  AppStrings.familyHouseRulesHint: 'e.g. Halal food only · No pork · Prayer times respected · No alcohol',
+  AppStrings.familyScheduleHint: 'e.g. Sun–Thu, 8am–6pm or 6 days/week',
+  AppStrings.familyTrialDaysN: '@n days',
 
   AppStrings.browseGoodMorning: 'Good morning 🌸',
   AppStrings.browseHello: 'Hello, @name!',
