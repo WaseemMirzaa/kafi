@@ -35,6 +35,10 @@ class NotificationsScreen extends GetView<NotificationController> {
                 if (controller.isLoading.value) {
                   return Center(child: CircularProgressIndicator(color: _accent));
                 }
+                if (controller.loadError.value != null &&
+                    controller.notifications.isEmpty) {
+                  return _errorState();
+                }
                 if (controller.notifications.isEmpty) {
                   return _emptyState();
                 }
@@ -102,6 +106,30 @@ class NotificationsScreen extends GetView<NotificationController> {
           const SizedBox(height: 12),
           Text(AppStrings.notificationsEmpty.tr,
               style: KafiTheme.nunito(13, color: KafiColors.ts, w: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
+
+  Widget _errorState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.cloud_off_outlined, size: 52, color: _accent.withValues(alpha: 0.4)),
+          const SizedBox(height: 12),
+          Text(AppStrings.loadErrorTitle.tr,
+              style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w800)),
+          const SizedBox(height: 4),
+          Text(AppStrings.loadErrorSub.tr,
+              textAlign: TextAlign.center,
+              style: KafiTheme.nunito(11, color: KafiColors.ts)),
+          const SizedBox(height: 12),
+          TextButton(
+            onPressed: controller.loadNotifications,
+            child: Text(AppStrings.retry.tr,
+                style: KafiTheme.fredoka(12, color: _accent, w: FontWeight.w700)),
+          ),
         ],
       ),
     );

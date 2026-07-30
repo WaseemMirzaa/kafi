@@ -16,6 +16,7 @@ class NotificationController extends GetxController {
   final RxList<AppNotification> notifications = <AppNotification>[].obs;
   final RxInt unreadCount = 0.obs;
   final RxBool isLoading = false.obs;
+  final RxnString loadError = RxnString();
 
   /// Queued chat deep-link when the user taps a notification before the
   /// family shell (and [ChatController]) has mounted.
@@ -74,37 +75,57 @@ class NotificationController extends GetxController {
 
   Future<void> loadNotifications() async {
     isLoading.value = true;
+    loadError.value = null;
     try {
       final userId = currentUserId(_auth);
       if (userId == null) return;
       notifications.value = await _notifService.loadNotifications(userId);
       unreadCount.value = notifications.where((n) => !n.read).length;
+    } catch (e) {
+      // A failed read must surface as an error+retry, not masquerade as an empty
+      // inbox — the screen previously had only loading + empty states.
+      Get.log('notifications load failed: $e', isError: true);
+      loadError.value = e.toString();
     } finally {
       isLoading.value = false;
     }
   }
 
   Future<void> markAsRead(String id) async {
-    await _notifService.markAsRead(id);
-    final idx = notifications.indexWhere((n) => n.id == id);
-    if (idx >= 0) {
-      notifications[idx] = notifications[idx].copyWith(read: true);
-      unreadCount.value = notifications.where((n) => !n.read).length;
+    try {
+      await _notifService.markAsRead(id);
+      final idx = notifications.indexWhere((n) => n.id == id);
+      if (idx >= 0) {
+        notifications[idx] = notifications[idx].copyWith(read: true);
+        unreadCount.value = notifications.where((n) => !n.read).length;
+      }
+    } catch (e) {
+      // Incidental (tapping an item) — log, don't disrupt navigation.
+      Get.log('markAsRead failed: $e', isError: true);
     }
   }
 
   Future<void> markAllAsRead() async {
     final userId = currentUserId(_auth);
     if (userId == null) return;
-    await _notifService.markAllAsRead(userId);
-    notifications.value = notifications.map((n) => n.copyWith(read: true)).toList();
-    unreadCount.value = 0;
+    try {
+      await _notifService.markAllAsRead(userId);
+      notifications.value = notifications.map((n) => n.copyWith(read: true)).toList();
+      unreadCount.value = 0;
+    } catch (e) {
+      Get.log('markAllAsRead failed: $e', isError: true);
+    }
   }
 
   Future<void> deleteNotification(String id) async {
-    await _notifService.delete(id);
-    notifications.removeWhere((n) => n.id == id);
-    unreadCount.value = notifications.where((n) => !n.read).length;
+    try {
+      await _notifService.delete(id);
+      notifications.removeWhere((n) => n.id == id);
+      unreadCount.value = notifications.where((n) => !n.read).length;
+    } catch (e) {
+      // Keep the item (the delete didn't take) rather than silently dropping it.
+      Get.log('deleteNotification failed: $e', isError: true);
+    }
   }
 
   void _openRouteForRole(String route) {
