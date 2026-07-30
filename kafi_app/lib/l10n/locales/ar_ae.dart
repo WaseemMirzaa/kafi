@@ -580,4 +580,23 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.familyHouseRulesHint: 'مثال: طعام حلال فقط · بدون لحم خنزير · احترام أوقات الصلاة · بدون كحول',
     AppStrings.familyScheduleHint: 'مثال: الأحد–الخميس، 8 صباحًا–6 مساءً أو 6 أيام/أسبوع',
     AppStrings.familyTrialDaysN: '@n أيام',
+
+    // Smart-match contextual checklist
+    AppStrings.smartLangFallback: 'اللغات',
+    AppStrings.smartLangPass: '@langs — تطابق تام',
+    AppStrings.smartLangFail: '@langs مطلوبة — ليست كلها في ملفك',
+    AppStrings.smartExpYears: 'خبرة @n+ سنوات',
+    AppStrings.smartExpFallback: 'الخبرة',
+    AppStrings.smartExpPass: '@exp — تم استيفاء الشرط',
+    AppStrings.smartExpFail: 'يتطلب @n+ سنوات — أكثر مما يظهره ملفك',
+    AppStrings.smartRoleLiveOut: 'إقامة خارجية',
+    AppStrings.smartRoleLiveIn: 'إقامة داخلية',
+    AppStrings.smartRoleMatches: 'مطابق',
+    AppStrings.smartRoleNoMatch: 'غير مطابق',
+    AppStrings.smartRoleLine: 'توفّر @type — @status',
+    AppStrings.smartVisaPass: 'حالة التأشيرة — متوافقة مع العائلة',
+    AppStrings.smartVisaFail: 'متطلب التأشيرة — غير متوافق',
+    AppStrings.smartSalaryPass: 'نطاق الراتب — ضمن توقعاتك',
+    AppStrings.smartSalaryFail: 'الراتب أعلى قليلاً من النطاق — للنقاش',
+    AppStrings.smartJobSummary: '@years+ سنة · @langs · @min–@max درهم/شهر',
   });
