@@ -10,23 +10,32 @@ import {
   TableCard,
   TopStat,
 } from '../../components/ui/AdminUI';
-import { FamilyService, FamilyRow, RevenueService, RevenueSummary } from '../../services/firestore';
+import {
+  FamilyService,
+  FamilyRow,
+  RevenueService,
+  RevenueSummary,
+  SettingsService,
+  DEFAULT_PLAN_PRICES,
+} from '../../services/firestore';
 import { exportCsv } from '../../utils/csv';
-
-const planPrice: Record<string, number> = { weekly: 89, monthly: 239, twoMonths: 369 };
 
 export default function Subscriptions() {
   const [families, setFamilies] = useState<FamilyRow[]>([]);
   const [revenue, setRevenue] = useState<RevenueSummary | null>(null);
+  // Plan prices come from admin settings (falls back to the shared defaults).
+  const [planPrice, setPlanPrice] = useState<Record<string, number>>(DEFAULT_PLAN_PRICES);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    // Fetch families once and pass them to summary() (avoids a duplicate list).
-    FamilyService.list()
-      .then((f) => RevenueService.summary(f).then((r) => {
+    // Fetch families + settings once and pass families to summary() (avoids a
+    // duplicate list). settings.plans drives the plan-breakdown price labels.
+    Promise.all([FamilyService.list(), SettingsService.get()])
+      .then(([f, s]) => RevenueService.summary(f).then((r) => {
         setFamilies(f);
         setRevenue(r);
+        setPlanPrice(s.plans);
       }))
       // Without .catch/.finally the page hangs on "Loading…" on any read failure.
       .catch((e) => setError((e as Error).message || 'Failed to load subscriptions'))

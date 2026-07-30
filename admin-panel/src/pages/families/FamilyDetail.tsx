@@ -102,6 +102,14 @@ export default function FamilyDetail() {
   const [error, setError] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
   const [freeLimit, setFreeLimit] = useState(5);
+  // Admin subscription actions (override / reset free contacts).
+  const [subBusy, setSubBusy] = useState(false);
+  const [actionMsg, setActionMsg] = useState<string | null>(null);
+  const [actionErr, setActionErr] = useState<string | null>(null);
+  const [showOverride, setShowOverride] = useState(false);
+  const [ovStatus, setOvStatus] = useState<FamilyRow['subscription']['status']>('active');
+  const [ovPlan, setOvPlan] = useState('');
+  const [ovEnd, setOvEnd] = useState('');
 
   const load = async () => {
     if (!id) return;
@@ -175,6 +183,44 @@ export default function FamilyDetail() {
       alert((e as Error).message || 'Block toggle failed');
     } finally {
       setBusy(false);
+    }
+  };
+
+  // Manually correct a family's subscription (support/ops). Only the provided
+  // fields change; blank plan / end date leave those untouched.
+  const applyOverride = async () => {
+    setSubBusy(true);
+    setActionMsg(null);
+    setActionErr(null);
+    try {
+      await FamilyService.overrideSubscription(family.id, {
+        status: ovStatus,
+        plan: ovPlan || undefined,
+        endDate: ovEnd ? new Date(ovEnd) : undefined,
+      });
+      setShowOverride(false);
+      setActionMsg('Subscription updated.');
+      await load();
+    } catch (e) {
+      setActionErr((e as Error).message || 'Failed to update subscription');
+    } finally {
+      setSubBusy(false);
+    }
+  };
+
+  // Reset the family's used free-contact count back to zero.
+  const resetContacts = async () => {
+    setSubBusy(true);
+    setActionMsg(null);
+    setActionErr(null);
+    try {
+      await FamilyService.resetFreeContacts(family.id);
+      setActionMsg('Free contacts reset to 0.');
+      await load();
+    } catch (e) {
+      setActionErr((e as Error).message || 'Failed to reset free contacts');
+    } finally {
+      setSubBusy(false);
     }
   };
 
@@ -264,8 +310,8 @@ export default function FamilyDetail() {
           {family.aboutFamily && <div className="text-[9px] text-navy/70 mt-1">About: {family.aboutFamily}</div>}
         </Section>
 
-        {/* Subscription — view only */}
-        <Section title="Subscription (view only)">
+        {/* Subscription — view + admin override */}
+        <Section title="Subscription">
           <FieldGrid>
             <Field label="Status" value={sub.status} />
             <Field label="Plan" value={sub.plan ?? 'Free tier'} />
@@ -276,6 +322,74 @@ export default function FamilyDetail() {
             <Field label="Free contacts used" value={`${family.freeContactsUsed ?? 0} / ${freeLimit}`} />
             <Field label="Active trials" value={String(family.activeTrialNannyIds?.length ?? 0)} />
           </FieldGrid>
+
+          <div className="mt-4 flex flex-wrap items-center gap-2">
+            <button
+              type="button"
+              className="qa-btn qa-n"
+              onClick={() => {
+                setActionErr(null);
+                setActionMsg(null);
+                setShowOverride((v) => !v);
+              }}
+              disabled={subBusy}
+            >
+              {showOverride ? 'Close override' : 'Override subscription'}
+            </button>
+            <button type="button" className="qa-btn qa-n" onClick={resetContacts} disabled={subBusy}>
+              Reset free contacts
+            </button>
+            {actionMsg && <span className="text-[10px] font-bold text-[#2A8A50]">{actionMsg}</span>}
+            {actionErr && <span className="text-[10px] font-bold text-rose-dark">{actionErr}</span>}
+          </div>
+
+          {showOverride && (
+            <div className="mt-3 rounded-lg border border-[#EBEEF8] p-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                <div>
+                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">Status</div>
+                  <select
+                    value={ovStatus}
+                    onChange={(e) => setOvStatus(e.target.value as FamilyRow['subscription']['status'])}
+                    className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30"
+                  >
+                    <option value="active">active</option>
+                    <option value="free">free</option>
+                    <option value="expired">expired</option>
+                    <option value="cancelled">cancelled</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">Plan</div>
+                  <select
+                    value={ovPlan}
+                    onChange={(e) => setOvPlan(e.target.value)}
+                    className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30"
+                  >
+                    <option value="">Leave unchanged</option>
+                    <option value="weekly">weekly</option>
+                    <option value="monthly">monthly</option>
+                    <option value="twoMonths">twoMonths</option>
+                  </select>
+                </div>
+                <div>
+                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">End date</div>
+                  <input
+                    type="date"
+                    value={ovEnd}
+                    onChange={(e) => setOvEnd(e.target.value)}
+                    className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30"
+                  />
+                </div>
+              </div>
+              <div className="text-[8px] text-[#8090B0] mt-2 leading-relaxed">
+                Applies immediately. Blank plan / end date leave those fields as they are.
+              </div>
+              <button type="button" className="qa-btn qa-r mt-3" onClick={applyOverride} disabled={subBusy}>
+                {subBusy ? 'Applying…' : 'Apply override'}
+              </button>
+            </div>
+          )}
         </Section>
 
         {/* Job posts */}
