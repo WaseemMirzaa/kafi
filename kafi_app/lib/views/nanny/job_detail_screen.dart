@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/application_controller.dart';
-import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
-import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/string_format.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
@@ -20,15 +18,6 @@ class JobDetailScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final JobPostModel job = Get.arguments as JobPostModel;
-    final nanny = Get.isRegistered<NannyProfileController>()
-        ? Get.find<NannyProfileController>().nanny.value
-        : null;
-    final matchService = MatchService();
-    final matchScore =
-        nanny == null ? 0 : matchService.calculateJobMatch(nanny, job);
-    final factors = nanny == null
-        ? const <MatchFactor>[]
-        : matchService.getMatchFactors(nanny, job);
 
     return Scaffold(
       backgroundColor: KafiColors.nannyBg,
@@ -46,8 +35,9 @@ class JobDetailScreen extends StatelessWidget {
                   children: [
                     _familyCard(job),
                     const SizedBox(height: 16),
-                    _matchScoreSection(matchScore, factors),
-                    const SizedBox(height: 16),
+                    // The nanny-side "% match" is intentionally not shown: the
+                    // canonical match is scored from the family's household +
+                    // job, which the nanny can't compute (M8).
                     _jobDetailsSection(job),
                     const SizedBox(height: 16),
                     _requirementsSection(job),
@@ -143,60 +133,6 @@ class JobDetailScreen extends StatelessWidget {
               ],
             ),
           ),
-        ],
-      ),
-    );
-  }
-
-  Widget _matchScoreSection(int score, List<MatchFactor> factors) {
-    final isGood = score >= 80;
-    return Container(
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: const Color(0xFFFFE8EF), width: 1.5),
-        boxShadow: const [BoxShadow(color: Color(0x12FF5F96), blurRadius: 8, offset: Offset(0, 2))],
-      ),
-      child: Column(
-        children: [
-          Container(
-            width: 58,
-            height: 58,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isGood ? KafiColors.grnL : KafiColors.ambL,
-              border: Border.all(
-                  color: isGood ? KafiColors.grnD : KafiColors.ambD, width: 2),
-            ),
-            child: Center(
-              child: Text('$score%',
-                  style: KafiTheme.nunito(15,
-                      color: isGood ? KafiColors.grnD : KafiColors.ambD,
-                      w: FontWeight.w900)),
-            ),
-          ),
-          const SizedBox(height: 7),
-          Text(isGood ? AppStrings.matchGreat.tr : AppStrings.matchLow.tr,
-              style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
-          const SizedBox(height: 10),
-          ...factors.map((f) => Padding(
-                padding: const EdgeInsets.symmetric(vertical: 3),
-                child: Row(
-                  children: [
-                    Icon(f.isStrong ? Icons.check_circle : Icons.warning_amber_rounded,
-                        size: 14,
-                        color: f.isStrong ? KafiColors.grnD : KafiColors.ambD),
-                    const SizedBox(width: 7),
-                    Expanded(
-                      child: Text(f.name,
-                          style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w700)),
-                    ),
-                    Text('${f.score}%',
-                        style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600)),
-                  ],
-                ),
-              )),
         ],
       ),
     );

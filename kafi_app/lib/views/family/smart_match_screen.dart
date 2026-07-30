@@ -178,25 +178,22 @@ class SmartMatchScreen extends GetView<ApplicationController> {
   Widget _scoreBlock(int score, bool good, Color color, int failCount) {
     return Column(
       children: [
+        // The numeric match score is intentionally hidden on the nanny side
+        // (M8): a job-only score (the nanny can't read the family household)
+        // can't equal the family's canonical match, so a divergent number here
+        // would mislead. A qualitative icon + the "Great/Low match" label below
+        // convey fit without a number.
         SizedBox(
           width: 84,
           height: 84,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 84,
-                height: 84,
-                child: CircularProgressIndicator(
-                  value: score / 100,
-                  strokeWidth: 7,
-                  strokeCap: StrokeCap.round,
-                  backgroundColor: const Color(0xFFFFE8EF),
-                  color: color,
-                ),
-              ),
-              Text('$score%', style: KafiTheme.nunito(21, color: color, w: FontWeight.w900)),
-            ],
+          child: Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: color.withValues(alpha: 0.12),
+              border: Border.all(color: color, width: 3),
+            ),
+            child: Icon(good ? Icons.thumb_up_alt_rounded : Icons.info_outline,
+                color: color, size: 34),
           ),
         ),
         const SizedBox(height: 6),
