@@ -553,4 +553,31 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     // Snackbars
     AppStrings.jobPostedToast: 'تم نشر الوظيفة!',
     AppStrings.renewToSendMessages: 'جدّد اشتراكك لإرسال الرسائل.',
+
+    // Family form — chrome
+    AppStrings.familyNameHint: 'مثال: عائلة الراشد',
+    AppStrings.familyYourNationality: 'جنسيتك',
+    AppStrings.familyChildrenAgesHint: 'مثال: 6 أشهر، 3 سنوات، 7 سنوات',
+    AppStrings.familyHomeCameras: 'كاميرات في المنزل؟',
+    AppStrings.familyHasCameras: 'نعم، لدينا كاميرات',
+    AppStrings.familyNoCameras: 'لا توجد كاميرات',
+    AppStrings.familyPets: 'حيوانات أليفة؟',
+    AppStrings.familyAboutPrompt: 'أخبر المربيات قليلاً عن عائلتك',
+    AppStrings.familyAboutLabel: 'معلومات العائلة',
+    AppStrings.familyAboutHint:
+        'مثال: نحن عائلة دافئة من أربعة أفراد في دبي. كلا الوالدين يعملان. '
+        'نقدّر اللطف والروتين والتواصل الجيد. منزلنا خالٍ من التدخين '
+        'ونحب النزهات في عطلة نهاية الأسبوع مع الأطفال.',
+    AppStrings.familyReligionBanner:
+        'يساعدنا هذا في مطابقتك مع مربيات يتوافق أسلوب حياتهن وممارساتهن مع منزلك. تُعامَل جميع المعلومات باحترام وخصوصية تامّين.',
+    AppStrings.familyReligionLabel: 'ديانة عائلتك (اختياري)',
+    AppStrings.familyReligionPrefPrompt: 'هل تطلب من المربية اتباع أي ممارسات دينية؟',
+    AppStrings.familyReligionPrefNone: 'لا — يمكن أن تكون المربية من أي ديانة',
+    AppStrings.familyReligionPrefMuslim: 'نفضّل مربية مسلمة (طعام حلال، احترام الصلاة)',
+    AppStrings.familyReligionPrefSame: 'نفضّل مربية من نفس ديانتنا',
+    AppStrings.familyReligionPrefOpen: 'نحن منفتحون — لكن يجب أن تحترم المربية قواعد منزلنا',
+    AppStrings.familyHouseRulesLabel: 'أي قواعد منزلية متعلقة بالدين تودّ ذكرها؟ (اختياري)',
+    AppStrings.familyHouseRulesHint: 'مثال: طعام حلال فقط · بدون لحم خنزير · احترام أوقات الصلاة · بدون كحول',
+    AppStrings.familyScheduleHint: 'مثال: الأحد–الخميس، 8 صباحًا–6 مساءً أو 6 أيام/أسبوع',
+    AppStrings.familyTrialDaysN: '@n أيام',
   });
