@@ -1022,6 +1022,8 @@ START
   │     • Duties checklist
   │     • Benefits offered
   │     • Salary range, trial details, visa sponsorship
+  │     • GATE: until ≥1 job is posted, relaunch/resume always returns here;
+  │       back navigation cannot open Browse
   │
   ├─→ [Browse Nannies] Home screen
   │     └─→ Free contacts: 5/5 remaining
@@ -2438,9 +2440,9 @@ Permission Requested
 | # | Scenario | Action |
 |---|----------|--------|
 | RC1 | Abandoned nanny onboarding | Resume from last completed step |
-| RC2 | Abandoned family registration | Resume from last completed step |
+| RC2 | Abandoned family registration | Resume on Job Post Form until ≥1 job exists; cannot open Browse |
 | RC3 | Abandoned trial offer creation | Save draft locally, prompt on return |
-| RC4 | Abandoned job post | Save draft, prompt on return |
+| RC4 | Abandoned first job post | Keep family on Screen 13 (Job Post Form) on relaunch/resume until a job is posted; back navigation does not escape to Browse |
 | RC5 | App crash mid-flow | Restore from last save point |
 | RC6 | Battery dies mid-upload | Resume upload on next session |
 | RC7 | Lost connection mid-chat | Queue messages, send on reconnect |
@@ -2551,5 +2553,7 @@ First Launch
 *Errors: 27 categories, 250+ scenarios documented*
 *Comparison Status: Verified against HTML mockup (kafi-platform-v8-final.html)*
 | 2026-07-17 | Native media and location permissions | Done | Photo capture requires Camera; photo gallery requires Images/Photos; video capture requires Camera + Microphone; video gallery requires Videos/Photos; location picker requires when-in-use location. Android 12− storage fallback, Android 13+ granular image/video access, Android 14 selected-media access, and iOS limited Photos access are supported. |
+
+| 2026-07-31 | Family first-job onboarding gate | Done | Families with no job posts stay on Screen 13 / familyForm on relaunch and resume; back cannot escape to Browse until ≥1 job exists |
 
 | 2026-07-17 | Media screen photo/video preview | Done | Nanny media step (§3.2) now correctly previews selected photos (cover + thumbs) and intro video after pick/record in mock and live modes. |

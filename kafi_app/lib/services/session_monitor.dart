@@ -109,8 +109,21 @@ class SessionMonitor extends GetxService {
   }
 
   /// Routes where "no signed-in user" is expected and must NOT be treated as a
-  /// dropped session (startup gate, pre-auth welcome, and the blocked screen).
-  static const _noUserRoutes = {Routes.splash, Routes.welcome, Routes.blocked};
+  /// dropped session (startup, welcome/blocked, and the phone-OTP auth funnel).
+  /// Login + OTP are included because Firebase phone auth keeps `currentUser`
+  /// null until the code is verified — and returning from the iOS reCAPTCHA
+  /// sheet can re-emit `authStateChanges(null)`, which previously force-sent
+  /// the user back to welcome right after "OTP sent".
+  static const _noUserRoutes = {
+    Routes.splash,
+    Routes.welcome,
+    Routes.blocked,
+    Routes.loginNanny,
+    Routes.loginFamily,
+    Routes.otpVerify,
+    Routes.terms,
+    Routes.privacy,
+  };
 
   void _onAuthStateChanged(User? user) {
     if (user == null) {

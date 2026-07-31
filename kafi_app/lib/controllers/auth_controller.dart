@@ -18,7 +18,7 @@ import 'package:kafi_app/utils/constants/auth_constants.dart';
 import 'package:kafi_app/utils/constants/mock_constants.dart';
 import 'package:kafi_app/utils/validators.dart';
 
-class AuthController extends GetxController {
+class AuthController extends GetxController with WidgetsBindingObserver {
   final IAuthService _authService = Get.find<IAuthService>();
 
   final Rx<UserModel?> currentUser = Rx<UserModel?>(null);
@@ -45,6 +45,10 @@ class AuthController extends GetxController {
   /// expiry, it throttles re-requests without forcing a full expiry wait.
   final RxInt otpResendLeft = 0.obs;
 
+  /// True when the signed-in family has zero job posts and must finish Screen 13
+  /// before Browse. Used to lock back navigation and re-route on resume.
+  final RxBool familyMustPostFirstJob = false.obs;
+
   String get formattedPhone =>
       '${countryCode.value} ${phoneController.text.trim()}';
 
@@ -55,12 +59,26 @@ class AuthController extends GetxController {
   }
 
   @override
+  void onInit() {
+    super.onInit();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
   void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
     _otpTimer?.cancel();
     _resendTimer?.cancel();
     _blockSub?.cancel();
     phoneController.dispose();
     super.onClose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(enforceFamilyFirstJobGate());
+    }
   }
 
   /// Startup decision, driven by the splash screen. Sends the user to the right
@@ -144,18 +162,16 @@ class AuthController extends GetxController {
       await _authService.sendOtp(phone, countryCode.value);
       _startOtpTimer();
       sent = true;
-      Get.snackbar(
-        AppStrings.authOtpSentTitle.tr,
-        AppConfig.useMock
-            ? AppStrings.authOtpSentBody.trParams({'otp': MockConstants.otp})
-            : AppStrings.authCodeSent.trParams({'phone': formattedPhone}),
-      );
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, _authErrorMessage(e));
     } finally {
       isLoading.value = false;
     }
-    if (sent) await Get.toNamed(Routes.otpVerify);
+    if (!sent) return;
+    // Navigate first — the OTP screen is the success signal. Showing a snackbar
+    // before navigation raced the iOS reCAPTCHA return + session monitor and
+    // left users on welcome with only "OTP sent" feedback.
+    await Get.toNamed(Routes.otpVerify);
   }
 
   /// Re-issue OTP from the verify screen. Disabled during the short resend
@@ -328,6 +344,7 @@ class AuthController extends GetxController {
       return;
     }
     if (user.isNanny) {
+      familyMustPostFirstJob.value = false;
       final nanny = await userService.getNanny(user.id);
       // Presence stamp for the admin "hide inactive nannies" filter — records
       // "last opened the app". Best-effort, non-blocking.
@@ -340,9 +357,39 @@ class AuthController extends GetxController {
       // form. Once ≥1 job exists, subsequent sign-ins land on browse/home.
       final hasPostedJob =
           (await Get.find<IJobService>().getJobsByFamily(user.id)).isNotEmpty;
+      familyMustPostFirstJob.value = !hasPostedJob;
       Get.offAllNamed(hasPostedJob ? Routes.browse : Routes.familyForm);
     }
     _startBlockWatch(user);
+  }
+
+  /// Re-check whether a signed-in family still owes their first job post.
+  /// On relaunch this is covered by [_routeForUser]; on resume we call this so
+  /// a family who somehow left the form (or was deep-linked elsewhere) is
+  /// pulled back until ≥1 job exists.
+  Future<void> enforceFamilyFirstJobGate() async {
+    final user = currentUser.value;
+    if (user == null || !user.isFamily) {
+      familyMustPostFirstJob.value = false;
+      return;
+    }
+    if (!Get.isRegistered<IJobService>()) return;
+    try {
+      final hasPostedJob =
+          (await Get.find<IJobService>().getJobsByFamily(user.id)).isNotEmpty;
+      familyMustPostFirstJob.value = !hasPostedJob;
+      if (!hasPostedJob && Get.currentRoute != Routes.familyForm) {
+        Get.offAllNamed(Routes.familyForm);
+      }
+    } catch (e) {
+      Get.log('enforceFamilyFirstJobGate failed: $e', isError: true);
+    }
+  }
+
+  /// Clears the first-job gate after a successful post so back/resume stop
+  /// locking the family onto the form.
+  void markFamilyFirstJobPosted() {
+    familyMustPostFirstJob.value = false;
   }
 
   /// The screen a nanny should resume on: approved → home; pending/rejected →
@@ -397,6 +444,7 @@ class AuthController extends GetxController {
     if (Get.isRegistered<SessionMonitor>()) {
       Get.find<SessionMonitor>().beginIntentionalSignOut();
     }
+    familyMustPostFirstJob.value = false;
     final uid = currentUser.value?.id;
     if (uid != null && Get.isRegistered<INotificationService>()) {
       final token = await Get.find<INotificationService>().getToken();

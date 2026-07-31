@@ -181,7 +181,10 @@ class FamilyProfileController extends GetxController {
 
   Future<void> savePostAndBrowse() async {
     final ok = await _persist();
-    if (ok) Get.offAllNamed(Routes.browse);
+    if (ok) {
+      _auth.markFamilyFirstJobPosted();
+      Get.offAllNamed(Routes.browse);
+    }
   }
 
   /// Edit-screen path — save in place and stay on the screen with a snackbar.

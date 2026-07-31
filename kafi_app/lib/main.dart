@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
@@ -16,9 +17,20 @@ import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Avoid runtime font downloads on Android; the cache path currently trips a
-  // native jni/path_provider crash on this device/build.
+  // Prefer bundled `google_fonts/` assets (see pubspec). Runtime fetch is
+  // disabled because Android's path_provider/jni path currently crashes when
+  // google_fonts tries to cache downloaded TTFs.
   GoogleFonts.config.allowRuntimeFetching = false;
+  LicenseRegistry.addLicense(() async* {
+    for (final path in const [
+      'google_fonts/OFL-Nunito.txt',
+      'google_fonts/OFL-Fredoka.txt',
+      'google_fonts/OFL-Pacifico.txt',
+    ]) {
+      final license = await rootBundle.loadString(path);
+      yield LicenseEntryWithLineBreaks(['google_fonts'], license);
+    }
+  });
   SystemChrome.setSystemUIOverlayStyle(KafiTheme.darkStatusBar);
   if (!AppConfig.useMock) {
     try {

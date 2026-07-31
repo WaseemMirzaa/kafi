@@ -52,3 +52,8 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  # Bundled for google_fonts with allowRuntimeFetching=false (Android JNI
+  # crash if fonts are downloaded at runtime). Filenames must match Google
+  # Fonts API names — do not rename.
+  assets:
+    - google_fonts/

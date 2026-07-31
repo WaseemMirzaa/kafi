@@ -250,22 +250,52 @@ class _BigOtpBoxesState extends State<_BigOtpBoxes> {
         // and cursor are transparent (not Opacity/Visibility, which can drop
         // interactivity), so a tap anywhere on the boxes focuses it and the
         // digits render in the boxes above.
+        //
+        // Explicitly clear EVERY border/fill variant — the app's
+        // InputDecorationTheme otherwise paints enabled/focused OutlineBorders
+        // on top of the digit boxes (visible pink overlay).
         Positioned.fill(
-          child: AutofillGroup(
-            child: TextField(
-              controller: _controller,
-              focusNode: _focusNode,
-              keyboardType: TextInputType.number,
-              maxLength: _len,
-              autofillHints: const [AutofillHints.oneTimeCode],
-              inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-              showCursor: false,
-              cursorColor: Colors.transparent,
-              style: const TextStyle(color: Colors.transparent),
-              decoration: const InputDecoration(
-                counterText: '',
+          child: Theme(
+            data: Theme.of(context).copyWith(
+              inputDecorationTheme: const InputDecorationTheme(
+                filled: false,
                 border: InputBorder.none,
-                contentPadding: EdgeInsets.zero,
+                enabledBorder: InputBorder.none,
+                focusedBorder: InputBorder.none,
+                disabledBorder: InputBorder.none,
+                errorBorder: InputBorder.none,
+                focusedErrorBorder: InputBorder.none,
+              ),
+            ),
+            child: AutofillGroup(
+              child: TextField(
+                controller: _controller,
+                focusNode: _focusNode,
+                keyboardType: TextInputType.number,
+                maxLength: _len,
+                autofillHints: const [AutofillHints.oneTimeCode],
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                showCursor: false,
+                cursorColor: Colors.transparent,
+                style: const TextStyle(
+                  color: Colors.transparent,
+                  fontSize: 1,
+                  height: 0.01,
+                ),
+                decoration: const InputDecoration(
+                  counterText: '',
+                  isCollapsed: true,
+                  filled: false,
+                  fillColor: Colors.transparent,
+                  hoverColor: Colors.transparent,
+                  border: InputBorder.none,
+                  enabledBorder: InputBorder.none,
+                  focusedBorder: InputBorder.none,
+                  disabledBorder: InputBorder.none,
+                  errorBorder: InputBorder.none,
+                  focusedErrorBorder: InputBorder.none,
+                  contentPadding: EdgeInsets.zero,
+                ),
               ),
             ),
           ),

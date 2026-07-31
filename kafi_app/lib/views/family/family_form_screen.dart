@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
@@ -34,57 +35,65 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
     (NannyReligionPreference.openWithRespect, AppStrings.familyReligionPrefOpen.tr),
   ];
 
+  AuthController get _auth => Get.find<AuthController>();
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: KafiColors.bgLight,
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: Column(
-          children: [
-            _hero(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
-                child: Column(
-                  children: [
-                    _yourFamily(),
-                    _aboutFamily(),
-                    _religion(),
-                    _roleJobType(),
-                    _duties(),
-                    _benefits(),
-                    _salaryTrialVisa(),
-                  ],
-                ),
-              ),
-            ),
-            SafeArea(
-              top: false,
-              child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  boxShadow: [BoxShadow(color: Color(0x14000000), blurRadius: 10, offset: Offset(0, -2))],
-                ),
-                padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
-                child: Obx(
-                  () => KafiPrimaryButton(
-                    label: AppStrings.findMyNanny.tr,
-                    variant: KafiButtonVariant.purple,
-                    loading: controller.isLoading.value,
-                    onPressed: controller.savePostAndBrowse,
+    return Obx(() {
+      final locked = _auth.familyMustPostFirstJob.value;
+      return PopScope(
+        canPop: !locked,
+        child: Scaffold(
+          backgroundColor: KafiColors.bgLight,
+          body: SafeArea(
+            top: true,
+            bottom: false,
+            child: Column(
+              children: [
+                _hero(showBack: !locked),
+                Expanded(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.fromLTRB(12, 12, 12, 16),
+                    child: Column(
+                      children: [
+                        _yourFamily(),
+                        _aboutFamily(),
+                        _religion(),
+                        _roleJobType(),
+                        _duties(),
+                        _benefits(),
+                        _salaryTrialVisa(),
+                      ],
+                    ),
                   ),
                 ),
-              ),
+                SafeArea(
+                  top: false,
+                  child: Container(
+                    decoration: const BoxDecoration(
+                      color: Colors.white,
+                      boxShadow: [BoxShadow(color: Color(0x14000000), blurRadius: 10, offset: Offset(0, -2))],
+                    ),
+                    padding: const EdgeInsets.fromLTRB(18, 10, 18, 14),
+                    child: Obx(
+                      () => KafiPrimaryButton(
+                        label: AppStrings.findMyNanny.tr,
+                        variant: KafiButtonVariant.purple,
+                        loading: controller.isLoading.value,
+                        onPressed: controller.savePostAndBrowse,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
-          ],
+          ),
         ),
-      ),
-    );
+      );
+    });
   }
 
-  Widget _hero() {
+  Widget _hero({required bool showBack}) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
@@ -100,13 +109,14 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
         children: [
           Row(
             children: [
-              GestureDetector(
-                onTap: AppNavigation.back,
-                child: const Padding(
-                  padding: EdgeInsets.only(right: 8),
-                  child: Icon(Icons.arrow_back, color: KafiColors.pur, size: 20),
+              if (showBack)
+                GestureDetector(
+                  onTap: AppNavigation.back,
+                  child: const Padding(
+                    padding: EdgeInsets.only(right: 8),
+                    child: Icon(Icons.arrow_back, color: KafiColors.pur, size: 20),
+                  ),
                 ),
-              ),
               Expanded(
                 child: Text(AppStrings.postNewJob.tr,
                     style: KafiTheme.pacifico(17, color: _purpleLabel)),
@@ -115,7 +125,7 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
           ),
           const SizedBox(height: 2),
           Padding(
-            padding: const EdgeInsets.only(left: 28),
+            padding: EdgeInsets.only(left: showBack ? 28 : 0),
             child: Text(AppStrings.familyFormSub.tr,
                 style: KafiTheme.nunito(10, color: KafiColors.pur, w: FontWeight.w600)),
           ),

@@ -400,6 +400,8 @@ Kafi is a mobile-first marketplace connecting:
 
 **Progress:** Step 2 of 4 (assumes Step 1 is registration)
 
+**Onboarding gate:** A family with **zero** job posts must stay on this screen. Cold start, OTP completion, and app resume all re-route here until the first job is saved. The header back control and system back gesture do not open Browse until that first job exists. Additional job posts from Browse (after the first) keep normal back navigation.
+
 **A. Your Family Section:**
 - Full name
 - Nationality (comprehensive dropdown by region)

@@ -18,18 +18,28 @@ class AppNavigation {
   /// so the stack is empty) it falls back to the role-appropriate home instead
   /// of silently doing nothing. Behaves exactly like [Get.back] in the common
   /// case where a previous route exists.
+  ///
+  /// Families still gated on their first job post cannot leave Screen 13 via
+  /// this helper — Browse is blocked until a job exists.
   static void back() {
+    final auth = Get.isRegistered<AuthController>()
+        ? Get.find<AuthController>()
+        : null;
+    if (auth?.familyMustPostFirstJob.value == true &&
+        Get.currentRoute == Routes.familyForm) {
+      return;
+    }
     if (Get.key.currentState?.canPop() ?? false) {
       Get.back();
       return;
     }
-    final user = Get.isRegistered<AuthController>()
-        ? Get.find<AuthController>().currentUser.value
-        : null;
+    final user = auth?.currentUser.value;
     if (user == null) {
       Get.offAllNamed(Routes.welcome);
     } else if (user.isNanny) {
       Get.offAllNamed(Routes.nannyHome);
+    } else if (auth?.familyMustPostFirstJob.value == true) {
+      Get.offAllNamed(Routes.familyForm);
     } else {
       Get.offAllNamed(Routes.browse);
     }
