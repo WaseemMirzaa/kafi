@@ -226,13 +226,16 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  /// Nanny resigns from her current hire (ends the employment). The dashboard
-  /// confirms first; this performs the write and refreshes the status card.
-  Future<void> resignHire() async {
+  /// Nanny resigns from her current hire (ends the employment), optionally
+  /// carrying a [reasonNote] (one of `ReactivationReason.name`, captured by
+  /// the dashboard's reactivation reason sheet). Default `null` preserves
+  /// exact prior behavior for any other caller. Performs the write and
+  /// refreshes the status card.
+  Future<void> resignHire({String? reasonNote}) async {
     final hire = activeHire.value;
     if (hire == null) return;
     try {
-      await _hireService.endHire(hire.id, reason: HireEndReason.resigned);
+      await _hireService.endHire(hire.id, reason: HireEndReason.resigned, note: reasonNote);
       await loadEmploymentStatus();
       Get.snackbar(AppStrings.successTitle.tr, AppStrings.hireResignedToast.tr);
       // Peer reviews were retired — invite the nanny to rate the app instead.
