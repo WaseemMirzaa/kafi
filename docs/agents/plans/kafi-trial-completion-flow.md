@@ -580,3 +580,151 @@ every other server-owned write in `stats.ts` already does.
 - [ ] `flutter analyze` clean in `kafi_app/`.
 - [ ] Manual smoke of the 2×2 outcome matrix + the scheduled detector's
       idempotency (`outcomePromptSent`) + reactivation, per §7.
+
+## 9. Fix addendum — M1 chat-badge retirement (post-review)
+
+Addresses review finding **M1** (`docs/agents/reviews/kafi-trial-completion-flow.md`).
+This is a **fix addendum only** — the header stays `READY_FOR_BUILD`; no other
+section of this plan changes. Fixer executes this verbatim; no design latitude.
+
+### 9.1 The decision (what & where)
+
+**One write, in one place: `functions/src/triggers/trial.ts` → `onTrialEnded`,
+in its shared terminal-cleanup path (after the existing
+`recomputeActiveTrialNannyIds(familyId)` + `lastTrialEndedAt` writes, before the
+`completed`/`cancelled` notification split at the current line 352).**
+
+Do **NOT** add this to `onTrialOutcomeResolved`, and do **NOT** split it across
+two triggers as the review's *tentative* suggestion floated. Rationale (verified
+against the real code, not assumed):
+
+- `onTrialOutcomeResolved`, `onTrialEnded`, and `onTrialResponse` are three
+  independent `onDocumentUpdated('trials/{trialId}')` triggers (confirmed
+  `trial.ts:121,228,328`; the review's own "no trigger storm" trace confirms all
+  three fire on each update). When `onTrialOutcomeResolved`'s transaction commits
+  `awaitingOutcome → completed` (`trial.ts:257-262`), that commit is itself a
+  trial-doc update, so `onTrialEnded` **re-fires** with `before.status =
+  'awaitingOutcome'` (not terminal) and `after.status = 'completed'` (terminal) →
+  `wasActive && isTerminal` true (`trial.ts:334-336`) → its body runs. So
+  `onTrialEnded` already executes on the **hired** and **failed** resolutions,
+  the **cancelled** path, and the **declined** path — every terminal transition.
+- Retiring the thread badge is the *same responsibility* as the
+  `recomputeActiveTrialNannyIds(familyId)` cleanup already sitting in
+  `onTrialEnded` (`trial.ts:343`): both are "a trial left the entitling set, drop
+  its cached family-side entitlement." Co-locating them keeps one home for that
+  concern and avoids duplicating the write in two functions. Single
+  responsibility + no duplication, per the Quality Bar.
+
+### 9.2 Lookup mechanism (reuse, and why it needs no new index)
+
+Query `chatThreads` by the trial's own id, which the thread already caches:
+
+```ts
+.collection('chatThreads').where('trialId', '==', event.params.trialId).limit(1)
+```
+
+- The thread carries `trialId` because the family's offer flow linked it:
+  `linkTrialToThread(thread.id, trialId, ...)` writes `trialId` onto the thread
+  doc (`firestore_chat_service.dart:223-231`, called at
+  `trial_controller.dart:337`). `event.params.trialId` in the trigger is exactly
+  that value.
+- This is **cleaner and safer** than the review's tentative `familyId + nannyId`
+  query: (a) it is a **single-field equality** filter, which Firestore serves
+  from the **automatic single-field index** — **no `firestore.indexes.json`
+  change** (contrast C2, which genuinely needed a composite). The existing
+  `{familyId,nannyId}` chatThreads composite (`firestore.indexes.json:69-74`) is
+  **not** needed here and must not be relied on. (b) A family may re-offer on the
+  same pair's thread; `linkTrialToThread` overwrites `trialId` to the *latest*
+  trial, so matching by `trialId` retires the badge only for the trial that
+  actually resolved and never stomps a newer active trial's badge on the same
+  thread.
+- `.limit(1)` — a thread↔trial link is 1:1 (one thread per family/nanny pair,
+  one current `trialId`).
+
+### 9.3 Field/value written
+
+`update({ trialStatus: after.status })` on the matched thread doc.
+
+- `after.status` here is one of `completed` / `cancelled` / `declined` (the
+  `terminal` set that gated entry, `trial.ts:333-336`). Writing the terminal
+  status string mirrors the removed client `_flipThreadTrialStatus`, which wrote
+  `s.name` (verified against `origin/main:trial_controller.dart`).
+- Any of those three values retires the badge: `ChatThread.hasActiveTrial` is
+  true **only** for `trialStatus == 'active' || 'accepted'`
+  (`chat_models.dart:124-125`), so `completed`/`cancelled`/`declined` all flip it
+  false, removing the green "on trial" pill + "View Trial" banner. It also aligns
+  with the offer-bubble chip map (`kafi_trial_offer_bubble.dart:219-224`).
+- Write **only** the `trialStatus` field. Do not touch `trialId`, `lastMessage`,
+  or `lastMessageAt` — retirement is a status flip, not a message event (the old
+  client likewise passed only `trialStatus`).
+
+### 9.4 Error handling (best-effort, must not fail the trigger)
+
+Wrap the lookup+update in `try/catch` that logs and swallows, exactly mirroring
+the application-lookup precedent already in this file
+(`onTrialOutcomeResolved`, `trial.ts:305-322`): a missing/unlinked thread (e.g. a
+trial that never had a chat thread) must never throw out of `onTrialEnded` and
+undo the entitlement recompute or the notifications that follow. Empty query
+result → no update, no throw. Do **not** use a bare/empty `catch` — log via
+`console.error` like the existing precedent.
+
+### 9.5 Exact edit (single INDEPENDENT work unit)
+
+- **File:** `functions/src/triggers/trial.ts` — MODIFY `onTrialEnded` only.
+- **Insertion point:** immediately after the `lastTrialEndedAt` update block
+  (current `trial.ts:344-346`) and before the
+  `if (after.status === 'completed' || after.status === 'cancelled')` block
+  (current line 352).
+- **Insert:**
+
+```ts
+// Retire the family's cached chat-thread trial badge. The linked thread caches
+// `trialStatus` to drive the green "on trial" pill + "View Trial" banner
+// (ChatThread.hasActiveTrial is true only for 'active'/'accepted'); writing the
+// terminal status here retires it — the server-side replacement for the removed
+// client `_flipThreadTrialStatus`. Best-effort: a trial with no linked thread
+// must never fail this trigger, matching the application-lookup swallow in
+// onTrialOutcomeResolved above.
+try {
+  const threadSnap = await admin
+    .firestore()
+    .collection('chatThreads')
+    .where('trialId', '==', event.params.trialId)
+    .limit(1)
+    .get();
+  const thread = threadSnap.docs[0];
+  if (thread) {
+    await thread.ref.update({ trialStatus: after.status });
+  }
+} catch (error) {
+  console.error('onTrialEnded: chat-thread badge retirement failed', error);
+}
+```
+
+- **No other files change.** No `firestore.indexes.json` edit (§9.2). No app-side
+  change — the app already reads `trialStatus` reactively via the thread stream
+  (`firestore_chat_service.dart:104`), so the family's chat list retires the
+  badge on the next thread snapshot once the server writes it.
+
+### 9.6 Test / verification for the fixer
+
+- `npm run build && npm test` in `functions/` — must stay green (37/37); this
+  change touches no unit-tested pure helper, so no test is required, but the
+  build must compile.
+- Manual/emulator trace of both resolving paths:
+  - **hired:** mutual `hired` → `onTrialOutcomeResolved` sets `completed` →
+    `onTrialEnded` re-fires → thread `trialStatus` becomes `completed` → family
+    chat list badge/banner gone.
+  - **not-hired:** either side `notHired` → `completed`/`outcome=failed` →
+    `onTrialEnded` → thread `trialStatus` `completed` → badge gone.
+  - **cancelled:** `onTrialEnded` cancelled branch → thread `trialStatus`
+    `cancelled` → badge gone.
+  - **no linked thread:** trigger completes without throwing; entitlement
+    recompute and notifications still run.
+
+### 9.7 Definition of done (M1)
+- [ ] `onTrialEnded` retires the linked `chatThreads.trialStatus` for every
+      terminal transition, via the `where('trialId','==',...)` lookup, best-effort.
+- [ ] No new Firestore index added; `functions/` build green.
+- [ ] Family chat list no longer shows a stale "on trial" pill/banner after a
+      hire, a failed trial, or a cancellation.
