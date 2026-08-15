@@ -10,6 +10,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/models/nanny_model.dart';
+import 'package:kafi_app/models/trial_outcome_reasons.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
@@ -306,26 +307,32 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                   ),
                 ],
               ),
-              // A hired nanny can resign here (ends the employment).
+              // A hired nanny can make her profile available again from here —
+              // the one entry point to end this hire, always with a reason.
               if (hired) ...[
                 const SizedBox(height: 8),
                 const Divider(height: 1),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: GestureDetector(
-                    onTap: _confirmResign,
-                    child: Padding(
-                      padding: const EdgeInsets.only(top: 6, left: 8),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(Icons.logout, size: 13, color: KafiColors.redD),
-                          const SizedBox(width: 4),
-                          Text(AppStrings.hireResignAction.tr,
-                              style: KafiTheme.nunito(10, color: KafiColors.redD, w: FontWeight.w800)),
-                        ],
+                Padding(
+                  padding: const EdgeInsets.only(top: 8),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: Text(AppStrings.reactivationCardTitle.tr,
+                            style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w700)),
                       ),
-                    ),
+                      GestureDetector(
+                        onTap: _openReactivationSheet,
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.logout, size: 13, color: KafiColors.redD),
+                            const SizedBox(width: 4),
+                            Text(AppStrings.reactivationCardCta.tr,
+                                style: KafiTheme.nunito(10, color: KafiColors.redD, w: FontWeight.w800)),
+                          ],
+                        ),
+                      ),
+                    ],
                   ),
                 ),
               ],
@@ -336,23 +343,55 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
     });
   }
 
-  void _confirmResign() {
-    Get.dialog(AlertDialog(
-      title: Text(AppStrings.hireResignTitle.tr),
-      content: Text(AppStrings.hireResignBody.tr),
-      actions: [
-        TextButton(onPressed: () => Get.back(), child: Text(AppStrings.cancel.tr)),
-        TextButton(
-          onPressed: () {
-            Get.back();
-            controller.resignHire();
-          },
-          child: Text(AppStrings.hireResignAction.tr,
-              style: const TextStyle(color: KafiColors.redD)),
+  /// Reason sheet for making the profile available again — same idiom as
+  /// `trial_screen.dart`'s `_chooseProofSource`/reason sheets: white
+  /// rounded-top sheet, drag handle, tile rows. No separate skip — "Prefer
+  /// not to say" is itself one of the six reasons.
+  void _openReactivationSheet() {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
         ),
-      ],
-    ));
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration:
+                  BoxDecoration(color: KafiColors.cardBorder, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 14),
+            for (final reason in ReactivationReason.values)
+              _reasonTile(_reactivationReasonLabel(reason), () {
+                Get.back();
+                controller.resignHire(reasonNote: reason.name);
+              }),
+          ],
+        ),
+      ),
+    );
   }
+
+  Widget _reasonTile(String label, VoidCallback onTap) {
+    return ListTile(
+      onTap: onTap,
+      title: Text(label, style: KafiTheme.nunito(12.5, color: KafiColors.td, w: FontWeight.w700)),
+      trailing: const Icon(Icons.chevron_right, color: KafiColors.ts, size: 18),
+    );
+  }
+
+  String _reactivationReasonLabel(ReactivationReason r) => switch (r) {
+        ReactivationReason.jobDidntWorkOut => AppStrings.reactivationReasonJobDidntWorkOut.tr,
+        ReactivationReason.familyEndedEmployment => AppStrings.reactivationReasonFamilyEnded.tr,
+        ReactivationReason.iDecidedToLeave => AppStrings.reactivationReasonIDecidedToLeave.tr,
+        ReactivationReason.temporaryJobEnded => AppStrings.reactivationReasonTemporaryEnded.tr,
+        ReactivationReason.other => AppStrings.reactivationReasonOther.tr,
+        ReactivationReason.preferNotToSay => AppStrings.reactivationReasonPreferNotToSay.tr,
+      };
 
   // ── Profile quality card ────────────────────────────────────────
   Widget _qualityCard() {

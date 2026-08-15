@@ -550,6 +550,36 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.trialReportIssueHint: 'صف المشكلة…',
     AppStrings.trialSendReport: 'إرسال البلاغ',
 
+    // Trial outcome — mutual hire confirmation
+    AppStrings.trialAwaitingResponseLabel: 'انتهت التجربة — بانتظار ردك',
+    AppStrings.trialOutcomePromptFamily: 'كيف سارت التجربة؟',
+    AppStrings.trialFamilyHireAction: 'قمنا بتوظيفها',
+    AppStrings.trialKeepSearchingAction: 'متابعة البحث',
+    AppStrings.trialFamilyWaitingSnackbar: 'بانتظار تأكيد @name',
+    AppStrings.trialWaitingForNannyBanner: 'ننتظر تأكيد @name.',
+    AppStrings.trialReasonSkip: 'تخطي',
+    AppStrings.notHiredReasonNotRightMatch: 'لم تكن الشخص المناسب',
+    AppStrings.notHiredReasonSalary: 'لم نتفق على الراتب',
+    AppStrings.notHiredReasonSchedule: 'الجدول الزمني لم يناسبنا',
+    AppStrings.notHiredReasonLocation: 'الموقع لم يكن مناسبًا',
+    AppStrings.notHiredReasonNannyDeclined: 'قررت المربية عدم الاستمرار',
+    AppStrings.notHiredReasonFoundSomeoneElse: 'وجدنا شخصًا آخر',
+    AppStrings.notHiredReasonOther: 'أخرى',
+    AppStrings.trialOutcomePromptNanny: 'ماذا حدث بعد التجربة؟',
+    AppStrings.trialNannyGotJobAction: 'حصلت على الوظيفة',
+    AppStrings.trialNannyStillLookingAction: 'ما زلت أبحث',
+    AppStrings.trialNannyWaitingBanner: 'رائع! ننتظر تأكيد العائلة.',
+
+    // Hire reactivation — nanny makes her profile available again
+    AppStrings.reactivationCardTitle: 'تبحثين عن عمل مجددًا؟',
+    AppStrings.reactivationCardCta: 'إتاحة ملفي الشخصي',
+    AppStrings.reactivationReasonJobDidntWorkOut: 'لم تنجح الوظيفة',
+    AppStrings.reactivationReasonFamilyEnded: 'أنهت العائلة عملي',
+    AppStrings.reactivationReasonIDecidedToLeave: 'قررت المغادرة',
+    AppStrings.reactivationReasonTemporaryEnded: 'كانت وظيفة مؤقتة وانتهت',
+    AppStrings.reactivationReasonOther: 'أخرى',
+    AppStrings.reactivationReasonPreferNotToSay: 'أفضل عدم القول',
+
     // Snackbars
     AppStrings.jobPostedToast: 'تم نشر الوظيفة!',
     AppStrings.renewToSendMessages: 'جدّد اشتراكك لإرسال الرسائل.',

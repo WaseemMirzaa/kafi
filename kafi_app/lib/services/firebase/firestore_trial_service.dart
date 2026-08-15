@@ -34,9 +34,13 @@ class FirestoreTrialService implements ITrialService {
 
   @override
   Future<TrialModel?> activeTrial(String familyId) async {
+    // Includes awaitingOutcome so TrialController.refreshAll() still resolves
+    // this trial (and the mutual-outcome UI stays reachable) once the
+    // execution window closes — distinct from activeTrialNannyIds() below,
+    // the browse-hide derivation, which deliberately excludes it (plan §1).
     final snap = await _trials
         .where('familyId', isEqualTo: familyId)
-        .where('status', whereIn: ['active', 'accepted'])
+        .where('status', whereIn: ['active', 'accepted', 'awaitingOutcome'])
         .limit(1)
         .get();
 
@@ -61,10 +65,14 @@ class FirestoreTrialService implements ITrialService {
 
   @override
   Future<void> sendOffer(TrialModel trial) async {
-    // Persist startDate as a Timestamp so the scheduled "trial starts tomorrow"
-    // reminder (a Timestamp range query in functions) can actually match it.
+    // Persist startDate/endDate as Timestamps so Timestamp range queries can
+    // actually match them: the scheduled "trial starts tomorrow" reminder
+    // (startDate) and the trial-outcome detector (endDate). toMap() writes
+    // both as ISO strings by default, which a `where('endDate', '<=', ...)`
+    // query silently never matches.
     final data = trial.toMap();
     data['startDate'] = Timestamp.fromDate(trial.startDate);
+    data['endDate'] = Timestamp.fromDate(trial.endDate);
     await _trials.doc(trial.id).set(data);
   }
 
@@ -145,11 +153,39 @@ class FirestoreTrialService implements ITrialService {
   }
 
   @override
+  Future<void> setFamilyOutcome(
+    String trialId, {
+    required String outcome,
+    TrialEvaluation? evaluation,
+    String? notHiredReason,
+  }) =>
+      _trials.doc(trialId).update({
+        'familyOutcome': outcome,
+        'familyOutcomeAt': FieldValue.serverTimestamp(),
+        if (evaluation != null) 'evaluation': evaluation.toMap(),
+        if (notHiredReason != null) 'notHiredReason': notHiredReason,
+      });
+
+  @override
+  Future<void> setNannyOutcome(String trialId, {required String outcome}) =>
+      _trials.doc(trialId).update({
+        'nannyOutcome': outcome,
+        'nannyOutcomeAt': FieldValue.serverTimestamp(),
+      });
+
+  @override
   Future<void> applyCounterAndAccept(String trialId, CounterOffer counter) async {
-    // CounterOffer only carries `dailyRate` and `startDate`.
+    // CounterOffer only carries `dailyRate` and `startDate` — durationDays
+    // comes from the trial itself so a counter that moves the start date
+    // also recomputes the end date (previously left stale) and keeps it a
+    // Timestamp, matching sendOffer's fix above.
+    final doc = await _trials.doc(trialId).get();
+    final durationDays = (doc.data()?['durationDays'] as num?)?.toInt() ?? 7;
+    final newEndDate = counter.startDate.add(Duration(days: durationDays));
     await _trials.doc(trialId).update({
       'dailyRate': counter.dailyRate,
       'startDate': Timestamp.fromDate(counter.startDate),
+      'endDate': Timestamp.fromDate(newEndDate),
       'status': TrialStatus.accepted.name,
       'respondedAt': FieldValue.serverTimestamp(),
     });

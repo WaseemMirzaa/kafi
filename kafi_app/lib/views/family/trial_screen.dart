@@ -7,6 +7,7 @@ import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/trial_model.dart';
+import 'package:kafi_app/models/trial_outcome_reasons.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/support/report_problem_sheet.dart';
@@ -324,8 +325,15 @@ class TrialScreen extends GetView<TrialController> {
                   ],
                 ),
                 const SizedBox(height: 5),
-                Text(_remainingLabel(t),
-                    style: KafiTheme.nunito(26, color: KafiColors.td, w: FontWeight.w900).copyWith(height: 1)),
+                // Execution window closed — a frozen '0d 0h 0m' would read as a
+                // bug, so swap the countdown for a clear status label instead.
+                t.isAwaitingOutcome
+                    ? Text(AppStrings.trialAwaitingResponseLabel.tr,
+                        textAlign: TextAlign.center,
+                        style: KafiTheme.fredoka(15, color: KafiColors.td, w: FontWeight.w800))
+                    : Text(_remainingLabel(t),
+                        style:
+                            KafiTheme.nunito(26, color: KafiColors.td, w: FontWeight.w900).copyWith(height: 1)),
                 const SizedBox(height: 3),
                 Text(
                   AppStrings.trialSummaryLine.trParams({
@@ -497,9 +505,28 @@ class TrialScreen extends GetView<TrialController> {
     );
   }
 
-  // ── Outcome bar (family: Hire / Not this time) ─────────────────────────────
+  // ── Outcome bar ──────────────────────────────────────────────────────────
+  // Family: pre-awaitingOutcome → nothing; not yet responded → "We hired
+  // her" / "Keep searching"; responded hired → waiting banner; responded
+  // notHired → nothing left to do.
+  // Nanny: pending/accepted → cancel option (unchanged); awaitingOutcome,
+  // not yet responded → "I got the job" / "I'm still looking"; responded
+  // hired → waiting banner; responded notHired → nothing left to do.
   Widget _outcomeBar(BuildContext context, TrialModel t) {
     if (_isNanny) {
+      if (t.isAwaitingOutcome) {
+        if (t.nannyDeclinedHire) return const SizedBox.shrink();
+        if (t.nannyConfirmedHire) {
+          return _waitingBanner(AppStrings.trialNannyWaitingBanner.tr);
+        }
+        return _mutualOutcomeButtons(
+          prompt: AppStrings.trialOutcomePromptNanny.tr,
+          positiveLabel: AppStrings.trialNannyGotJobAction.tr,
+          negativeLabel: AppStrings.trialNannyStillLookingAction.tr,
+          onPositive: () => controller.nannyRecordOutcome('hired'),
+          onNegative: () => controller.nannyRecordOutcome('notHired'),
+        );
+      }
       // Nanny side: cancel option only (payment block is in the scroll body).
       if (t.status != TrialStatus.pending && t.status != TrialStatus.accepted) {
         return const SizedBox.shrink();
@@ -516,66 +543,166 @@ class TrialScreen extends GetView<TrialController> {
         ),
       );
     }
-    // The family can only record an outcome (Hire / Not this time) once the
-    // trial is actually ACTIVE — not during an accepted-but-not-yet-started
-    // trial, and not after it has already been resolved.
-    if (!t.isActive) return const SizedBox.shrink();
+
+    // Family can only record an outcome once the execution window has
+    // actually closed (awaitingOutcome) — not during accepted-but-not-yet-
+    // started or active, and not after it's already been resolved.
+    if (!t.isAwaitingOutcome) return const SizedBox.shrink();
+    if (t.familyDeclinedHire) return const SizedBox.shrink();
+    if (t.familyConfirmedHire) {
+      final nannyName = controller.nannyCardFor(t.nannyId).name;
+      return _waitingBanner(AppStrings.trialWaitingForNannyBanner.trParams({'name': nannyName}));
+    }
+    return _mutualOutcomeButtons(
+      prompt: AppStrings.trialOutcomePromptFamily.tr,
+      positiveLabel: AppStrings.trialFamilyHireAction.tr,
+      negativeLabel: AppStrings.trialKeepSearchingAction.tr,
+      onPositive: () => controller.familyRecordOutcome(outcome: 'hired'),
+      onNegative: () => _chooseNotHiredReason(t),
+    );
+  }
+
+  /// Shared positive/negative choice for the mutual-outcome prompt — same
+  /// green-gradient positive / white-outline-rose-text negative styling this
+  /// screen already used for the old single-sided Hire/Not-this-time choice.
+  Widget _mutualOutcomeButtons({
+    required String prompt,
+    required String positiveLabel,
+    required String negativeLabel,
+    required VoidCallback onPositive,
+    required VoidCallback onNegative,
+  }) {
     return SafeArea(
       top: false,
       child: Container(
         padding: const EdgeInsets.fromLTRB(13, 10, 13, 13),
         decoration: const BoxDecoration(color: Color(0xFFF0FFF5)),
-        child: Row(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            Expanded(
-              child: GestureDetector(
-                onTap: () => controller.setOutcome(TrialStatus.completed,
-                    outcomeLabel: 'failed', evaluation: controller.buildEvaluation()),
-                child: Container(
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(11),
-                    border: Border.all(color: KafiColors.cardBorder, width: 2),
-                  ),
-                  child: Text(AppStrings.trialNotThisTime.tr,
-                      style: KafiTheme.fredoka(12, color: KafiColors.roseD, w: FontWeight.w700)),
-                ),
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: GestureDetector(
-                onTap: () => controller.setOutcome(TrialStatus.completed,
-                    outcomeLabel: 'hired', evaluation: controller.buildEvaluation()),
-                child: Container(
-                  alignment: Alignment.center,
-                  padding: const EdgeInsets.symmetric(vertical: 11),
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(colors: [KafiColors.grn, KafiColors.grnD]),
-                    borderRadius: BorderRadius.circular(11),
-                    boxShadow: [
-                      BoxShadow(color: KafiColors.grnD.withValues(alpha: 0.28), blurRadius: 12, offset: const Offset(0, 4)),
-                    ],
-                  ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.check, color: Colors.white, size: 14),
-                      const SizedBox(width: 5),
-                      Text(AppStrings.trialHire.tr,
-                          style: KafiTheme.fredoka(12, color: Colors.white, w: FontWeight.w700)),
-                    ],
+            Text(prompt,
+                textAlign: TextAlign.center,
+                style: KafiTheme.nunito(10.5, color: KafiColors.ts, w: FontWeight.w700)),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onNegative,
+                    child: Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(11),
+                        border: Border.all(color: KafiColors.cardBorder, width: 2),
+                      ),
+                      child: Text(negativeLabel,
+                          style: KafiTheme.fredoka(12, color: KafiColors.roseD, w: FontWeight.w700)),
+                    ),
                   ),
                 ),
-              ),
+                const SizedBox(width: 6),
+                Expanded(
+                  child: GestureDetector(
+                    onTap: onPositive,
+                    child: Container(
+                      alignment: Alignment.center,
+                      padding: const EdgeInsets.symmetric(vertical: 11),
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(colors: [KafiColors.grn, KafiColors.grnD]),
+                        borderRadius: BorderRadius.circular(11),
+                        boxShadow: [
+                          BoxShadow(
+                              color: KafiColors.grnD.withValues(alpha: 0.28),
+                              blurRadius: 12,
+                              offset: const Offset(0, 4)),
+                        ],
+                      ),
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          const Icon(Icons.check, color: Colors.white, size: 14),
+                          const SizedBox(width: 5),
+                          Text(positiveLabel,
+                              style: KafiTheme.fredoka(12, color: Colors.white, w: FontWeight.w700)),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
       ),
     );
   }
+
+  /// Bottom-bar "waiting on the other party" banner — reuses the existing
+  /// [_banner] helper already used for the payment block above.
+  Widget _waitingBanner(String text) {
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(13, 6, 13, 13),
+        child: _banner(KafiColors.grnL, KafiColors.grnD, Icons.hourglass_top, text),
+      ),
+    );
+  }
+
+  /// Family's "Keep searching" reason sheet — same idiom as
+  /// [_chooseProofSource]: white rounded-top sheet, drag handle, tile rows.
+  /// Skip records `notHired` with no reason.
+  void _chooseNotHiredReason(TrialModel t) {
+    Get.bottomSheet(
+      Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.fromLTRB(16, 14, 16, 20),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 40,
+              height: 4,
+              decoration: BoxDecoration(color: KafiColors.cardBorder, borderRadius: BorderRadius.circular(2)),
+            ),
+            const SizedBox(height: 14),
+            for (final reason in NotHiredReason.values)
+              _reasonTile(_notHiredReasonLabel(reason), () {
+                Get.back();
+                controller.familyRecordOutcome(outcome: 'notHired', reason: reason);
+              }),
+            _reasonTile(AppStrings.trialReasonSkip.tr, () {
+              Get.back();
+              controller.familyRecordOutcome(outcome: 'notHired');
+            }),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _reasonTile(String label, VoidCallback onTap) {
+    return ListTile(
+      onTap: onTap,
+      title: Text(label, style: KafiTheme.nunito(12.5, color: KafiColors.td, w: FontWeight.w700)),
+      trailing: const Icon(Icons.chevron_right, color: KafiColors.ts, size: 18),
+    );
+  }
+
+  String _notHiredReasonLabel(NotHiredReason r) => switch (r) {
+        NotHiredReason.notTheRightMatch => AppStrings.notHiredReasonNotRightMatch.tr,
+        NotHiredReason.salary => AppStrings.notHiredReasonSalary.tr,
+        NotHiredReason.schedule => AppStrings.notHiredReasonSchedule.tr,
+        NotHiredReason.location => AppStrings.notHiredReasonLocation.tr,
+        NotHiredReason.nannyDeclined => AppStrings.notHiredReasonNannyDeclined.tr,
+        NotHiredReason.foundSomeoneElse => AppStrings.notHiredReasonFoundSomeoneElse.tr,
+        NotHiredReason.other => AppStrings.notHiredReasonOther.tr,
+      };
 
   Widget _emptyState() {
     return Center(

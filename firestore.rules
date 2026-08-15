@@ -217,10 +217,16 @@ service cloud.firestore {
             && (existing().familyId == request.auth.uid
                 || existing().nannyId == request.auth.uid));
       allow create: if isSignedIn() && incoming().familyId == request.auth.uid;
+      // Mutual-outcome gate (kafi-trial-completion-flow): each party may only
+      // write their OWN side's outcome fields — otherwise either party could
+      // forge the other's response and defeat the mutual-confirm gate. Same
+      // field-restriction pattern already used for `families`.
       allow update: if isAdmin()
-        || (isSignedIn()
-            && (existing().familyId == request.auth.uid
-                || existing().nannyId == request.auth.uid));
+        || (isSignedIn() && existing().familyId == request.auth.uid
+            && !incoming().diff(existing()).affectedKeys().hasAny(['nannyOutcome', 'nannyOutcomeAt']))
+        || (isSignedIn() && existing().nannyId == request.auth.uid
+            && !incoming().diff(existing()).affectedKeys()
+                .hasAny(['familyOutcome', 'familyOutcomeAt', 'notHiredReason']));
       allow delete: if isAdmin();
 
       // Daily proof photos the nanny uploads during the trial. Both parties +
