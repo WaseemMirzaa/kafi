@@ -5,7 +5,7 @@ title: Trial-completion workflow — Cloud Functions (scheduled detector, mutual
 owner: developer
 status: READY_FOR_REVIEW
 updated: 2026-08-15
-branch: claude/kafi-trial-completion-flow-functions
+branch: claude/kafi-trial-completion-flow
 plan: docs/agents/plans/kafi-trial-completion-flow.md
 ---
 
@@ -264,3 +264,81 @@ pipeline's `.claude/agents/`/`.claude/skills/` files — neither touches
 final `origin/main` tip (`ec2125b`) before pushing — one clean commit
 (`ec0730a`), no conflicts, build/test re-verified green after the rebase.
 Worktree: `/home/user/kafi/.claude/worktrees/agent-adb77b83ab6ee4283`.
+
+---
+
+## Fix round 2 — 2026-08-15
+
+Addresses the one remaining finding from the REVIEW_FAIL verdict
+(`docs/agents/reviews/kafi-trial-completion-flow.md`): **M1 — chat "on
+trial" badge no longer retires after a trial resolves**.
+
+### M1 — Chat thread badge retirement (Major)
+
+**Finding:** The removed client `_flipThreadTrialStatus` (which wrote
+`chatThreads/{id}.trialStatus` to the terminal status on family
+Hire/Not-this-time tap) was never replaced server-side. After any terminal
+trial transition (`completed`, `cancelled`, `declined`), the family's chat
+list kept showing the stale green "on trial" pill and "View Trial" banner
+indefinitely.
+
+**Exact fix applied per plan §9 — single write in `onTrialEnded`, in
+`functions/src/triggers/trial.ts`:**
+
+Inserted a `try/catch` block immediately after the `lastTrialEndedAt`
+family-doc stamp (line 344-346) and before the notification dispatch
+if-block (line 374). The block:
+
+1. Queries `chatThreads` by `trialId` using a single-field equality filter
+   (`.where('trialId', '==', event.params.trialId).limit(1)`) — no new
+   Firestore index required (single-field indexes are automatic).
+2. If a thread doc is found, writes `{ trialStatus: after.status }` — only
+   the one field, no touch to `trialId`, `lastMessage`, or `lastMessageAt`.
+3. Wraps in `try/catch` with a `console.error` log on failure, mirroring
+   the application-lookup swallow pattern already in
+   `onTrialOutcomeResolved` (lines 305-322). A trial with no linked thread
+   never throws out of `onTrialEnded`.
+
+The placement in `onTrialEnded` (rather than `onTrialOutcomeResolved`) is
+deliberate per §9.1: `onTrialEnded` already fires on every terminal
+transition — hired, failed, cancelled, declined — because
+`onTrialOutcomeResolved`'s `awaitingOutcome → completed` commit re-triggers
+it with the correct before/after guard. This gives a single home for both
+the `recomputeActiveTrialNannyIds` cleanup and the thread-badge retirement
+(same responsibility: "a trial left the entitling set, retire its cached
+family-side state"), matching the Quality Bar's single-responsibility and
+no-duplication requirements.
+
+**No new test added:** §9.6 explicitly says no test is required for this
+trigger side-effect (it touches live Firestore, not a unit-testable pure
+helper). The build must compile and existing tests must remain green — both
+verified below.
+
+**No other files changed.** No `firestore.indexes.json` edit (single-field
+equality filter, covered by automatic index). No app-side change (the app
+already reads `trialStatus` reactively via the thread stream,
+`firestore_chat_service.dart:104`, so the badge retires on the next
+snapshot after the server write).
+
+### Commands run and results
+
+```
+cd functions && npm ci        # clean install
+cd functions && npm run build # tsc — clean, zero errors or warnings
+cd functions && npm test      # node --test test/*.test.js
+```
+
+Test result: **37/37 passing** — 22 pre-existing (unmodified, still green)
++ 15 from `trial_outcome.test.js`. Zero regressions. No new test added for
+M1 (per §9.6: trigger side-effect, not a pure helper; build-compilation
+verification is the gate).
+
+### §9.7 definition of done (M1)
+
+- [x] `onTrialEnded` retires the linked `chatThreads.trialStatus` for
+      every terminal transition, via the `where('trialId','==',...)` lookup,
+      best-effort with `console.error` swallow.
+- [x] No new Firestore index added; `functions/` build green.
+- [x] Family chat list no longer shows a stale "on trial" pill/banner after
+      a hire, a failed trial, or a cancellation (server writes the terminal
+      status; app reads it reactively).

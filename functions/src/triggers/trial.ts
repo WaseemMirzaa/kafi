@@ -345,6 +345,28 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
     'subscription.lastTrialEndedAt': admin.firestore.FieldValue.serverTimestamp(),
   });
 
+  // Retire the family's cached chat-thread trial badge. The linked thread caches
+  // `trialStatus` to drive the green "on trial" pill + "View Trial" banner
+  // (ChatThread.hasActiveTrial is true only for 'active'/'accepted'); writing the
+  // terminal status here retires it — the server-side replacement for the removed
+  // client `_flipThreadTrialStatus`. Best-effort: a trial with no linked thread
+  // must never fail this trigger, matching the application-lookup swallow in
+  // onTrialOutcomeResolved above.
+  try {
+    const threadSnap = await admin
+      .firestore()
+      .collection('chatThreads')
+      .where('trialId', '==', event.params.trialId)
+      .limit(1)
+      .get();
+    const thread = threadSnap.docs[0];
+    if (thread) {
+      await thread.ref.update({ trialStatus: after.status });
+    }
+  } catch (error) {
+    console.error('onTrialEnded: chat-thread badge retirement failed', error);
+  }
+
   // Both terminal outcomes must reach BOTH parties. Previously only 'completed'
   // fired, only to the family, with stale "evaluate the nanny" copy — and
   // 'cancelled' notified nobody despite the UI promising "both parties will be
