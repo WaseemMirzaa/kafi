@@ -11,7 +11,6 @@ import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
-import 'package:kafi_app/models/geo_location.dart';
 import 'package:kafi_app/models/hire_model.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/models/trial_model.dart';
@@ -69,9 +68,8 @@ class NannyProfileController extends GetxController {
   final Rx<bool?> willingTransferVisa = Rx<bool?>(true);
   final RxList<Emirate> workEmirates = <Emirate>[].obs;
   final RxBool willingRelocate = true.obs;
-  final currentAreaCtrl = TextEditingController();
-  // Structured current-area location from the map picker (coords/city/country).
-  GeoLocation? currentLocationPicked;
+  // Canonical current-location value (replaces the free-text + GPS picker).
+  final Rx<Emirate?> currentEmirate = Rx<Emirate?>(null);
   // Work preferences (System Spec §3.2 — required)
   final salaryMinCtrl = TextEditingController();
   final salaryMaxCtrl = TextEditingController();
@@ -79,6 +77,9 @@ class NannyProfileController extends GetxController {
   final Rx<AvailabilityStatus> availability = AvailabilityStatus.availableNow.obs;
   final Rx<DateTime?> availableFrom = Rx<DateTime?>(null);
   final availableFromCtrl = TextEditingController();
+  // Employment type + part-time availability (System Spec — net-new).
+  final RxList<EmploymentType> employmentTypes = <EmploymentType>[].obs;
+  final RxList<DayAvailability> partTimeAvailability = <DayAvailability>[].obs;
   final Rx<MaritalStatus?> maritalStatus = Rx<MaritalStatus?>(null);
   final RxBool hasChildren = false.obs;
   final childrenCountCtrl = TextEditingController();
@@ -91,10 +92,6 @@ class NannyProfileController extends GetxController {
   final RxBool nightShifts = false.obs;
   final RxBool comfortDifferentFaith = true.obs;
   final religionCtrl = TextEditingController();
-  final emergencyNameCtrl = TextEditingController();
-  final emergencyRelCtrl = TextEditingController();
-  final emergencyPhoneCtrl = TextEditingController();
-  final emergencyCountryCode = '+971'.obs;
   final bioCtrl = TextEditingController();
 
   // step 2
@@ -171,7 +168,6 @@ class NannyProfileController extends GetxController {
     fullNameCtrl.dispose();
     dobCtrl.dispose();
     ageCtrl.dispose();
-    currentAreaCtrl.dispose();
     salaryMinCtrl.dispose();
     salaryMaxCtrl.dispose();
     availableFromCtrl.dispose();
@@ -180,9 +176,6 @@ class NannyProfileController extends GetxController {
     medsCtrl.dispose();
     allergiesCtrl.dispose();
     religionCtrl.dispose();
-    emergencyNameCtrl.dispose();
-    emergencyRelCtrl.dispose();
-    emergencyPhoneCtrl.dispose();
     bioCtrl.dispose();
     super.onClose();
   }
@@ -305,8 +298,7 @@ class NannyProfileController extends GetxController {
     willingTransferVisa.value = n.willingToTransferVisa;
     workEmirates.value = List.of(n.workEmirates);
     willingRelocate.value = n.willingToRelocate;
-    currentAreaCtrl.text = n.currentArea;
-    currentLocationPicked = n.currentLocation;
+    currentEmirate.value = n.currentEmirate;
     // Work preferences
     salaryMinCtrl.text = n.expectedSalaryMin > 0 ? '${n.expectedSalaryMin}' : '';
     salaryMaxCtrl.text = n.expectedSalaryMax > 0 ? '${n.expectedSalaryMax}' : '';
@@ -314,6 +306,8 @@ class NannyProfileController extends GetxController {
     availability.value = n.availability;
     availableFrom.value = n.availableFrom;
     if (n.availableFrom != null) availableFromCtrl.text = _fmtDate(n.availableFrom!);
+    employmentTypes.assignAll(n.employmentTypes);
+    partTimeAvailability.assignAll(n.partTimeAvailability);
     // Personal
     maritalStatus.value = n.maritalStatus;
     hasChildren.value = n.hasChildren;
@@ -329,12 +323,6 @@ class NannyProfileController extends GetxController {
     nightShifts.value = n.canDoNightShifts;
     comfortDifferentFaith.value = n.comfortableWithDifferentFaith;
     religionCtrl.text = n.religion;
-    // Emergency contact
-    emergencyNameCtrl.text = n.emergencyName;
-    emergencyRelCtrl.text = n.emergencyRelationship;
-    emergencyCountryCode.value =
-        n.emergencyCountryCode.isNotEmpty ? n.emergencyCountryCode : '+971';
-    emergencyPhoneCtrl.text = n.emergencyPhone;
     // Bio + media + history
     bioCtrl.text = n.bio;
     photoUrls.value = List.of(n.photoUrls);
@@ -364,6 +352,52 @@ class NannyProfileController extends GetxController {
     }
   }
 
+  /// Selects/clears every emirate at once (the "Any Emirate" chip).
+  void toggleAnyEmirate() {
+    if (workEmirates.length == Emirate.values.length) {
+      workEmirates.clear();
+    } else {
+      workEmirates.assignAll(Emirate.values);
+    }
+  }
+
+  bool get allEmiratesSelected => Emirate.values.every(workEmirates.contains);
+
+  /// Adds/removes an employment type. Deselecting Part-Time also clears its
+  /// availability so the UI + saved data disappear together.
+  void toggleEmploymentType(EmploymentType t) {
+    if (employmentTypes.contains(t)) {
+      employmentTypes.remove(t);
+      if (t == EmploymentType.partTime) partTimeAvailability.clear();
+    } else {
+      employmentTypes.add(t);
+    }
+  }
+
+  /// Adds/removes a part-time-availability day (weekday 1=Mon…7=Sun).
+  void toggleDay(int weekday) {
+    final i = partTimeAvailability.indexWhere((d) => d.weekday == weekday);
+    if (i != -1) {
+      partTimeAvailability.removeAt(i);
+    } else {
+      partTimeAvailability.add(DayAvailability(weekday: weekday, from: '', until: ''));
+    }
+  }
+
+  void setDayFrom(int weekday, String v) => _updateDay(weekday, from: v);
+
+  void setDayUntil(int weekday, String v) => _updateDay(weekday, until: v);
+
+  /// Replaces the availability entry for [weekday] via `copyWith`, reassigning
+  /// the RxList so `Obx` listeners fire.
+  void _updateDay(int weekday, {String? from, String? until}) {
+    final i = partTimeAvailability.indexWhere((d) => d.weekday == weekday);
+    if (i == -1) return;
+    final updated = List<DayAvailability>.of(partTimeAvailability);
+    updated[i] = updated[i].copyWith(from: from, until: until);
+    partTimeAvailability.assignAll(updated);
+  }
+
   /// Save profile updates without advancing onboarding step.
   /// Used by Screen 27A (nanny edit profile).
   /// Saves the edit-profile draft. Returns true on success; on failure it shows
@@ -379,16 +413,10 @@ class NannyProfileController extends GetxController {
         fullName: fullNameCtrl.text.trim(),
         languages: List.of(selectedLanguages),
         workEmirates: List.of(workEmirates),
-        currentArea: currentAreaCtrl.text.trim(),
-        currentLocation: currentLocationPicked,
         comfortableWithCameras: comfortCameras.value,
         comfortableWithPets: comfortPets.value,
         canCook: cooks.value,
         canDoNightShifts: nightShifts.value,
-        emergencyName: emergencyNameCtrl.text.trim(),
-        emergencyRelationship: emergencyRelCtrl.text.trim(),
-        emergencyCountryCode: emergencyCountryCode.value,
-        emergencyPhone: emergencyPhoneCtrl.text.trim(),
         bio: bioCtrl.text.trim(),
       );
       await _userService.saveNanny(updated);
@@ -422,7 +450,7 @@ class NannyProfileController extends GetxController {
     if (selectedLanguages.isEmpty) return AppStrings.nannyLanguagesRequired;
     if (visaStatus.value == null) return AppStrings.nannyVisaRequired;
     if (workEmirates.isEmpty) return AppStrings.nannyEmiratesRequired;
-    if (currentAreaCtrl.text.trim().isEmpty) return AppStrings.nannyCurrentAreaRequired;
+    if (currentEmirate.value == null) return AppStrings.nannyCurrentAreaRequired;
     final salErr = Validators.salaryRange(
       int.tryParse(salaryMinCtrl.text) ?? 0,
       int.tryParse(salaryMaxCtrl.text) ?? 0,
@@ -436,10 +464,11 @@ class NannyProfileController extends GetxController {
     if (hasChildren.value && (int.tryParse(childrenCountCtrl.text) ?? 0) < 1) {
       return AppStrings.nannyChildrenCountRequired;
     }
-    if (emergencyNameCtrl.text.trim().isEmpty) return AppStrings.nannyEmergencyNameRequired;
-    if (emergencyRelCtrl.text.trim().isEmpty) return AppStrings.nannyEmergencyRelRequired;
-    if (Validators.contactPhone(emergencyPhoneCtrl.text) != null) {
-      return AppStrings.nannyEmergencyPhoneRequired;
+    if (employmentTypes.isEmpty) return AppStrings.nannyEmploymentTypeRequired;
+    if (employmentTypes.contains(EmploymentType.partTime)) {
+      final ok = partTimeAvailability.isNotEmpty &&
+          partTimeAvailability.every((d) => d.from.isNotEmpty && d.until.isNotEmpty);
+      if (!ok) return AppStrings.nannyPartTimeAvailabilityRequired;
     }
     if (bioCtrl.text.trim().isEmpty) return AppStrings.nannyBioRequired;
     return null;
@@ -467,8 +496,8 @@ class NannyProfileController extends GetxController {
         willingToTransferVisa: willingTransferVisa.value,
         workEmirates: List.of(workEmirates),
         willingToRelocate: willingRelocate.value,
-        currentArea: currentAreaCtrl.text.trim(),
-        currentLocation: currentLocationPicked,
+        currentEmirate: currentEmirate.value,
+        currentArea: currentEmirate.value?.label ?? '',
         expectedSalaryMin: int.tryParse(salaryMinCtrl.text) ?? 0,
         expectedSalaryMax: int.tryParse(salaryMaxCtrl.text) ?? 0,
         jobTypePreference: jobTypePref.value,
@@ -476,6 +505,8 @@ class NannyProfileController extends GetxController {
         availableFrom: availability.value == AvailabilityStatus.availableFrom
             ? availableFrom.value
             : null,
+        employmentTypes: List.of(employmentTypes),
+        partTimeAvailability: List.of(partTimeAvailability),
         maritalStatus: maritalStatus.value,
         hasChildren: hasChildren.value,
         childrenCount: int.tryParse(childrenCountCtrl.text) ?? 0,
@@ -488,10 +519,6 @@ class NannyProfileController extends GetxController {
         canDoNightShifts: nightShifts.value,
         comfortableWithDifferentFaith: comfortDifferentFaith.value,
         religion: religionCtrl.text.trim(),
-        emergencyName: emergencyNameCtrl.text.trim(),
-        emergencyRelationship: emergencyRelCtrl.text.trim(),
-        emergencyCountryCode: emergencyCountryCode.value,
-        emergencyPhone: emergencyPhoneCtrl.text.trim(),
         bio: bioCtrl.text.trim(),
       );
       await _userService.saveNanny(updated);

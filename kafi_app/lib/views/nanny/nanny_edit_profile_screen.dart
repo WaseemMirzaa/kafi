@@ -2,14 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_app_bar.dart';
+import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
 import 'package:kafi_app/views/widgets/kafi_input.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
 /// Screen 27A — Nanny edit profile.
-/// Per System Spec §6.7: nannies can update bio, photos, languages, and
-/// emergency contact after approval without re-verification.
+/// Per System Spec §6.7: nannies can update bio, photos, and languages after
+/// approval without re-verification.
 class NannyEditProfileScreen extends StatelessWidget {
   const NannyEditProfileScreen({super.key});
 
@@ -40,64 +42,14 @@ class NannyEditProfileScreen extends StatelessWidget {
                 () => Wrap(
                   spacing: 6,
                   runSpacing: 6,
-                  children: const [
-                    'English',
-                    'Arabic',
-                    'French',
-                    'Hindi',
-                    'Tagalog',
-                    'Amharic',
-                  ].map((lang) {
-                    final selected = ctrl.selectedLanguages.contains(lang);
-                    return GestureDetector(
-                      onTap: () {
-                        if (selected) {
-                          ctrl.selectedLanguages.remove(lang);
-                        } else {
-                          ctrl.selectedLanguages.add(lang);
-                        }
-                      },
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                        decoration: BoxDecoration(
-                          color: selected ? KafiColors.roseD : Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: KafiColors.cardBorder),
-                        ),
-                        child: Text(
-                          lang,
-                          style: KafiTheme.fredoka(
-                            10,
-                            color: selected ? Colors.white : KafiColors.tm,
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
+                  children: NannyConstants.languages
+                      .map((lang) => KafiChip(
+                            label: lang,
+                            selected: ctrl.selectedLanguages.contains(lang),
+                            onTap: () => ctrl.toggleLanguage(lang),
+                          ))
+                      .toList(),
                 ),
-              ),
-            ),
-            const SizedBox(height: 14),
-            _section(
-              AppStrings.editEmergencyContact.tr,
-              Column(
-                children: [
-                  KafiInput(
-                    controller: ctrl.emergencyNameCtrl,
-                    hint: AppStrings.fldEmergencyName.tr,
-                  ),
-                  const SizedBox(height: 8),
-                  KafiInput(
-                    controller: ctrl.emergencyRelCtrl,
-                    hint: AppStrings.fldEmergencyRel.tr,
-                  ),
-                  const SizedBox(height: 8),
-                  KafiInput(
-                    controller: ctrl.emergencyPhoneCtrl,
-                    hint: AppStrings.fldEmergencyPhone.tr,
-                    keyboardType: TextInputType.phone,
-                  ),
-                ],
               ),
             ),
             const SizedBox(height: 14),

@@ -2,11 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
-import 'package:kafi_app/models/geo_location.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
-import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_step_scaffold.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
@@ -86,7 +84,8 @@ class NannyExpScreen extends GetView<NannyProfileController> {
         id: const Uuid().v4(),
         jobTitle: NannyConstants.jobTitles.first,
         employer: '',
-        cityCountry: '',
+        country: '',
+        city: '',
         fromDate: DateTime(DateTime.now().year - 1),
         toDate: DateTime.now(),
         children: '',
@@ -135,6 +134,7 @@ class _ExpCard extends StatefulWidget {
 
 class _ExpCardState extends State<_ExpCard> {
   late final TextEditingController _employer;
+  late final TextEditingController _country;
   late final TextEditingController _city;
   late final TextEditingController _children;
   late final TextEditingController _duties;
@@ -142,22 +142,21 @@ class _ExpCardState extends State<_ExpCard> {
   late String _reason;
   late DateTime _from;
   late DateTime _to;
-  GeoLocation? _cityLocation;
 
   @override
   void initState() {
     super.initState();
     final e = widget.exp;
-    _cityLocation = e.location;
     _employer = TextEditingController(text: e.employer);
-    _city = TextEditingController(text: e.cityCountry);
+    _country = TextEditingController(text: e.country);
+    _city = TextEditingController(text: e.city);
     _children = TextEditingController(text: e.children);
     _duties = TextEditingController(text: e.duties);
     _jobTitle = NannyConstants.jobTitles.contains(e.jobTitle) ? e.jobTitle : NannyConstants.jobTitles.first;
     _reason = NannyConstants.reasonsLeaving.contains(e.reasonLeaving) ? e.reasonLeaving : NannyConstants.reasonsLeaving.first;
     _from = e.fromDate;
     _to = e.toDate;
-    for (final c in [_employer, _city, _children, _duties]) {
+    for (final c in [_employer, _country, _city, _children, _duties]) {
       c.addListener(_emit);
     }
   }
@@ -167,19 +166,19 @@ class _ExpCardState extends State<_ExpCard> {
       id: widget.exp.id,
       jobTitle: _jobTitle,
       employer: _employer.text,
-      cityCountry: _city.text,
+      country: _country.text,
+      city: _city.text,
       fromDate: _from,
       toDate: _to,
       children: _children.text,
       duties: _duties.text,
       reasonLeaving: _reason,
-      location: _cityLocation,
     ));
   }
 
   @override
   void dispose() {
-    for (final c in [_employer, _city, _children, _duties]) {
+    for (final c in [_employer, _country, _city, _children, _duties]) {
       c.dispose();
     }
     super.dispose();
@@ -272,21 +271,8 @@ class _ExpCardState extends State<_ExpCard> {
             _emit();
           }),
           KafiTextField(label: AppStrings.expEmployer.tr, controller: _employer, hint: 'e.g. Al Mansoori Family'),
-          _label(AppStrings.expCityCountry.tr),
-          const SizedBox(height: 4),
-          // Uber-style location picker keeps job-history locations consistent
-          // with the rest of the app. Writing to `_city` fires its listener
-          // (`_emit`), so the parent experience list updates automatically.
-          KafiLocationPicker(
-            label: AppStrings.expCityCountry.tr,
-            initialValue: _city.text,
-            onChanged: (v) => _city.text = v,
-            onLocationPicked: (loc) {
-              _cityLocation = loc.toGeoLocation();
-              _emit();
-            },
-          ),
-          const SizedBox(height: 7),
+          KafiTextField(label: AppStrings.expCountry.tr, controller: _country, hint: 'e.g. Philippines'),
+          KafiTextField(label: AppStrings.expCity.tr, controller: _city, hint: 'e.g. Dubai'),
           Row(
             children: [
               Expanded(child: _dateField(AppStrings.expFrom.tr, _from, () => _pickDate(true))),

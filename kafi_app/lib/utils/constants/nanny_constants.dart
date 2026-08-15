@@ -49,8 +49,8 @@ class NannyConstants {
   ];
 
   static const languages = [
-    'English', 'Arabic (basic)', 'Hindi', 'Tagalog',
-    'Urdu', 'French', 'Swahili', 'Amharic',
+    'English', 'Arabic', 'Filipino/Tagalog', 'Bahasa Indonesia', 'Hindi', 'Urdu',
+    'Bengali', 'Amharic', 'Oromo', 'Swahili', 'Punjabi', 'Malayalam', 'Other',
   ];
 
   static const jobTitles = [

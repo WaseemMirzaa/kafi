@@ -103,7 +103,7 @@ void main() {
       expect(c.validatePersonalInfo(), AppStrings.nannyEmiratesRequired);
     });
     test('empty current area is rejected', () {
-      c.currentAreaCtrl.text = '';
+      c.currentEmirate.value = null;
       expect(c.validatePersonalInfo(), AppStrings.nannyCurrentAreaRequired);
     });
     test('inverted salary range is rejected', () {
@@ -129,21 +129,23 @@ void main() {
       c.childrenCountCtrl.text = '0';
       expect(c.validatePersonalInfo(), AppStrings.nannyChildrenCountRequired);
     });
-    test('empty emergency name is rejected', () {
-      c.emergencyNameCtrl.text = '';
-      expect(c.validatePersonalInfo(), AppStrings.nannyEmergencyNameRequired);
-    });
-    test('empty emergency relationship is rejected', () {
-      c.emergencyRelCtrl.text = '';
-      expect(c.validatePersonalInfo(), AppStrings.nannyEmergencyRelRequired);
-    });
-    test('invalid emergency phone is rejected', () {
-      c.emergencyPhoneCtrl.text = '';
-      expect(c.validatePersonalInfo(), AppStrings.nannyEmergencyPhoneRequired);
-    });
     test('empty bio is rejected', () {
       c.bioCtrl.text = '';
       expect(c.validatePersonalInfo(), AppStrings.nannyBioRequired);
+    });
+    test('no employment type is rejected', () {
+      c.employmentTypes.clear();
+      expect(c.validatePersonalInfo(), AppStrings.nannyEmploymentTypeRequired);
+    });
+    test('part-time with no availability is rejected', () {
+      c.employmentTypes.assignAll([EmploymentType.partTime]);
+      expect(c.validatePersonalInfo(), AppStrings.nannyPartTimeAvailabilityRequired);
+    });
+    test('part-time with a day and times passes', () {
+      c.employmentTypes.assignAll([EmploymentType.partTime]);
+      c.partTimeAvailability
+          .add(DayAvailability(weekday: 1, from: '08:00', until: '17:00'));
+      expect(c.validatePersonalInfo(), isNull);
     });
   });
 
@@ -290,15 +292,13 @@ void _fillValidPersonalInfo(NannyProfileController c) {
   c.selectedLanguages.assignAll(['English']);
   c.visaStatus.value = VisaStatus.ownResidence;
   c.workEmirates.assignAll([Emirate.dubai]);
-  c.currentAreaCtrl.text = 'Dubai Marina';
+  c.currentEmirate.value = Emirate.dubai;
   c.salaryMinCtrl.text = '2000';
   c.salaryMaxCtrl.text = '3000';
   c.availability.value = AvailabilityStatus.availableNow;
   c.maritalStatus.value = MaritalStatus.single;
   c.hasChildren.value = false;
-  c.emergencyNameCtrl.text = 'Ana Santos';
-  c.emergencyRelCtrl.text = 'Sister';
-  c.emergencyPhoneCtrl.text = '501234567';
+  c.employmentTypes.assignAll([EmploymentType.fullTimeLiveIn]);
   c.bioCtrl.text = 'Experienced and caring nanny who loves children.';
 }
 
