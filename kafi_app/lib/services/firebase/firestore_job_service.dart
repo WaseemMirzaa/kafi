@@ -147,10 +147,11 @@ class FirestoreJobService implements IJobService {
         expiresAt: _date(m['expiresAt']),
         jobTitle: m['jobTitle'] ?? '',
         rolesNeeded: List<String>.from(m['rolesNeeded'] ?? const []),
+        rolesOther: m['rolesOther'] as String?,
         jobType: _enumByName(JobType.values, m['jobType'], JobType.liveIn),
         employmentType: _enumByName(
             JobEmploymentType.values, m['employmentType'], JobEmploymentType.fullTime),
-        schedule: m['schedule'] ?? '',
+        daysOff: m['daysOff'] ?? '',
         startDate: _date(m['startDate']),
         startImmediate: m['startImmediate'] ?? true,
         duration: _enumByName(JobDuration.values, m['duration'], JobDuration.permanent),

@@ -22,8 +22,9 @@ class JobPostModel {
     this.expiresAt,
     this.jobTitle = '',
     this.rolesNeeded = const [],
+    this.rolesOther,
     this.jobType = JobType.liveIn,
-    this.schedule = '',
+    this.daysOff = '',
     this.startDate,
     this.startImmediate = true,
     this.duration = JobDuration.permanent,
@@ -60,8 +61,11 @@ class JobPostModel {
   final DateTime? expiresAt;
   final String jobTitle;
   final List<String> rolesNeeded;
+
+  /// Custom role text when [rolesNeeded] contains "Other"; null when not used.
+  final String? rolesOther;
   final JobType jobType;
-  final String schedule;
+  final String daysOff;
   final DateTime? startDate;
   final bool startImmediate;
   final JobDuration duration;
@@ -95,10 +99,6 @@ class JobPostModel {
   String localizedJobTitle([String? lang]) =>
       localize(jobTitle, i18n['jobTitle'], lang);
 
-  /// Schedule in the app's current language (falls back to original).
-  String localizedSchedule([String? lang]) =>
-      localize(schedule, i18n['schedule'], lang);
-
   /// Additional notes in the app's current language (falls back to original).
   String localizedAdditionalNotes([String? lang]) =>
       localize(additionalNotes, i18n['additionalNotes'], lang);
@@ -111,8 +111,9 @@ class JobPostModel {
     DateTime? expiresAt,
     String? jobTitle,
     List<String>? rolesNeeded,
+    String? rolesOther,
     JobType? jobType,
-    String? schedule,
+    String? daysOff,
     DateTime? startDate,
     bool? startImmediate,
     JobDuration? duration,
@@ -149,8 +150,9 @@ class JobPostModel {
         expiresAt: expiresAt ?? this.expiresAt,
         jobTitle: jobTitle ?? this.jobTitle,
         rolesNeeded: rolesNeeded ?? this.rolesNeeded,
+        rolesOther: rolesOther ?? this.rolesOther,
         jobType: jobType ?? this.jobType,
-        schedule: schedule ?? this.schedule,
+        daysOff: daysOff ?? this.daysOff,
         startDate: startDate ?? this.startDate,
         startImmediate: startImmediate ?? this.startImmediate,
         duration: duration ?? this.duration,
@@ -217,8 +219,9 @@ class JobPostModel {
       expiresAt: date(m['expiresAt']),
       jobTitle: (m['jobTitle'] as String?) ?? '',
       rolesNeeded: List<String>.from(m['rolesNeeded'] ?? const []),
+      rolesOther: m['rolesOther'] as String?,
       jobType: enumBy(JobType.values, m['jobType'], JobType.liveIn),
-      schedule: (m['schedule'] as String?) ?? '',
+      daysOff: (m['daysOff'] as String?) ?? '',
       startDate: date(m['startDate']),
       startImmediate: m['startImmediate'] ?? true,
       duration: enumBy(JobDuration.values, m['duration'], JobDuration.permanent),
@@ -259,8 +262,9 @@ class JobPostModel {
         'expiresAt': expiresAt?.toIso8601String(),
         'jobTitle': jobTitle,
         'rolesNeeded': rolesNeeded,
+        'rolesOther': rolesOther,
         'jobType': jobType.name,
-        'schedule': schedule,
+        'daysOff': daysOff,
         'startDate': startDate?.toIso8601String(),
         'startImmediate': startImmediate,
         'duration': duration.name,
