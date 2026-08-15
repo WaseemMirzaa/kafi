@@ -19,9 +19,9 @@ standalone change).
 | ---- | ------- | ------------ | ------ | ------ | ------- | --------- |
 | kafi-dashboard-revert-revenue-filters | Nannies app (Kafi admin) | — (standalone) | feat/kafi-dashboard-revert-revenue-filters | READY_FOR_REVIEW | 2026-06-07 | scope · plan · build |
 | mobile-auth-onboarding-backend | Kafi mobile (Flutter) | — (standalone) | claude/quirky-goldberg-7jxx5a | BUILT (partial) | 2026-06-21 | plan · build |
-| kafi-nanny-profile-fields | Kafi mobile (Flutter) | kafi-profile-trial-overhaul / phase 1 | TBD (architect to branch) | READY_FOR_ARCH | 2026-08-15 | scope |
-| kafi-family-profile-fields | Kafi mobile (Flutter) | kafi-profile-trial-overhaul / phase 2 | TBD (architect to branch) | READY_FOR_ARCH | 2026-08-15 | scope |
-| kafi-trial-completion-flow | Kafi mobile (Flutter) + functions | kafi-profile-trial-overhaul / phase 3 | TBD (architect to branch) | READY_FOR_ARCH | 2026-08-15 | scope |
+| kafi-nanny-profile-fields | Kafi mobile (Flutter) | kafi-profile-trial-overhaul / phase 1 | claude/kafi-nanny-profile-fields | READY_FOR_BUILD | 2026-08-15 | scope · plan |
+| kafi-family-profile-fields | Kafi mobile (Flutter) + admin | kafi-profile-trial-overhaul / phase 2 | claude/kafi-family-profile-fields | READY_FOR_BUILD | 2026-08-15 | scope · plan |
+| kafi-trial-completion-flow | Kafi mobile (Flutter) + functions | kafi-profile-trial-overhaul / phase 3 | claude/kafi-trial-completion-flow-{app,functions} | READY_FOR_BUILD | 2026-08-15 | scope · plan |
 
 <!--
 Task status flow:
