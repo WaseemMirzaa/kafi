@@ -82,3 +82,6 @@ functions/lib/
 
 # Deploy service account materialized by scripts/materialize-secrets.sh (never commit)
 scripts/service-account.json
+
+# Claude Code agent git worktrees (each is its own working tree, never repo content)
+.claude/worktrees/
