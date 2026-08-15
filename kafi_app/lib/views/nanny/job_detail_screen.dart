@@ -143,8 +143,8 @@ class JobDetailScreen extends StatelessWidget {
       'Job Details',
       [
         _detailRow('Job Type', job.jobType.name.titleCase),
-        _detailRow('Schedule',
-            job.schedule.isNotEmpty ? job.schedule : 'Not specified'),
+        _detailRow('Days off',
+            job.daysOff.isNotEmpty ? job.daysOff : 'Not specified'),
         _detailRow(
             'Start Date',
             job.startImmediate

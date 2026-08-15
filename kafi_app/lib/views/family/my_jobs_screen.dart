@@ -310,8 +310,8 @@ class MyJobsScreen extends GetView<FamilyJobsController> {
   }
 }
 
-/// Bottom-sheet form to edit a job's headline fields (title, schedule, salary
-/// range). A stateful widget so its text controllers are disposed cleanly.
+/// Bottom-sheet form to edit a job's headline fields (title, salary range).
+/// A stateful widget so its text controllers are disposed cleanly.
 class _JobEditSheet extends StatefulWidget {
   const _JobEditSheet({required this.job, required this.onSave});
 
@@ -325,8 +325,6 @@ class _JobEditSheet extends StatefulWidget {
 class _JobEditSheetState extends State<_JobEditSheet> {
   late final TextEditingController _title =
       TextEditingController(text: widget.job.jobTitle);
-  late final TextEditingController _schedule =
-      TextEditingController(text: widget.job.schedule);
   late final TextEditingController _salaryMin =
       TextEditingController(text: widget.job.salaryMin > 0 ? '${widget.job.salaryMin}' : '');
   late final TextEditingController _salaryMax =
@@ -335,7 +333,6 @@ class _JobEditSheetState extends State<_JobEditSheet> {
   @override
   void dispose() {
     _title.dispose();
-    _schedule.dispose();
     _salaryMin.dispose();
     _salaryMax.dispose();
     super.dispose();
@@ -372,8 +369,6 @@ class _JobEditSheetState extends State<_JobEditSheet> {
           Text(AppStrings.jobEditTitle.tr, style: KafiTheme.pacifico(16, color: KafiColors.pur)),
           const SizedBox(height: 14),
           KafiTextField(label: AppStrings.jobFieldTitle.tr, controller: _title, purple: true),
-          const SizedBox(height: 10),
-          KafiTextField(label: AppStrings.jobFieldSchedule.tr, controller: _schedule, purple: true),
           const SizedBox(height: 10),
           Row(
             children: [
@@ -443,7 +438,6 @@ class _JobEditSheetState extends State<_JobEditSheet> {
     }
     final updated = widget.job.copyWith(
       jobTitle: _title.text.trim(),
-      schedule: _schedule.text.trim(),
       salaryMin: min,
       salaryMax: max,
     );
