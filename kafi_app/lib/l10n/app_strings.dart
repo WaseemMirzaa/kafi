@@ -153,6 +153,8 @@ abstract class AppStrings {
   static const fldTransferVisa = 'fld_transfer_visa';
   static const fldEmirates = 'fld_emirates';
   static const fldRelocate = 'fld_relocate';
+  static const nannyCurrentEmirateLabel = 'nanny_current_emirate_label';
+  static const nannyAnyEmirate = 'nanny_any_emirate';
   static const fldCurrentArea = 'fld_current_area';
   static const fldCity = 'fld_city';
   static const fldMarital = 'fld_marital';
@@ -204,6 +206,8 @@ abstract class AppStrings {
   static const expJobTitle = 'exp_job_title';
   static const expEmployer = 'exp_employer';
   static const expCityCountry = 'exp_city_country';
+  static const expCountry = 'exp_country';
+  static const expCity = 'exp_city';
   static const expFrom = 'exp_from';
   static const expTo = 'exp_to';
   static const expChildren = 'exp_children';
@@ -953,6 +957,25 @@ abstract class AppStrings {
   static const nannyAvailableFrom = 'nanny_available_from';
   static const nannyAvailableFromDate = 'nanny_available_from_date';
   static const nannyAvailableFromRequired = 'nanny_available_from_required';
+
+  // Nanny onboarding — employment type + part-time availability
+  static const nannySecEmployment = 'nanny_sec_employment';
+  static const nannyEmploymentQuestion = 'nanny_employment_question';
+  static const nannyEmpFullLiveIn = 'nanny_emp_full_live_in';
+  static const nannyEmpFullLiveOut = 'nanny_emp_full_live_out';
+  static const nannyEmpPartTime = 'nanny_emp_part_time';
+  static const nannyEmploymentTypeRequired = 'nanny_employment_type_required';
+  static const nannyPartTimeQuestion = 'nanny_part_time_question';
+  static const nannyPartTimeFrom = 'nanny_part_time_from';
+  static const nannyPartTimeUntil = 'nanny_part_time_until';
+  static const nannyPartTimeAvailabilityRequired = 'nanny_part_time_availability_required';
+  static const dayMon = 'day_mon';
+  static const dayTue = 'day_tue';
+  static const dayWed = 'day_wed';
+  static const dayThu = 'day_thu';
+  static const dayFri = 'day_fri';
+  static const daySat = 'day_sat';
+  static const daySun = 'day_sun';
 
   // Location picker
   static const locationChange = 'location_change';

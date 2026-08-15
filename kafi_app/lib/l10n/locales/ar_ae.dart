@@ -443,6 +443,34 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.nannyAvailableFromDate: 'متاحة اعتباراً من',
     AppStrings.nannyAvailableFromRequired: 'الرجاء اختيار تاريخ البدء.',
 
+    // Nanny onboarding — current emirate (kafi-nanny-profile-fields)
+    AppStrings.nannyCurrentEmirateLabel: 'في أي إمارة تقيمين حاليًا؟',
+    AppStrings.nannyAnyEmirate: 'أي إمارة',
+
+    // Nanny onboarding — employment type + part-time availability
+    AppStrings.nannySecEmployment: 'نوع التوظيف',
+    AppStrings.nannyEmploymentQuestion: 'ما نوع العمل الذي تبحثين عنه؟',
+    AppStrings.nannyEmpFullLiveIn: 'دوام كامل — إقامة داخلية',
+    AppStrings.nannyEmpFullLiveOut: 'دوام كامل — إقامة خارجية',
+    AppStrings.nannyEmpPartTime: 'دوام جزئي',
+    AppStrings.nannyEmploymentTypeRequired: 'الرجاء اختيار نوع وظيفة واحد على الأقل.',
+    AppStrings.nannyPartTimeQuestion: 'ما الأيام التي تكونين متاحة فيها؟',
+    AppStrings.nannyPartTimeFrom: 'متاحة من',
+    AppStrings.nannyPartTimeUntil: 'متاحة حتى',
+    AppStrings.nannyPartTimeAvailabilityRequired:
+        'أضيفي يومًا واحدًا على الأقل مع تحديد وقتي البداية والنهاية.',
+    AppStrings.dayMon: 'إثنين',
+    AppStrings.dayTue: 'ثلاثاء',
+    AppStrings.dayWed: 'أربعاء',
+    AppStrings.dayThu: 'خميس',
+    AppStrings.dayFri: 'جمعة',
+    AppStrings.daySat: 'سبت',
+    AppStrings.daySun: 'أحد',
+
+    // Work experience — country + city (kafi-nanny-profile-fields)
+    AppStrings.expCountry: 'الدولة',
+    AppStrings.expCity: 'المدينة أو المنطقة',
+
     // Location picker
     AppStrings.locationChange: 'تغيير',
     AppStrings.locationDetecting: 'جارٍ تحديد موقعك…',
