@@ -7,6 +7,8 @@ status: READY_FOR_REVIEW
 updated: 2026-08-15
 branch: claude/kafi-trial-completion-flow-app
 commits: 78df95d
+fix_round: 1
+fix_commit: add2c19
 ---
 
 # Build note — Trial-completion flow (app side)
@@ -337,3 +339,77 @@ Branch: `claude/kafi-trial-completion-flow-app`, based on latest
 `origin/main` at the time of branching (commit `5d28dbf`). Pushed to
 `origin/claude/kafi-trial-completion-flow-app`. No PR opened, per
 instructions — the project-manager merges both sides and opens the PR.
+
+---
+
+## Fix round 1 — 2026-08-15
+
+Applied to the integration branch `claude/kafi-trial-completion-flow` (commit
+`add2c19`), which is the merge of both sibling branches. Both changes are
+purely additive (one case label, one JSON object) with no other modifications.
+
+### C1 — Non-exhaustive switch (Critical)
+**File:** `kafi_app/lib/controllers/notification_controller.dart`
+
+Added `case NotificationType.trialOutcomePending:` to the existing trial
+notification group in `_handleTap`'s `switch (notif.type)` statement, at the
+same indentation level as `trialOfferReceived`/`trialStartingSoon`/
+`trialEndingSoon`/`trialCompleted` (the five cases that all fall through to
+`_openRouteForRole(Routes.chat); return;`). This makes the switch exhaustive
+over `NotificationType`, resolving the Dart 3 compile error that blocked
+`flutter analyze` and prevented all test files from compiling.
+
+### C2 — Missing composite Firestore index (Critical)
+**File:** `firestore.indexes.json`
+
+Added one new composite index entry to the `indexes` array, placed immediately
+after the existing `{status, reminderSent, startDate}` trials composite and
+before the `chatThreads` entry, matching the file's formatting exactly:
+```json
+{
+  "collectionGroup": "trials",
+  "queryScope": "COLLECTION",
+  "fields": [
+    { "fieldPath": "status", "order": "ASCENDING" },
+    { "fieldPath": "endDate", "order": "ASCENDING" }
+  ]
+}
+```
+This backs the `trialOutcomeDetector` scheduled function's query:
+`.where('status','==','active').where('endDate','<=',now)` — without it
+Firestore throws `FAILED_PRECONDITION` at runtime and the detector never runs.
+
+### M1 — Not fixed
+M1 (chat thread badge retirement regression) requires an architect placement
+decision before the fixer touches it. The review doc explicitly routes M1 back
+to the PM → architect. It is NOT fixed in this round.
+
+### Commands run and results
+
+```
+flutter pub get
+  → Got dependencies! (97 packages have newer versions incompatible with
+    constraints — pre-existing, unrelated to this change)
+
+flutter analyze
+  → No issues found! (ran in 2.5s)
+  Confirms C1 is resolved: the switch is now exhaustive.
+
+flutter test --no-pub
+  → All tests passed! (149 tests, 0 failures)
+  All 9 test files compiled and passed, including the 4 that previously
+  failed to compile due to the non-exhaustive switch error.
+
+python3 -m json.tool firestore.indexes.json > /dev/null
+  → JSON valid
+  Confirms C2's addition is syntactically correct. A live index deploy/build
+  cannot be run in this sandbox — the JSON structure matches Firestore's
+  composite-index schema exactly (collectionGroup, queryScope, fields with
+  fieldPath + order), which is the only checkable property here.
+
+git push origin HEAD:claude/kafi-trial-completion-flow
+  → d85cd78..add2c19  HEAD -> claude/kafi-trial-completion-flow
+```
+
+Flutter 3.35.7 / Dart 3.9.2 (pre-staged SDK in scratchpad, same as original
+developer's workaround — no `flutter` on PATH in this sandbox).
