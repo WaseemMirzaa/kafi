@@ -7,12 +7,14 @@ import {
   onApplicationUpdated,
   onTrialEnded,
   onTrialOffered,
+  onTrialOutcomeResolved,
   onTrialResponse,
 } from './triggers/trial';
 import { onDocumentReviewed } from './triggers/nanny';
 import {
   subscriptionExpiredEnforcer,
   subscriptionExpiringReminder,
+  trialOutcomeDetector,
   trialStartingReminder,
 } from './triggers/scheduled';
 import { revenueCatWebhook } from './triggers/webhook';
@@ -42,10 +44,12 @@ export {
   onApplicationUpdated,
   onTrialOffered,
   onTrialResponse,
+  onTrialOutcomeResolved,
   onTrialEnded,
   onDocumentReviewed,
   subscriptionExpiredEnforcer,
   subscriptionExpiringReminder,
+  trialOutcomeDetector,
   trialStartingReminder,
   revenueCatWebhook,
   onBroadcastCreated,
