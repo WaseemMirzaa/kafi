@@ -117,19 +117,17 @@ void main() {
   });
 
   group('JobPostModel translation-awareness', () {
-    test('localizes jobTitle / schedule / additionalNotes with fallback', () {
+    test('localizes jobTitle / additionalNotes with fallback', () {
       const j = JobPostModel(
         id: 'j1',
         familyId: 'f1',
         jobTitle: 'Live-in Nanny',
-        schedule: 'Mon-Fri',
         additionalNotes: 'Must love pets',
         i18n: {
           'jobTitle': {'en': 'Live-in Nanny', 'ar': 'مربية مقيمة'},
         },
       );
       expect(j.localizedJobTitle('ar'), 'مربية مقيمة');
-      expect(j.localizedSchedule('ar'), 'Mon-Fri'); // no ar → original
       expect(j.localizedAdditionalNotes('ar'), 'Must love pets');
       expect(j.copyWith(city: 'Dubai').localizedJobTitle('ar'), 'مربية مقيمة');
     });

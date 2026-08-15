@@ -155,6 +155,7 @@ abstract class AppStrings {
   static const fldRelocate = 'fld_relocate';
   static const fldCurrentArea = 'fld_current_area';
   static const fldCity = 'fld_city';
+  static const fldSelectEmirate = 'fld_select_emirate';
   static const fldMarital = 'fld_marital';
   static const fldChildren = 'fld_children';
   static const fldChildrenCount = 'fld_children_count';
@@ -940,7 +941,9 @@ abstract class AppStrings {
   static const familyChildrenInvalid = 'family_children_invalid';
   static const familyLanguagesRequired = 'family_languages_required';
   static const familyRolesRequired = 'family_roles_required';
+  static const familyRoleOtherRequired = 'family_role_other_required';
   static const familyScheduleRequired = 'family_schedule_required';
+  static const familyDaysOffRequired = 'family_days_off_required';
   static const familyDutiesRequired = 'family_duties_required';
   static const familyBenefitsRequired = 'family_benefits_required';
   static const familyTrialDaysRequired = 'family_trial_days_required';
@@ -978,6 +981,9 @@ abstract class AppStrings {
   static const employmentPartTime = 'employment_part_time';
   static const familyJobTypeLimit = 'family_job_type_limit';
   static const fldSchedule = 'fld_schedule';
+  static const fldRolePrompt = 'fld_role_prompt';
+  static const fldRoleOther = 'fld_role_other';
+  static const fldDaysOff = 'fld_days_off';
   static const fldAboutFamily = 'fld_about_family';
   static const fldHouseRules = 'fld_house_rules';
 

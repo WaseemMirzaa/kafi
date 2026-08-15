@@ -424,12 +424,15 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.nannyReligiousPractices: 'الممارسات الدينية (اختياري)',
 
     // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
+    AppStrings.familyCityRequired: 'يرجى اختيار الإمارة.',
     AppStrings.familyNationalityRequired: 'الرجاء اختيار جنسيتك.',
     AppStrings.familyChildrenAgesRequired: 'الرجاء إدخال أعمار أطفالك.',
     AppStrings.familyChildrenInvalid: 'أدخل عدداً صحيحاً للأطفال.',
     AppStrings.familyLanguagesRequired: 'الرجاء اختيار لغة منزلية واحدة على الأقل.',
     AppStrings.familyRolesRequired: 'الرجاء اختيار دور واحد على الأقل تحتاجه.',
+    AppStrings.familyRoleOtherRequired: 'يرجى تحديد الدور الذي تبحث عنه.',
     AppStrings.familyScheduleRequired: 'الرجاء وصف جدول العمل.',
+    AppStrings.familyDaysOffRequired: 'يرجى اختيار عدد أيام الإجازة التي ستوفرها.',
     AppStrings.familyDutiesRequired: 'الرجاء اختيار مهمة واحدة على الأقل.',
     AppStrings.familyBenefitsRequired: 'الرجاء اختيار ميزة واحدة على الأقل تقدمها.',
     AppStrings.familyTrialDaysRequired: 'الرجاء اختيار مدة التجربة.',
@@ -462,11 +465,15 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.docTooLarge: 'حجم الملف كبير جدًا. يرجى اختيار ملف أقل من 25 ميغابايت.',
 
     // Family job — employment type + edit fields
+    AppStrings.fldSelectEmirate: 'اختر الإمارة',
     AppStrings.fldEmployment: 'نوع التوظيف',
     AppStrings.employmentFullTime: 'دوام كامل',
     AppStrings.employmentPartTime: 'دوام جزئي',
     AppStrings.familyJobTypeLimit: 'لديك بالفعل وظيفة نشطة من هذا النوع. أغلقها أو أعد نشرها أولاً.',
     AppStrings.fldSchedule: 'جدول العمل',
+    AppStrings.fldRolePrompt: 'ما نوع المساعدة التي تبحث عنها؟',
+    AppStrings.fldRoleOther: 'يرجى تحديد الدور الذي تبحث عنه',
+    AppStrings.fldDaysOff: 'كم يوم إجازة ستوفر كل أسبوع؟',
     AppStrings.fldAboutFamily: 'عن عائلتك',
     AppStrings.fldHouseRules: 'قواعد المنزل (اختياري)',
 

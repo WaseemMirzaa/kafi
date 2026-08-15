@@ -198,7 +198,7 @@ export interface JobPostRow {
   jobTitle?: string;
   rolesNeeded?: string[];
   jobType?: JobType;
-  schedule?: string;
+  daysOff?: string;
   startDate?: Date;
   startImmediate?: boolean;
   duration?: JobDuration;
@@ -558,7 +558,7 @@ const mockJobPosts: JobPostRow[] = [
     id: 'j1', familyId: 'f1', familyName: 'Al Mansoori Family', status: 'active',
     createdAt: new Date(Date.now() - 12 * 86400000), expiresAt: new Date(Date.now() + 18 * 86400000),
     jobTitle: 'Live-in nanny for 3 children', rolesNeeded: ['Nanny', 'Babysitter'], jobType: 'liveIn',
-    schedule: 'Sun–Thu, 7am–7pm', startImmediate: true, duration: 'permanent', experienceYears: 3,
+    daysOff: '1 day off', startImmediate: true, duration: 'permanent', experienceYears: 3,
     languagesRequired: ['English'], languagesPreferred: ['Arabic (basic)'], nationalityPreference: ['Filipino', 'Indian'],
     religionPreference: 'preferMuslim', duties: ['Newborn', 'Childcare', 'Light cleaning', 'Cook family'],
     salaryMin: 2500, salaryMax: 3500, currency: 'AED',
@@ -571,7 +571,7 @@ const mockJobPosts: JobPostRow[] = [
     id: 'j2', familyId: 'f1', familyName: 'Al Mansoori Family', status: 'closed',
     createdAt: new Date(Date.now() - 90 * 86400000),
     jobTitle: 'Weekend babysitter', rolesNeeded: ['Babysitter'], jobType: 'liveOut',
-    schedule: 'Fri–Sat evenings', startImmediate: false, duration: 'contract', contractMonths: 3, experienceYears: 1,
+    daysOff: 'Other', startImmediate: false, duration: 'contract', contractMonths: 3, experienceYears: 1,
     languagesRequired: ['English'], duties: ['Childcare'], salaryMin: 1200, salaryMax: 1600, currency: 'AED',
     benefits: ['Meals provided'], visaSponsorship: 'none', trialDurationDays: 3, trialDailyRate: 120,
     viewsCount: 88, applicationsCount: 3, city: 'Abu Dhabi',
@@ -580,7 +580,7 @@ const mockJobPosts: JobPostRow[] = [
     id: 'j3', familyId: 'f2', familyName: 'James & Sarah K.', status: 'active',
     createdAt: new Date(Date.now() - 13 * 86400000), expiresAt: new Date(Date.now() + 17 * 86400000),
     jobTitle: 'Live-out nanny (English-speaking)', rolesNeeded: ['Nanny'], jobType: 'liveOut',
-    schedule: 'Mon–Fri, 8am–5pm', startImmediate: true, duration: 'permanent', experienceYears: 2,
+    daysOff: '2 days off', startImmediate: true, duration: 'permanent', experienceYears: 2,
     languagesRequired: ['English'], nationalityPreference: ['Filipino', 'Kenyan'],
     duties: ['Childcare', 'Tutoring', 'Light cleaning'], salaryMin: 2200, salaryMax: 3000, currency: 'AED',
     benefits: ['Health insurance', 'Days off weekly'], visaSponsorship: 'residenceOnly', trialDurationDays: 5, trialDailyRate: 140,
@@ -590,7 +590,7 @@ const mockJobPosts: JobPostRow[] = [
     id: 'j4', familyId: 'f3', familyName: 'Lin Chen', status: 'active',
     createdAt: new Date(Date.now() - 6 * 86400000), expiresAt: new Date(Date.now() + 24 * 86400000),
     jobTitle: 'Caregiver — special needs experience', rolesNeeded: ['Caregiver', 'Nanny'], jobType: 'liveOut',
-    schedule: 'Sun–Thu, 9am–6pm', startImmediate: false, startDate: new Date(Date.now() + 20 * 86400000),
+    daysOff: '2 days off', startImmediate: false, startDate: new Date(Date.now() + 20 * 86400000),
     duration: 'permanent', experienceYears: 4, languagesRequired: ['English'],
     skillsRequired: ['Special needs care', 'First Aid'], duties: ['Childcare', 'First Aid'],
     salaryMin: 3000, salaryMax: 4000, currency: 'AED', benefits: ['Health insurance', 'Phone provided'],
@@ -602,7 +602,7 @@ const mockJobPosts: JobPostRow[] = [
     id: 'j5', familyId: 'f4', familyName: 'Mohammed Al Rashid', status: 'expired',
     createdAt: new Date(Date.now() - 40 * 86400000), expiresAt: new Date(Date.now() - 5 * 86400000),
     jobTitle: 'Live-in nanny & housekeeper', rolesNeeded: ['Nanny', 'Maid', 'Cook'], jobType: 'liveIn',
-    schedule: 'Sat–Thu, full day', startImmediate: true, duration: 'permanent', experienceYears: 5,
+    daysOff: '1 day off', startImmediate: true, duration: 'permanent', experienceYears: 5,
     languagesRequired: ['English', 'Arabic (basic)'], religionPreference: 'preferSame',
     duties: ['Childcare', 'Light cleaning', 'Laundry', 'Cook family'], salaryMin: 2800, salaryMax: 3600, currency: 'AED',
     benefits: ['Meals provided', 'Private room', 'Yearly flight'], visaSponsorship: 'full', trialDurationDays: 10, trialDailyRate: 160,
@@ -1120,7 +1120,7 @@ function parseJobPost(id: string, data: Record<string, unknown>): JobPostRow {
     jobTitle: data.jobTitle as string | undefined,
     rolesNeeded: (data.rolesNeeded as string[]) ?? [],
     jobType: data.jobType as JobType | undefined,
-    schedule: data.schedule as string | undefined,
+    daysOff: data.daysOff as string | undefined,
     startDate: toDateOrUndef(data.startDate),
     startImmediate: data.startImmediate as boolean | undefined,
     duration: data.duration as JobDuration | undefined,

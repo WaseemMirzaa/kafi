@@ -232,7 +232,7 @@ void main() {
       expect(c.validateFamily(), AppStrings.familyNationalityRequired);
     });
     test('empty city is rejected', () {
-      c.city.value = '';
+      c.cityEmirate.value = null;
       expect(c.validateFamily(), AppStrings.familyCityRequired);
     });
     test('children present but no ages is rejected', () {
@@ -253,9 +253,9 @@ void main() {
       c.roles.clear();
       expect(c.validateFamily(), AppStrings.familyRolesRequired);
     });
-    test('empty schedule is rejected', () {
-      c.scheduleCtrl.text = '';
-      expect(c.validateFamily(), AppStrings.familyScheduleRequired);
+    test('empty days off is rejected', () {
+      c.daysOff.value = '';
+      expect(c.validateFamily(), AppStrings.familyDaysOffRequired);
     });
     test('no duties is rejected', () {
       c.duties.clear();
@@ -305,10 +305,10 @@ void _fillValidPersonalInfo(NannyProfileController c) {
 /// Fills every required family/job field (some have sensible defaults already).
 void _fillValidFamily(FamilyProfileController c) {
   c.fullNameCtrl.text = 'Al Mansoori';
-  c.city.value = 'Dubai';
+  c.cityEmirate.value = Emirate.dubai;
   c.childrenCtrl.text = '2';
   c.childrenAgesCtrl.text = '3, 5';
-  c.scheduleCtrl.text = 'Mon-Fri, 8am-6pm';
+  c.daysOff.value = '1 day off';
   c.duties.assignAll(['Cooking', 'School runs']);
   c.benefits.assignAll(['Health insurance']);
   // nationality ('Emirati'), languages, roles, salary, trial days/rate use the

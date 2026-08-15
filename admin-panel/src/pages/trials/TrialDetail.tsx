@@ -289,7 +289,7 @@ export default function TrialDetail() {
             <FieldGrid>
               <Field label="Roles" value={listOr(job.rolesNeeded)} />
               <Field label="Job type" value={job.jobType ? jobTypeFullLabel[job.jobType] : '—'} />
-              <Field label="Schedule" value={job.schedule || '—'} />
+              <Field label="Days off" value={job.daysOff || '—'} />
               <Field label="Salary" value={salaryRange(job.salaryMin, job.salaryMax)} />
               <Field label="Visa sponsorship" value={job.visaSponsorship ? visaSponsorshipLabel[job.visaSponsorship] : '—'} />
               <Field label="Duties" value={listOr(job.duties)} />

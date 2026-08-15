@@ -8,8 +8,8 @@ import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/family_job_selectors.dart';
 import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
-import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_searchable_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_section.dart';
@@ -149,34 +149,15 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
               onSelected: (v) => controller.nationality.value = v,
             )),
         const SizedBox(height: 8),
-        Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _label(AppStrings.fldCity.tr),
-                  const SizedBox(height: 4),
-                  Obx(() => controller.detectingCity.value
-                      ? _detectingCity()
-                      : KafiLocationPicker(
-                          initialValue: controller.city.value,
-                          onChanged: (v) => controller.city.value = v,
-                        )),
-                ],
-              ),
-            ),
-            const SizedBox(width: 6),
-            Expanded(
-              child: KafiTextField(
-                label: AppStrings.fldChildrenCount.tr,
-                controller: controller.childrenCtrl,
-                keyboardType: TextInputType.number,
-                purple: true,
-              ),
-            ),
-          ],
+        _label(AppStrings.fldSelectEmirate.tr),
+        const SizedBox(height: 4),
+        FamilyEmirateSelector(controller),
+        const SizedBox(height: 8),
+        KafiTextField(
+          label: AppStrings.fldChildrenCount.tr,
+          controller: controller.childrenCtrl,
+          keyboardType: TextInputType.number,
+          purple: true,
         ),
         KafiTextField(
           label: AppStrings.fldChildrenAges.tr,
@@ -407,20 +388,9 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
       icon: Icons.work_outline,
       accent: KafiSectionAccent.purple,
       children: [
-        _label(AppStrings.fldRoles.tr),
+        _label(AppStrings.fldRolePrompt.tr),
         const SizedBox(height: 4),
-        Obx(() => Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: FamilyConstants.roles
-                  .map((r) => KafiChip(
-                        label: r,
-                        purple: true,
-                        selected: controller.roles.contains(r),
-                        onTap: () => controller.toggle(controller.roles, r),
-                      ))
-                  .toList(),
-            )),
+        FamilyRoleSelector(controller),
         const SizedBox(height: 8),
         _label(AppStrings.fldJobType.tr),
         const SizedBox(height: 4),
@@ -473,13 +443,10 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
                 ),
               ],
             )),
-        const SizedBox(height: 6),
-        KafiTextField(
-          label: AppStrings.fldSchedule.tr,
-          controller: controller.scheduleCtrl,
-          hint: AppStrings.familyScheduleHint.tr,
-          purple: true,
-        ),
+        const SizedBox(height: 8),
+        _label(AppStrings.fldDaysOff.tr),
+        const SizedBox(height: 4),
+        FamilyDaysOffSelector(controller),
       ],
     );
   }
@@ -623,31 +590,6 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
   // ── Shared helpers ─────────────────────────────────────────────────────────
   Widget _label(String text) =>
       Text(text, style: KafiTheme.nunito(9, color: _purpleLabel, w: FontWeight.w800));
-
-  /// Placeholder shown while the city is being auto-detected from GPS.
-  Widget _detectingCity() => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
-        decoration: BoxDecoration(
-          border: Border.all(color: KafiColors.cardBorder),
-          borderRadius: BorderRadius.circular(12),
-          color: KafiColors.inputBg,
-        ),
-        child: Row(
-          children: [
-            const SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2, color: KafiColors.roseD),
-            ),
-            const SizedBox(width: 10),
-            Expanded(
-              child: Text(AppStrings.locationDetecting.tr,
-                  style: KafiTheme.nunito(13, color: KafiColors.ts)),
-            ),
-          ],
-        ),
-      );
-
 
   Widget _dropdownInt({
     required int value,
