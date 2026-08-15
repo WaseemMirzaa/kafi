@@ -3,7 +3,7 @@ epic: kafi-profile-trial-overhaul
 project: kafi
 title: Trial-completion workflow + family/nanny profile simplification (emirate-only location, no GPS)
 owner: project-manager
-status: APPROVED
+status: DONE
 updated: 2026-08-15
 ---
 
@@ -38,11 +38,18 @@ emergency contact). All three remove Google Maps/GPS from the fields they touch.
 
 ## Phases
 
-| Phase | Slug | Scope doc | Status |
-| ----- | ---- | --------- | ------ |
-| 1 — Nanny profile fields | `kafi-nanny-profile-fields` | `scope/kafi-nanny-profile-fields.md` | ACTIVE |
-| 2 — Family profile fields | `kafi-family-profile-fields` | `scope/kafi-family-profile-fields.md` | ACTIVE |
-| 3 — Trial completion & reactivation flow | `kafi-trial-completion-flow` | `scope/kafi-trial-completion-flow.md` | ACTIVE |
+| Phase | Slug | Scope doc | Status | PR |
+| ----- | ---- | --------- | ------ | -- |
+| 1 — Nanny profile fields | `kafi-nanny-profile-fields` | `scope/kafi-nanny-profile-fields.md` | MERGED | #148 |
+| 2 — Family profile fields | `kafi-family-profile-fields` | `scope/kafi-family-profile-fields.md` | MERGED | #147 |
+| 3 — Trial completion & reactivation flow | `kafi-trial-completion-flow` | `scope/kafi-trial-completion-flow.md` | MERGED | #149 |
+
+All three phases shipped. Phase 3 went through one real review-fail/fix/re-review
+cycle (see `reviews/kafi-trial-completion-flow.md`) — the app-side and
+functions-side builds were each individually clean, but integration surfaced a
+compile-breaking non-exhaustive `switch`, a missing Firestore composite index,
+and a chat-badge regression needing an architect placement decision. All three
+resolved and independently re-verified before merge.
 
 Each phase runs the full `scope → plan → build → review → PR` cycle
 independently (see root `CLAUDE.md` §1, §3). Architect plans first — no
