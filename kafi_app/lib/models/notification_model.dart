@@ -9,6 +9,7 @@ enum NotificationType {
   trialCountered,
   trialStartingSoon,
   trialEndingSoon,
+  trialOutcomePending,
   trialCompleted,
   hired,
   profileViewed,
