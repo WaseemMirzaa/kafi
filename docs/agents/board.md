@@ -11,6 +11,7 @@ standalone change).
 | Epic | Project | Status | Phases done / total | Doc |
 | ---- | ------- | ------ | ------------------- | --- |
 | _(example)_ nanny-profile-module | Nannies app | IN_PROGRESS | 2 / 5 | epics/nanny-profile-module.md |
+| kafi-profile-trial-overhaul | Kafi mobile (Flutter) + functions | APPROVED | 0 / 3 (all 3 ACTIVE, parallel) | epics/kafi-profile-trial-overhaul.md |
 
 ## Tasks (active + recent)
 
@@ -18,6 +19,9 @@ standalone change).
 | ---- | ------- | ------------ | ------ | ------ | ------- | --------- |
 | kafi-dashboard-revert-revenue-filters | Nannies app (Kafi admin) | — (standalone) | feat/kafi-dashboard-revert-revenue-filters | READY_FOR_REVIEW | 2026-06-07 | scope · plan · build |
 | mobile-auth-onboarding-backend | Kafi mobile (Flutter) | — (standalone) | claude/quirky-goldberg-7jxx5a | BUILT (partial) | 2026-06-21 | plan · build |
+| kafi-nanny-profile-fields | Kafi mobile (Flutter) | kafi-profile-trial-overhaul / phase 1 | TBD (architect to branch) | READY_FOR_ARCH | 2026-08-15 | scope |
+| kafi-family-profile-fields | Kafi mobile (Flutter) | kafi-profile-trial-overhaul / phase 2 | TBD (architect to branch) | READY_FOR_ARCH | 2026-08-15 | scope |
+| kafi-trial-completion-flow | Kafi mobile (Flutter) + functions | kafi-profile-trial-overhaul / phase 3 | TBD (architect to branch) | READY_FOR_ARCH | 2026-08-15 | scope |
 
 <!--
 Task status flow:
