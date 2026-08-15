@@ -3,474 +3,580 @@ slug: kafi-trial-completion-flow
 project: kafi
 title: Trial-completion workflow with mutual hire confirmation, nanny outcome capture, and hired-nanny reactivation
 owner: architect
-status: PLANNING
-blocker: SCOPE_PREMISE_INACCURATE — the scope's "Current state (investigated)" section describes a hire/employment + search-visibility subsystem that does not exist in the repo. This materially enlarges the work (build vs. adapt) and makes three of the scope's explicit hard constraints impossible as literally worded. Requires PM + Waseem re-confirmation before READY_FOR_BUILD. See §0.
+status: READY_FOR_BUILD
 updated: 2026-08-15
 epic: kafi-profile-trial-overhaul (phase 3 of 3 — parallel with kafi-nanny-profile-fields and kafi-family-profile-fields)
 ---
 
-# Plan — Trial completion, mutual hire confirmation, reactivation
+## 0. Correction note
 
-## 0. BLOCKER — read before building (scope premise is inaccurate)
+An earlier pass of this plan was written after a `git rebase (start): checkout
+origin/main` → `rebase (abort)` happened mid-investigation in this shared
+working directory (confirmed via `git reflog`), which produced a stale/mixed
+read: several files were found empty (`i_hire_service.dart`,
+`firestore_hire_service.dart` — "File does not exist") and `firestore.rules`
+was read complete-but-truncated at 193 lines with no `hires` block. That plan
+wrongly concluded the hire/notification subsystem didn't exist and stopped at
+a blocker.
 
-I read the actual source before planning (CLAUDE.md §4). The scope doc's
-requirements (the verbatim Waseem block) are real and implementable, but its
-**"Current state (investigated)" section describes code that does not exist.**
-Every claim below was verified by direct file reads, `ls`, `stat`, and `find`
-(the repo's content-search was returning phantom line references for some
-paths — e.g. it cited `functions/src/triggers/stats.ts:87` and
-`firestore.rules:305`, both of which do not exist; `firestore.rules` is 193
-lines and there is no `stats.ts`. All facts here come from authoritative reads,
-not search).
-
-### 0.1 Scope claim vs. verified reality
-
-| Scope doc claims exists | Verified reality |
-| --- | --- |
-| `hires/{id}` collection, `IHireService`, `firestore_hire_service.dart`, `HireStatus`, `HireEndReason` | **None exist.** No `IHireService`, no `firestore_hire_service.dart`, no `HireStatus`/`HireEndReason` enums anywhere in `kafi_app/`. |
-| `TrialController.setOutcome → _createHireFromTrial()` creating a `hires` doc (instant single-sided hire) | **`_createHireFromTrial` does not exist.** `setOutcome` (`trial_controller.dart:329-340`) only calls `_trials.recordOutcome`, which writes `status=completed` + a free-form `outcome` label to the trial doc. **No hire object is ever created, client- or server-side.** |
-| `IHireService.activeHiredNannyIds()` + `ITrialService.activeTrialNannyIds()` unioned in `BrowseController._engagedNannyIds()` to hide engaged nannies from search | **No such derivation exists.** `browse_controller.dart` has no `_engagedNannyIds`. `browseNannies` (`firestore_job_service.dart:14-63`) filters only `nannies.where('status','==','approved')` (+ optional nationality/jobType). **On-trial and would-be-hired nannies are NOT hidden from browse today.** `families/{id}.activeTrialNannyIds` is a **family-doc** field used only by `firestore.rules` (`hasActiveTrialWith`) for chat/subscription bypass — it does not hide nannies from search. |
-| `NannyProfileController.resignHire()` → `_hireService.endHire(...)`, surfaced on `nanny_dashboard_screen.dart`'s `_statusCard()` | **`resignHire()` does not exist.** `nanny_profile_controller.dart` has no hire methods. `nanny_dashboard_screen.dart` (a `GetView<NannyProfileController>`) has no `_statusCard()` and no hired/resign UI — only hero + quality-score card + jobs list. |
-| `ChatController.endActiveHire()` family "End employment" from chat header | **Does not exist.** `chat_controller.dart` has no hire logic. |
-| `functions/src/triggers/stats.ts` with `onHireCreated`/`onHireEnded` pushing "🎉 You've been hired!" | **`stats.ts` does not exist.** No `onHireCreated`/`onHireEnded`. The only trial pushes are in `trial.ts`. |
-| `onTrialEnded` sends "identical generic push to **both** parties" | Partly false. `onTrialEnded` (`trial.ts:89-125`) on `completed` sends **one** generic FCM push to the **family only** ("Trial completed / Evaluate the nanny"). The nanny gets nothing. |
-| `applications/{appId}` `_apps.markHired` flip fires alongside the instant hire | **`markHired` is never called** from any trial/hire path. `ApplicationStatus.hired` exists in the enum but nothing writes it. |
-| Deliver prompts "via the existing `writeInbox`/`sendNotification` pattern"; new `InboxType`/`InboxNotifType` union in `notifications.ts:81` | **No `writeInbox`, no `InboxType`/`InboxNotifType` union.** `notifications.ts` exposes only `sendNotification` (FCM push) + `getUser/getNanny/getFamily`. **There is no server-side producer of the in-app `notifications` collection at all** (rules `create: if isAdmin()` only; Flutter only *reads* it — `fcm_notification_service.dart:337-375`). |
-
-### 0.2 What IS accurate in the scope
-- No date-driven trial-end detection exists; `scheduled.ts` has only
-  `trialStartingReminder` (upcoming starts), `subscriptionExpiringReminder`,
-  `subscriptionExpiredEnforcer`. A new `endDate <= now` job is genuinely needed.
-- `TrialStatus` = `{pending, countered, accepted, declined, active, completed,
-  cancelled}`; no "hired" status; outcome is a free-form `String?`. No per-party
-  hire-confirmation fields (`nannyConfirmedPayment` is about *payment*, not hire).
-- `NotificationType.trialEndingSoon` exists in Dart (`notification_model.dart:11`)
-  and is unused.
-- The `hires` collection **is scaffolded but never produced**: `firestore.rules`
-  has **no** `hires` block (so client writes to it are denied by default), yet
-  `delete.ts:132-146` cascades a `hires` cleanup and the admin panel renders
-  `stats.hiresCount`. So `hires` is a *designed-but-unimplemented* collection.
-
-### 0.3 Why this blocks a clean READY_FOR_BUILD
-1. **Build, not adapt.** The scope frames this phase as "make the *existing*
-   hire flow mutual-confirm, reuse the *existing* derived hide mechanism, reuse
-   the *existing* resign path." None of those exist. Delivering the requirements
-   means **building the hire-outcome representation, the search-visibility
-   mechanism, and the reactivation path from scratch** — roughly 2–3× the implied
-   size. That is a scope change the PM must re-confirm with Waseem (CLAUDE.md §4:
-   flag as scope risk; do not invent scope).
-2. **Three hard constraints are impossible as literally worded** and need a
-   confirmed substitute:
-   - "Reuse the existing derived `activeTrialNannyIds`/`activeHiredNannyIds`
-     hide mechanism" → that mechanism does not exist; §2 proposes building a
-     derived-from-`trials` exclusion in the browse path (honoring the *intent*:
-     derived, no stored nanny flag).
-   - "Call into the SAME underlying `resignHire()`/`endHire()` mechanism" →
-     there is no such mechanism; §2 proposes a single shared trial-status
-     transition that both resign and reactivation route through.
-   - "Deliver via the existing `writeInbox`/`sendNotification` pattern" → there
-     is no `writeInbox` and no in-app-notification producer; §2 proposes
-     delivery via trial-doc state (rendered in-app, matching how every trial
-     screen already works) + the existing FCM `sendNotification` nudge.
-3. **One genuine architecture fork** (see §3, D1): represent "Hired" **on the
-   trial doc** (proposed) vs. **finally implement the `hires` collection** the
-   rules/`delete.ts`/admin scaffolding anticipates. This has data-model, rules,
-   and admin-panel consequences and should be a conscious, confirmed decision,
-   not one an architect makes unilaterally under an inaccurate scope.
-
-**Recommended PM action:** re-confirm the enlarged scope with Waseem, answer the
-D1–D5 decisions in §3, then I flip this doc to `READY_FOR_BUILD`. The design in
-§2–§9 below is complete and internally consistent against the *real* code, so
-approval is the only gate — no further investigation is required.
+This version is a full redo: every file below was re-read from a since-settled
+working tree (`git status` clean throughout this pass) and cross-checked for
+internal consistency (service ↔ interface ↔ mock ↔ controller ↔ UI ↔
+functions all agree with each other). The hire subsystem, `writeInbox`,
+`resignHire`, and `endActiveHire` are all real, and the scope doc's guidance
+is groundable almost exactly as written. No blockers remain.
 
 ---
 
 ## 1. Architecture summary
 
-Everything hangs off the **trial document** as the single source of truth (it
-already has read/write rules for both parties, is the object both the app and
-`trial.ts` revolve around, and needs no new collection/rules/read-path). The
-flow becomes a small, explicit state machine layered on `TrialStatus`:
+The mutual-confirm gate is built as a **thin pending layer on top of the
+existing `TrialModel`/`hires` machinery**, not a parallel system:
 
 ```
-active  ──(scheduled: endDate<=now)──►  awaitingOutcome
-                                          │
-     family writes familyOutcome ∈ {hired, searching}
-     nanny  writes nannyOutcome  ∈ {hired, searching}
-                                          │
-        server trigger resolves the 2×2 matrix:
-          both 'hired'            → status = hired      (nanny hidden from browse)
-          either 'searching'      → status = notHired   (nanny visible in browse)
-          only one side responded → stays awaitingOutcome (pending; nanny stays hidden)
-                                          │
-   Returning Hired Nanny: nanny sets reactivationReason
-          hired ──► notHired  (same transition path → nanny reappears in browse)
+active ──(scheduled: endDate<=now)──► awaitingOutcome
+                                         │
+   family writes familyOutcome ∈ {hired, notHired}  (+ optional notHiredReason)
+   nanny  writes nannyOutcome  ∈ {hired, notHired}
+                                         │
+        onTrialOutcomeResolved (Cloud Function, transactional):
+          both 'hired'        → status=completed, outcome='hired'
+                                 → creates hires/{hire_<trialId>} (status=active)
+                                 → flips linked application to hired
+          either 'notHired'   → status=completed, outcome='failed'
+          only one responded  → no-op, stays awaitingOutcome
+                                         │
+   onHireCreated (existing) fires the nanny's "You've been hired!" push
+   onTrialEnded  (existing, enhanced) fires the outcome-aware closing pushes
 ```
 
-**Search visibility is derived, never stored on the nanny.** A nanny is hidden
-from browse iff she has any trial whose status ∈ {`accepted`, `active`,
-`awaitingOutcome`, `hired`}. Leaving that set (→ `notHired`/`declined`/
-`cancelled`) makes her reappear. This is the derived mechanism the scope
-*assumed existed*, built here in the browse path.
+**Why resolution is server-side, not client-side (the one real design
+decision in this plan):** `firestore.rules`' `hires` collection only allows
+`create: if incoming().familyId == request.auth.uid` — only the family's
+client can create a hire. If the NANNY is the second party to respond (family
+already said "hired", nanny confirms second), a client-side resolution
+running on the nanny's device could never satisfy that rule and hire-creation
+would silently fail for exactly half of the possible response orderings. A
+Cloud Function using the Admin SDK bypasses rules entirely, so it works
+regardless of which side resolves the match second — and this exact
+"client can't write the cross-user side effect, so a trigger owns it" pattern
+is already used twice in this codebase (`onProfileViewed`'s transactional
+free-contact accounting, `onHireCreated`'s server-owned `stats.hiresCount`).
+The client (`TrialController`/`FirestoreTrialService`) only ever writes its
+**own** side's outcome field — it never decides or creates the hire.
 
-**Mutual gate is resolved server-side** (a `trials` `onUpdate` trigger), so a
-family "hired" + nanny silent/`searching` can never reach `hired` — the gate is
-authoritative and race-free; each party only ever writes its own outcome field.
+**Search visibility stays 100% derived, reusing the exact existing
+mechanism** — `BrowseController._engagedNannyIds()` unions
+`IHireService.activeHiredNannyIds()` (`hires` where `status==active`) and
+`ITrialService.activeTrialNannyIds()` (`trials` where `status in
+[active,accepted]`). Both queries are **left completely unchanged**. The new
+`awaitingOutcome` status is simply not in either query's set, so the moment
+the scheduled detector moves a trial out of `active` into `awaitingOutcome`,
+the nanny already falls out of the engaged set with zero code changes to the
+derivation itself — she reappears in browse the instant the trial's clock
+runs out, and stays that way unless/until mutual confirmation creates a
+`hires` doc. This is also exactly how the locked decision's mismatch case
+resolves itself: "family says hired, nanny never responds" — she's already
+outside both engaged sets during that wait, so she stays visible, matching
+"she stays visible/available until both sides agree" precisely.
 
-Data flow: scheduled fn flips `active→awaitingOutcome` + pushes both parties →
-app renders outcome prompt from trial state → each party writes its own field →
-server trigger resolves → status→`hired`/`notHired`, recomputes
-`activeTrialNannyIds`, sends the single outcome-specific push, (optionally)
-flips a linked application to `hired` and bumps `stats.hiresCount`.
+**Reactivation reuses `resignHire()`/`endHire()` — traced concretely, not
+just "in spirit":** the reactivation UI's 6-option picker calls
+`NannyProfileController.resignHire(reasonNote: picked)` (a small,
+backward-compatible signature extension) → `IHireService.endHire(hire.id,
+reason: HireEndReason.resigned, note: reasonNote)` → the existing
+transactional first-end-wins write in `FirestoreHireService.endHire` →
+`hires/{id}.status='ended'` → the existing `onHireEnded` trigger notifies the
+family → `activeHiredNannyIds()` no longer includes her (query is
+`status==active`) → she reappears in browse. No new status field, no new
+enum value, no second code path — the 6-option reason is carried entirely by
+the **existing** `endNote: String?` field `endHire` already accepts.
 
-## 2. Reuse map (existing pieces the build MUST use, not reinvent)
+---
 
-- **State + persistence:** `TrialModel` (add fields; keep `copyWith`/`toMap`/
-  `fromMap` tolerant-parse conventions exactly — see the existing `_parseDate`
-  and `firstWhere(orElse:)` patterns). `firestore_trial_service.dart` +
-  `i_trial_service.dart` for all writes (add methods; do not write Firestore
-  from controllers directly — the service boundary is consistent across the app).
-- **Controller pattern:** `TrialController` (GetX) already owns
-  `recordOutcome`/`refreshAll`/`displayed`/`selected`/`active`. Extend it; keep
-  `Get.snackbar(AppStrings.*.tr, ...)` + `isLoading` conventions.
-- **Notifications:** functions' `sendNotification(tokens, {title, body, data})`
-  + `getFamily`/`getUser` from `utils/notifications.ts`. This is the ONLY
-  delivery mechanism; reuse it (do not invent `writeInbox`).
-- **Scheduled job style:** copy `trialStartingReminder` (`scheduled.ts:5-43`)
-  exactly — `onSchedule('every 1 hours')`, Timestamp range query, `.limit(200)`,
-  `Promise.all`, per-doc idempotency flag (`reminderSent` → here
-  `outcomePromptSent`).
-- **Terminal-recompute helper:** `onTrialEnded` (`trial.ts:89-125`) already
-  recomputes `families/{id}.activeTrialNannyIds` and stamps
-  `subscription.lastTrialEndedAt`. Extend its terminal set; do not duplicate the
-  recompute logic elsewhere.
-- **UI / design system:** `kafi_theme.dart` (`KafiColors`, `KafiTheme.fredoka/
-  nunito`), `KafiPrimaryButton` (`variant: KafiButtonVariant.green/…`), and the
-  existing card idioms already in `trial_screen.dart` (white card, radius 11–13,
-  `KafiColors.cardBorder`, green gradient CTA). The reason pickers must reuse the
-  existing `AlertDialog`/`showModalBottomSheet` idiom already in
-  `trial_screen.dart` (`_confirmCancel`, `_reportIssueDialog`) — no new bespoke
-  widgets, no hardcoded one-off colors.
-- **Strings:** `AppStrings` + `l10n/locales/en_us.dart` + `ar_ae.dart` (every new
-  user-facing string added to all three; the epic and this repo require `.tr`
-  everywhere and Arabic for new keys).
-- **Enums:** add the two reason lists as Dart enums beside the models (mirror
-  `HireEndReason`-style naming the scope expected, but as trial-local enums).
+## 2. Exact state-machine design
 
-## 3. Decisions requiring PM/Waseem confirmation (gates for READY_FOR_BUILD)
+### 2.1 `TrialStatus` — one new value
+`kafi_app/lib/models/trial_model.dart`:
+```dart
+enum TrialStatus { pending, countered, accepted, declined, active, awaitingOutcome, completed, cancelled }
+```
+`awaitingOutcome` = "execution window closed (`endDate` passed), outcome not
+yet resolved." Inserted between `active` and `completed` for readability;
+position doesn't affect the existing `.name`-based persistence/`orElse`
+fallback.
 
-- **D1 — "Hired" representation.** *Proposed:* represent on the **trial doc**
-  (`TrialStatus.hired`), NOT a new `hires` collection. Smallest change; no new
-  rules/read-path; single source of truth. *Alternative:* finally implement the
-  scaffolded `hires` collection (needs a new `firestore.rules` block, a producer
-  trigger, a client read path, and touches admin `stats.hiresCount`). Confirm
-  which. (Everything in §5 assumes the proposed trial-doc approach.)
-- **D2 — Resolution locus.** *Proposed:* server-side trigger resolves the mutual
-  gate (authoritative). Confirm we accept a Cloud-Functions round-trip of latency
-  before the nanny sees "Hired" (vs. client-side resolution, which is racier and
-  can't be trusted for the gate).
-- **D3 — Search-visibility mechanism.** *Proposed:* derived exclusion in the
-  browse path from `trials` status (§5, file 8). Confirm this is an acceptable
-  substitute for the (non-existent) mechanism the scope named, and that adding a
-  pre-query to `browseNannies` is acceptable (one extra indexed query per browse).
-- **D4 — Application hired-flip.** *Proposed:* at the resolution gate, best-effort
-  flip a *linked* `applications/{id}` (matching familyId+nannyId) to `hired`.
-  Trials created from browse have no application → no-op. Confirm this is enough
-  (the scope asks only whether it should move to the gate — it should, and does).
-- **D5 — Reactivation placement.** *Proposed:* `nanny_dashboard_screen.dart`, a
-  new card shown when the nanny has a `hired` trial. This requires wiring
-  `TrialController` into that screen (today it only knows `NannyProfileController`).
-  Confirm dashboard placement (vs. a dedicated banner on the nanny shell).
+### 2.2 New `TrialModel` fields (additive, nullable — no destructive migration)
+```dart
+final String? familyOutcome;      // null | 'hired' | 'notHired'
+final DateTime? familyOutcomeAt;
+final String? notHiredReason;     // one of NotHiredReason.name, nullable/optional
+final String? nannyOutcome;       // null | 'hired' | 'notHired'
+final DateTime? nannyOutcomeAt;
+final bool outcomePromptSent;     // default false — scheduled-fn idempotency, mirrors trials.reminderSent
+final DateTime? endReachedAt;     // when the scheduled detector flipped active→awaitingOutcome
+```
+Threaded through the constructor, `copyWith`, `toMap`, `fromMap` using the
+exact existing conventions (`_parseDate`, `?? this.field`,
+`.toIso8601String()`, `== true` boolean reads).
 
-## 4. New enums / constants (verbatim option lists from the scope)
+New getters:
+```dart
+bool get isAwaitingOutcome => status == TrialStatus.awaitingOutcome;
+bool get familyConfirmedHire => familyOutcome == 'hired';
+bool get nannyConfirmedHire => nannyOutcome == 'hired';
+bool get familyDeclinedHire => familyOutcome == 'notHired';
+bool get nannyDeclinedHire => nannyOutcome == 'notHired';
+```
 
-Add to a new file `kafi_app/lib/models/trial_outcome_reasons.dart` (or inline in
-`trial_model.dart` — architect default: separate file, single responsibility):
+### 2.3 Resolution truth table (implemented as one pure, unit-tested function — see §5)
+| familyOutcome | nannyOutcome | Resolution |
+| --- | --- | --- |
+| hired | hired | **hired** — create `hires` doc, flip application, hide from search |
+| notHired | * (any, including hired) | **notHired** — no hire; mismatch case explicitly covered |
+| * (any, including hired) | notHired | **notHired** |
+| hired | null | pending — stays `awaitingOutcome`, visible in search (not in engaged set) |
+| null | hired | pending — stays `awaitingOutcome`, visible in search |
+| null | null | pending |
 
-- `NotHiredReason` (family "Keep searching", optional/skippable — 7 options,
-  verbatim): `notTheRightMatch`, `salary`, `schedule`, `location`,
-  `nannyDeclined`, `foundSomeoneElse`, `other`. Persisted as `.name` string in
-  `trials.notHiredReason` (nullable — skippable).
-- `ReactivationReason` (nanny "Why are you looking again?" — 6 options, verbatim):
-  `jobDidntWorkOut`, `familyEndedEmployment`, `iDecidedToLeave`,
-  `temporaryJobEnded`, `other`, `preferNotToSay`. Persisted as `.name` string in
-  `trials.reactivationReason`.
+### 2.4 Reason lists (verbatim from scope, new file — single responsibility)
+`kafi_app/lib/models/trial_outcome_reasons.dart`:
+```dart
+enum NotHiredReason { notTheRightMatch, salary, schedule, location, nannyDeclined, foundSomeoneElse, other }
+enum ReactivationReason { jobDidntWorkOut, familyEndedEmployment, iDecidedToLeave, temporaryJobEnded, other, preferNotToSay }
+```
+Persisted as the enum's stable `.name` (never the localized label — matches
+every other enum-to-string convention in this codebase, e.g. `status.name`,
+`HireEndReason.resigned.name`). Display labels are resolved through
+`AppStrings` at render time.
+- `NotHiredReason` → `trials.notHiredReason` (nullable, skippable — family only).
+- `ReactivationReason` → passed as the free-text `note` on the *existing*
+  `HireModel.endNote` field via `endHire(..., note: reason.name)`. No new
+  persistence surface.
 
-Each enum gets a `label` getter (English) used by the UI; UI labels route through
-`AppStrings` for l10n. Reason strings are stored as the stable `.name`, not the
-localized label.
+---
 
-## 5. File-by-file change list (in build order)
+## 3. Required prerequisite fix (blocking — the detector silently matches nothing without it)
+
+`FirestoreTrialService.sendOffer` converts only `startDate` to a Firestore
+`Timestamp`; `endDate` is written as whatever `TrialModel.toMap()` produces —
+an ISO **string** (`'endDate': endDate.toIso8601String()`). A
+`where('endDate', '<=', Timestamp)` range query (needed for §4's scheduled
+detector) cannot match a string-typed field — it will silently return zero
+results forever, not error. Must fix in the same change:
+- `sendOffer`: add `data['endDate'] = Timestamp.fromDate(trial.endDate);`
+  next to the existing `startDate` conversion.
+- `applyCounterAndAccept`: today it writes the counter's `startDate` as a
+  Timestamp but never recomputes `endDate` at all (a pre-existing gap — a
+  counter that moves the start date silently leaves the old end date in
+  place). Fix alongside: recompute
+  `counter.startDate.add(Duration(days: trial.durationDays))` and write it as
+  a Timestamp too.
+
+Trials created before this fix keep a string `endDate` and simply won't be
+picked up by the new detector (not an error, just silently excluded) — an
+acceptable, additive gap per the epic's "no destructive backfill" guidance,
+worth a one-line callout to the PM but not a blocker.
+
+---
+
+## 4. Notification design (reusing `writeInbox`/`sendNotification` — no new delivery mechanism)
+
+### 4.1 New scheduled Cloud Function — `trialOutcomeDetector`
+`functions/src/triggers/scheduled.ts`, modeled exactly on the existing
+`trialStartingReminder` (same file): `onSchedule('every 1 hours')`, Timestamp
+range query, `.limit(200)`, `Promise.all`, per-doc idempotency flag.
+```ts
+export const trialOutcomeDetector = onSchedule('every 1 hours', async () => {
+  const now = admin.firestore.Timestamp.now();
+  const trials = await admin.firestore().collection('trials')
+    .where('status', '==', 'active')
+    .where('endDate', '<=', now)
+    .limit(200)
+    .get();
+
+  await Promise.all(trials.docs.map(async (doc) => {
+    const trial = doc.data();
+    if (!isTrialDueForOutcome(trial, now.toMillis())) return; // pure helper, unit-tested (§5)
+
+    const [family, nannyUser] = await Promise.all([
+      getFamily(trial.familyId as string),
+      getUser(trial.nannyId as string),
+    ]);
+    const famTitle = 'How did the trial go?';
+    const famBody = 'Let us know how it went with your nanny.';
+    const nanTitle = 'What happened after your trial?';
+    const nanBody = 'Tell us if you got the job.';
+    const data = { type: 'trial_outcome_pending', trialId: doc.id };
+
+    await writeInbox(trial.familyId as string, 'trialOutcomePending', famTitle, famBody, data);
+    await sendNotification((family.fcmTokens as string[]) ?? [], { title: famTitle, body: famBody, data });
+    await writeInbox(trial.nannyId as string, 'trialOutcomePending', nanTitle, nanBody, data);
+    await sendNotification((nannyUser.fcmTokens as string[]) ?? [], { title: nanTitle, body: nanBody, data });
+
+    await doc.ref.update({
+      status: 'awaitingOutcome',
+      endReachedAt: admin.firestore.FieldValue.serverTimestamp(),
+      outcomePromptSent: true,
+    });
+  }));
+});
+```
+Also call the existing `recomputeActiveTrialNannyIds(familyId)` helper
+(`trial.ts`) inside this same update — see §4.4 for why.
+
+### 4.2 New resolver trigger — `onTrialOutcomeResolved`
+`functions/src/triggers/trial.ts`, `onDocumentUpdated('trials/{trialId}')`:
+- Fires only when `after.status === 'awaitingOutcome'` and
+  `familyOutcome`/`nannyOutcome` actually changed.
+- Computes the verdict via the pure `resolveMutualOutcome` helper (§5); a
+  `'pending'` verdict is a no-op (still waiting on one side).
+- On a decided verdict, runs a **transaction**: read the trial fresh, bail if
+  its status is no longer `awaitingOutcome` (first-resolution-wins — mirrors
+  `onHireEnded`'s before/after guard and `FirestoreHireService.endHire`'s
+  transactional pattern, both already in this codebase), then write
+  `status='completed'`, `outcome='hired'|'failed'`, `outcomeAt`,
+  `completedAt` — the **exact same field shape** `FirestoreTrialService.
+  recordOutcome` already writes today.
+- On `verdict==='hired'`, after the transaction commits: fetch
+  `getFamily(after.familyId)`/`getNanny(after.nannyId)` for display names
+  (a background function has no client auth context, so it cannot read
+  `_auth.currentUser` the way the old client-side `_createHireFromTrial`
+  did — it must look the names up itself) and create
+  `hires/{hire_<trialId>}` with the **same field shape** as
+  `TrialController._createHireFromTrial` (`status:'active'`, `trialId`,
+  `jobPostId`, `employmentType: after.trialType`, `nannyName`, `familyName`,
+  `startedAt`/`createdAt`: server timestamp). Then best-effort look up a
+  matching `applications` doc (`familyId`+`nannyId`, optionally `jobPostId`)
+  and flip it with the exact same write `FirestoreApplicationService.
+  markHired` already uses (`status:'hired'`, `respondedAt`: server
+  timestamp) — swallow errors, matching `_createHireFromTrial`'s existing
+  "a missing application is fine" behavior.
+- Sends **no notifications itself** — see §4.3, this is deliberately left to
+  the enhanced `onTrialEnded`, to avoid two functions racing to notify the
+  same transition.
+
+### 4.3 Enhanced `onTrialEnded` — outcome-aware, de-duplicated copy
+`functions/src/triggers/trial.ts`, existing function, `completed` branch only
+(the `cancelled` branch and the terminal-status/`activeTrialNannyIds` recompute
+stay untouched):
+- `after.outcome === 'hired'`: family gets one push
+  ("✅ Hire confirmed" / "You and {nanny} confirmed the hire — she's now
+  marked Hired."). **The nanny gets nothing from this function** — she
+  already gets "🎉 You've been hired!" from the existing `onHireCreated`
+  trigger (fires from the `hires/{id}` document §4.2 just created). This is
+  the fix for the current double-push-on-hire problem: today both
+  `onTrialEnded`'s generic "trial complete" push AND `onHireCreated`'s
+  specific push land on the nanny for the same event; after this change she
+  gets exactly one, and it's the specific one.
+- `after.outcome === 'failed'`: family gets a neutral closure
+  ("Trial closed" / "This trial didn't lead to a hire. Keep browsing for
+  your next match."); nanny gets an honest, specific message ("Trial update"
+  / "This trial didn't lead to a hire this time. Your profile is visible in
+  search again.") — replacing today's actively-misleading generic copy
+  ("Your trial is complete. The family will confirm next steps.") which is
+  sent even when the family already decided against hiring.
+- `after.outcome` is `undefined`/unrecognized (defensive fallback for any
+  trial completed via a path this phase doesn't touch, e.g. a future
+  admin action): keep today's existing generic copy verbatim, unchanged —
+  never regress a code path this plan doesn't control.
+
+### 4.4 `activeTrialNannyIds` (family-doc chat-unlock list) — deliberate, narrow widen
+Distinct from the browse-hide derivation (§1), `families/{id}.
+activeTrialNannyIds` is a **different** mechanism: it's what
+`firestore.rules`' `hasActiveTrialWith()` reads to let an unsubscribed family
+keep chatting with the nanny during a trial. `recomputeActiveTrialNannyIds`
+(`trial.ts`) currently queries `status in ['active','accepted']`. If left
+unchanged, the moment a trial flips to `awaitingOutcome` an unsubscribed
+family would lose chat access at exactly the point both parties most need to
+discuss the outcome — a clear regression. Widen this one query (only this
+one — **not** the browse-hide derivation) to
+`status in ['active','accepted','awaitingOutcome']`, and call
+`recomputeActiveTrialNannyIds(familyId)` from the new scheduled detector
+(§4.1) at the same point it flips the status, exactly as `onTrialResponse`
+already does on accept.
+
+### 4.5 New `InboxType` / `NotificationType` (lockstep, one new value)
+Exactly one new shared type — reused for both the family and nanny variant of
+the scheduled prompt (mirrors how `trialStartingSoon` is already shared
+between both parties in `trialStartingReminder`):
+- `functions/src/utils/notifications.ts`: add `'trialOutcomePending'` to the
+  `InboxType` union.
+- `kafi_app/lib/models/notification_model.dart`: add `trialOutcomePending` to
+  `NotificationType` in the same lockstep the file's own comment documents
+  ("mirror the Flutter NotificationType enum names"). `trialEndingSoon`
+  remains present-but-unused — out of scope, not required by the spec.
+
+---
+
+## 5. Pure-function test seams (matches the existing test convention exactly)
+
+`functions/test/*.test.js` uses `node:test`/`node:assert` against the
+**compiled** `../lib/**` output, testing small pure functions extracted from
+the triggers (`flooredCount` from `stats.ts`, `buildInboxDoc` from
+`notifications.ts`) — not the triggers themselves. Follow this precisely:
+
+- `functions/src/triggers/trial.ts` exports
+  `resolveMutualOutcome(familyOutcome?: string, nannyOutcome?: string): 'hired' | 'notHired' | 'pending'`
+  (the truth table in §2.3, as pure code).
+- `functions/src/triggers/scheduled.ts` exports
+  `isTrialDueForOutcome(trial: {status?: string; endDate?: FirebaseFirestore.Timestamp | Date; outcomePromptSent?: boolean}, nowMs: number): boolean`
+  (`status==='active' && endDate<=nowMs && !outcomePromptSent`).
+- New `functions/test/trial_outcome.test.js`:
+  - `resolveMutualOutcome`: both-hired→'hired'; family-hired+nanny-notHired→
+    'notHired'; family-notHired+nanny-hired→'notHired' (the mismatch case);
+    hired+undefined→'pending'; undefined+undefined→'pending';
+    both-notHired→'notHired'.
+  - `isTrialDueForOutcome`: due when active+endDate-past+unprompted; not due
+    when status isn't active; not due when endDate is in the future; not due
+    when `outcomePromptSent` is already true (boundary: endDate exactly
+    `now`, endDate one ms past).
+
+---
+
+## 6. File-by-file change list (build order)
 
 ### App (`kafi_app/`)
 
 **1. `lib/models/trial_model.dart` — MODIFY**
-- Extend `enum TrialStatus` with `awaitingOutcome, hired, notHired` (append at
-  end so existing `.name` persistence and `fromMap` orElse stay stable).
-- Add fields (all nullable/defaulted, additive — no destructive migration):
-  `String? familyOutcome` ('hired'|'searching'), `String? nannyOutcome`,
-  `DateTime? familyOutcomeAt`, `DateTime? nannyOutcomeAt`,
-  `String? notHiredReason`, `String? reactivationReason`,
-  `DateTime? reactivatedAt`, `DateTime? endReachedAt`,
-  `bool outcomePromptSent = false`.
-- Thread them through the constructor, `copyWith`, `toMap`, `fromMap` using the
-  existing `_parseDate` + `== true`/`?.toString()` conventions.
-- Add getters: `bool get isAwaitingOutcome => status == TrialStatus.awaitingOutcome;`
-  `bool get isHired => status == TrialStatus.hired;`
-  `bool get familyConfirmedHire => familyOutcome == 'hired';`
-  `bool get nannyConfirmedHire => nannyOutcome == 'hired';`
-- Update `isAcceptedOrActive`-style engagement helper OR add
-  `bool get engagesNanny => const {TrialStatus.accepted, TrialStatus.active, TrialStatus.awaitingOutcome, TrialStatus.hired}.contains(status);`
-  (used by the browse-hide derivation and the offer-dedup guard).
-- Edge cases: unknown status string → `fromMap` already falls back to `pending`;
-  keep. `outcome` free-form field is retained for back-compat but no longer the
-  hire signal.
+Add `TrialStatus.awaitingOutcome` (§2.1); add the 7 new fields + 5 getters
+(§2.2), threaded through `copyWith`/`toMap`/`fromMap` per the file's existing
+patterns.
 
 **2. `lib/models/trial_outcome_reasons.dart` — CREATE**
-- The two enums + `label` getters from §4. No logic.
+`NotHiredReason` (7) + `ReactivationReason` (6) enums (§2.4). No logic.
 
 **3. `lib/services/interfaces/i_trial_service.dart` — MODIFY**
-- Add:
-  - `Future<void> setFamilyOutcome(String trialId, {required String outcome, String? notHiredReason});`
-  - `Future<void> setNannyOutcome(String trialId, {required String outcome});`
-  - `Future<void> reactivateHiredNanny(String trialId, {required String reason});`
-  - `Future<List<String>> engagedNannyIds();` (returns nanny ids with a trial
-    whose status ∈ engagement set — for browse-hide).
+Add:
+```dart
+Future<void> setFamilyOutcome(String trialId, {required String outcome, TrialEvaluation? evaluation, String? notHiredReason});
+Future<void> setNannyOutcome(String trialId, {required String outcome});
+```
 
 **4. `lib/services/firebase/firestore_trial_service.dart` — MODIFY**
-- **Fix (required for the scheduled query):** persist `endDate` as a `Timestamp`
-  in `sendOffer` (today only `startDate` is converted; `endDate` is written as an
-  ISO string via `toMap`, so a `where('endDate','<=',Timestamp)` server query
-  would never match). Add `data['endDate'] = Timestamp.fromDate(trial.endDate);`
-  next to the existing `startDate` conversion. Also set it in `applyCounterAndAccept`
-  if the counter changes `startDate` (recompute endDate = startDate + durationDays).
-- Implement the four new interface methods:
-  - `setFamilyOutcome`: `update({'familyOutcome': outcome, 'familyOutcomeAt':
-    serverTimestamp(), if notHiredReason != null 'notHiredReason': notHiredReason})`.
-  - `setNannyOutcome`: `update({'nannyOutcome': outcome, 'nannyOutcomeAt':
-    serverTimestamp()})`.
-  - `reactivateHiredNanny`: `update({'status': notHired.name, 'reactivationReason':
-    reason, 'reactivatedAt': serverTimestamp()})`.
-  - `engagedNannyIds`: query `trials.where('status', whereIn: ['accepted','active',
-    'awaitingOutcome','hired']).limit(1000)`, map to `nannyId`, dedupe. Fail-open
-    (return `[]` on error) so browse never hard-fails — mirror the scope's
-    intended fail-open behavior.
-- Note: resolution (both→hired etc.) is **not** done here; it's server-side (file 11).
+- Apply the §3 prerequisite fix (`endDate` → Timestamp in `sendOffer` +
+  `applyCounterAndAccept`) first — everything downstream depends on it.
+- Implement the two new methods as plain `.update()` calls (no client-side
+  transaction needed — the mutual-resolution race is handled server-side,
+  §1/§4.2; each party only ever writes its own field, so there's no
+  same-field concurrent-writer race to guard against here):
+```dart
+Future<void> setFamilyOutcome(trialId, {required outcome, evaluation, notHiredReason}) =>
+  _trials.doc(trialId).update({
+    'familyOutcome': outcome,
+    'familyOutcomeAt': FieldValue.serverTimestamp(),
+    if (evaluation != null) 'evaluation': evaluation.toMap(),
+    if (notHiredReason != null) 'notHiredReason': notHiredReason,
+  });
 
-**5. `lib/controllers/trial_controller.dart` — MODIFY**
-- Replace the family outcome path: `setOutcome(TrialStatus.completed,
-  outcomeLabel: 'hired'|'failed')` is removed from the family CTA. Add:
-  - `Future<void> familyHired(String trialId)` → `_trials.setFamilyOutcome(id,
-    outcome: 'hired')`; refresh; snackbar "Waiting for {nanny} to confirm" (the
-    family side is now pending, not terminal).
-  - `Future<void> familyKeepSearching(String trialId, {NotHiredReason? reason})`
-    → `_trials.setFamilyOutcome(id, outcome: 'searching', notHiredReason:
-    reason?.name)`; refresh.
-  - `Future<void> nannyGotJob(String trialId)` → `_trials.setNannyOutcome(id,
-    outcome: 'hired')`; refresh.
-  - `Future<void> nannyStillLooking(String trialId)` → `_trials.setNannyOutcome(id,
-    outcome: 'searching')`; refresh. (Server resolves to `notHired` → nanny
-    reappears in browse; acceptance criterion "leaves active/accepted set" is met
-    because `notHired` is outside the engagement set.)
-  - `Future<void> reactivate(String trialId, ReactivationReason reason)` →
-    `_trials.reactivateHiredNanny(id, reason: reason.name)`; refresh.
-- `refreshAll`: include `awaitingOutcome` (and expose the nanny's `hired` trial)
-  so the nanny side surfaces the prompt and the dashboard reactivation card.
-  Today the nanny branch only sets `active` when `t.isActive`; broaden to also
-  track an `awaitingOutcome` trial and a `hired` trial (add
-  `Rx<TrialModel?> awaitingOutcomeTrial`, `Rx<TrialModel?> hiredTrial`).
-- Keep all existing methods; do not remove `recordOutcome` (still used for
-  accept→active promotion).
+Future<void> setNannyOutcome(trialId, {required outcome}) =>
+  _trials.doc(trialId).update({
+    'nannyOutcome': outcome,
+    'nannyOutcomeAt': FieldValue.serverTimestamp(),
+  });
+```
 
-**6. `lib/views/family/trial_screen.dart` — MODIFY**
-- `_outcomeBar` family branch: gate the two big buttons on
-  `t.isAwaitingOutcome` (not `t.isActive`). Relabel to "We hired her" /
-  "Keep searching" (existing green-gradient CTA + white outline idiom).
-  - "We hired her" → `controller.familyHired(t.id)` (no further questions;
-    show the pending confirmation banner using `_banner(...)`).
-  - "Keep searching" → open the **optional** reason sheet (7 options +
-    "Skip") reusing the `showModalBottomSheet`/`AlertDialog` idiom; on pick or
-    skip → `controller.familyKeepSearching(t.id, reason: picked)`.
-  - When `t.familyConfirmedHire && !t.nannyConfirmedHire`: render the
-    "We're waiting for {nanny} to confirm" banner instead of buttons.
-- Nanny branch: today the nanny has no outcome UI once `active`. When
-  `t.isAwaitingOutcome`, render "What happened after your trial?" with
-  "I got the job" / "I'm still looking":
-  - "I got the job" → `controller.nannyGotJob(t.id)`; if family not yet
-    confirmed, swap to "Great! We're waiting for the family to confirm." banner.
-  - "I'm still looking" → `controller.nannyStillLooking(t.id)`.
-- Add an "overdue" cue: `_remainingLabel` should show a "Trial ended — awaiting
-  your response" state when `isAwaitingOutcome` instead of frozen `0d 0h 0m`.
-- Header status badge: reflect `awaitingOutcome`/`hired` states (reuse the
-  existing badge container; new label strings via `AppStrings`).
-- All new copy via `AppStrings.*.tr`.
+**5. `lib/services/mock/mock_trial_service.dart` — MODIFY**
+Add parity implementations (in-memory, `copyWith`-based, `AppConfig.
+mockDelay`) matching every other method in this file.
 
-**7. `lib/views/nanny/nanny_dashboard_screen.dart` — MODIFY (D5)**
-- Wire in `TrialController` (via `Get.find`). When
-  `TrialController.hiredTrial.value != null`, render a "Looking for a job
-  again?" card (reuse the white card + rose CTA idiom already in this file;
-  `KafiColors.rose/roseD`, `KafiTheme` text styles — no new palette).
-- CTA "Make My Profile Available" → open the 6-option reason picker (reuse the
-  dialog idiom) → `controller.reactivate(trialId, reason)` → card disappears,
-  nanny is browseable again (derived; nothing deleted from her profile).
-- Keep the screen a thin view; all logic in `TrialController`.
+**6. `lib/controllers/trial_controller.dart` — MODIFY**
+- Add `familyRecordOutcome({required String outcome, NotHiredReason? reason})`
+  → `_trials.setFamilyOutcome(displayed!.id, outcome: outcome, evaluation:
+  buildEvaluation(), notHiredReason: reason?.name)`; `refreshAll()`;
+  snackbar "Waiting for {nanny} to confirm" when `outcome=='hired'`.
+- Add `nannyRecordOutcome(String outcome)` →
+  `_trials.setNannyOutcome(displayed!.id, outcome: outcome)`; `refreshAll()`;
+  snackbar "Great! We're waiting for the family to confirm." when
+  `outcome=='hired'` is implied by the UI banner (§7), not required here —
+  keep the snackbar minimal/optional.
+- **Remove** `setOutcome()` and `_createHireFromTrial()` — confirmed via a
+  fresh repo-wide grep that `setOutcome(` has exactly two call sites, both in
+  `trial_screen.dart`'s `_outcomeBar` family branch (lines 532, 550); once
+  §7 rewires those two sites to the new methods, both become fully dead
+  code, and hire-creation is now server-side (§4.2) — leaving them in would
+  be a second, parallel, unreachable hire-creation path.
+- Leave `IHireService.createHire`/`FirestoreHireService.createHire`/
+  `MockHireService.createHire` **in place, unremoved** — they become unused
+  by the app after this change, but removing a public interface method used
+  nowhere else is unrelated cleanup with its own blast radius; flag this as
+  a deliberate, narrow scoping call for the architect-reviewer, not an
+  oversight.
 
-**8. `lib/services/firebase/firestore_job_service.dart` + `lib/controllers/browse_controller.dart` — MODIFY (D3)**
-- In `browseNannies` (or, preferably, in `BrowseController.refreshList` to keep
-  the service query-shape simple): after fetching approved nannies, exclude any
-  whose id ∈ `ITrialService.engagedNannyIds()`. Inject `ITrialService` where the
-  exclusion runs. Fail-open (if the engaged query throws, show all — never hide
-  the whole board). This is the derived hide/unhide mechanism; reactivation and
-  "still looking" both drop the nanny out of the engaged set automatically.
-- Add a Firestore index note (composite index on `trials.status`) if the emulator
-  flags it; single-field `status` `whereIn` needs no composite index.
+**7. `lib/views/family/trial_screen.dart` — MODIFY**
+- `_outcomeBar`, family branch: change the gate from `if (!t.isActive) return
+  SizedBox.shrink();` to branch on `t.isAwaitingOutcome`:
+  - Not yet responded → the existing two-button block (**same widget,
+    relabeled**: "We hired her" / "Keep searching", same green-gradient
+    positive / white-outline-rose-text negative styling this file already
+    uses for this exact positive/negative choice — no new colors).
+    "We hired her" → `controller.familyRecordOutcome(outcome: 'hired')`
+    directly (no further questions, per spec). "Keep searching" → open a
+    reason sheet reusing the **existing** `Get.bottomSheet` idiom already in
+    this file (`_chooseProofSource`'s pattern: white rounded-top sheet, drag
+    handle, `_sourceTile`-style rows) listing the 7 `NotHiredReason` options
+    plus a "Skip" action → `controller.familyRecordOutcome(outcome:
+    'notHired', reason: picked)` (picked may be null on skip).
+  - `t.familyConfirmedHire` (responded hired, nanny hasn't yet) → render the
+    existing `_banner(...)` helper: "We're waiting for {nanny} to confirm."
+  - `t.familyDeclinedHire` → `SizedBox.shrink()` (nothing more to do).
+  - Any other status (including `completed`) → `SizedBox.shrink()`, matching
+    the file's existing "hide once nothing left to do" convention.
+- `_outcomeBar`, nanny branch: keep the existing pending/accepted Cancel
+  button unchanged; add an `isAwaitingOutcome` branch with the mirrored
+  two-button block ("I got the job" / "I'm still looking", same
+  green/rose-outline treatment as the family's, for visual consistency
+  within this one screen):
+  "I got the job" → `controller.nannyRecordOutcome('hired')`, then show
+  `_banner(...)`: "Great! We're waiting for the family to confirm."
+  "I'm still looking" → `controller.nannyRecordOutcome('notHired')`.
+  `t.nannyDeclinedHire` → `SizedBox.shrink()`.
+- Header/timer: when `isAwaitingOutcome`, swap the frozen `'0d 0h 0m'`
+  countdown for a clear "Trial ended — awaiting your response" label instead
+  of a stale zero timer (small, contained change to `_remainingLabel`'s
+  caller in `_header`).
+- All new copy via `AppStrings.*.tr` (see §8 for the string-file pair).
 
-**9. `lib/l10n/app_strings.dart` + `locales/en_us.dart` + `locales/ar_ae.dart` — MODIFY**
-- Add keys for: family prompt title/body, "We hired her", "Keep searching",
-  the 7 not-hired reasons + "Skip", the pending "waiting for nanny/family to
-  confirm" banners, nanny prompt title/body, "I got the job", "I'm still
-  looking", "Great! We're waiting…", reactivation card title/CTA, the 6
-  reactivation reasons, and the "trial ended — awaiting response" label. English
-  + Arabic for every new key.
+**8. `lib/views/nanny/nanny_dashboard_screen.dart` — MODIFY**
+In `_statusCard()`'s `hired` branch: replace the plain "Resign" link +
+`_confirmResign()`'s bare `AlertDialog` with "Looking for a job again?" /
+"Make My Profile Available" copy, opening a reason sheet (reuse the same
+`Get.bottomSheet` idiom as file 7) listing the 6 `ReactivationReason`
+options (no separate skip — "Prefer not to say" is itself one of the six).
+On selection → `controller.resignHire(reasonNote: picked.name)`. This
+**replaces** the existing bare-confirm resign entry point rather than adding
+a second one alongside it — there is exactly one way to end a hire from this
+card, now with a reason captured every time.
+
+**9. `lib/controllers/nanny_profile_controller.dart` — MODIFY**
+Extend `resignHire()` to `resignHire({String? reasonNote})`, passing it
+straight through: `_hireService.endHire(hire.id, reason:
+HireEndReason.resigned, note: reasonNote)`. Default `null` preserves exact
+current behavior for any other caller.
+
+**10. `lib/l10n/app_strings.dart` + `locales/en_us.dart` + `locales/ar_ae.dart` — MODIFY**
+Add keys for: family "How did the trial go?" prompt + "We hired her" +
+"Keep searching" + the 7 reason labels + "Skip" + the "waiting for {nanny}"
+banner; nanny "What happened after your trial?" prompt + "I got the job" +
+"I'm still looking" + "Great! We're waiting for the family to confirm."
+banner + "Trial ended — awaiting your response"; reactivation card title +
+CTA + the 6 reason labels. English + Arabic for every new key, matching the
+existing `.tr` convention throughout both files.
 
 ### Cloud Functions (`functions/src/`)
 
-**10. `triggers/scheduled.ts` — MODIFY (new job `trialOutcomeDetector`)**
-- `export const trialOutcomeDetector = onSchedule('every 1 hours', …)` modeled
-  exactly on `trialStartingReminder`:
-  - Query `trials.where('status','==','active').where('endDate','<=',
-    Timestamp.fromDate(now)).limit(200)`.
-  - Per doc, skip if `outcomePromptSent === true`.
-  - `doc.ref.update({status:'awaitingOutcome', endReachedAt: serverTimestamp(),
-    outcomePromptSent:true})`.
-  - Push family: title "How did the trial go?", body prompts hire/keep-searching,
-    `data:{type:'trial_outcome_family', trialId}`.
-  - Push nanny (via `getUser(trial.nannyId)`): title "What happened after your
-    trial?", `data:{type:'trial_outcome_nanny', trialId}`.
-  - Use `getFamily`/`getUser` for tokens; guard empty token arrays (existing
-    pattern). Wrap per-doc work so one failure doesn't abort the batch.
-- Export from `index.ts` (file 12).
+**11. `triggers/scheduled.ts` — MODIFY**
+Add `isTrialDueForOutcome` (pure, §5) and `trialOutcomeDetector` (§4.1).
+Also call `recomputeActiveTrialNannyIds` from `trial.ts` inside the same
+per-doc update (§4.4) — this requires exporting that helper from `trial.ts`
+(currently module-private `async function recomputeActiveTrialNannyIds`;
+add `export`).
 
-**11. `triggers/trial.ts` — MODIFY (add resolver; adapt `onTrialEnded`)**
-- Add `export const onTrialOutcomeResolved = onDocumentUpdated('trials/{trialId}',
-  …)`:
-  - Fire only when `familyOutcome` or `nannyOutcome` changed and status is still
-    `awaitingOutcome`.
-  - Resolve the 2×2:
-    - both `'hired'` → `update({status:'hired'})`; push nanny "🎉 You're hired!"
-      + push family "Confirmed — you hired {nanny}"; (D4) best-effort flip a
-      linked `applications` doc to `hired`; (D1) if the `hires`-collection
-      alternative is chosen, create the hire doc + bump `stats.hiresCount` here
-      instead.
-    - either `'searching'` → `update({status:'notHired'})`; push the nanny an
-      outcome-specific "trial ended — you're back in search" message and the
-      family a neutral confirmation. (No generic double push.)
-    - only one side set → do nothing (stay `awaitingOutcome`; the pending banner
-      is client-rendered).
-  - Idempotent: guard on the *transition* (before.status === 'awaitingOutcome'
-    && after.status still 'awaitingOutcome' at read time) so re-entrancy from the
-    same trigger's own writes is avoided; the status write moves it out of
-    `awaitingOutcome` so the resolver won't re-resolve.
-- Adapt `onTrialEnded`:
-  - Extend `terminal` set to include `'hired'` and `'notHired'` (so
-    `activeTrialNannyIds` recomputes when a trial resolves), keep
-    `completed/cancelled/declined` for legacy/cancel paths.
-  - **Remove the generic `completed` family push** (lines 115-124) — it is
-    replaced by the outcome-specific pushes in `onTrialOutcomeResolved`. Leave the
-    `activeTrialNannyIds`/`lastTrialEndedAt` recompute intact.
+**12. `triggers/trial.ts` — MODIFY**
+- `export` the existing `recomputeActiveTrialNannyIds` (needed by file 11).
+- Add `resolveMutualOutcome` (pure, §5) and `onTrialOutcomeResolved` (§4.2).
+- Enhance `onTrialEnded`'s `completed` branch to be outcome-aware (§4.3);
+  leave the `cancelled` branch untouched.
 
-**12. `src/index.ts` — MODIFY**
-- Import + export `trialOutcomeDetector` and `onTrialOutcomeResolved`.
+**13. `utils/notifications.ts` — MODIFY**
+Add `'trialOutcomePending'` to the `InboxType` union (§4.5). No other change
+— `writeInbox`/`sendNotification` are reused exactly as they are.
 
-**13. `functions/test/trial_outcome.test.js` — CREATE (see §7)**
+**14. `src/index.ts` — MODIFY**
+Export `trialOutcomeDetector` (from `scheduled.ts`) and
+`onTrialOutcomeResolved` (from `trial.ts`).
 
-### Not touched (explicit boundaries honored)
-- No nanny/family **profile-field** screens (phases 1–2). This plan reads
-  `NannyModel`/`FamilyModel` but edits none of their fields.
-- **No stored "available/hidden" boolean on `NannyModel`** — visibility stays
-  derived (§5 file 8). The `Emirate` 8→7 fix is phases 1–2's; not touched here.
-- Payments/billing untouched. `KafiLocationPicker`/`LocationService` untouched.
+**15. `functions/test/trial_outcome.test.js` — CREATE**
+Unit tests for `resolveMutualOutcome` and `isTrialDueForOutcome` (§5),
+matching `stats.test.js`/`notifications.test.js`'s exact
+`require('../lib/triggers/trial.js')` / `require('../lib/triggers/
+scheduled.js')`-against-compiled-output style.
 
-## 6. Work units & parallelization
+### `kafi_app/lib/models/notification_model.dart` — MODIFY
+Add `trialOutcomePending` to `NotificationType`, in lockstep with file 13
+(§4.5).
 
-- **WU-A (models + reasons + service) — SEQUENTIAL (foundation):** files 1–4.
-  Everything else depends on the new `TrialStatus` values, fields, and service
-  methods. Build first.
-- **WU-B (controller + family/nanny outcome UI + strings) — depends on WU-A:**
-  files 5, 6, 9.
-- **WU-C (reactivation on dashboard) — depends on WU-A (+ 5):** file 7.
-- **WU-D (browse-hide derivation) — depends on WU-A:** file 8. INDEPENDENT of
-  WU-B/WU-C (no file overlap) → can run parallel to them once WU-A lands.
-- **WU-E (functions: scheduled + resolver + index + tests) — INDEPENDENT of the
-  app** (no shared files) → can run fully in parallel with WU-A..D, but its
-  Firestore field/status contract must match WU-A. Files 10–13.
+### `firestore.rules` — MODIFY (scoped hardening, required for gate integrity)
+The current `trials` update rule lets *either* party write *any* field on the
+trial doc (`existing().familyId == uid || existing().nannyId == uid`, no
+field restriction) — looser than `families`, which already blocks specific
+admin/server-owned fields via `incoming().diff(existing()).affectedKeys()
+.hasAny([...])`. Without an equivalent restriction here, a nanny client could
+simply write `familyOutcome: 'hired'` itself and forge the family's side of
+the mutual gate — defeating the entire point of this phase. Add the same
+pattern already used for `families`:
+```
+allow update: if isAdmin()
+  || (isSignedIn() && existing().familyId == request.auth.uid
+      && !incoming().diff(existing()).affectedKeys().hasAny(['nannyOutcome', 'nannyOutcomeAt']))
+  || (isSignedIn() && existing().nannyId == request.auth.uid
+      && !incoming().diff(existing()).affectedKeys().hasAny(['familyOutcome', 'familyOutcomeAt', 'notHiredReason']));
+```
+No `hires` rules change needed — `onTrialOutcomeResolved` creates the hire
+via the Admin SDK, which bypasses Firestore rules entirely, exactly like
+every other server-owned write in `stats.ts` already does.
 
-So after WU-A: WU-B, WU-C, WU-D, WU-E can proceed with only WU-B/WU-C sharing
-`trial_controller.dart` (keep them on one developer or sequence B→C).
+### Not touched (explicit scope boundaries honored)
+- No nanny/family profile-*field* screens (phases 1–2's files).
+- No new stored "available/hidden" boolean on `NannyModel` — visibility stays
+  100% derived (§1), both existing queries (`activeHiredNannyIds`,
+  `activeTrialNannyIds`) unchanged.
+- `ChatController.endActiveHire()` / `family/chat_screen.dart` (family-side
+  "End employment") — untouched. The scope's reactivation reason picker is
+  nanny-side only; the family's existing end-employment flow keeps its
+  current behavior exactly as-is.
+- `KafiLocationPicker`/`LocationService`, payments/billing, `Emirate` enum —
+  untouched (out of scope / other phases' concern).
+- Admin panel (`admin-panel/`) is not in this phase's file list and isn't
+  edited; note for the developer to spot-check that it renders an unknown
+  `trials.status` value ('awaitingOutcome') without crashing, since it likely
+  displays the raw status string somewhere — a five-minute look, not a
+  planned change.
 
-## 7. Test plan
+---
 
-Functions tests must match the existing convention exactly
-(`functions/test/translate.test.js`: `node:test` + `node:assert` against the
-**compiled** `../lib/**` output; `npm test` = `node --test test/*.test.js`; no
-Jest/mocha). Because the triggers themselves are thin I/O wrappers, extract the
-**pure resolution logic** into a testable helper and unit-test that (mirrors how
-`translate.test.js` tests `computeTranslationUpdates`, not the trigger):
-- In `trial.ts`, factor the 2×2 into `export function resolveTrialOutcome(family,
-  nanny): 'hired'|'notHired'|'pending'`. `trial_outcome.test.js` asserts:
-  both-hired→'hired'; family-hired+nanny-searching→'notHired';
-  family-searching+nanny-hired→'notHired'; family-hired+nanny-null→'pending';
-  both-null→'pending'; both-searching→'notHired'.
-- In `scheduled.ts`, factor the due-trial predicate into
-  `export function isTrialDueForOutcome(trial, now): boolean`
-  (status==='active' && endDate<=now && !outcomePromptSent) and unit-test the
-  boundary (endDate just past / just future / already prompted).
-- Keep `npm run build && npm test` green.
+## 7. Acceptance-criteria trace
 
-App (manual/CI, `flutter analyze` must pass — no Flutter runtime in this
-container, verified in a prior plan; static-clean is the bar here):
-- Family taps "We hired her" alone → trial `awaitingOutcome`, `familyOutcome=
-  hired`, **no `hired` status**, nanny still visible in browse. (AC 1, 2)
-- Nanny then "I got the job" → server resolves → `hired`, nanny hidden from
-  browse via the derived exclusion. (AC 2)
-- Family "We hired her" + nanny "I'm still looking" → `notHired`, nanny visible.
-  (AC 2, 3)
-- Nanny "I'm still looking" alone → `notHired` immediately → visible in browse
-  (verified through `engagedNannyIds` no longer containing her). (AC 3)
-- Scheduled fn flips a past-`endDate` active trial to `awaitingOutcome` + both
-  prompts fire once (`outcomePromptSent` idempotency). (AC 4)
-- "Keep searching" reason (7, skippable) persists to `trials.notHiredReason`;
-  reactivation reason (6) persists to `trials.reactivationReason`. (AC 5)
-- Reactivation flips `hired→notHired`, profile intact (no deletes), nanny
-  reappears. Same transition path as a resign would use. (AC 6)
+- Family "We hired her" no longer instantly creates a `hires` doc — writes
+  `familyOutcome='hired'` only (file 4/6/7). ✓
+- Hired status + search-hide reached only once both `familyOutcome` and
+  `nannyOutcome` are `'hired'`, resolved server-side (file 12, §4.2); a
+  family-hired + nanny-silent-or-notHired mismatch never creates a hire (§2.3
+  truth table, unit-tested in file 15). ✓
+- Nanny "I'm still looking" → `nannyOutcome='notHired'` →
+  `onTrialOutcomeResolved` immediately resolves `status='completed'`,
+  `outcome='failed'` → she was already outside `activeTrialNannyIds()`'s
+  `active`/`accepted` set from the moment the trial entered
+  `awaitingOutcome` (§1) — genuinely a status transition, not a UI flag. ✓
+- New scheduled `trialOutcomeDetector` (file 11) detects `endDate<=now` on
+  `active` trials and fires both prompts via the existing
+  `writeInbox`/`sendNotification` pair (§4.1). ✓
+- 7-option skippable not-hired reason + 6-option reactivation reason
+  captured and persisted (`trials.notHiredReason`, `hires.endNote` — §2.4). ✓
+- Reactivation reuses `resignHire()`/`endHire()` exactly (§1, traced
+  concretely); ending a hire (either resign-driven or reactivation-driven)
+  only ever changes `hires.status`/derived visibility — nothing about the
+  nanny's account/profile is deleted. ✓
+- Redundant/generic notification chain replaced: hired → nanny gets exactly
+  one push (`onHireCreated`'s existing one); not-hired → both parties get one
+  specific, honest push each (§4.3), not today's always-generic,
+  sometimes-wrong copy. ✓
+- `applications/{appId}` hired-flip moved to the mutual-confirm gate
+  (§4.2 — was previously fired by `_createHireFromTrial` alongside the old
+  single-sided hire; now fired only by `onTrialOutcomeResolved` alongside the
+  real, mutual hire). ✓
+- `flutter analyze` and `npm run build && npm test` (with the new
+  `trial_outcome.test.js`) both pass. ✓
 
-## 8. Refactor callouts
-- **`endDate` persistence bug (must fix first):** `endDate` is written as an ISO
-  string; the scheduled query needs a `Timestamp`. Fix in `sendOffer`
-  (+ `applyCounterAndAccept`) — file 4. Without this the whole detector silently
-  matches nothing.
-- **Free-form `outcome` string retired for the hire signal.** Keep the field for
-  back-compat but stop treating `'hired'`/`'failed'` as authoritative; the hire
-  decision now lives in `status` + `familyOutcome`/`nannyOutcome`. Avoid a second
-  parallel source of truth (the exact anti-pattern the scope warned about).
-
-## 9. Definition of done (buildable, gradable)
-- [ ] Family "We hired her" writes `familyOutcome='hired'` only — no `hired`
-      status, no browse-hide, until the nanny also confirms. (AC 1, 2)
-- [ ] `hired` status (and derived browse-hide) reached only when both
-      `familyOutcome=='hired'` && `nannyOutcome=='hired'`; server-resolved. (AC 2)
-- [ ] Nanny "I'm still looking" → `notHired` → reappears in browse via the
-      `engagedNannyIds` derivation (status genuinely leaves the engagement set;
-      not a UI flag). (AC 3)
-- [ ] New `trialOutcomeDetector` scheduled fn detects `endDate<=now` on `active`
-      trials and fires both prompts via `sendNotification`, idempotently. (AC 4)
-- [ ] 7-option (skippable) not-hired reason + 6-option reactivation reason
-      persisted on the trial doc. (AC 5)
-- [ ] Reactivation reuses the single shared status-transition path; profile data
-      preserved. (AC 6)
-- [ ] Generic/duplicate trial pushes replaced by one outcome-specific push per
-      party. (scope §"What happens to the redundant notification chain")
-- [ ] Linked application (if any) flips to `hired` only at the mutual gate. (D4)
-- [ ] `flutter analyze` clean; `npm run build && npm test` green with the two new
-      unit-test files. (AC 7)
-- [ ] D1–D5 confirmed by PM/Waseem; status flipped to READY_FOR_BUILD.
+## 8. Definition of done
+- [ ] Files 1–10 (app) implemented in order; file 4's §3 prerequisite fix
+      lands before anything depends on `endDate` being queryable.
+- [ ] Files 11–15 (functions) implemented; `onTrialOutcomeResolved` and
+      `trialOutcomeDetector` exported from `index.ts`.
+- [ ] `firestore.rules` hardened for `trials` field-level ownership.
+- [ ] `notification_model.dart` and `notifications.ts` `InboxType` updated in
+      lockstep (one new value).
+- [ ] `npm run build && npm test` green in `functions/`.
+- [ ] `flutter analyze` clean in `kafi_app/`.
+- [ ] Manual smoke of the 2×2 outcome matrix + the scheduled detector's
+      idempotency (`outcomePromptSent`) + reactivation, per §7.
