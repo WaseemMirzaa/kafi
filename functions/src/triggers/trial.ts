@@ -3,19 +3,27 @@ import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getUser, getNanny, getFamily } from '../utils/notifications';
 
 /// Recomputes `families/{familyId}.activeTrialNannyIds` from the family's trials
-/// currently in an entitling state (accepted/active). This server-owned list is
-/// what the security rules' `hasActiveTrialWith` reads to let a family without a
-/// subscription chat with a nanny during a trial, so it must be refreshed
-/// whenever a trial ENTERS that set (accept) as well as when it leaves (end) —
-/// previously only the end transition recomputed it, so an accepted trial never
-/// unlocked the chat for a free family.
-async function recomputeActiveTrialNannyIds(familyId: string): Promise<void> {
+/// currently in an entitling state (accepted/active/awaitingOutcome). This
+/// server-owned list is what the security rules' `hasActiveTrialWith` reads to
+/// let a family without a subscription chat with a nanny during a trial, so it
+/// must be refreshed whenever a trial ENTERS that set (accept; the scheduled
+/// detector's active→awaitingOutcome flip) as well as when it LEAVES it (end)
+/// — previously only the end transition recomputed it, so an accepted trial
+/// never unlocked the chat for a free family. `awaitingOutcome` is included so
+/// an unsubscribed family doesn't lose chat access at exactly the point both
+/// parties most need to discuss the outcome — she hasn't left the
+/// relationship, she's just waiting on both sides to record what happened.
+/// Distinct from the browse-hide derivation (`activeTrialNannyIds` on
+/// `ITrialService`), which is intentionally left unwidened — see the
+/// trial-completion plan §4.4. Exported so the scheduled detector
+/// (scheduled.ts) can call it too.
+export async function recomputeActiveTrialNannyIds(familyId: string): Promise<void> {
   if (!familyId) return;
   const db = admin.firestore();
   const snap = await db
     .collection('trials')
     .where('familyId', '==', familyId)
-    .where('status', 'in', ['active', 'accepted'])
+    .where('status', 'in', ['active', 'accepted', 'awaitingOutcome'])
     .get();
   const activeIds = Array.from(
     new Set(snap.docs.map((d) => d.data().nannyId as string).filter(Boolean)),
@@ -187,6 +195,133 @@ export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (even
   }
 });
 
+/// Pure truth table behind `onTrialOutcomeResolved` — decides the
+/// mutual-confirm verdict from each side's independently-written outcome
+/// field. `notHired` on EITHER side wins outright (the mismatch case: a
+/// family that already said "hired" but a nanny who says "notHired" must
+/// never create a hire), both sides must say `hired` for a match, and
+/// anything else (a side hasn't responded yet) stays `pending`. Kept
+/// pure/exported so the truth table is unit-testable without a live trigger
+/// invocation.
+export function resolveMutualOutcome(
+  familyOutcome?: string,
+  nannyOutcome?: string,
+): 'hired' | 'notHired' | 'pending' {
+  if (familyOutcome === 'notHired' || nannyOutcome === 'notHired') return 'notHired';
+  if (familyOutcome === 'hired' && nannyOutcome === 'hired') return 'hired';
+  return 'pending';
+}
+
+/// Resolves the mutual-confirm gate once a side writes its outcome onto an
+/// `awaitingOutcome` trial. Fires on every update to such a trial but only
+/// acts when `familyOutcome`/`nannyOutcome` actually changed and the verdict
+/// is decided (`resolveMutualOutcome` above) — a lone response is a no-op,
+/// still waiting on the other side.
+///
+/// Resolution is server-side by design, not client-side: `firestore.rules`'
+/// `hires` collection only lets the FAMILY's client create a hire doc, so a
+/// client-side resolution running on the nanny's device (when she's the
+/// second party to respond) could never write it — hire creation would
+/// silently fail for exactly half of the possible response orderings. The
+/// Admin SDK bypasses rules entirely, so this works regardless of which side
+/// resolves the match second.
+export const onTrialOutcomeResolved = onDocumentUpdated('trials/{trialId}', async (event) => {
+  const before = event.data?.before.data();
+  const after = event.data?.after.data();
+  if (!before || !after || after.status !== 'awaitingOutcome') return;
+  if (
+    before.familyOutcome === after.familyOutcome &&
+    before.nannyOutcome === after.nannyOutcome
+  ) {
+    return;
+  }
+
+  const verdict = resolveMutualOutcome(
+    after.familyOutcome as string | undefined,
+    after.nannyOutcome as string | undefined,
+  );
+  if (verdict === 'pending') return;
+
+  const trialId = event.params.trialId;
+  const db = admin.firestore();
+  const ref = db.collection('trials').doc(trialId);
+
+  // First-resolution-wins: read the trial fresh inside a transaction and bail
+  // if another invocation already resolved it — mirrors `onHireEnded`'s
+  // before/after guard and `FirestoreHireService.endHire`'s transactional
+  // first-end-wins pattern, both already in this codebase.
+  let didResolve = false;
+  await db.runTransaction(async (tx) => {
+    const snap = await tx.get(ref);
+    if (snap.data()?.status !== 'awaitingOutcome') return;
+    tx.update(ref, {
+      status: 'completed',
+      outcome: verdict === 'hired' ? 'hired' : 'failed',
+      outcomeAt: admin.firestore.FieldValue.serverTimestamp(),
+      completedAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+    didResolve = true;
+  });
+  // A verdict lost the race (another invocation resolved it first) or wasn't
+  // a hire — either way there's no hire record to create.
+  if (!didResolve || verdict !== 'hired') return;
+
+  // A background function has no client auth context — it cannot read
+  // `_auth.currentUser` the way the old client-side `_createHireFromTrial`
+  // did — so the display names for the hire record must be looked up here.
+  const [family, nanny] = await Promise.all([
+    getFamily(after.familyId as string),
+    getNanny(after.nannyId as string),
+  ]);
+
+  const hireId = `hire_${trialId}`;
+  await db
+    .collection('hires')
+    .doc(hireId)
+    .set({
+      id: hireId,
+      familyId: after.familyId,
+      nannyId: after.nannyId,
+      jobPostId: (after.jobPostId as string | undefined) ?? null,
+      trialId,
+      employmentType: (after.trialType as string | undefined) ?? 'live-in',
+      salaryAed: 0,
+      status: 'active',
+      endReason: null,
+      startedAt: admin.firestore.FieldValue.serverTimestamp(),
+      endedAt: null,
+      endNote: null,
+      nannyName: (nanny.fullName as string | undefined) ?? null,
+      familyName: (family.fullName as string | undefined) ?? null,
+      createdAt: admin.firestore.FieldValue.serverTimestamp(),
+    });
+
+  // Best-effort: flip the matching application to hired, using the exact same
+  // write shape `FirestoreApplicationService.markHired` already uses. A
+  // missing application is fine (a trial offered directly, not via an
+  // application) — swallow errors so a lookup failure never undoes the hire
+  // that already committed above, matching `_createHireFromTrial`'s existing
+  // behavior.
+  try {
+    const appsSnap = await db
+      .collection('applications')
+      .where('familyId', '==', after.familyId)
+      .where('nannyId', '==', after.nannyId)
+      .limit(10)
+      .get();
+    const jobPostId = after.jobPostId as string | undefined;
+    const match = appsSnap.docs.find((d) => !jobPostId || d.data().jobPostId === jobPostId);
+    if (match) {
+      await match.ref.update({
+        status: 'hired',
+        respondedAt: admin.firestore.FieldValue.serverTimestamp(),
+      });
+    }
+  } catch (error) {
+    console.error('onTrialOutcomeResolved: application lookup failed', error);
+  }
+});
+
 /// Per Technical Architecture §10.2 — when a trial transitions to a terminal
 /// state (completed/cancelled), recompute family.activeTrialNannyIds so the
 /// subscription bypass falls back to normal lockdown rules.
@@ -210,6 +345,28 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
     'subscription.lastTrialEndedAt': admin.firestore.FieldValue.serverTimestamp(),
   });
 
+  // Retire the family's cached chat-thread trial badge. The linked thread caches
+  // `trialStatus` to drive the green "on trial" pill + "View Trial" banner
+  // (ChatThread.hasActiveTrial is true only for 'active'/'accepted'); writing the
+  // terminal status here retires it — the server-side replacement for the removed
+  // client `_flipThreadTrialStatus`. Best-effort: a trial with no linked thread
+  // must never fail this trigger, matching the application-lookup swallow in
+  // onTrialOutcomeResolved above.
+  try {
+    const threadSnap = await admin
+      .firestore()
+      .collection('chatThreads')
+      .where('trialId', '==', event.params.trialId)
+      .limit(1)
+      .get();
+    const thread = threadSnap.docs[0];
+    if (thread) {
+      await thread.ref.update({ trialStatus: after.status });
+    }
+  } catch (error) {
+    console.error('onTrialEnded: chat-thread badge retirement failed', error);
+  }
+
   // Both terminal outcomes must reach BOTH parties. Previously only 'completed'
   // fired, only to the family, with stale "evaluate the nanny" copy — and
   // 'cancelled' notified nobody despite the UI promising "both parties will be
@@ -223,17 +380,46 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
     const data = { type: `trial_${after.status}`, trialId: event.params.trialId };
 
     if (after.status === 'completed') {
-      const famTitle = '✅ Trial completed';
-      const famBody = 'The trial is complete — decide whether to hire.';
-      const nanTitle = '✅ Trial completed';
-      const nanBody = 'Your trial is complete. The family will confirm next steps.';
+      // Outcome-aware, de-duplicated copy — replaces the old always-generic
+      // pair that fired verbatim even when the family had already decided
+      // against hiring.
+      const outcome = after.outcome as string | undefined;
+      let famTitle: string;
+      let famBody: string;
+      let nanTitle: string | undefined;
+      let nanBody: string | undefined;
+
+      if (outcome === 'hired') {
+        // The nanny already got "🎉 You’ve been hired!" from `onHireCreated`
+        // (fired off the `hires/{id}` doc `onTrialOutcomeResolved` just
+        // created) — sending her this generic push too would double-notify
+        // her for the same event, so only the family gets a push here.
+        const nannyName = (nanny.fullName as string | undefined) || 'your nanny';
+        famTitle = '✅ Hire confirmed';
+        famBody = `You and ${nannyName} confirmed the hire — she’s now marked Hired.`;
+      } else if (outcome === 'failed') {
+        famTitle = 'Trial closed';
+        famBody = 'This trial didn’t lead to a hire. Keep browsing for your next match.';
+        nanTitle = 'Trial update';
+        nanBody =
+          'This trial didn’t lead to a hire this time. Your profile is visible in search again.';
+      } else {
+        // Defensive fallback for a trial completed via a path this phase
+        // doesn't control (e.g. a future admin action) — keep today's copy
+        // verbatim so that path never regresses.
+        famTitle = '✅ Trial completed';
+        famBody = 'The trial is complete — decide whether to hire.';
+        nanTitle = '✅ Trial completed';
+        nanBody = 'Your trial is complete. The family will confirm next steps.';
+      }
+
       await writeInbox(familyId, 'trialCompleted', famTitle, famBody, data);
       await sendNotification((family.fcmTokens as string[]) ?? [], {
         title: famTitle,
         body: famBody,
         data,
       });
-      if (nannyId) {
+      if (nannyId && nanTitle && nanBody) {
         await writeInbox(nannyId, 'trialCompleted', nanTitle, nanBody, data);
         await sendNotification((nanny.fcmTokens as string[]) ?? [], {
           title: nanTitle,

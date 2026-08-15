@@ -221,6 +221,7 @@ class NotificationController extends GetxController {
       case NotificationType.trialStartingSoon:
       case NotificationType.trialEndingSoon:
       case NotificationType.trialCompleted:
+      case NotificationType.trialOutcomePending:
         _openRouteForRole(Routes.chat);
         return;
       case NotificationType.subscriptionExpiring:

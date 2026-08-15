@@ -660,6 +660,36 @@ abstract class AppStrings {
   static const trialReportIssueHint = 'trial_report_issue_hint';
   static const trialSendReport = 'trial_send_report';
 
+  // Trial outcome — mutual hire confirmation (awaitingOutcome)
+  static const trialAwaitingResponseLabel = 'trial_awaiting_response_label';
+  static const trialOutcomePromptFamily = 'trial_outcome_prompt_family';
+  static const trialFamilyHireAction = 'trial_family_hire_action';
+  static const trialKeepSearchingAction = 'trial_keep_searching_action';
+  static const trialFamilyWaitingSnackbar = 'trial_family_waiting_snackbar';
+  static const trialWaitingForNannyBanner = 'trial_waiting_for_nanny_banner';
+  static const trialReasonSkip = 'trial_reason_skip';
+  static const notHiredReasonNotRightMatch = 'not_hired_reason_not_right_match';
+  static const notHiredReasonSalary = 'not_hired_reason_salary';
+  static const notHiredReasonSchedule = 'not_hired_reason_schedule';
+  static const notHiredReasonLocation = 'not_hired_reason_location';
+  static const notHiredReasonNannyDeclined = 'not_hired_reason_nanny_declined';
+  static const notHiredReasonFoundSomeoneElse = 'not_hired_reason_found_someone_else';
+  static const notHiredReasonOther = 'not_hired_reason_other';
+  static const trialOutcomePromptNanny = 'trial_outcome_prompt_nanny';
+  static const trialNannyGotJobAction = 'trial_nanny_got_job_action';
+  static const trialNannyStillLookingAction = 'trial_nanny_still_looking_action';
+  static const trialNannyWaitingBanner = 'trial_nanny_waiting_banner';
+
+  // Hire reactivation — nanny makes her profile available again
+  static const reactivationCardTitle = 'reactivation_card_title';
+  static const reactivationCardCta = 'reactivation_card_cta';
+  static const reactivationReasonJobDidntWorkOut = 'reactivation_reason_job_didnt_work_out';
+  static const reactivationReasonFamilyEnded = 'reactivation_reason_family_ended';
+  static const reactivationReasonIDecidedToLeave = 'reactivation_reason_i_decided_to_leave';
+  static const reactivationReasonTemporaryEnded = 'reactivation_reason_temporary_ended';
+  static const reactivationReasonOther = 'reactivation_reason_other';
+  static const reactivationReasonPreferNotToSay = 'reactivation_reason_prefer_not_to_say';
+
   // Pricing
   static const pricingTitle = 'pricing_title';
   static const pricingFreeBanner = 'pricing_free_banner';

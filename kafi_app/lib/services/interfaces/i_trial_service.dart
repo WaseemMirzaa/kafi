@@ -4,6 +4,12 @@ abstract class ITrialService {
   Future<List<TrialModel>> listTrials(String familyId);
   Future<List<TrialModel>> listTrialsForNanny(String nannyId);
   Future<TrialModel?> getTrial(String trialId);
+
+  /// The trial currently in play for this family — active, accepted, or
+  /// awaitingOutcome (execution window closed, outcome not yet resolved).
+  /// Drives `TrialController.active`/the trial screen. Distinct from
+  /// [activeTrialNannyIds], the browse-hide derivation below, which
+  /// deliberately excludes awaitingOutcome (plan §1).
   Future<TrialModel?> activeTrial(String familyId);
 
   /// Nanny ids currently on an accepted or active trial (with any family). Used
@@ -31,6 +37,23 @@ abstract class ITrialService {
     TrialEvaluation? evaluation,
     String? outcomeLabel,
   });
+
+  /// Family's mutual-outcome response once the trial reaches
+  /// `awaitingOutcome`. Writes only the family's own side — resolution
+  /// (creating the `hires` doc, flipping the trial to `completed`) happens
+  /// server-side once both parties have responded (see
+  /// `onTrialOutcomeResolved`), never on the client.
+  Future<void> setFamilyOutcome(
+    String trialId, {
+    required String outcome,
+    TrialEvaluation? evaluation,
+    String? notHiredReason,
+  });
+
+  /// Nanny's mutual-outcome response once the trial reaches
+  /// `awaitingOutcome`. Writes only the nanny's own side — see
+  /// [setFamilyOutcome].
+  Future<void> setNannyOutcome(String trialId, {required String outcome});
 
   /// Apply a counter offer's accepted terms to the trial record
   /// (daily rate, duration, start date) and mark it `accepted`.
