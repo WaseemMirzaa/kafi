@@ -79,6 +79,7 @@ export type InboxType =
   | 'trialCountered'
   | 'trialStartingSoon'
   | 'trialEndingSoon'
+  | 'trialOutcomePending'
   | 'trialCompleted'
   | 'hired'
   | 'profileViewed'

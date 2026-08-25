@@ -24,17 +24,36 @@ T? _enumByName<T extends Enum>(List<T> values, dynamic raw) {
   return null;
 }
 
+/// Reads an [Emirate] by name, remapping the retired `'alAin'` value to
+/// `abuDhabi` (Al Ain ⊂ Abu Dhabi, 8→7 remap). Applied on every read so
+/// existing docs holding `alAin` come back as `abuDhabi` with no migration
+/// script — plan kafi-nanny-profile-fields §1.1.
+Emirate? _emirateByName(dynamic raw) {
+  if (raw == null) return null;
+  var name = raw.toString();
+  if (name == 'alAin') name = 'abuDhabi';
+  return _enumByName(Emirate.values, name);
+}
+
+DayAvailability _dayAvailabilityFromMap(Map<String, dynamic> m) => DayAvailability(
+      weekday: (m['weekday'] as num?)?.toInt() ?? 1,
+      from: m['from']?.toString() ?? '',
+      until: m['until']?.toString() ?? '',
+    );
+
 WorkExperience _experienceFromMap(Map<String, dynamic> m) => WorkExperience(
       id: m['id']?.toString() ?? '',
       jobTitle: m['jobTitle']?.toString() ?? '',
       employer: m['employer']?.toString() ?? '',
-      cityCountry: m['cityCountry']?.toString() ?? '',
+      country: m['country']?.toString() ?? '',
+      // Legacy docs only have `cityCountry` — fold it into `city` so old
+      // experience entries keep showing their text after this migration.
+      city: m['city']?.toString() ?? m['cityCountry']?.toString() ?? '',
       fromDate: _parseDate(m['fromDate']) ?? DateTime(2000),
       toDate: _parseDate(m['toDate']) ?? DateTime.now(),
       children: m['children']?.toString() ?? '',
       duties: m['duties']?.toString() ?? '',
       reasonLeaving: m['reasonLeaving']?.toString() ?? '',
-      location: _geoFromMap(m['location']),
     );
 
 ReferenceContact _referenceFromMap(Map<String, dynamic> m) => ReferenceContact(
@@ -78,14 +97,17 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
       hasEmiratesId: m['hasEmiratesId'] == true,
       eidNumber: m['eidNumber'] as String?,
       willingToTransferVisa: m['willingToTransferVisa'] as bool?,
+      // De-duplicate after remap: a legacy doc that independently held both
+      // 'abuDhabi' and 'alAin' would otherwise collide into abuDhabi twice.
       workEmirates: (m['workEmirates'] as List?)
-              ?.map((e) => _enumByName(Emirate.values, e))
+              ?.map(_emirateByName)
               .whereType<Emirate>()
+              .toSet()
               .toList() ??
           const [],
       willingToRelocate: m['willingToRelocate'] == true,
       currentArea: (m['currentArea'] as String?) ?? '',
-      currentLocation: _geoFromMap(m['currentLocation']),
+      currentEmirate: _emirateByName(m['currentEmirate']),
       jobTypePreference: _enumByName(JobTypePreference.values, m['jobTypePreference']) ??
           JobTypePreference.both,
       expectedSalaryMin: (m['expectedSalaryMin'] as num?)?.toInt() ?? 0,
@@ -93,6 +115,15 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
       availability: _enumByName(AvailabilityStatus.values, m['availability']) ??
           AvailabilityStatus.availableNow,
       availableFrom: _parseDate(m['availableFrom']),
+      employmentTypes: (m['employmentTypes'] as List?)
+              ?.map((e) => _enumByName(EmploymentType.values, e))
+              .whereType<EmploymentType>()
+              .toList() ??
+          const [],
+      partTimeAvailability: (m['partTimeAvailability'] as List?)
+              ?.map((e) => _dayAvailabilityFromMap(Map<String, dynamic>.from(e as Map)))
+              .toList() ??
+          const [],
       maritalStatus: _enumByName(MaritalStatus.values, m['maritalStatus']),
       hasChildren: m['hasChildren'] == true,
       childrenCount: (m['childrenCount'] as num?)?.toInt() ?? 0,
@@ -113,10 +144,6 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
       religion: (m['religion'] as String?) ?? '',
       religiousNotes: (m['religiousNotes'] as String?) ?? '',
       comfortableWithDifferentFaith: m['comfortableWithDifferentFaith'] != false,
-      emergencyName: (m['emergencyName'] as String?) ?? '',
-      emergencyRelationship: (m['emergencyRelationship'] as String?) ?? '',
-      emergencyCountryCode: (m['emergencyCountryCode'] as String?) ?? '+971',
-      emergencyPhone: (m['emergencyPhone'] as String?) ?? '',
       bio: (m['bio'] as String?) ?? '',
       photoUrls: List<String>.from(m['photoUrls'] ?? const []),
       introVideoUrl: m['introVideoUrl'] as String?,

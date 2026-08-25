@@ -4,12 +4,9 @@ import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
-import 'package:kafi_app/utils/constants/auth_constants.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
-import 'package:kafi_app/views/widgets/kafi_phone_input.dart';
-import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_searchable_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_section.dart';
@@ -20,13 +17,31 @@ import 'package:kafi_app/views/widgets/kafi_toggle_box.dart';
 class NannyInfoScreen extends GetView<NannyProfileController> {
   const NannyInfoScreen({super.key});
 
-  /// Country-code options for the emergency contact — nanny-origin countries
-  /// (the emergency contact is usually back home). Rendered "Name +code"; the
-  /// picker extracts the +code.
-  static final List<String> _emergencyCodeOptions = AuthConstants
-      .nannyCountryCodes.entries
-      .map((e) => '${e.key} ${e.value}')
-      .toList();
+  /// Single source of truth for the emirate grids (emoji + subtitle; the name
+  /// comes from [EmirateX.label]) — drives both the current-emirate and
+  /// preferred-emirates boxes so they can never drift out of sync with the
+  /// [Emirate] enum the way the old hardcoded 8-box list once did (Al Ain bug).
+  static const List<(Emirate, String, String)> _emirates = [
+    (Emirate.dubai, '🏙️', 'Most jobs'),
+    (Emirate.abuDhabi, '🕌', 'Capital · High demand'),
+    (Emirate.sharjah, '🌆', 'Near Dubai'),
+    (Emirate.ajman, '🏘️', 'Compact · Affordable'),
+    (Emirate.rak, '⛵', 'RAK · Growing fast'),
+    (Emirate.fujairah, '🌊', 'East coast · Quiet'),
+    (Emirate.uaq, '🤿', 'UAQ · Relaxed pace'),
+  ];
+
+  /// Weekday (1=Mon…7=Sun, matches [DateTime.weekday]) → day-chip label key,
+  /// driving the part-time availability day picker.
+  static const List<(int, String)> _weekdays = [
+    (1, AppStrings.dayMon),
+    (2, AppStrings.dayTue),
+    (3, AppStrings.dayWed),
+    (4, AppStrings.dayThu),
+    (5, AppStrings.dayFri),
+    (6, AppStrings.daySat),
+    (7, AppStrings.daySun),
+  ];
 
   @override
   Widget build(BuildContext context) {
@@ -49,11 +64,11 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
         _visa(),
         _workLocation(),
         _workPrefs(),
+        _employment(),
         _personal(),
         _health(),
         _comfort(),
         _religion(),
-        _emergency(),
         _bio(),
       ],
     );
@@ -323,6 +338,23 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
       icon: Icons.location_on_outlined,
       accent: KafiSectionAccent.purple,
       children: [
+        // 1) Current emirate — single-select, replaces the free-text + GPS picker.
+        Text(AppStrings.nannyCurrentEmirateLabel.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        const SizedBox(height: 5),
+        Obx(() => GridView.count(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          crossAxisCount: 2,
+          mainAxisSpacing: 6,
+          crossAxisSpacing: 6,
+          childAspectRatio: 2.2,
+          children: [
+            for (final (e, emoji, _) in _emirates)
+              _currentEmirateBox(emoji, e.label, e, controller.currentEmirate.value == e),
+          ],
+        )),
+        const SizedBox(height: 12),
+        // 2) Preferred job locations — multi-select ("Any Emirate" selects all 7).
         _infoBannerPurple(
           icon: Icons.location_on_outlined,
           text: 'Select every emirate you are willing to work in. Families can only find you for their emirate if you select it. You can select all if you are flexible.',
@@ -330,6 +362,13 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
         const SizedBox(height: 8),
         Text(AppStrings.fldEmirates.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 5),
+        Obx(() => KafiChip(
+          label: AppStrings.nannyAnyEmirate.tr,
+          selected: controller.allEmiratesSelected,
+          onTap: controller.toggleAnyEmirate,
+          purple: true,
+        )),
+        const SizedBox(height: 6),
         Obx(() {
           final selected = controller.workEmirates; // explicit read keeps the Obx subscribed
           return GridView.count(
@@ -340,18 +379,13 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
             crossAxisSpacing: 6,
             childAspectRatio: 2.2,
             children: [
-              _emirateBox('🏙️', 'Dubai', 'Most jobs', Emirate.dubai, selected.contains(Emirate.dubai)),
-              _emirateBox('🕌', 'Abu Dhabi', 'Capital · High demand', Emirate.abuDhabi, selected.contains(Emirate.abuDhabi)),
-              _emirateBox('🌆', 'Sharjah', 'Near Dubai', Emirate.sharjah, selected.contains(Emirate.sharjah)),
-              _emirateBox('🏘️', 'Ajman', 'Compact · Affordable', Emirate.ajman, selected.contains(Emirate.ajman)),
-              _emirateBox('⛵', 'Ras Al Khaimah', 'RAK · Growing fast', Emirate.rak, selected.contains(Emirate.rak)),
-              _emirateBox('🌊', 'Fujairah', 'East coast · Quiet', Emirate.fujairah, selected.contains(Emirate.fujairah)),
-              _emirateBox('🤿', 'Umm Al Quwain', 'UAQ · Relaxed pace', Emirate.uaq, selected.contains(Emirate.uaq)),
-              _emirateBox('🌴', 'Al Ain', 'Garden city · Abu Dhabi', Emirate.alAin, selected.contains(Emirate.alAin)),
+              for (final (e, emoji, subtitle) in _emirates)
+                _emirateBox(emoji, e.label, subtitle, e, selected.contains(e)),
             ],
           );
         }),
         const SizedBox(height: 8),
+        // 3) Relocate toggle.
         Text(AppStrings.fldRelocate.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
         Obx(() => Row(children: [
@@ -371,14 +405,6 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
             onTap: () => controller.willingRelocate.value = false,
           )),
         ])),
-        const SizedBox(height: 6),
-        KafiLocationPicker(
-          initialValue: controller.currentAreaCtrl.text,
-          label: AppStrings.fldCurrentArea.tr,
-          onChanged: (v) => controller.currentAreaCtrl.text = v,
-          onLocationPicked: (loc) =>
-              controller.currentLocationPicked = loc.toGeoLocation(),
-        ),
       ],
     );
   }
@@ -398,6 +424,29 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           const SizedBox(height: 3),
           Text(name, textAlign: TextAlign.center, style: KafiTheme.nunito(10.5, color: selected ? KafiColors.pur : KafiColors.tm, w: FontWeight.w800)),
           Text(subtitle, textAlign: TextAlign.center, style: KafiTheme.nunito(8, color: selected ? KafiColors.pur.withValues(alpha: 0.75) : KafiColors.ts)),
+        ]),
+      ),
+    );
+  }
+
+  /// Single-select variant of [_emirateBox] for the current-emirate grid (no
+  /// subtitle — that copy is specific to the "where do you want to work"
+  /// context). Copies the same box styling; `onTap` sets the single
+  /// [NannyProfileController.currentEmirate] instead of toggling membership.
+  Widget _currentEmirateBox(String emoji, String name, Emirate value, bool selected) {
+    return GestureDetector(
+      onTap: () => controller.currentEmirate.value = value,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
+        decoration: BoxDecoration(
+          color: selected ? KafiColors.purL : KafiColors.inputBgP,
+          border: Border.all(color: selected ? KafiColors.pur : KafiColors.purB, width: 1.5),
+          borderRadius: BorderRadius.circular(9),
+        ),
+        child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
+          Text(emoji, style: const TextStyle(fontSize: 16)),
+          const SizedBox(height: 3),
+          Text(name, textAlign: TextAlign.center, style: KafiTheme.nunito(10.5, color: selected ? KafiColors.pur : KafiColors.tm, w: FontWeight.w800)),
         ]),
       ),
     );
@@ -609,55 +658,147 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
     );
   }
 
-  // ─── EMERGENCY ───────────────────────────────────────────────────────────
+  // ─── EMPLOYMENT ──────────────────────────────────────────────────────────
 
-  Widget _emergency() {
+  Widget _employment() {
     return KafiSection(
-      title: AppStrings.secEmergency.tr,
-      icon: Icons.contact_phone_outlined,
+      title: AppStrings.nannySecEmployment.tr,
+      icon: Icons.work_outline,
+      accent: KafiSectionAccent.purple,
       children: [
-        KafiTextField(label: AppStrings.fldEmergencyName.tr, controller: controller.emergencyNameCtrl),
-        Text(AppStrings.fldEmergencyRel.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
-        const SizedBox(height: 4),
-        Container(
-          margin: const EdgeInsets.only(bottom: 7),
-          padding: const EdgeInsets.symmetric(horizontal: 10),
-          decoration: BoxDecoration(
-            color: KafiColors.inputBg,
-            border: Border.all(color: KafiColors.cardBorder, width: 1.5),
-            borderRadius: BorderRadius.circular(10),
-          ),
-          child: DropdownButtonHideUnderline(
-            child: DropdownButton<String>(
-              isExpanded: true,
-              value: _relValue(),
-              style: KafiTheme.nunito(11, color: KafiColors.td),
-              items: ['Spouse / Partner', 'Parent', 'Sibling', 'Child', 'Friend', 'Other']
-                  .map((r) => DropdownMenuItem(value: r, child: Text(r)))
-                  .toList(),
-              onChanged: (v) { if (v != null) controller.emergencyRelCtrl.text = v; },
-            ),
-          ),
-        ),
-        Text(AppStrings.fldEmergencyPhone.tr,
-            style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
-        const SizedBox(height: 4),
-        Obx(() => KafiPhoneInput(
-              controller: controller.emergencyPhoneCtrl,
-              countryCode: controller.emergencyCountryCode.value,
-              onCountryChanged: (c) => controller.emergencyCountryCode.value = c,
-              countryOptions: _emergencyCodeOptions,
-            )),
-        const SizedBox(height: 7),
+        Text(AppStrings.nannyEmploymentQuestion.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+        const SizedBox(height: 5),
+        Obx(() => Column(children: [
+          _employmentTile(AppStrings.nannyEmpFullLiveIn.tr, EmploymentType.fullTimeLiveIn),
+          const SizedBox(height: 6),
+          _employmentTile(AppStrings.nannyEmpFullLiveOut.tr, EmploymentType.fullTimeLiveOut),
+          const SizedBox(height: 6),
+          _employmentTile(AppStrings.nannyEmpPartTime.tr, EmploymentType.partTime),
+        ])),
+        Obx(() => controller.employmentTypes.contains(EmploymentType.partTime)
+            ? _partTimeAvailability()
+            : const SizedBox.shrink()),
       ],
     );
   }
 
-  String _relValue() {
-    const options = ['Spouse / Partner', 'Parent', 'Sibling', 'Child', 'Friend', 'Other'];
-    final v = controller.emergencyRelCtrl.text;
-    return options.contains(v) ? v : options.first;
+  Widget _employmentTile(String label, EmploymentType type) {
+    return KafiToggleTile(
+      label: label,
+      selected: controller.employmentTypes.contains(type),
+      onTap: () => controller.toggleEmploymentType(type),
+      purple: true,
+    );
   }
+
+  Widget _partTimeAvailability() {
+    return Padding(
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(AppStrings.nannyPartTimeQuestion.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
+          const SizedBox(height: 5),
+          Obx(() {
+            final days = controller.partTimeAvailability; // explicit read keeps the Obx subscribed
+            return Wrap(
+              spacing: 4,
+              runSpacing: 4,
+              children: [
+                for (final (weekday, labelKey) in _weekdays)
+                  KafiChip(
+                    label: labelKey.tr,
+                    selected: days.any((d) => d.weekday == weekday),
+                    onTap: () => controller.toggleDay(weekday),
+                    purple: true,
+                  ),
+              ],
+            );
+          }),
+          Obx(() {
+            final days = List.of(controller.partTimeAvailability)
+              ..sort((a, b) => a.weekday.compareTo(b.weekday));
+            if (days.isEmpty) return const SizedBox.shrink();
+            return Padding(
+              padding: const EdgeInsets.only(top: 8),
+              child: Column(children: [for (final d in days) _dayTimeRow(d)]),
+            );
+          }),
+        ],
+      ),
+    );
+  }
+
+  Widget _dayTimeRow(DayAvailability d) {
+    final dayLabel = _weekdays.firstWhere((w) => w.$1 == d.weekday).$2.tr;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 34,
+            child: Text(dayLabel, style: KafiTheme.nunito(9.5, color: KafiColors.td, w: FontWeight.w800)),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _timeField(
+              AppStrings.nannyPartTimeFrom.tr,
+              d.from,
+              (t) => controller.setDayFrom(d.weekday, t),
+            ),
+          ),
+          const SizedBox(width: 6),
+          Expanded(
+            child: _timeField(
+              AppStrings.nannyPartTimeUntil.tr,
+              d.until,
+              (t) => controller.setDayUntil(d.weekday, t),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _timeField(String label, String value, ValueChanged<String> onPicked) {
+    return GestureDetector(
+      onTap: () async {
+        final picked = await showTimePicker(
+          context: Get.context!,
+          initialTime: _parseTimeOfDay(value) ?? TimeOfDay.now(),
+          helpText: label,
+        );
+        if (picked != null) onPicked(_fmtTimeOfDay(picked));
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 11),
+        decoration: BoxDecoration(
+          color: KafiColors.inputBgP,
+          border: Border.all(color: KafiColors.purB, width: 1.5),
+          borderRadius: BorderRadius.circular(10),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.access_time, size: 12, color: KafiColors.pur),
+            const SizedBox(width: 7),
+            Text(value.isEmpty ? '—' : value, style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w600)),
+          ],
+        ),
+      ),
+    );
+  }
+
+  TimeOfDay? _parseTimeOfDay(String v) {
+    final parts = v.split(':');
+    if (parts.length != 2) return null;
+    final h = int.tryParse(parts[0]);
+    final m = int.tryParse(parts[1]);
+    if (h == null || m == null) return null;
+    return TimeOfDay(hour: h, minute: m);
+  }
+
+  String _fmtTimeOfDay(TimeOfDay t) =>
+      '${t.hour.toString().padLeft(2, '0')}:${t.minute.toString().padLeft(2, '0')}';
 
   // ─── BIO ─────────────────────────────────────────────────────────────────
 

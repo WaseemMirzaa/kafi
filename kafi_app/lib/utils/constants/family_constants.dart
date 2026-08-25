@@ -1,9 +1,13 @@
 /// Family job-post constants (per docs §Family — Post Job).
 class FamilyConstants {
-  static const homeLanguages = ['English', 'Arabic', 'Hindi', 'Filipino', 'Urdu', 'French'];
+  static const homeLanguages = [
+    'Arabic', 'English', 'Hindi', 'Urdu', 'Tagalog', 'French', 'Russian', 'Other',
+  ];
 
   static const roles = [
-    'Nanny', 'Maid', 'Caregiver', 'Cook', 'Babysitter', 'Helper', 'Pet Caretaker',
+    'Maid & Nanny', 'Nanny', 'Maid', 'Babysitter', "Mother's Helper",
+    'Child Caregiver', 'Elderly Caregiver', 'Cook', 'Household Helper',
+    'Pet Caregiver', 'Other',
   ];
 
   static const duties = [
@@ -17,4 +21,6 @@ class FamilyConstants {
   ];
 
   static const trialDurations = [3, 5, 7, 10, 14];
+
+  static const daysOffOptions = ['1 day off', '2 days off', 'Other'];
 }

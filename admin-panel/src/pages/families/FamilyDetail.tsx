@@ -60,7 +60,7 @@ function JobPostCard({ job }: { job: JobPostRow }) {
       <FieldGrid>
         <Field label="Roles needed" value={listOr(job.rolesNeeded)} />
         <Field label="Job type" value={job.jobType ? jobTypeFullLabel[job.jobType] : '—'} />
-        <Field label="Schedule" value={job.schedule || '—'} />
+        <Field label="Days off" value={job.daysOff || '—'} />
         <Field
           label="Start"
           value={job.startImmediate ? 'Immediately' : fmtDate(job.startDate)}

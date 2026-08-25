@@ -5,10 +5,11 @@ import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
+import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
-import 'package:kafi_app/services/location_service.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
+import 'package:kafi_app/utils/emirate_ui.dart';
 import 'package:kafi_app/utils/validators.dart';
 import 'package:uuid/uuid.dart';
 
@@ -16,7 +17,6 @@ class FamilyProfileController extends GetxController {
   final IUserService _user = Get.find<IUserService>();
   final IJobService _jobs = Get.find<IJobService>();
   final AuthController _auth = Get.find<AuthController>();
-  final LocationService _location = Get.find<LocationService>();
   final _uuid = const Uuid();
 
   /// The specific post the edit form targets (a family may hold one full-time
@@ -26,11 +26,10 @@ class FamilyProfileController extends GetxController {
 
   final Rx<FamilyModel?> family = Rx<FamilyModel?>(null);
   final RxBool isLoading = false.obs;
-  final RxBool detectingCity = false.obs;
 
   final fullNameCtrl = TextEditingController();
   final RxString nationality = 'Emirati'.obs;
-  final RxString city = ''.obs;
+  final Rx<Emirate?> cityEmirate = Rx<Emirate?>(null);
   final childrenCtrl = TextEditingController(text: '2');
   final childrenAgesCtrl = TextEditingController();
   final RxList<String> languages = <String>['English', 'Arabic'].obs;
@@ -48,7 +47,8 @@ class FamilyProfileController extends GetxController {
   final RxList<String> roles = <String>['Nanny'].obs;
   final Rx<JobType> jobType = JobType.liveIn.obs;
   final Rx<JobEmploymentType> employmentType = JobEmploymentType.fullTime.obs;
-  final scheduleCtrl = TextEditingController();
+  final RxString daysOff = ''.obs;
+  final rolesOtherCtrl = TextEditingController();
   final RxList<String> duties = <String>[].obs;
   final RxList<String> benefits = <String>[].obs;
 
@@ -71,7 +71,7 @@ class FamilyProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _hydrateFromCurrentUser().then((_) => autoDetectCity());
+    _hydrateFromCurrentUser();
   }
 
   /// Loads the signed-in family's profile + latest job post (if any) and
@@ -86,7 +86,7 @@ class FamilyProfileController extends GetxController {
         family.value = fam;
         fullNameCtrl.text = fam.fullName;
         if (fam.nationality.isNotEmpty) nationality.value = fam.nationality;
-        if (fam.city.isNotEmpty) city.value = fam.city;
+        cityEmirate.value = emirateFromStored(fam.city);
         childrenCtrl.text = '${fam.childrenCount}';
         childrenAgesCtrl.text = fam.childrenAges.join(', ');
         languages.value = List<String>.from(fam.languagesAtHome);
@@ -106,7 +106,8 @@ class FamilyProfileController extends GetxController {
         roles.value = List<String>.from(p.rolesNeeded);
         jobType.value = p.jobType;
         employmentType.value = p.employmentType;
-        scheduleCtrl.text = p.schedule;
+        daysOff.value = FamilyConstants.daysOffOptions.contains(p.daysOff) ? p.daysOff : '';
+        rolesOtherCtrl.text = p.rolesOther ?? '';
         duties.value = List<String>.from(p.duties);
         benefits.value = List<String>.from(p.benefits);
         salaryMinCtrl.text = '${p.salaryMin}';
@@ -148,23 +149,6 @@ class FamilyProfileController extends GetxController {
             : b);
   }
 
-  /// Auto-fills [city] from the device GPS location on first load, unless the
-  /// family already has a saved city. Requests location permission. No-op when
-  /// the Google Maps key is the placeholder (reverse geocoding unavailable).
-  Future<void> autoDetectCity() async {
-    if (city.value.trim().isNotEmpty) return;
-    if (!_location.hasMapsKey) return;
-    detectingCity.value = true;
-    try {
-      final detected = await _location.detectCurrentCity();
-      if (detected != null && city.value.trim().isEmpty) {
-        city.value = detected;
-      }
-    } finally {
-      detectingCity.value = false;
-    }
-  }
-
   @override
   void onClose() {
     fullNameCtrl.dispose();
@@ -172,7 +156,7 @@ class FamilyProfileController extends GetxController {
     childrenAgesCtrl.dispose();
     houseRulesCtrl.dispose();
     aboutFamilyCtrl.dispose();
-    scheduleCtrl.dispose();
+    rolesOtherCtrl.dispose();
     salaryMinCtrl.dispose();
     salaryMaxCtrl.dispose();
     trialRateCtrl.dispose();
@@ -204,7 +188,7 @@ class FamilyProfileController extends GetxController {
   String? validateFamily() {
     if (fullNameCtrl.text.trim().isEmpty) return AppStrings.familyNameRequired;
     if (nationality.value.trim().isEmpty) return AppStrings.familyNationalityRequired;
-    if (city.value.trim().isEmpty) return AppStrings.familyCityRequired;
+    if (cityEmirate.value == null) return AppStrings.familyCityRequired;
     final childText = childrenCtrl.text.trim();
     final parsedChildren = int.tryParse(childText);
     // A non-numeric entry previously parsed to 0 and silently skipped the ages
@@ -221,7 +205,10 @@ class FamilyProfileController extends GetxController {
     if (childCount > 0 && ages.isEmpty) return AppStrings.familyChildrenAgesRequired;
     if (languages.isEmpty) return AppStrings.familyLanguagesRequired;
     if (roles.isEmpty) return AppStrings.familyRolesRequired;
-    if (scheduleCtrl.text.trim().isEmpty) return AppStrings.familyScheduleRequired;
+    if (roles.contains('Other') && rolesOtherCtrl.text.trim().isEmpty) {
+      return AppStrings.familyRoleOtherRequired;
+    }
+    if (daysOff.value.trim().isEmpty) return AppStrings.familyDaysOffRequired;
     if (duties.isEmpty) return AppStrings.familyDutiesRequired;
     if (benefits.isEmpty) return AppStrings.familyBenefitsRequired;
     final salErr = Validators.salaryRange(
@@ -247,6 +234,7 @@ class FamilyProfileController extends GetxController {
       final user = _auth.currentUser.value;
       final fid = user?.id;
       if (fid == null) return false;
+      final cityLabel = cityEmirate.value != null ? emirateLabel(cityEmirate.value!) : '';
       final ages = childrenAgesCtrl.text
           .split(',')
           .map((e) => e.trim())
@@ -257,7 +245,7 @@ class FamilyProfileController extends GetxController {
         userId: user?.id ?? fid,
         fullName: fullNameCtrl.text.trim(),
         nationality: nationality.value,
-        city: city.value,
+        city: cityLabel,
         childrenCount: int.tryParse(childrenCtrl.text) ?? 0,
         childrenAges: ages,
         languagesAtHome: List.of(languages),
@@ -295,11 +283,12 @@ class FamilyProfileController extends GetxController {
         id: existingPostId ?? _uuid.v4(),
         familyId: fid,
         familyName: fam.fullName.split(' ').first,
-        city: city.value,
+        city: cityLabel,
         rolesNeeded: List.of(roles),
+        rolesOther: roles.contains('Other') ? rolesOtherCtrl.text.trim() : null,
         jobType: jobType.value,
         employmentType: employmentType.value,
-        schedule: scheduleCtrl.text.trim(),
+        daysOff: daysOff.value,
         duties: List.of(duties),
         benefits: List.of(benefits),
         salaryMin: int.tryParse(salaryMinCtrl.text) ?? 0,

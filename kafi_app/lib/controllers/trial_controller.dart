@@ -9,8 +9,8 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/models/dispute_model.dart';
-import 'package:kafi_app/models/hire_model.dart';
 import 'package:kafi_app/models/trial_model.dart';
+import 'package:kafi_app/models/trial_outcome_reasons.dart';
 import 'package:kafi_app/services/interfaces/i_application_service.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 import 'package:kafi_app/services/interfaces/i_dispute_service.dart';
@@ -20,7 +20,6 @@ import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
-import 'package:kafi_app/views/shared/rate_app_dialog.dart';
 import 'package:uuid/uuid.dart';
 
 class TrialController extends GetxController {
@@ -151,7 +150,9 @@ class TrialController extends GetxController {
       all.value = await _trials.listTrialsForNanny(nannyId);
       TrialModel? act;
       for (final t in all) {
-        if (t.isActive) {
+        // Includes awaitingOutcome — see FirestoreTrialService.activeTrial
+        // for why (mirrors the family-side query above).
+        if (t.isActive || t.isAwaitingOutcome) {
           act = t;
           break;
         }
@@ -530,72 +531,66 @@ class TrialController extends GetxController {
         honestyAndTrustworthiness: evalDraft['honestyAndTrustworthiness'] ?? false,
       );
 
-  Future<void> setOutcome(
-    TrialStatus s, {
-    TrialEvaluation? evaluation,
-    String? outcomeLabel,
+  /// Family's mutual-outcome response once the trial reaches
+  /// `awaitingOutcome` (§2.3 truth table). Writes only the family's own
+  /// side — hire-creation and the terminal `completed` status are resolved
+  /// server-side by `onTrialOutcomeResolved` once both parties have
+  /// responded, never decided on the client (see plan §1/§4.2).
+  Future<void> familyRecordOutcome({
+    required String outcome,
+    NotHiredReason? reason,
   }) async {
     final t = displayed;
     if (t == null) return;
-    await _trials.recordOutcome(t.id, s,
-        evaluation: evaluation, outcomeLabel: outcomeLabel);
-    // A "Hire" outcome turns the finished trial into an employment record so the
-    // family and nanny both see the ongoing hire (and the nanny's hiresCount
-    // ticks up server-side). Best-effort: a hire-write failure must not block
-    // the trial from being marked completed.
-    final isFamily = !(_auth.currentUser.value?.isNanny ?? false);
-    if (s == TrialStatus.completed && outcomeLabel == 'hired' && isFamily) {
-      await _createHireFromTrial(t);
-    }
-    // Retire the trial badge on the chat thread: once the trial is completed or
-    // cancelled it is no longer "active/accepted", so the chat list swaps the
-    // green trial pill for the hire badge (or nothing on a pass).
-    if (const {TrialStatus.completed, TrialStatus.cancelled, TrialStatus.declined}
-        .contains(s)) {
-      await _flipThreadTrialStatus(t, s.name);
-    }
-    selected.value = null;
-    await refreshAll();
-    // Invite the user to rate the app only after a POSITIVE outcome (a hire) —
-    // prompting right after a "Not this time" rejection is poor timing.
-    // (Throttled; no-ops if recently shown or already rated.)
-    if (s == TrialStatus.completed && outcomeLabel == 'hired') {
-      await RateAppPrompt.maybeShow();
+    isLoading.value = true;
+    try {
+      await _trials.setFamilyOutcome(
+        t.id,
+        outcome: outcome,
+        evaluation: buildEvaluation(),
+        notHiredReason: reason?.name,
+      );
+      // refreshAll() only recomputes `active`; a deep-linked `selected` (e.g.
+      // opened from chat's "View Trial") would otherwise keep showing the
+      // pre-response trial and the buttons could appear tappable again.
+      if (selected.value?.id == t.id) {
+        selected.value = await _trials.getTrial(t.id);
+      }
+      await refreshAll();
+      if (outcome == 'hired') {
+        final nannyName = nannyCards[t.nannyId]?.name ?? '';
+        Get.snackbar(
+          AppStrings.successTitle.tr,
+          AppStrings.trialFamilyWaitingSnackbar.trParams({'name': nannyName}),
+        );
+      }
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    } finally {
+      isLoading.value = false;
     }
   }
 
-  /// Creates the `hires/{id}` record for a hired trial and flips the matching
-  /// application to `hired` so the family's Applicants list shows the badge.
-  /// Every step is defensive — the trial is already completed, so a failure
-  /// here should surface a toast, never throw.
-  Future<void> _createHireFromTrial(TrialModel t) async {
+  /// Nanny's mutual-outcome response once the trial reaches
+  /// `awaitingOutcome`. Writes only the nanny's own side — see
+  /// [familyRecordOutcome]. The "waiting for the family" state is already
+  /// communicated by the screen's banner once `nannyConfirmedHire` is true
+  /// (§7), so no snackbar here — kept minimal per plan.
+  Future<void> nannyRecordOutcome(String outcome) async {
+    final t = displayed;
+    if (t == null) return;
+    isLoading.value = true;
     try {
-      final hire = HireModel(
-        id: 'hire_${t.id}',
-        familyId: t.familyId,
-        nannyId: t.nannyId,
-        jobPostId: t.jobPostId,
-        trialId: t.id,
-        employmentType: t.trialType,
-        status: HireStatus.active,
-        startedAt: DateTime.now(),
-        nannyName: nannyCards[t.nannyId]?.name,
-        familyName: _auth.currentUser.value?.fullName,
-      );
-      await _hires.createHire(hire);
+      await _trials.setNannyOutcome(t.id, outcome: outcome);
+      // See familyRecordOutcome — keeps a deep-linked `selected` in sync.
+      if (selected.value?.id == t.id) {
+        selected.value = await _trials.getTrial(t.id);
+      }
+      await refreshAll();
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
-    }
-    // Flip the application (if one exists) to hired — separate try so a missing
-    // application never undoes the hire.
-    try {
-      final apps = await _apps.getApplicationsForFamily(t.familyId);
-      final match = apps.firstWhereOrNull((a) =>
-          a.nannyId == t.nannyId &&
-          (t.jobPostId == null || a.jobPostId == t.jobPostId));
-      if (match != null) await _apps.markHired(match.id);
-    } catch (_) {
-      // No application to update (trial may have been offered directly) — fine.
+    } finally {
+      isLoading.value = false;
     }
   }
 
@@ -613,25 +608,6 @@ class TrialController extends GetxController {
       return activeHires + activeTrials >= 2;
     } catch (_) {
       return false;
-    }
-  }
-
-  /// Persists the terminal trial [status] onto the linked chat thread so the
-  /// chat list / conversation header stop showing the "on trial" badge once the
-  /// trial ends. Best-effort — a missing thread is fine.
-  Future<void> _flipThreadTrialStatus(TrialModel t, String status) async {
-    try {
-      final lookupUserId = currentUserId(_auth) ?? t.familyId;
-      final threads = await _chat.listThreads(lookupUserId);
-      final thread = threads.firstWhereOrNull(
-          (th) => th.familyId == t.familyId && th.nannyId == t.nannyId);
-      if (thread == null || (thread.trialId ?? '').isEmpty) return;
-      await _chat.linkTrialToThread(thread.id, thread.trialId!, trialStatus: status);
-      if (Get.isRegistered<ChatController>()) {
-        await Get.find<ChatController>().refreshThreads();
-      }
-    } catch (_) {
-      // Non-fatal — the badge will still retire on the next full thread refresh.
     }
   }
 

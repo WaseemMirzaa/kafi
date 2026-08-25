@@ -3,7 +3,19 @@ import 'package:kafi_app/utils/localized_text.dart';
 
 enum VisaStatus { visit, residenceSponsored, ownResidence, cancelled, outsideUae }
 
-enum Emirate { dubai, abuDhabi, sharjah, ajman, rak, fujairah, uaq, alAin }
+enum Emirate { dubai, abuDhabi, sharjah, ajman, rak, fujairah, uaq }
+
+extension EmirateX on Emirate {
+  String get label => switch (this) {
+        Emirate.dubai => 'Dubai',
+        Emirate.abuDhabi => 'Abu Dhabi',
+        Emirate.sharjah => 'Sharjah',
+        Emirate.ajman => 'Ajman',
+        Emirate.rak => 'Ras Al Khaimah',
+        Emirate.fujairah => 'Fujairah',
+        Emirate.uaq => 'Umm Al Quwain',
+      };
+}
 
 enum MaritalStatus { married, single, divorced, widowed }
 
@@ -19,46 +31,67 @@ enum AvailabilityStatus { availableNow, availableFrom, onTrial }
 /// Per System Spec §3.2
 enum JobTypePreference { liveIn, liveOut, both }
 
+/// Employment type the nanny is looking for (net-new — plan
+/// kafi-nanny-profile-fields §1.5). Multi-select on the profile.
+enum EmploymentType { fullTimeLiveIn, fullTimeLiveOut, partTime }
+
 class WorkExperience {
   WorkExperience({
     required this.id,
     required this.jobTitle,
     required this.employer,
-    required this.cityCountry,
+    required this.country,
+    required this.city,
     required this.fromDate,
     required this.toDate,
     required this.children,
     required this.duties,
     required this.reasonLeaving,
-    this.location,
   });
 
   final String id;
   final String jobTitle;
   final String employer;
-  final String cityCountry;
+  final String country;
+  final String city;
   final DateTime fromDate;
   final DateTime toDate;
   final String children;
   final String duties;
   final String reasonLeaving;
 
-  /// Structured city/country from the map picker (coords + address), when
-  /// available. `cityCountry` remains the display string.
-  final GeoLocation? location;
-
   Map<String, dynamic> toMap() => {
         'id': id,
         'jobTitle': jobTitle,
         'employer': employer,
-        'cityCountry': cityCountry,
+        'country': country,
+        'city': city,
         'fromDate': fromDate.toIso8601String(),
         'toDate': toDate.toIso8601String(),
         'children': children,
         'duties': duties,
         'reasonLeaving': reasonLeaving,
-        if (location != null) 'location': location!.toMap(),
       };
+}
+
+/// A single day's part-time availability window. [weekday] is 1–7 matching
+/// [DateTime.weekday] (Mon=1…Sun=7); [from]/[until] are 24h "HH:mm" strings.
+/// Net-new — plan kafi-nanny-profile-fields §1.5.
+class DayAvailability {
+  DayAvailability({required this.weekday, required this.from, required this.until});
+
+  final int weekday;
+  final String from;
+  final String until;
+
+  DayAvailability copyWith({int? weekday, String? from, String? until}) =>
+      DayAvailability(
+        weekday: weekday ?? this.weekday,
+        from: from ?? this.from,
+        until: until ?? this.until,
+      );
+
+  Map<String, dynamic> toMap() => {'weekday': weekday, 'from': from, 'until': until};
 }
 
 class ReferenceContact {
@@ -196,12 +229,14 @@ class NannyModel {
     this.workEmirates = const [],
     this.willingToRelocate = false,
     this.currentArea = '',
-    this.currentLocation,
+    this.currentEmirate,
     this.jobTypePreference = JobTypePreference.both,
     this.expectedSalaryMin = 0,
     this.expectedSalaryMax = 0,
     this.availability = AvailabilityStatus.availableNow,
     this.availableFrom,
+    this.employmentTypes = const [],
+    this.partTimeAvailability = const [],
     this.maritalStatus,
     this.hasChildren = false,
     this.childrenCount = 0,
@@ -222,10 +257,6 @@ class NannyModel {
     this.religion = '',
     this.religiousNotes = '',
     this.comfortableWithDifferentFaith = true,
-    this.emergencyName = '',
-    this.emergencyRelationship = '',
-    this.emergencyCountryCode = '+971',
-    this.emergencyPhone = '',
     this.bio = '',
     this.photoUrls = const [],
     this.introVideoUrl,
@@ -264,14 +295,22 @@ class NannyModel {
   final bool willingToRelocate;
   final String currentArea;
 
-  /// Structured current area / neighbourhood from the map picker (coords +
-  /// address + city + country). `currentArea` remains the display string.
-  final GeoLocation? currentLocation;
+  /// Canonical current-location value. [currentArea] is kept in sync as a
+  /// denormalized display label for out-of-scope readers (dashboard, browse
+  /// cards, admin panel) — see plan §1.3.
+  final Emirate? currentEmirate;
   final JobTypePreference jobTypePreference;
   final int expectedSalaryMin;
   final int expectedSalaryMax;
   final AvailabilityStatus availability;
   final DateTime? availableFrom;
+
+  /// Employment type(s) the nanny is looking for (multi-select, additive).
+  final List<EmploymentType> employmentTypes;
+
+  /// Day-by-day availability windows, populated only when [employmentTypes]
+  /// includes [EmploymentType.partTime].
+  final List<DayAvailability> partTimeAvailability;
   final MaritalStatus? maritalStatus;
   final bool hasChildren;
   final int childrenCount;
@@ -292,10 +331,6 @@ class NannyModel {
   final String religion;
   final String religiousNotes;
   final bool comfortableWithDifferentFaith;
-  final String emergencyName;
-  final String emergencyRelationship;
-  final String emergencyCountryCode;
-  final String emergencyPhone;
   final String bio;
   final List<String> photoUrls;
   final String? introVideoUrl;
@@ -420,12 +455,14 @@ class NannyModel {
     List<Emirate>? workEmirates,
     bool? willingToRelocate,
     String? currentArea,
-    GeoLocation? currentLocation,
+    Emirate? currentEmirate,
     JobTypePreference? jobTypePreference,
     int? expectedSalaryMin,
     int? expectedSalaryMax,
     AvailabilityStatus? availability,
     DateTime? availableFrom,
+    List<EmploymentType>? employmentTypes,
+    List<DayAvailability>? partTimeAvailability,
     MaritalStatus? maritalStatus,
     bool? hasChildren,
     int? childrenCount,
@@ -446,10 +483,6 @@ class NannyModel {
     String? religion,
     String? religiousNotes,
     bool? comfortableWithDifferentFaith,
-    String? emergencyName,
-    String? emergencyRelationship,
-    String? emergencyCountryCode,
-    String? emergencyPhone,
     String? bio,
     List<String>? photoUrls,
     String? introVideoUrl,
@@ -487,12 +520,14 @@ class NannyModel {
         workEmirates: workEmirates ?? this.workEmirates,
         willingToRelocate: willingToRelocate ?? this.willingToRelocate,
         currentArea: currentArea ?? this.currentArea,
-        currentLocation: currentLocation ?? this.currentLocation,
+        currentEmirate: currentEmirate ?? this.currentEmirate,
         jobTypePreference: jobTypePreference ?? this.jobTypePreference,
         expectedSalaryMin: expectedSalaryMin ?? this.expectedSalaryMin,
         expectedSalaryMax: expectedSalaryMax ?? this.expectedSalaryMax,
         availability: availability ?? this.availability,
         availableFrom: availableFrom ?? this.availableFrom,
+        employmentTypes: employmentTypes ?? this.employmentTypes,
+        partTimeAvailability: partTimeAvailability ?? this.partTimeAvailability,
         maritalStatus: maritalStatus ?? this.maritalStatus,
         hasChildren: hasChildren ?? this.hasChildren,
         childrenCount: childrenCount ?? this.childrenCount,
@@ -513,10 +548,6 @@ class NannyModel {
         religion: religion ?? this.religion,
         religiousNotes: religiousNotes ?? this.religiousNotes,
         comfortableWithDifferentFaith: comfortableWithDifferentFaith ?? this.comfortableWithDifferentFaith,
-        emergencyName: emergencyName ?? this.emergencyName,
-        emergencyRelationship: emergencyRelationship ?? this.emergencyRelationship,
-        emergencyCountryCode: emergencyCountryCode ?? this.emergencyCountryCode,
-        emergencyPhone: emergencyPhone ?? this.emergencyPhone,
         bio: bio ?? this.bio,
         photoUrls: photoUrls ?? this.photoUrls,
         introVideoUrl: introVideoUrl ?? this.introVideoUrl,
@@ -556,12 +587,14 @@ class NannyModel {
         'workEmirates': workEmirates.map((e) => e.name).toList(),
         'willingToRelocate': willingToRelocate,
         'currentArea': currentArea,
-        if (currentLocation != null) 'currentLocation': currentLocation!.toMap(),
+        'currentEmirate': currentEmirate?.name,
         'jobTypePreference': jobTypePreference.name,
         'expectedSalaryMin': expectedSalaryMin,
         'expectedSalaryMax': expectedSalaryMax,
         'availability': availability.name,
         'availableFrom': availableFrom?.toIso8601String(),
+        'employmentTypes': employmentTypes.map((e) => e.name).toList(),
+        'partTimeAvailability': partTimeAvailability.map((d) => d.toMap()).toList(),
         'maritalStatus': maritalStatus?.name,
         'hasChildren': hasChildren,
         'childrenCount': childrenCount,
@@ -582,10 +615,6 @@ class NannyModel {
         'religion': religion,
         'religiousNotes': religiousNotes,
         'comfortableWithDifferentFaith': comfortableWithDifferentFaith,
-        'emergencyName': emergencyName,
-        'emergencyRelationship': emergencyRelationship,
-        'emergencyCountryCode': emergencyCountryCode,
-        'emergencyPhone': emergencyPhone,
         'bio': bio,
         'photoUrls': photoUrls,
         'introVideoUrl': introVideoUrl,

@@ -33,9 +33,10 @@ class MockTrialService implements ITrialService {
 
   @override
   Future<TrialModel?> activeTrial(String familyId) async {
+    // Includes awaitingOutcome — see FirestoreTrialService.activeTrial for why.
     final list = await listTrials(familyId);
     try {
-      return list.firstWhere((t) => t.isActive);
+      return list.firstWhere((t) => t.isActive || t.isAwaitingOutcome);
     } catch (_) {
       return null;
     }
@@ -129,6 +130,35 @@ class MockTrialService implements ITrialService {
       outcomeAt: DateTime.now(),
       evaluation: evaluation ?? t.evaluation,
       completedAt: outcome == TrialStatus.completed ? DateTime.now() : t.completedAt,
+    );
+  }
+
+  @override
+  Future<void> setFamilyOutcome(
+    String trialId, {
+    required String outcome,
+    TrialEvaluation? evaluation,
+    String? notHiredReason,
+  }) async {
+    await Future<void>.delayed(AppConfig.mockDelay);
+    final t = _trials[trialId];
+    if (t == null) return;
+    _trials[trialId] = t.copyWith(
+      familyOutcome: outcome,
+      familyOutcomeAt: DateTime.now(),
+      evaluation: evaluation ?? t.evaluation,
+      notHiredReason: notHiredReason ?? t.notHiredReason,
+    );
+  }
+
+  @override
+  Future<void> setNannyOutcome(String trialId, {required String outcome}) async {
+    await Future<void>.delayed(AppConfig.mockDelay);
+    final t = _trials[trialId];
+    if (t == null) return;
+    _trials[trialId] = t.copyWith(
+      nannyOutcome: outcome,
+      nannyOutcomeAt: DateTime.now(),
     );
   }
 

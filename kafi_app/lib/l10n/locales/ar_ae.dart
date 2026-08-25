@@ -424,12 +424,15 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.nannyReligiousPractices: 'الممارسات الدينية (اختياري)',
 
     // Family onboarding — required-field messages (System Spec §3.3 / §3.4 / §14.4)
+    AppStrings.familyCityRequired: 'يرجى اختيار الإمارة.',
     AppStrings.familyNationalityRequired: 'الرجاء اختيار جنسيتك.',
     AppStrings.familyChildrenAgesRequired: 'الرجاء إدخال أعمار أطفالك.',
     AppStrings.familyChildrenInvalid: 'أدخل عدداً صحيحاً للأطفال.',
     AppStrings.familyLanguagesRequired: 'الرجاء اختيار لغة منزلية واحدة على الأقل.',
     AppStrings.familyRolesRequired: 'الرجاء اختيار دور واحد على الأقل تحتاجه.',
+    AppStrings.familyRoleOtherRequired: 'يرجى تحديد الدور الذي تبحث عنه.',
     AppStrings.familyScheduleRequired: 'الرجاء وصف جدول العمل.',
+    AppStrings.familyDaysOffRequired: 'يرجى اختيار عدد أيام الإجازة التي ستوفرها.',
     AppStrings.familyDutiesRequired: 'الرجاء اختيار مهمة واحدة على الأقل.',
     AppStrings.familyBenefitsRequired: 'الرجاء اختيار ميزة واحدة على الأقل تقدمها.',
     AppStrings.familyTrialDaysRequired: 'الرجاء اختيار مدة التجربة.',
@@ -442,6 +445,34 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.nannyAvailableFrom: 'من تاريخ محدد',
     AppStrings.nannyAvailableFromDate: 'متاحة اعتباراً من',
     AppStrings.nannyAvailableFromRequired: 'الرجاء اختيار تاريخ البدء.',
+
+    // Nanny onboarding — current emirate (kafi-nanny-profile-fields)
+    AppStrings.nannyCurrentEmirateLabel: 'في أي إمارة تقيمين حاليًا؟',
+    AppStrings.nannyAnyEmirate: 'أي إمارة',
+
+    // Nanny onboarding — employment type + part-time availability
+    AppStrings.nannySecEmployment: 'نوع التوظيف',
+    AppStrings.nannyEmploymentQuestion: 'ما نوع العمل الذي تبحثين عنه؟',
+    AppStrings.nannyEmpFullLiveIn: 'دوام كامل — إقامة داخلية',
+    AppStrings.nannyEmpFullLiveOut: 'دوام كامل — إقامة خارجية',
+    AppStrings.nannyEmpPartTime: 'دوام جزئي',
+    AppStrings.nannyEmploymentTypeRequired: 'الرجاء اختيار نوع وظيفة واحد على الأقل.',
+    AppStrings.nannyPartTimeQuestion: 'ما الأيام التي تكونين متاحة فيها؟',
+    AppStrings.nannyPartTimeFrom: 'متاحة من',
+    AppStrings.nannyPartTimeUntil: 'متاحة حتى',
+    AppStrings.nannyPartTimeAvailabilityRequired:
+        'أضيفي يومًا واحدًا على الأقل مع تحديد وقتي البداية والنهاية.',
+    AppStrings.dayMon: 'إثنين',
+    AppStrings.dayTue: 'ثلاثاء',
+    AppStrings.dayWed: 'أربعاء',
+    AppStrings.dayThu: 'خميس',
+    AppStrings.dayFri: 'جمعة',
+    AppStrings.daySat: 'سبت',
+    AppStrings.daySun: 'أحد',
+
+    // Work experience — country + city (kafi-nanny-profile-fields)
+    AppStrings.expCountry: 'الدولة',
+    AppStrings.expCity: 'المدينة أو المنطقة',
 
     // Location picker
     AppStrings.locationChange: 'تغيير',
@@ -462,11 +493,15 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.docTooLarge: 'حجم الملف كبير جدًا. يرجى اختيار ملف أقل من 25 ميغابايت.',
 
     // Family job — employment type + edit fields
+    AppStrings.fldSelectEmirate: 'اختر الإمارة',
     AppStrings.fldEmployment: 'نوع التوظيف',
     AppStrings.employmentFullTime: 'دوام كامل',
     AppStrings.employmentPartTime: 'دوام جزئي',
     AppStrings.familyJobTypeLimit: 'لديك بالفعل وظيفة نشطة من هذا النوع. أغلقها أو أعد نشرها أولاً.',
     AppStrings.fldSchedule: 'جدول العمل',
+    AppStrings.fldRolePrompt: 'ما نوع المساعدة التي تبحث عنها؟',
+    AppStrings.fldRoleOther: 'يرجى تحديد الدور الذي تبحث عنه',
+    AppStrings.fldDaysOff: 'كم يوم إجازة ستوفر كل أسبوع؟',
     AppStrings.fldAboutFamily: 'عن عائلتك',
     AppStrings.fldHouseRules: 'قواعد المنزل (اختياري)',
 
@@ -549,6 +584,36 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.trialReportIssueTitle: 'الإبلاغ عن مشكلة في الدفع',
     AppStrings.trialReportIssueHint: 'صف المشكلة…',
     AppStrings.trialSendReport: 'إرسال البلاغ',
+
+    // Trial outcome — mutual hire confirmation
+    AppStrings.trialAwaitingResponseLabel: 'انتهت التجربة — بانتظار ردك',
+    AppStrings.trialOutcomePromptFamily: 'كيف سارت التجربة؟',
+    AppStrings.trialFamilyHireAction: 'قمنا بتوظيفها',
+    AppStrings.trialKeepSearchingAction: 'متابعة البحث',
+    AppStrings.trialFamilyWaitingSnackbar: 'بانتظار تأكيد @name',
+    AppStrings.trialWaitingForNannyBanner: 'ننتظر تأكيد @name.',
+    AppStrings.trialReasonSkip: 'تخطي',
+    AppStrings.notHiredReasonNotRightMatch: 'لم تكن الشخص المناسب',
+    AppStrings.notHiredReasonSalary: 'لم نتفق على الراتب',
+    AppStrings.notHiredReasonSchedule: 'الجدول الزمني لم يناسبنا',
+    AppStrings.notHiredReasonLocation: 'الموقع لم يكن مناسبًا',
+    AppStrings.notHiredReasonNannyDeclined: 'قررت المربية عدم الاستمرار',
+    AppStrings.notHiredReasonFoundSomeoneElse: 'وجدنا شخصًا آخر',
+    AppStrings.notHiredReasonOther: 'أخرى',
+    AppStrings.trialOutcomePromptNanny: 'ماذا حدث بعد التجربة؟',
+    AppStrings.trialNannyGotJobAction: 'حصلت على الوظيفة',
+    AppStrings.trialNannyStillLookingAction: 'ما زلت أبحث',
+    AppStrings.trialNannyWaitingBanner: 'رائع! ننتظر تأكيد العائلة.',
+
+    // Hire reactivation — nanny makes her profile available again
+    AppStrings.reactivationCardTitle: 'تبحثين عن عمل مجددًا؟',
+    AppStrings.reactivationCardCta: 'إتاحة ملفي الشخصي',
+    AppStrings.reactivationReasonJobDidntWorkOut: 'لم تنجح الوظيفة',
+    AppStrings.reactivationReasonFamilyEnded: 'أنهت العائلة عملي',
+    AppStrings.reactivationReasonIDecidedToLeave: 'قررت المغادرة',
+    AppStrings.reactivationReasonTemporaryEnded: 'كانت وظيفة مؤقتة وانتهت',
+    AppStrings.reactivationReasonOther: 'أخرى',
+    AppStrings.reactivationReasonPreferNotToSay: 'أفضل عدم القول',
 
     // Snackbars
     AppStrings.jobPostedToast: 'تم نشر الوظيفة!',

@@ -1,7 +1,19 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-/// Per System Spec §3.6
-enum TrialStatus { pending, countered, accepted, declined, active, completed, cancelled }
+/// Per System Spec §3.6. `awaitingOutcome` = execution window closed
+/// (`endDate` passed), the mutual hired/notHired outcome not yet resolved —
+/// inserted between `active` and `completed` for readability; position
+/// doesn't affect the `.name`-based persistence/`orElse` fallback below.
+enum TrialStatus {
+  pending,
+  countered,
+  accepted,
+  declined,
+  active,
+  awaitingOutcome,
+  completed,
+  cancelled,
+}
 
 DateTime? _parseDate(dynamic v) {
   if (v == null) return null;
@@ -128,6 +140,13 @@ class TrialModel {
     this.outcomeAt,
     this.nannyConfirmedPayment = false,
     this.paymentIssueReported = false,
+    this.familyOutcome,
+    this.familyOutcomeAt,
+    this.notHiredReason,
+    this.nannyOutcome,
+    this.nannyOutcomeAt,
+    this.outcomePromptSent = false,
+    this.endReachedAt,
   })  : endDate = endDate ?? startDate.add(Duration(days: durationDays)),
         offeredAt = offeredAt ?? DateTime.now();
 
@@ -155,6 +174,23 @@ class TrialModel {
   final bool nannyConfirmedPayment;
   final bool paymentIssueReported;
 
+  /// null | 'hired' | 'notHired' — the family's mutual-outcome response.
+  final String? familyOutcome;
+  final DateTime? familyOutcomeAt;
+
+  /// One of [NotHiredReason].name, set only when the family declines to hire.
+  final String? notHiredReason;
+
+  /// null | 'hired' | 'notHired' — the nanny's mutual-outcome response.
+  final String? nannyOutcome;
+  final DateTime? nannyOutcomeAt;
+
+  /// Scheduled-function idempotency flag — mirrors `trials.reminderSent`.
+  final bool outcomePromptSent;
+
+  /// When the scheduled detector flipped active → awaitingOutcome.
+  final DateTime? endReachedAt;
+
   /// Only TRUE when trial is in execution phase (after start date reached, before end).
   bool get isActive => status == TrialStatus.active;
 
@@ -163,6 +199,14 @@ class TrialModel {
 
   /// Counts both accepted (pre-start) and active (running) — used to lock new trial offers.
   bool get isAcceptedOrActive => status == TrialStatus.accepted || status == TrialStatus.active;
+
+  /// Execution window closed; waiting on the mutual hired/notHired resolution.
+  bool get isAwaitingOutcome => status == TrialStatus.awaitingOutcome;
+
+  bool get familyConfirmedHire => familyOutcome == 'hired';
+  bool get nannyConfirmedHire => nannyOutcome == 'hired';
+  bool get familyDeclinedHire => familyOutcome == 'notHired';
+  bool get nannyDeclinedHire => nannyOutcome == 'notHired';
 
   Duration get remaining => endDate.difference(DateTime.now());
 
@@ -179,6 +223,13 @@ class TrialModel {
     DateTime? outcomeAt,
     bool? nannyConfirmedPayment,
     bool? paymentIssueReported,
+    String? familyOutcome,
+    DateTime? familyOutcomeAt,
+    String? notHiredReason,
+    String? nannyOutcome,
+    DateTime? nannyOutcomeAt,
+    bool? outcomePromptSent,
+    DateTime? endReachedAt,
   }) =>
       TrialModel(
         id: id,
@@ -204,6 +255,13 @@ class TrialModel {
         outcomeAt: outcomeAt ?? this.outcomeAt,
         nannyConfirmedPayment: nannyConfirmedPayment ?? this.nannyConfirmedPayment,
         paymentIssueReported: paymentIssueReported ?? this.paymentIssueReported,
+        familyOutcome: familyOutcome ?? this.familyOutcome,
+        familyOutcomeAt: familyOutcomeAt ?? this.familyOutcomeAt,
+        notHiredReason: notHiredReason ?? this.notHiredReason,
+        nannyOutcome: nannyOutcome ?? this.nannyOutcome,
+        nannyOutcomeAt: nannyOutcomeAt ?? this.nannyOutcomeAt,
+        outcomePromptSent: outcomePromptSent ?? this.outcomePromptSent,
+        endReachedAt: endReachedAt ?? this.endReachedAt,
       );
 
   Map<String, dynamic> toMap() => {
@@ -230,6 +288,13 @@ class TrialModel {
         'outcomeAt': outcomeAt?.toIso8601String(),
         'nannyConfirmedPayment': nannyConfirmedPayment,
         'paymentIssueReported': paymentIssueReported,
+        'familyOutcome': familyOutcome,
+        'familyOutcomeAt': familyOutcomeAt?.toIso8601String(),
+        'notHiredReason': notHiredReason,
+        'nannyOutcome': nannyOutcome,
+        'nannyOutcomeAt': nannyOutcomeAt?.toIso8601String(),
+        'outcomePromptSent': outcomePromptSent,
+        'endReachedAt': endReachedAt?.toIso8601String(),
       };
 
   /// Tolerates Firestore Timestamps and partial payloads. Use everywhere a
@@ -286,6 +351,13 @@ class TrialModel {
       outcomeAt: _parseDate(m['outcomeAt']),
       nannyConfirmedPayment: m['nannyConfirmedPayment'] == true,
       paymentIssueReported: m['paymentIssueReported'] == true,
+      familyOutcome: m['familyOutcome']?.toString(),
+      familyOutcomeAt: _parseDate(m['familyOutcomeAt']),
+      notHiredReason: m['notHiredReason']?.toString(),
+      nannyOutcome: m['nannyOutcome']?.toString(),
+      nannyOutcomeAt: _parseDate(m['nannyOutcomeAt']),
+      outcomePromptSent: m['outcomePromptSent'] == true,
+      endReachedAt: _parseDate(m['endReachedAt']),
     );
   }
 }

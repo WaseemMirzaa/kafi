@@ -153,8 +153,11 @@ abstract class AppStrings {
   static const fldTransferVisa = 'fld_transfer_visa';
   static const fldEmirates = 'fld_emirates';
   static const fldRelocate = 'fld_relocate';
+  static const nannyCurrentEmirateLabel = 'nanny_current_emirate_label';
+  static const nannyAnyEmirate = 'nanny_any_emirate';
   static const fldCurrentArea = 'fld_current_area';
   static const fldCity = 'fld_city';
+  static const fldSelectEmirate = 'fld_select_emirate';
   static const fldMarital = 'fld_marital';
   static const fldChildren = 'fld_children';
   static const fldChildrenCount = 'fld_children_count';
@@ -204,6 +207,8 @@ abstract class AppStrings {
   static const expJobTitle = 'exp_job_title';
   static const expEmployer = 'exp_employer';
   static const expCityCountry = 'exp_city_country';
+  static const expCountry = 'exp_country';
+  static const expCity = 'exp_city';
   static const expFrom = 'exp_from';
   static const expTo = 'exp_to';
   static const expChildren = 'exp_children';
@@ -655,6 +660,36 @@ abstract class AppStrings {
   static const trialReportIssueHint = 'trial_report_issue_hint';
   static const trialSendReport = 'trial_send_report';
 
+  // Trial outcome — mutual hire confirmation (awaitingOutcome)
+  static const trialAwaitingResponseLabel = 'trial_awaiting_response_label';
+  static const trialOutcomePromptFamily = 'trial_outcome_prompt_family';
+  static const trialFamilyHireAction = 'trial_family_hire_action';
+  static const trialKeepSearchingAction = 'trial_keep_searching_action';
+  static const trialFamilyWaitingSnackbar = 'trial_family_waiting_snackbar';
+  static const trialWaitingForNannyBanner = 'trial_waiting_for_nanny_banner';
+  static const trialReasonSkip = 'trial_reason_skip';
+  static const notHiredReasonNotRightMatch = 'not_hired_reason_not_right_match';
+  static const notHiredReasonSalary = 'not_hired_reason_salary';
+  static const notHiredReasonSchedule = 'not_hired_reason_schedule';
+  static const notHiredReasonLocation = 'not_hired_reason_location';
+  static const notHiredReasonNannyDeclined = 'not_hired_reason_nanny_declined';
+  static const notHiredReasonFoundSomeoneElse = 'not_hired_reason_found_someone_else';
+  static const notHiredReasonOther = 'not_hired_reason_other';
+  static const trialOutcomePromptNanny = 'trial_outcome_prompt_nanny';
+  static const trialNannyGotJobAction = 'trial_nanny_got_job_action';
+  static const trialNannyStillLookingAction = 'trial_nanny_still_looking_action';
+  static const trialNannyWaitingBanner = 'trial_nanny_waiting_banner';
+
+  // Hire reactivation — nanny makes her profile available again
+  static const reactivationCardTitle = 'reactivation_card_title';
+  static const reactivationCardCta = 'reactivation_card_cta';
+  static const reactivationReasonJobDidntWorkOut = 'reactivation_reason_job_didnt_work_out';
+  static const reactivationReasonFamilyEnded = 'reactivation_reason_family_ended';
+  static const reactivationReasonIDecidedToLeave = 'reactivation_reason_i_decided_to_leave';
+  static const reactivationReasonTemporaryEnded = 'reactivation_reason_temporary_ended';
+  static const reactivationReasonOther = 'reactivation_reason_other';
+  static const reactivationReasonPreferNotToSay = 'reactivation_reason_prefer_not_to_say';
+
   // Pricing
   static const pricingTitle = 'pricing_title';
   static const pricingFreeBanner = 'pricing_free_banner';
@@ -940,7 +975,9 @@ abstract class AppStrings {
   static const familyChildrenInvalid = 'family_children_invalid';
   static const familyLanguagesRequired = 'family_languages_required';
   static const familyRolesRequired = 'family_roles_required';
+  static const familyRoleOtherRequired = 'family_role_other_required';
   static const familyScheduleRequired = 'family_schedule_required';
+  static const familyDaysOffRequired = 'family_days_off_required';
   static const familyDutiesRequired = 'family_duties_required';
   static const familyBenefitsRequired = 'family_benefits_required';
   static const familyTrialDaysRequired = 'family_trial_days_required';
@@ -953,6 +990,25 @@ abstract class AppStrings {
   static const nannyAvailableFrom = 'nanny_available_from';
   static const nannyAvailableFromDate = 'nanny_available_from_date';
   static const nannyAvailableFromRequired = 'nanny_available_from_required';
+
+  // Nanny onboarding — employment type + part-time availability
+  static const nannySecEmployment = 'nanny_sec_employment';
+  static const nannyEmploymentQuestion = 'nanny_employment_question';
+  static const nannyEmpFullLiveIn = 'nanny_emp_full_live_in';
+  static const nannyEmpFullLiveOut = 'nanny_emp_full_live_out';
+  static const nannyEmpPartTime = 'nanny_emp_part_time';
+  static const nannyEmploymentTypeRequired = 'nanny_employment_type_required';
+  static const nannyPartTimeQuestion = 'nanny_part_time_question';
+  static const nannyPartTimeFrom = 'nanny_part_time_from';
+  static const nannyPartTimeUntil = 'nanny_part_time_until';
+  static const nannyPartTimeAvailabilityRequired = 'nanny_part_time_availability_required';
+  static const dayMon = 'day_mon';
+  static const dayTue = 'day_tue';
+  static const dayWed = 'day_wed';
+  static const dayThu = 'day_thu';
+  static const dayFri = 'day_fri';
+  static const daySat = 'day_sat';
+  static const daySun = 'day_sun';
 
   // Location picker
   static const locationChange = 'location_change';
@@ -978,6 +1034,9 @@ abstract class AppStrings {
   static const employmentPartTime = 'employment_part_time';
   static const familyJobTypeLimit = 'family_job_type_limit';
   static const fldSchedule = 'fld_schedule';
+  static const fldRolePrompt = 'fld_role_prompt';
+  static const fldRoleOther = 'fld_role_other';
+  static const fldDaysOff = 'fld_days_off';
   static const fldAboutFamily = 'fld_about_family';
   static const fldHouseRules = 'fld_house_rules';
 

@@ -8,8 +8,8 @@ import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/family/family_household_fields.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/family_job_selectors.dart';
 import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
-import 'package:kafi_app/views/widgets/kafi_location_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_section.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
@@ -124,16 +124,11 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
             keyboardType: TextInputType.number,
             purple: true,
           ),
-          Text(AppStrings.fldCity.tr,
+          Text(AppStrings.fldSelectEmirate.tr,
               style: KafiTheme.nunito(9,
                   color: const Color(0xFF5A2090), w: FontWeight.w800)),
           const SizedBox(height: 4),
-          Obx(
-            () => KafiLocationPicker(
-              initialValue: controller.city.value,
-              onChanged: (v) => controller.city.value = v,
-            ),
-          ),
+          FamilyEmirateSelector(controller),
           const SizedBox(height: 4),
           Text(AppStrings.fldHomeLanguages.tr,
               style: KafiTheme.nunito(9,
@@ -184,22 +179,11 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
         icon: Icons.work_outline,
         accent: KafiSectionAccent.purple,
         children: [
-          Obx(
-            () => Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: FamilyConstants.roles
-                  .map(
-                    (r) => KafiChip(
-                      label: r,
-                      purple: true,
-                      selected: controller.roles.contains(r),
-                      onTap: () => controller.toggle(controller.roles, r),
-                    ),
-                  )
-                  .toList(),
-            ),
-          ),
+          Text(AppStrings.fldRolePrompt.tr,
+              style: KafiTheme.nunito(9,
+                  color: const Color(0xFF5A2090), w: FontWeight.w800)),
+          const SizedBox(height: 4),
+          FamilyRoleSelector(controller),
           const SizedBox(height: 8),
           Text(AppStrings.fldJobType.tr,
               style: KafiTheme.nunito(9,
@@ -259,12 +243,12 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
               ],
             ),
           ),
-          const SizedBox(height: 6),
-          KafiTextField(
-            label: AppStrings.fldSchedule.tr,
-            controller: controller.scheduleCtrl,
-            purple: true,
-          ),
+          const SizedBox(height: 8),
+          Text(AppStrings.fldDaysOff.tr,
+              style: KafiTheme.nunito(9,
+                  color: const Color(0xFF5A2090), w: FontWeight.w800)),
+          const SizedBox(height: 4),
+          FamilyDaysOffSelector(controller),
         ],
       );
 
