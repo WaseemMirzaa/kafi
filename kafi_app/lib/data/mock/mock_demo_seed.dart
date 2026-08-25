@@ -26,8 +26,18 @@ class MockDemoIds {
   static const trialNannyOffer = 'tr_nanny_offer';
 }
 
+/// Photo galleries for the mock browse cards — deterministic per-nanny seeded
+/// placeholders so the profile-detail gallery/full-size viewer has something
+/// real to render in demo mode (mirrors the mock.kafi convention used for
+/// [NannyCardModel.introVideoUrl], but photos need to actually decode for a
+/// meaningful design QA pass, so these use picsum.photos rather than an
+/// unresolvable fake domain).
+List<String> _mockPhotos(String seed, int count) => List.generate(
+    count, (i) => 'https://picsum.photos/seed/$seed$i/600/800');
+
 /// Browse cards — varied match %, tags, availability (HTML browse feed).
-const mockNannyCards = <NannyCardModel>[
+/// Not `const`: several entries build their photo list via [_mockPhotos].
+final mockNannyCards = <NannyCardModel>[
   NannyCardModel(
     id: 'n1',
     initials: 'S',
@@ -42,6 +52,24 @@ const mockNannyCards = <NannyCardModel>[
     featured: true,
     verified: true,
     introVideoUrl: 'https://mock.kafi/v/sarah_intro.mp4',
+    age: 29,
+    photoUrls: [
+      'https://picsum.photos/seed/sarah0/600/800',
+      'https://picsum.photos/seed/sarah1/600/800',
+      'https://picsum.photos/seed/sarah2/600/800',
+      'https://picsum.photos/seed/sarah3/600/800',
+      'https://picsum.photos/seed/sarah4/600/800',
+    ],
+    bio: 'I am a caring, patient and responsible nanny with over 5 years of '
+        'experience in the UAE. I love working with children and supporting '
+        'their growth in a safe and nurturing environment.',
+    expectedSalaryMin: 3500,
+    expectedSalaryMax: 4200,
+    comfortableWithCameras: true,
+    comfortableWithPets: true,
+    handledChildrenNote: 'Newborns to 8 years',
+    workEmirateLabels: ['Dubai', 'Sharjah'],
+    hasReferences: true,
   ),
   NannyCardModel(
     id: 'n2',
@@ -54,6 +82,16 @@ const mockNannyCards = <NannyCardModel>[
     matchPercent: 82,
     tags: ['Hindi', 'English', 'Toddler'],
     verified: true,
+    age: 27,
+    photoUrls: _mockPhotos('priya', 4),
+    bio: 'Warm and energetic nanny who loves toddlers. Experienced with '
+        'potty training, meal prep and after-school routines.',
+    expectedSalaryMin: 3000,
+    expectedSalaryMax: 3600,
+    comfortableWithPets: true,
+    handledChildrenNote: '1–4 years',
+    workEmirateLabels: ['Abu Dhabi', 'Dubai'],
+    hasReferences: true,
   ),
   NannyCardModel(
     id: 'n3',
@@ -66,6 +104,16 @@ const mockNannyCards = <NannyCardModel>[
     matchPercent: 88,
     tags: ['Arabic', 'Amharic'],
     verified: true,
+    age: 31,
+    photoUrls: _mockPhotos('amara', 5),
+    bio: 'Dedicated live-in nanny fluent in Arabic, comfortable with '
+        'newborns and happy to help with light housekeeping.',
+    expectedSalaryMin: 2800,
+    expectedSalaryMax: 3400,
+    comfortableWithCameras: true,
+    handledChildrenNote: 'Newborns to 6 years',
+    workEmirateLabels: ['Sharjah', 'Ajman'],
+    hasReferences: true,
   ),
   NannyCardModel(
     id: 'n4',
@@ -78,6 +126,17 @@ const mockNannyCards = <NannyCardModel>[
     matchPercent: 71,
     tags: ['English', 'French'],
     verified: true,
+    age: 34,
+    photoUrls: _mockPhotos('grace', 4),
+    bio: 'Six years of live-in experience across two GCC families. Calm, '
+        'structured, and great with school-age routines.',
+    expectedSalaryMin: 3800,
+    expectedSalaryMax: 4500,
+    comfortableWithCameras: true,
+    comfortableWithPets: true,
+    handledChildrenNote: '3–10 years',
+    workEmirateLabels: ['Dubai'],
+    hasReferences: true,
   ),
   NannyCardModel(
     id: 'n5',
@@ -89,6 +148,13 @@ const mockNannyCards = <NannyCardModel>[
     city: 'Dubai',
     matchPercent: 65,
     tags: ['English', 'Tagalog'],
+    age: 25,
+    photoUrls: _mockPhotos('maria', 3),
+    bio: 'Early-career nanny, energetic and reliable, looking to grow with '
+        'a long-term family in Dubai.',
+    expectedSalaryMin: 2600,
+    expectedSalaryMax: 3000,
+    workEmirateLabels: ['Dubai'],
   ),
   NannyCardModel(
     id: 'n6',
@@ -102,6 +168,17 @@ const mockNannyCards = <NannyCardModel>[
     tags: ['Arabic', 'English', 'Cooking'],
     verified: true,
     featured: true,
+    age: 36,
+    photoUrls: _mockPhotos('nadia', 5),
+    bio: 'Native Arabic speaker who also cooks — seven years caring for '
+        'families across Abu Dhabi with a focus on home-cooked meals.',
+    expectedSalaryMin: 4000,
+    expectedSalaryMax: 4800,
+    comfortableWithCameras: true,
+    comfortableWithPets: true,
+    handledChildrenNote: 'Newborns to 12 years',
+    workEmirateLabels: ['Abu Dhabi', 'Dubai'],
+    hasReferences: true,
   ),
   NannyCardModel(
     id: 'n7',
@@ -114,6 +191,15 @@ const mockNannyCards = <NannyCardModel>[
     matchPercent: 78,
     tags: ['English', 'Infant care'],
     availableNow: true,
+    age: 30,
+    photoUrls: _mockPhotos('rosa', 4),
+    bio: 'Infant-care specialist with a gentle, patient approach — happy to '
+        'support night feeds and newborn routines.',
+    expectedSalaryMin: 2900,
+    expectedSalaryMax: 3500,
+    handledChildrenNote: 'Newborns to 2 years',
+    workEmirateLabels: ['Ajman', 'Sharjah'],
+    hasReferences: true,
   ),
   NannyCardModel(
     id: 'n8',
@@ -127,6 +213,17 @@ const mockNannyCards = <NannyCardModel>[
     tags: ['English', 'Hindi', 'Newborn', 'First aid'],
     verified: true,
     availableNow: true,
+    age: 38,
+    photoUrls: _mockPhotos('kavitha', 5),
+    bio: 'First-aid certified with eight years of newborn and multi-child '
+        'household experience across the UAE.',
+    expectedSalaryMin: 4200,
+    expectedSalaryMax: 5000,
+    comfortableWithCameras: true,
+    comfortableWithPets: true,
+    handledChildrenNote: 'Newborns to 9 years',
+    workEmirateLabels: ['Dubai', 'Abu Dhabi', 'Sharjah'],
+    hasReferences: true,
   ),
 ];
 

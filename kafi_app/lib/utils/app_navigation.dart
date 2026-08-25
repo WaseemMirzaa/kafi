@@ -192,6 +192,24 @@ class AppNavigation {
     );
   }
 
+  /// Opens the full-size, pinch-to-zoom photo viewer for a nanny's profile
+  /// gallery, starting at [initialIndex] (the thumbnail that was tapped).
+  static void openNannyPhotoViewer({
+    required List<String> photoUrls,
+    int initialIndex = 0,
+    String? nannyName,
+  }) {
+    if (photoUrls.isEmpty) return;
+    Get.toNamed(
+      Routes.nannyPhotoViewer,
+      arguments: <String, dynamic>{
+        'photoUrls': photoUrls,
+        'initialIndex': initialIndex,
+        if (nannyName != null && nannyName.isNotEmpty) 'nannyName': nannyName,
+      },
+    );
+  }
+
   static void familyGoToTab(int index) {
     // Notifications / deep links must not open Browse while the first job is due.
     if (_familyFirstJobGated) {

@@ -94,10 +94,9 @@ class ProfileUnlockedScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final card = resolveNannyCard();
     final subs = Get.find<SubscriptionController>();
-    final firstName = card.name.split(' ').first;
 
     return Scaffold(
-      backgroundColor: KafiColors.bgLight,
+      backgroundColor: Colors.white,
       body: SafeArea(
         bottom: false,
         child: SingleChildScrollView(
@@ -106,20 +105,11 @@ class ProfileUnlockedScreen extends StatelessWidget {
             children: [
               ProfileHero(card: card),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 11, 12, 22),
+                padding: const EdgeInsets.fromLTRB(15, 4, 15, 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Obx(() => subs.isExpired ? _expiredBanner() : _subscribedBadge()),
-                    const SizedBox(height: 8),
-                    ProfileSections.statsRow(card),
-                    const SizedBox(height: 10),
-                    Text(AppStrings.skillsSpecialties.tr,
-                        style: KafiTheme.nunito(10.5, color: KafiColors.td, w: FontWeight.w800)),
-                    const SizedBox(height: 7),
-                    ProfileSections.skills(card),
-                    const SizedBox(height: 10),
-                    _trialBadge(card.id),
+                    Obx(() => subs.isExpired ? _expiredBanner() : const SizedBox.shrink()),
                     // Direct contacts are gated when an expired subscription
                     // hides them (§8.5); a trial bypass keeps them visible.
                     Obx(() => subs.contactsHidden
@@ -127,11 +117,23 @@ class ProfileUnlockedScreen extends StatelessWidget {
                         : _Reveal(
                             nannyId: card.id,
                             builder: (phone, loading, failed, retry) =>
-                                _contactBlock(
-                                    card, firstName, phone, loading, failed, retry),
+                                _actionButtons(card, phone, loading, failed, retry),
                           )),
-                    const SizedBox(height: 10),
-                    _bottomActions(card),
+                    _trialBadge(card.id),
+                    const SizedBox(height: 18),
+                    ProfileSections.sectionTitle(AppStrings.profilePhotosVideos.tr),
+                    ProfileSections.mediaGallery(card),
+                    const SizedBox(height: 18),
+                    ProfileSections.sectionTitle(AppStrings.profileExperiencePreferences.tr),
+                    ProfileSections.experienceGrid(card),
+                    const SizedBox(height: 18),
+                    ProfileSections.sectionTitle(AppStrings.profileSalaryExpectation.tr),
+                    ProfileSections.salaryExpectation(card),
+                    const SizedBox(height: 18),
+                    ProfileSections.sectionTitle(AppStrings.profileAboutMe.tr),
+                    ProfileSections.aboutMe(card),
+                    const SizedBox(height: 20),
+                    _bottomCta(card),
                   ],
                 ),
               ),
@@ -142,13 +144,9 @@ class ProfileUnlockedScreen extends StatelessWidget {
     );
   }
 
-  // Green "contact fully unlocked" box, followed by the WhatsApp/Email rows
-  // and the download-CV button (which sit below the box, as in the design).
-  Widget _contactBlock(NannyCardModel card, String firstName, String? phone,
-      bool loading, bool failed, VoidCallback retry) {
-    final phoneText = loading
-        ? AppStrings.contactRevealing.tr
-        : (phone != null && phone.isNotEmpty ? phone : AppStrings.contactUnavailable.tr);
+  // ── Call / WhatsApp / Chat / Book Trial — one row, like the reference ──
+  Widget _actionButtons(NannyCardModel card, String? phone, bool loading, bool failed,
+      VoidCallback retry) {
     final digits = (phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
     final canContact = !loading && digits.isNotEmpty;
     void call() {
@@ -158,305 +156,136 @@ class ProfileUnlockedScreen extends StatelessWidget {
     void whatsapp() {
       if (canContact) _launchContact(Uri.parse('https://wa.me/$digits'));
     }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // ── Green ul-box: header + direct number + action grid ──
-        Container(
-          padding: const EdgeInsets.all(11),
-          decoration: BoxDecoration(
-            color: const Color(0xFFF4FFF8),
-            borderRadius: BorderRadius.circular(15),
-            border: Border.all(color: const Color(0xFFD0F0DC), width: 2),
-          ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    width: 28,
-                    height: 28,
-                    decoration: BoxDecoration(
-                      gradient: const LinearGradient(colors: [KafiColors.grn, KafiColors.grnD]),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    alignment: Alignment.center,
-                    child: const Text('🔓', style: TextStyle(fontSize: 13)),
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(AppStrings.contactFullyUnlocked.tr,
-                            style: KafiTheme.nunito(11, color: const Color(0xFF1A6A38), w: FontWeight.w800)),
-                        Text(AppStrings.contactCallOrWhatsapp.trParams({'name': firstName}),
-                            style: KafiTheme.nunito(9, color: const Color(0xFF4A9A65), w: FontWeight.w600)),
-                      ],
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 9),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 9),
-                decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [KafiColors.grnL, Color(0xFFD0F5E0)]),
-                  borderRadius: BorderRadius.circular(11),
-                  border: Border.all(color: const Color(0xFFA0E0C0), width: 1.5),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(AppStrings.contactDirectNumber.trParams({'name': firstName}),
-                        style: KafiTheme.fredoka(8.5, color: KafiColors.grnD, w: FontWeight.w700)),
-                    const SizedBox(height: 3),
-                    _revealValue(loading, failed, phone, retry),
-                  ],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Row(
-                children: [
-                  Expanded(
-                    child: _gridBtn('💬', AppStrings.whatsappHerBtn.tr, const [Color(0xFF25D366), Color(0xFF128C42)],
-                        whatsapp),
-                  ),
-                  const SizedBox(width: 7),
-                  Expanded(
-                    child: _gridBtn('📞', AppStrings.callHerBtn.tr, const [Color(0xFF34B87A), Color(0xFF1A8A50)],
-                        call, icon: Icons.call),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 7),
-              _gridBtn('🗨️', AppStrings.inAppChat.tr,
+        const SizedBox(height: 10),
+        Row(
+          children: [
+            Expanded(
+              child: _actionBtn(Icons.call, AppStrings.callHerBtn.tr,
+                  const [KafiColors.grn, KafiColors.grnD], call),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: _actionBtn(Icons.chat_bubble, AppStrings.whatsappHerBtn.tr,
+                  const [Color(0xFF25D366), Color(0xFF128C42)], whatsapp),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: _actionBtn(Icons.forum, AppStrings.inAppChat.tr,
                   const [KafiColors.rose, KafiColors.roseD],
-                  () => AppNavigation.openChat(nannyId: card.id, nannyName: card.name),
-                  small: true),
-              // Intro video is an unlocked perk — reachable only from here.
-              if ((card.introVideoUrl ?? '').isNotEmpty) ...[
-                const SizedBox(height: 7),
-                _gridBtn('🎬', AppStrings.watchIntroVideo.tr,
-                    const [KafiColors.pur, Color(0xFF7B5BD5)],
-                    () => AppNavigation.openIntroVideo(
-                          introVideoUrl: card.introVideoUrl,
-                          nannyName: card.name,
-                        ),
-                    small: true),
-              ],
-            ],
-          ),
+                  () => AppNavigation.openChat(nannyId: card.id, nannyName: card.name)),
+            ),
+            const SizedBox(width: 7),
+            Expanded(
+              child: _actionBtn(Icons.calendar_month, AppStrings.profileBookTrial.tr,
+                  const [KafiColors.pur, Color(0xFF7B5BD5)],
+                  () => AppNavigation.openTrialOffer(nannyId: card.id, nannyName: card.name)),
+            ),
+          ],
         ),
-        const SizedBox(height: 8),
-        // WhatsApp shortcut row using the real revealed number.
-        _contactRow('💬', const Color(0xFF25D366), AppStrings.contactWhatsappLabel.tr, phoneText,
-            AppStrings.chatActionLabel.tr, KafiColors.grnD, KafiColors.grnL, whatsapp),
+        // Inline reveal status — spinner while the gated reveal is in flight,
+        // an error + Retry if it failed, otherwise nothing (the number itself
+        // is only surfaced via the dialer once Call/WhatsApp is tapped).
+        if (loading || failed) ...[
+          const SizedBox(height: 8),
+          _revealStatus(loading, failed, retry),
+        ],
       ],
     );
   }
 
-  // The direct-number line: a spinner while revealing, an inline error + Retry
-  // if the gated reveal failed, otherwise the number itself (FAM-7).
-  Widget _revealValue(bool loading, bool failed, String? phone, VoidCallback retry) {
-    if (loading) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 3),
-        child: Row(
-          children: [
-            const SizedBox(
-              width: 15,
-              height: 15,
-              child: CircularProgressIndicator(strokeWidth: 2, color: KafiColors.grnD),
-            ),
-            const SizedBox(width: 8),
-            Text(AppStrings.contactRevealing.tr,
-                style: KafiTheme.nunito(12, color: KafiColors.grnD, w: FontWeight.w700)),
-          ],
-        ),
-      );
-    }
-    if (failed) {
-      return Row(
-        children: [
-          Expanded(
-            child: Text(AppStrings.contactLoadFailed.tr,
-                style: KafiTheme.nunito(11, color: const Color(0xFF1A4A30), w: FontWeight.w700)),
-          ),
-          const SizedBox(width: 8),
-          GestureDetector(
-            onTap: retry,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
-              decoration: BoxDecoration(
-                color: KafiColors.grnD,
-                borderRadius: BorderRadius.circular(9),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(Icons.refresh, color: Colors.white, size: 13),
-                  const SizedBox(width: 4),
-                  Text(AppStrings.retry.tr,
-                      style: KafiTheme.fredoka(11, color: Colors.white, w: FontWeight.w700)),
-                ],
-              ),
-            ),
-          ),
-        ],
-      );
-    }
-    final text = (phone != null && phone.isNotEmpty)
-        ? phone
-        : AppStrings.contactUnavailable.tr;
-    return Text(text,
-        style: KafiTheme.nunito(17, color: const Color(0xFF1A4A30), w: FontWeight.w900)
-            .copyWith(letterSpacing: 0.6));
-  }
-
-  Widget _gridBtn(String emoji, String label, List<Color> colors, VoidCallback onTap,
-      {bool small = false, IconData? icon}) {
-    final size = small ? 17.0 : 22.0;
+  Widget _actionBtn(IconData icon, String label, List<Color> colors, VoidCallback onTap) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        padding: EdgeInsets.symmetric(vertical: small ? 10 : 12, horizontal: 8),
+        padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
         decoration: BoxDecoration(
           gradient: LinearGradient(colors: colors),
           borderRadius: BorderRadius.circular(13),
           boxShadow: [
-            BoxShadow(color: colors.last.withValues(alpha: 0.3), blurRadius: 12, offset: const Offset(0, 4)),
+            BoxShadow(color: colors.last.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
           ],
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            icon != null
-                ? Icon(icon, color: Colors.white, size: size)
-                : Text(emoji, style: TextStyle(fontSize: size)),
-            SizedBox(height: small ? 4 : 5),
+            Icon(icon, color: Colors.white, size: 18),
+            const SizedBox(height: 4),
             Text(label,
                 textAlign: TextAlign.center,
-                style: KafiTheme.fredoka(small ? 11 : 12, color: Colors.white, w: FontWeight.w700)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: KafiTheme.fredoka(9.5, color: Colors.white, w: FontWeight.w700)),
           ],
         ),
       ),
     );
   }
 
-  Widget _contactRow(String emoji, Color icColor, String label, String value, String action,
-      Color actColor, Color actBg, VoidCallback onTap) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 5),
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 7),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(9),
-          border: Border.all(color: const Color(0xFFE0F5E8), width: 1.5),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 24,
-              height: 24,
-              decoration: BoxDecoration(
-                color: icColor.withValues(alpha: 0.12),
-                borderRadius: BorderRadius.circular(7),
-              ),
-              alignment: Alignment.center,
-              child: Text(emoji, style: const TextStyle(fontSize: 12)),
-            ),
-            const SizedBox(width: 8),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(label, style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
-                  Text(value,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: KafiTheme.nunito(10.5, color: KafiColors.td, w: FontWeight.w800)),
-                ],
-              ),
-            ),
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
-              decoration: BoxDecoration(color: actBg, borderRadius: BorderRadius.circular(6)),
-              child: Text(action, style: KafiTheme.fredoka(9, color: actColor, w: FontWeight.w700)),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _bottomActions(NannyCardModel card) {
+  Widget _revealStatus(bool loading, bool failed, VoidCallback retry) {
+    if (loading) {
+      return Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const SizedBox(
+            width: 13,
+            height: 13,
+            child: CircularProgressIndicator(strokeWidth: 2, color: KafiColors.grnD),
+          ),
+          const SizedBox(width: 7),
+          Text(AppStrings.contactRevealing.tr,
+              style: KafiTheme.nunito(10, color: KafiColors.grnD, w: FontWeight.w700)),
+        ],
+      );
+    }
     return Row(
       children: [
         Expanded(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => AppNavigation.toggleShortlist(card),
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                color: KafiColors.purL,
-                borderRadius: BorderRadius.circular(10),
-              ),
-              child: Text('⭐ ${AppStrings.shortlist.tr}',
-                  style: KafiTheme.fredoka(11, color: KafiColors.pur, w: FontWeight.w700)),
-            ),
-          ),
+          child: Text(AppStrings.contactLoadFailed.tr,
+              style: KafiTheme.nunito(10, color: const Color(0xFF7A4A00), w: FontWeight.w700)),
         ),
-        const SizedBox(width: 6),
-        Expanded(
-          child: GestureDetector(
-            behavior: HitTestBehavior.opaque,
-            onTap: () => AppNavigation.openTrialOffer(nannyId: card.id, nannyName: card.name),
-            child: Container(
-              alignment: Alignment.center,
-              padding: const EdgeInsets.symmetric(vertical: 10),
-              decoration: BoxDecoration(
-                gradient: const LinearGradient(colors: [KafiColors.grn, KafiColors.grnD]),
-                borderRadius: BorderRadius.circular(10),
-                boxShadow: [
-                  BoxShadow(color: KafiColors.grnD.withValues(alpha: 0.28), blurRadius: 10, offset: const Offset(0, 3)),
-                ],
-              ),
-              child: Text('${AppStrings.sendTrialOffer.tr} →',
-                  style: KafiTheme.fredoka(11, color: Colors.white, w: FontWeight.w700)),
-            ),
-          ),
+        TextButton(
+          onPressed: retry,
+          child: Text(AppStrings.retry.tr, style: KafiTheme.fredoka(10, color: KafiColors.roseD)),
         ),
       ],
     );
   }
 
-  Widget _subscribedBadge() {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
-      decoration: BoxDecoration(color: KafiColors.grnL, borderRadius: BorderRadius.circular(8)),
-      child: Row(
-        children: [
-          const Text('✅', style: TextStyle(fontSize: 12)),
-          const SizedBox(width: 6),
-          Expanded(
-            child: Text(AppStrings.monthlyActive.tr,
-                style: KafiTheme.fredoka(10, color: KafiColors.grnD, w: FontWeight.w700)),
-          ),
-        ],
+  Widget _bottomCta(NannyCardModel card) {
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onTap: () => AppNavigation.openTrialOffer(nannyId: card.id, nannyName: card.name),
+      child: Container(
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(vertical: 13),
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(colors: [KafiColors.rose, KafiColors.pur]),
+          borderRadius: BorderRadius.circular(14),
+          boxShadow: [
+            BoxShadow(color: KafiColors.pur.withValues(alpha: 0.28), blurRadius: 14, offset: const Offset(0, 4)),
+          ],
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.shield, color: Colors.white, size: 16),
+            const SizedBox(width: 8),
+            Text(AppStrings.sendTrialOffer.tr,
+                style: KafiTheme.fredoka(13, color: Colors.white, w: FontWeight.w700)),
+          ],
+        ),
       ),
     );
   }
 
   Widget _contactsLockedBanner() {
     return Container(
+      margin: const EdgeInsets.only(top: 10),
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: KafiColors.ambL,
@@ -482,6 +311,7 @@ class ProfileUnlockedScreen extends StatelessWidget {
 
   Widget _expiredBanner() {
     return Container(
+      margin: const EdgeInsets.only(bottom: 10),
       padding: const EdgeInsets.all(11),
       decoration: BoxDecoration(
         color: KafiColors.ambL,
@@ -517,7 +347,7 @@ class ProfileUnlockedScreen extends StatelessWidget {
       final isActive = s == 'active' || s == 'accepted';
       if (!isActive) return const SizedBox.shrink();
       return Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(top: 10),
         child: Container(
           padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
           decoration: BoxDecoration(color: KafiColors.purL, borderRadius: BorderRadius.circular(8)),

@@ -27,6 +27,7 @@ import 'package:kafi_app/views/family/smart_match_screen.dart';
 import 'package:kafi_app/views/family/trial_offer_screen.dart';
 import 'package:kafi_app/views/family/trial_screen.dart';
 import 'package:kafi_app/views/family/video_player_screen.dart';
+import 'package:kafi_app/views/family/nanny_photo_viewer_screen.dart';
 import 'package:kafi_app/views/legal/legal_screen.dart';
 import 'package:kafi_app/views/shared/blocked_screen.dart';
 import 'package:kafi_app/views/shared/splash_screen.dart';
@@ -88,6 +89,7 @@ abstract class Routes {
   static const deleteAccount = '/delete-account';
 
   static const videoPlayer = '/video-player';
+  static const nannyPhotoViewer = '/nanny-photo-viewer';
   static const terms = '/terms';
   static const privacy = '/privacy';
 }
@@ -150,6 +152,19 @@ class AppRoutes {
             raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
         return VideoPlayerScreen(
           videoUrl: args['videoUrl'] as String? ?? '',
+          nannyName: args['nannyName'] as String?,
+        );
+      },
+    ),
+    GetPage(
+      name: Routes.nannyPhotoViewer,
+      page: () {
+        final raw = Get.arguments;
+        final args =
+            raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+        return NannyPhotoViewerScreen(
+          photoUrls: (args['photoUrls'] as List?)?.cast<String>() ?? const [],
+          initialIndex: args['initialIndex'] as int? ?? 0,
           nannyName: args['nannyName'] as String?,
         );
       },

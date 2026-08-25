@@ -1411,6 +1411,33 @@ abstract class AppStrings {
   static const watchLabel = 'watch_label';
   static const whatsappHerBtn = 'whatsapp_her_btn';
   static const yearsAbbrevN = 'years_abbrev_n';
+
+  // --- Profile detail screen redesign (kafi-nanny-profile-detail-redesign) ---
+  static const profileIdVerified = 'profile_id_verified';
+  static const profileReferencesVerified = 'profile_references_verified';
+  static const profileKafiInterviewed = 'profile_kafi_interviewed';
+  static const profilePaidTrialAvailable = 'profile_paid_trial_available';
+  static const profilePhotosVideos = 'profile_photos_videos';
+  static const profilePhotoCountBadge = 'profile_photo_count_badge';
+  static const profileExperiencePreferences = 'profile_experience_preferences';
+  static const profileHandledChildren = 'profile_handled_children';
+  static const profileCamerasLabel = 'profile_cameras_label';
+  static const profileCamerasAccepts = 'profile_cameras_accepts';
+  static const profileCamerasDeclines = 'profile_cameras_declines';
+  static const profilePetsLabel = 'profile_pets_label';
+  static const profilePetsAccepts = 'profile_pets_accepts';
+  static const profilePetsDeclines = 'profile_pets_declines';
+  static const profileHealthIssuesLabel = 'profile_health_issues_label';
+  static const profileHealthIssuesNone = 'profile_health_issues_none';
+  static const profileHealthIssuesPresent = 'profile_health_issues_present';
+  static const profileWillingToWorkIn = 'profile_willing_to_work_in';
+  static const profileSalaryExpectation = 'profile_salary_expectation';
+  static const profilePerMonth = 'profile_per_month';
+  static const profileAboutMe = 'profile_about_me';
+  static const profileBookTrial = 'profile_book_trial';
+  static const profileGalleryCounter = 'profile_gallery_counter';
+  static const profileAgeYrs = 'profile_age_yrs';
+  static const profileKafiMatch = 'profile_kafi_match';
   static const countryUae = 'country_uae';
   static const petDog = 'pet_dog';
   static const petCat = 'pet_cat';
