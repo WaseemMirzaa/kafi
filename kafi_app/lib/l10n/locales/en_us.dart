@@ -1423,6 +1423,10 @@ const Map<String, String> enUs = {
   AppStrings.profileGalleryCounter: '@current / @total',
   AppStrings.profileAgeYrs: '@n yrs',
   AppStrings.profileKafiMatch: 'Kafi Match',
+  AppStrings.profileCallLabel: 'Call',
+  AppStrings.profileAvailableNowChip: 'Available Now',
+  AppStrings.profileUaeExperience: 'UAE experience',
+  AppStrings.profileYearsFull: '@n years',
 
   AppStrings.countryUae: 'United Arab Emirates',
   AppStrings.petDog: 'Dog',

@@ -121,7 +121,7 @@ class ProfileUnlockedScreen extends StatelessWidget {
                           )),
                     _trialBadge(card.id),
                     const SizedBox(height: 18),
-                    ProfileSections.sectionTitle(AppStrings.profilePhotosVideos.tr),
+                    ProfileSections.mediaGalleryTitle(card),
                     ProfileSections.mediaGallery(card),
                     const SizedBox(height: 18),
                     ProfileSections.sectionTitle(AppStrings.profileExperiencePreferences.tr),
@@ -132,7 +132,9 @@ class ProfileUnlockedScreen extends StatelessWidget {
                     const SizedBox(height: 18),
                     ProfileSections.sectionTitle(AppStrings.profileAboutMe.tr),
                     ProfileSections.aboutMe(card),
-                    const SizedBox(height: 20),
+                    const SizedBox(height: 14),
+                    Align(alignment: Alignment.centerLeft, child: ProfileSections.paidTrialChip()),
+                    const SizedBox(height: 14),
                     _bottomCta(card),
                   ],
                 ),
@@ -164,25 +166,22 @@ class ProfileUnlockedScreen extends StatelessWidget {
         Row(
           children: [
             Expanded(
-              child: _actionBtn(Icons.call, AppStrings.callHerBtn.tr,
-                  const [KafiColors.grn, KafiColors.grnD], call),
+              child: _actionBtn(Icons.call_outlined, AppStrings.profileCallLabel.tr, call),
             ),
             const SizedBox(width: 7),
             Expanded(
-              child: _actionBtn(Icons.chat_bubble, AppStrings.whatsappHerBtn.tr,
-                  const [Color(0xFF25D366), Color(0xFF128C42)], whatsapp),
+              child: _actionBtn(Icons.chat_bubble_outline, AppStrings.contactWhatsappLabel.tr, whatsapp),
             ),
             const SizedBox(width: 7),
             Expanded(
-              child: _actionBtn(Icons.forum, AppStrings.inAppChat.tr,
-                  const [KafiColors.rose, KafiColors.roseD],
+              child: _actionBtn(Icons.forum_outlined, AppStrings.chatActionLabel.tr,
                   () => AppNavigation.openChat(nannyId: card.id, nannyName: card.name)),
             ),
             const SizedBox(width: 7),
             Expanded(
-              child: _actionBtn(Icons.calendar_month, AppStrings.profileBookTrial.tr,
-                  const [KafiColors.pur, Color(0xFF7B5BD5)],
-                  () => AppNavigation.openTrialOffer(nannyId: card.id, nannyName: card.name)),
+              child: _actionBtn(Icons.calendar_month_outlined, AppStrings.profileBookTrial.tr,
+                  () => AppNavigation.openTrialOffer(nannyId: card.id, nannyName: card.name),
+                  highlighted: true),
             ),
           ],
         ),
@@ -197,29 +196,30 @@ class ProfileUnlockedScreen extends StatelessWidget {
     );
   }
 
-  Widget _actionBtn(IconData icon, String label, List<Color> colors, VoidCallback onTap) {
+  // Light outline pill — same rose accent for every action, matching the
+  // reference (no per-service brand colors). `highlighted` gives the primary
+  // action (Book Trial) a filled pale-rose background instead of white.
+  Widget _actionBtn(IconData icon, String label, VoidCallback onTap, {bool highlighted = false}) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 4),
         decoration: BoxDecoration(
-          gradient: LinearGradient(colors: colors),
+          color: highlighted ? KafiColors.roseP : Colors.white,
           borderRadius: BorderRadius.circular(13),
-          boxShadow: [
-            BoxShadow(color: colors.last.withValues(alpha: 0.3), blurRadius: 10, offset: const Offset(0, 4)),
-          ],
+          border: Border.all(color: KafiColors.cardBorder, width: 1.5),
         ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, color: Colors.white, size: 18),
+            Icon(icon, color: KafiColors.roseD, size: 18),
             const SizedBox(height: 4),
             Text(label,
                 textAlign: TextAlign.center,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: KafiTheme.fredoka(9.5, color: Colors.white, w: FontWeight.w700)),
+                style: KafiTheme.fredoka(9.5, color: KafiColors.roseD, w: FontWeight.w700)),
           ],
         ),
       ),

@@ -131,19 +131,21 @@ class ProfileSections {
   // ── Experience & Preferences grid ──────────────────────────────────────────
   static Widget experienceGrid(NannyCardModel card) {
     final tiles = <Widget>[
-      _gridTile('💼', '${card.yearsExp}', AppStrings.yearsExp.tr),
+      _gridTile(Icons.work_outline,
+          AppStrings.profileYearsFull.trParams({'n': '${card.yearsExp}'}),
+          AppStrings.profileUaeExperience.tr),
       if (card.handledChildrenNote != null)
-        _gridTile('👶', AppStrings.profileHandledChildren.tr, card.handledChildrenNote!),
-      _gridTile('🏠', localizeJobTypeLabel(card.jobType), ''),
-      if (card.tags.isNotEmpty) _gridTile('💬', card.tags.take(3).join(', '), ''),
-      _gridTile('📷', AppStrings.profileCamerasLabel.tr,
+        _gridTile(Icons.child_care_outlined, AppStrings.profileHandledChildren.tr, card.handledChildrenNote!),
+      _gridTile(Icons.home_outlined, localizeJobTypeLabel(card.jobType), ''),
+      if (card.tags.isNotEmpty) _gridTile(Icons.chat_bubble_outline, card.tags.take(3).join(', '), ''),
+      _gridTile(Icons.camera_alt_outlined, AppStrings.profileCamerasLabel.tr,
           card.comfortableWithCameras ? AppStrings.profileCamerasAccepts.tr : AppStrings.profileCamerasDeclines.tr),
-      _gridTile('🐾', AppStrings.profilePetsLabel.tr,
+      _gridTile(Icons.pets_outlined, AppStrings.profilePetsLabel.tr,
           card.comfortableWithPets ? AppStrings.profilePetsAccepts.tr : AppStrings.profilePetsDeclines.tr),
-      _gridTile('❤️', AppStrings.profileHealthIssuesLabel.tr,
+      _gridTile(Icons.favorite_border, AppStrings.profileHealthIssuesLabel.tr,
           card.hasHealthConditions ? AppStrings.profileHealthIssuesPresent.tr : AppStrings.profileHealthIssuesNone.tr),
       if (card.workEmirateLabels.isNotEmpty)
-        _gridTile('📍', AppStrings.profileWillingToWorkIn.tr, card.workEmirateLabels.join(', ')),
+        _gridTile(Icons.location_on_outlined, AppStrings.profileWillingToWorkIn.tr, card.workEmirateLabels.join(', ')),
     ];
     return GridView.count(
       crossAxisCount: 2,
@@ -151,12 +153,12 @@ class ProfileSections {
       physics: const NeverScrollableScrollPhysics(),
       mainAxisSpacing: 8,
       crossAxisSpacing: 8,
-      childAspectRatio: 1.55,
+      childAspectRatio: 1.3,
       children: tiles,
     );
   }
 
-  static Widget _gridTile(String emoji, String title, String sub) {
+  static Widget _gridTile(IconData icon, String title, String sub) {
     return Container(
       padding: const EdgeInsets.all(10),
       decoration: BoxDecoration(
@@ -167,15 +169,18 @@ class ProfileSections {
         crossAxisAlignment: CrossAxisAlignment.start,
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 16)),
-          const SizedBox(height: 4),
+          Icon(icon, color: KafiColors.rose, size: 18),
+          const SizedBox(height: 5),
           Text(title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
               style: KafiTheme.fredoka(11, color: KafiColors.td, w: FontWeight.w700)),
           if (sub.isNotEmpty)
             Text(sub,
-                maxLines: 1,
+                // 2 lines (not 1) so longer values — a full "willing to work
+                // in" emirate list, a multi-language line — stay fully
+                // visible instead of silently truncating real profile data.
+                maxLines: 2,
                 overflow: TextOverflow.ellipsis,
                 style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
         ],
@@ -218,12 +223,54 @@ class ProfileSections {
     return Text(card.bio, style: KafiTheme.nunito(11.5, color: KafiColors.td, w: FontWeight.w500).copyWith(height: 1.5));
   }
 
-  /// Section title used above each of the blocks above (Photos & Videos,
-  /// Experience & Preferences, Salary Expectation, About Me).
+  /// Section title used above each of the blocks above (Experience &
+  /// Preferences, Salary Expectation, About Me).
   static Widget sectionTitle(String label) => Padding(
         padding: const EdgeInsets.only(bottom: 8),
         child: Text(label, style: KafiTheme.nunito(11.5, color: KafiColors.td, w: FontWeight.w800)),
       );
+
+  /// "Photos & Videos" title with the "(N photos + N video)" count trailing
+  /// it, matching the reference.
+  static Widget mediaGalleryTitle(NannyCardModel card) {
+    final hasVideo = (card.introVideoUrl ?? '').isNotEmpty;
+    if (card.photoUrls.isEmpty && !hasVideo) return const SizedBox.shrink();
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          Text(AppStrings.profilePhotosVideos.tr,
+              style: KafiTheme.nunito(11.5, color: KafiColors.td, w: FontWeight.w800)),
+          const SizedBox(width: 5),
+          Text(
+            '(${AppStrings.profilePhotoCountBadge.trParams({
+                  'photos': '${card.photoUrls.length}',
+                  'videos': '${hasVideo ? 1 : 0}',
+                })})',
+            style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Small checkmark chip echoed just above the bottom CTA, matching the
+  /// reference's "✅ Paid Trial Available" pill.
+  static Widget paidTrialChip() {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      decoration: BoxDecoration(color: KafiColors.grnL, borderRadius: BorderRadius.circular(20)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.check_circle, color: KafiColors.grnD, size: 13),
+          const SizedBox(width: 5),
+          Text(AppStrings.profilePaidTrialAvailable.tr,
+              style: KafiTheme.fredoka(10, color: KafiColors.grnD, w: FontWeight.w700)),
+        ],
+      ),
+    );
+  }
 
   // ── Trial-active banner (shown when contacts are unlocked via a trial) ─────
   static Widget trialBypassBanner() {

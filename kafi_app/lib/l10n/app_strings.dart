@@ -1438,6 +1438,10 @@ abstract class AppStrings {
   static const profileGalleryCounter = 'profile_gallery_counter';
   static const profileAgeYrs = 'profile_age_yrs';
   static const profileKafiMatch = 'profile_kafi_match';
+  static const profileCallLabel = 'profile_call_label';
+  static const profileAvailableNowChip = 'profile_available_now_chip';
+  static const profileUaeExperience = 'profile_uae_experience';
+  static const profileYearsFull = 'profile_years_full';
   static const countryUae = 'country_uae';
   static const petDog = 'pet_dog';
   static const petCat = 'pet_cat';

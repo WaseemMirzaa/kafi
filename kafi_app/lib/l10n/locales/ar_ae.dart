@@ -742,4 +742,8 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.profileGalleryCounter: '@current / @total',
     AppStrings.profileAgeYrs: '@n سنة',
     AppStrings.profileKafiMatch: 'تطابق كافي',
+    AppStrings.profileCallLabel: 'اتصال',
+    AppStrings.profileAvailableNowChip: 'متاحة الآن',
+    AppStrings.profileUaeExperience: 'خبرة في الإمارات',
+    AppStrings.profileYearsFull: '@n سنوات',
   });

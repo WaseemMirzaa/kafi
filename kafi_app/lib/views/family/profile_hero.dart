@@ -104,7 +104,7 @@ class ProfileHero extends StatelessWidget {
                   spacing: 6,
                   runSpacing: 6,
                   children: [
-                    if (card.availableNow) _pill('🟢 ${AppStrings.availableNow.tr}', KafiColors.grnL, KafiColors.grnD),
+                    if (card.availableNow) _pill('🟢 ${AppStrings.profileAvailableNowChip.tr}', KafiColors.grnL, KafiColors.grnD),
                     _pill('📅 ${AppStrings.profilePaidTrialAvailable.tr}', KafiColors.purL, KafiColors.pur),
                   ],
                 ),
