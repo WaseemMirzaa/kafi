@@ -106,6 +106,10 @@ const en = {
   'trial.startingSoon.title': '⏰ Trial starts tomorrow!',
   'trial.startingSoon.body': 'Trial starts at {time}',
   'trial.startingSoon.defaultTime': 'scheduled time',
+  'trial.outcomePendingFamily.title': 'How did the trial go?',
+  'trial.outcomePendingFamily.body': 'Let us know how it went with your nanny.',
+  'trial.outcomePendingNanny.title': 'What happened after your trial?',
+  'trial.outcomePendingNanny.body': 'Tell us if you got the job.',
 
   // ── Subscription (triggers/scheduled.ts, triggers/webhook.ts) ─────────
   'subscription.expiringSoon.title': '💳 Expiring soon',
@@ -146,7 +150,7 @@ const en = {
 
   // ── Hires (triggers/stats.ts) ───────────────────────────────────────────
   'hire.hired.title': '🎉 You\u2019ve been hired!',
-  'hire.hired.body': '{familyName} hired you. Continue in Messages.',
+  'hire.hired.body': '{familyName} hired you. Your profile is now hidden from search — continue in Messages.',
   'hire.defaultFamilyName': 'A family',
   'hire.nannyResigned.title': 'Nanny resigned',
   'hire.nannyResigned.body': '{nannyName} has ended the hire.',
@@ -223,6 +227,10 @@ const ar: Record<keyof typeof en, string> = {
   'trial.startingSoon.title': '⏰ تبدأ التجربة غدًا!',
   'trial.startingSoon.body': 'تبدأ التجربة في {time}',
   'trial.startingSoon.defaultTime': 'الوقت المحدد',
+  'trial.outcomePendingFamily.title': 'كيف سارت التجربة؟',
+  'trial.outcomePendingFamily.body': 'أخبرينا كيف سارت الأمور مع المربية.',
+  'trial.outcomePendingNanny.title': 'ماذا حدث بعد تجربتك؟',
+  'trial.outcomePendingNanny.body': 'أخبرينا إذا حصلتِ على الوظيفة.',
 
   'subscription.expiringSoon.title': '💳 ستنتهي قريبًا',
   'subscription.expiringSoon.body': 'يتجدد اشتراكك خلال ٣ أيام',
@@ -258,7 +266,7 @@ const ar: Record<keyof typeof en, string> = {
   'ticket.closed.defaultBody': 'أغلق فريقنا تذكرة الدعم الخاصة بك.',
 
   'hire.hired.title': '🎉 تم توظيفك!',
-  'hire.hired.body': 'وظّفتك {familyName}. تابعي في الرسائل.',
+  'hire.hired.body': 'وظّفتك {familyName}. أصبح ملفك الشخصي مخفيًا الآن من نتائج البحث — تابعي في الرسائل.',
   'hire.defaultFamilyName': 'إحدى العائلات',
   'hire.nannyResigned.title': 'استقالت المربية',
   'hire.nannyResigned.body': 'أنهت {nannyName} التوظيف.',

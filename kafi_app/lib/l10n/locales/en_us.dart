@@ -27,7 +27,7 @@ const Map<String, String> enUs = {
   AppStrings.nannyWelcomeBack: 'Welcome back 🌸',
   AppStrings.nannyWelcomeBackSub: 'Sign in to your nanny account',
   AppStrings.nannyHomeHiredTitle: "You're hired! 🎉",
-  AppStrings.nannyHomeHiredSub: 'Employment active',
+  AppStrings.nannyHomeHiredSub: 'Your profile is automatically hidden from search',
   AppStrings.nannyHomeOnTrialTitle: "You're on trial 🤝",
   AppStrings.nannyHomeOnTrialSub: 'Trial in progress',
   AppStrings.nannyHomeViewChat: 'Open chat',

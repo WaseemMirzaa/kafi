@@ -187,6 +187,7 @@ export function trialStatusVariant(s: string): string {
     case 'accepted':
       return 'verified';
     case 'active':
+    case 'awaitingOutcome':
       return 'new';
     case 'cancelled':
     case 'declined':
@@ -257,11 +258,33 @@ const trialStatusKeys: Record<TrialStatus, TranslationKey> = {
   accepted: 'trials.accepted',
   declined: 'trials.declined',
   active: 'trials.active',
+  awaitingOutcome: 'trials.awaitingOutcome',
   completed: 'trials.completed',
   cancelled: 'trials.cancelled',
 };
 export const trialStatusLabel = (status: TrialStatus | string): string =>
   mapLabel(trialStatusKeys, status as TrialStatus);
+
+const trialOutcomeSideKeys: Record<string, TranslationKey> = {
+  hired: 'trials.outcomeHired',
+  notHired: 'trials.outcomeNotHired',
+};
+
+/** One-line outcome summary for list/detail rows. Falls back to the legacy
+ *  single-sided `outcome` field for trials recorded before the mutual-confirm
+ *  model (familyOutcome/nannyOutcome) shipped. */
+export function trialOutcomeSummary(trial: {
+  outcome?: string;
+  familyOutcome?: string;
+  nannyOutcome?: string;
+}): string {
+  if (trial.familyOutcome || trial.nannyOutcome) {
+    const family = trial.familyOutcome ? trialOutcomeSideKeys[trial.familyOutcome] ? t(trialOutcomeSideKeys[trial.familyOutcome]) : trial.familyOutcome : t('trials.outcomeAwaiting');
+    const nanny = trial.nannyOutcome ? trialOutcomeSideKeys[trial.nannyOutcome] ? t(trialOutcomeSideKeys[trial.nannyOutcome]) : trial.nannyOutcome : t('trials.outcomeAwaiting');
+    return `${t('trials.familyOutcome')}: ${family} · ${t('trials.nannyOutcome')}: ${nanny}`;
+  }
+  return trial.outcome ?? '';
+}
 
 const disputeStatusKeys: Record<DisputeRow['status'], TranslationKey> = {
   open: 'reports.open',

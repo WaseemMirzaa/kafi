@@ -77,7 +77,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.docRejected: 'مرفوض',
     AppStrings.nannyDocStatusTitle: 'حالة المستندات',
     AppStrings.nannyHomeHiredTitle: 'تم توظيفك! 🎉',
-    AppStrings.nannyHomeHiredSub: 'التوظيف نشط',
+    AppStrings.nannyHomeHiredSub: 'أصبح ملفك الشخصي مخفيًا تلقائيًا من نتائج البحث',
     AppStrings.nannyHomeOnTrialTitle: 'أنتِ في فترة تجربة 🤝',
     AppStrings.nannyHomeOnTrialSub: 'التجربة جارية',
     AppStrings.nannyHomeViewChat: 'فتح المحادثة',

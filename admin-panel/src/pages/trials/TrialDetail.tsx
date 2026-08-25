@@ -238,7 +238,29 @@ export default function TrialDetail() {
             <Field label={t('common.endDate')} value={fmtDate(trial.endDate)} />
             <Field label={t('trials.location')} value={trial.location || t('common.dash')} />
             <Field label={t('trials.type')} value={trial.trialType || t('common.dash')} />
-            <Field label={t('trials.outcome')} value={trial.outcome || t('common.dash')} />
+            <Field
+              label={t('trials.familyOutcome')}
+              value={
+                trial.familyOutcome === 'hired'
+                  ? t('trials.outcomeHired')
+                  : trial.familyOutcome === 'notHired'
+                    ? t('trials.outcomeNotHired')
+                    : t('trials.outcomeAwaiting')
+              }
+            />
+            <Field
+              label={t('trials.nannyOutcome')}
+              value={
+                trial.nannyOutcome === 'hired'
+                  ? t('trials.outcomeHired')
+                  : trial.nannyOutcome === 'notHired'
+                    ? t('trials.outcomeNotHired')
+                    : t('trials.outcomeAwaiting')
+              }
+            />
+            {trial.notHiredReason && (
+              <Field label={t('trials.notHiredReason')} value={trial.notHiredReason} />
+            )}
             <Field
               label={t('trials.payment')}
               value={

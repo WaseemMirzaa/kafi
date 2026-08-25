@@ -16,11 +16,11 @@ import { useListControls } from '../../hooks/useListControls';
 import { TrialService, TrialAdminRow } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
 import { exportCsv } from '../../utils/csv';
-import { trialStatusVariant, trialStatusLabel, fmtDate } from '../../utils/nannyLabels';
+import { trialStatusVariant, trialStatusLabel, trialOutcomeSummary, fmtDate } from '../../utils/nannyLabels';
 import { trialDayNumber, trialShortLeft } from '../../utils/trials';
 import { useLocale } from '../../context/LocaleContext';
 
-const STATUSES = ['pending', 'countered', 'accepted', 'active', 'completed', 'declined', 'cancelled'];
+const STATUSES = ['pending', 'countered', 'accepted', 'active', 'awaitingOutcome', 'completed', 'declined', 'cancelled'];
 
 export default function AllTrials() {
   const { t: translate } = useLocale();
@@ -69,7 +69,7 @@ export default function AllTrials() {
       { header: 'Start', value: (t) => fmtDate(t.startDate) },
       { header: 'End', value: (t) => fmtDate(t.endDate) },
       { header: 'Location', value: (t) => t.location ?? '' },
-      { header: 'Outcome', value: (t) => t.outcome ?? '' },
+      { header: 'Outcome', value: (t) => trialOutcomeSummary(t) },
     ]);
   };
 

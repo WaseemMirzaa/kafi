@@ -1103,7 +1103,15 @@ function parseFamily(id: string, data: Record<string, unknown>): FamilyRow {
 // ─────────────────────────────────────────────────────────
 // Trial service (admin read-only)
 // ─────────────────────────────────────────────────────────
-export type TrialStatus = 'pending' | 'countered' | 'accepted' | 'declined' | 'active' | 'completed' | 'cancelled';
+export type TrialStatus =
+  | 'pending'
+  | 'countered'
+  | 'accepted'
+  | 'declined'
+  | 'active'
+  | 'awaitingOutcome'
+  | 'completed'
+  | 'cancelled';
 
 /** Family's evaluation checklist after a trial (mirrors TrialEvaluation). */
 export interface TrialEvaluationRow {
@@ -1131,7 +1139,16 @@ export interface TrialAdminRow {
   endDate: Date;
   location?: string;
   notes?: string;
+  /** @deprecated legacy single-sided outcome; use familyOutcome/nannyOutcome. */
   outcome?: string;
+  /** Family's mutual-confirm response: 'hired' | 'notHired'. */
+  familyOutcome?: string;
+  familyOutcomeAt?: Date;
+  /** Reason the family gave for not hiring, when familyOutcome is 'notHired'. */
+  notHiredReason?: string;
+  /** Nanny's mutual-confirm response: 'hired' | 'notHired'. */
+  nannyOutcome?: string;
+  nannyOutcomeAt?: Date;
   completedAt?: Date;
   /** Family's rating of the nanny for this trial (1-5), if reviewed. */
   rating?: number;
@@ -1213,6 +1230,11 @@ function parseTrial(id: string, data: Record<string, unknown>): TrialAdminRow {
     location: data.location as string | undefined,
     notes: data.notes as string | undefined,
     outcome: data.outcome as string | undefined,
+    familyOutcome: data.familyOutcome as string | undefined,
+    familyOutcomeAt: toDateOrUndef(data.familyOutcomeAt),
+    notHiredReason: data.notHiredReason as string | undefined,
+    nannyOutcome: data.nannyOutcome as string | undefined,
+    nannyOutcomeAt: toDateOrUndef(data.nannyOutcomeAt),
     completedAt: toDateOrUndef(data.completedAt),
     rating: data.rating as number | undefined,
     evaluation: data.evaluation as TrialEvaluationRow | undefined,

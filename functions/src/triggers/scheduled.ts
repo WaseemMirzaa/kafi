@@ -107,10 +107,12 @@ export const trialOutcomeDetector = onSchedule('every 1 hours', async () => {
         getUser(trial.nannyId as string),
       ]);
 
-      const famTitle = 'How did the trial go?';
-      const famBody = 'Let us know how it went with your nanny.';
-      const nanTitle = 'What happened after your trial?';
-      const nanBody = 'Tell us if you got the job.';
+      const famLocale = family.locale ?? 'en';
+      const nanLocale = nannyUser.locale ?? 'en';
+      const famTitle = tn('trial.outcomePendingFamily.title', famLocale);
+      const famBody = tn('trial.outcomePendingFamily.body', famLocale);
+      const nanTitle = tn('trial.outcomePendingNanny.title', nanLocale);
+      const nanBody = tn('trial.outcomePendingNanny.body', nanLocale);
       const data = { type: 'trial_outcome_pending', trialId: doc.id };
 
       await writeInbox(trial.familyId as string, 'trialOutcomePending', famTitle, famBody, data);

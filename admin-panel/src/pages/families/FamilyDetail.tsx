@@ -40,6 +40,7 @@ import {
   applicationStatusVariant,
   trialStatusVariant,
   trialStatusLabel,
+  trialOutcomeSummary,
   subscriptionStatusLabel,
   subscriptionPlanLabel,
   yesNo,
@@ -452,7 +453,7 @@ export default function FamilyDetail() {
                     </div>
                     <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">
                       {trial.trialType ?? ''} · {t('families.trialTerms', { days: trial.durationDays, rate: trial.dailyRate })} · {fmtDate(trial.startDate)}
-                      {trial.outcome ? ` · ${trial.outcome}` : ''}
+                      {trialOutcomeSummary(trial) ? ` · ${trialOutcomeSummary(trial)}` : ''}
                     </div>
                   </div>
                   <StatusBadge variant={trialStatusVariant(String(trial.status))}>{trialStatusLabel(trial.status)}</StatusBadge>
