@@ -177,12 +177,37 @@ class FcmNotificationService implements INotificationService {
     if (!Get.isRegistered<NotificationController>()) return;
     final ctrl = Get.find<NotificationController>();
     final data = message.data;
+    // Prefer the inbox enum name when present; otherwise map snake_case push
+    // `data.type` so tap routing still hits the right NotificationType branch.
+    final rawType = data['inboxType']?.toString() ??
+        data['notificationType']?.toString() ??
+        data['type']?.toString() ??
+        'systemAnnouncement';
+    final normalizedType = switch (rawType) {
+      'new_message' => 'newMessage',
+      'new_application' => 'newApplication',
+      'application_viewed' => 'applicationViewed',
+      'application_declined' => 'applicationDeclined',
+      'trial_offer_received' => 'trialOfferReceived',
+      'trial_accepted' || 'trial_counter_accepted' => 'trialAccepted',
+      'trial_declined' || 'trial_counter_declined' => 'trialDeclined',
+      'trial_countered' => 'trialCountered',
+      'trial_starting_soon' => 'trialStartingSoon',
+      'trial_ending_soon' => 'trialEndingSoon',
+      'trial_completed' => 'trialCompleted',
+      'documents_approved' || 'intro_video_approved' => 'documentsApproved',
+      'documents_rejected' || 'intro_video_rejected' || 'profile_rejected' =>
+        'documentsRejected',
+      'profile_approved' => 'profileVerified',
+      'hire_ended' => 'systemAnnouncement',
+      _ => rawType,
+    };
     final notif = AppNotification.fromMap({
       'id': data['notificationId']?.toString() ?? message.messageId ?? '',
       'userId': data['userId']?.toString() ?? '',
       'title': message.notification?.title ?? data['title']?.toString() ?? '',
       'body': message.notification?.body ?? data['body']?.toString() ?? '',
-      'type': data['type']?.toString() ?? 'systemAnnouncement',
+      'type': normalizedType,
       'createdAt': DateTime.now().toIso8601String(),
       'data': data.map((k, v) => MapEntry(k.toString(), v)),
     });

@@ -19,11 +19,15 @@ class NannyBinding extends Bindings {
     Get.put(NannyShellController(), permanent: true);
     Get.put(NannyProfileController(), permanent: true);
     Get.put(JobPostController(), permanent: true);
-    Get.put(ApplicationController(), permanent: true);
+    if (!Get.isRegistered<ApplicationController>()) {
+      Get.put(ApplicationController(), permanent: true);
+    }
     Get.put(ChatController(), permanent: true);
     Get.put(SettingsController(), permanent: true);
     Get.put(TrialController(), permanent: true);
     Get.put(TicketController(), permanent: true);
-    Get.put(DisputeController(), permanent: true);
+    if (!Get.isRegistered<DisputeController>()) {
+      Get.put(DisputeController(), permanent: true);
+    }
   }
 }

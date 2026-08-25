@@ -40,7 +40,8 @@ class SettingsScreen extends GetView<SettingsController> {
             _editTile('📞', AppStrings.editReferences.tr, Routes.nannyRefs),
             _editTile('📄', AppStrings.editDocuments.tr, Routes.nannyDocs),
             const SizedBox(height: 24),
-            _actionTile(Icons.work_outline, 'My applications', () => Get.toNamed(Routes.nannyApplications)),
+            _actionTile(Icons.work_outline, AppStrings.nannyMyApplications.tr,
+                () => Get.toNamed(Routes.nannyApplications)),
             const SizedBox(height: 8),
           ] else if (Get.find<AuthController>().currentUser.value?.isFamily == true) ...[
             _actionTile(Icons.people_alt_outlined, AppStrings.familyApplicants.tr,
@@ -203,7 +204,9 @@ class SettingsScreen extends GetView<SettingsController> {
             final u = authCtrl.currentUser.value;
             final name = (u?.fullName?.isNotEmpty == true)
                 ? u!.fullName!
-                : (u?.isFamily == true ? 'Family' : 'User');
+                : (u?.isFamily == true
+                    ? AppStrings.roleFallbackFamily.tr
+                    : AppStrings.roleFallbackUser.tr);
             final sub = (u?.email?.isNotEmpty == true) ? u!.email! : (u?.phone ?? '');
             final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
             final isFamily = u?.isFamily == true;

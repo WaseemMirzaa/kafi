@@ -17,13 +17,19 @@ class SupportTicketScreen extends StatefulWidget {
 
 class _SupportTicketScreenState extends State<SupportTicketScreen> {
   final TicketController controller = Get.find<TicketController>();
-  late final TicketModel _ticket;
 
   @override
   void initState() {
     super.initState();
-    _ticket = Get.arguments as TicketModel;
-    controller.openTicketThread(_ticket);
+    final arg = Get.arguments;
+    final seed = arg is TicketModel
+        ? arg
+        : (arg is Map && arg['ticketId'] is String
+            ? controller.tickets.firstWhereOrNull((t) => t.id == arg['ticketId'])
+            : null);
+    if (seed != null) {
+      controller.openTicketThread(seed);
+    }
   }
 
   @override
@@ -39,33 +45,57 @@ class _SupportTicketScreenState extends State<SupportTicketScreen> {
       body: SafeArea(
         top: true,
         bottom: false,
-        child: Column(
-          children: [
-            _header(),
-            Expanded(
-              child: Obx(() {
-                final msgs = controller.messages;
-                if (msgs.isEmpty) {
-                  return Center(
-                    child: Text(AppStrings.supportThreadEmpty.tr,
-                        style: KafiTheme.nunito(11, color: KafiColors.ts)),
-                  );
-                }
-                return ListView.builder(
-                  padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
-                  itemCount: msgs.length,
-                  itemBuilder: (_, i) => _bubble(msgs[i]),
-                );
-              }),
-            ),
-            _composer(),
-          ],
-        ),
+        child: Obx(() {
+          final ticket = controller.activeTicket.value;
+          if (ticket == null) {
+            return Center(
+              child: Text(AppStrings.loadErrorTitle.tr,
+                  style: KafiTheme.nunito(12, color: KafiColors.ts)),
+            );
+          }
+          final msgs = controller.messages;
+          return Column(
+            children: [
+              _header(ticket),
+              Expanded(
+                child: msgs.isEmpty
+                    ? Center(
+                        child: Text(AppStrings.supportThreadEmpty.tr,
+                            style: KafiTheme.nunito(11, color: KafiColors.ts)),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.fromLTRB(12, 12, 12, 12),
+                        itemCount: msgs.length,
+                        itemBuilder: (_, i) => _bubble(msgs[i]),
+                      ),
+              ),
+              if (ticket.isClosed) _closedBanner(ticket) else _composer(),
+            ],
+          );
+        }),
       ),
     );
   }
 
-  Widget _header() {
+  Widget _closedBanner(TicketModel ticket) {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF0FFF5),
+        border: Border(top: BorderSide(color: Color(0xFFDCEFE4))),
+      ),
+      child: Text(
+        ticket.status == TicketStatus.resolved
+            ? AppStrings.supportStatusResolved.tr
+            : AppStrings.supportStatusClosed.tr,
+        textAlign: TextAlign.center,
+        style: KafiTheme.nunito(11, color: KafiColors.grnD, w: FontWeight.w700),
+      ),
+    );
+  }
+
+  Widget _header(TicketModel ticket) {
     return Container(
       width: double.infinity,
       padding: const EdgeInsets.fromLTRB(10, 10, 12, 12),
@@ -89,16 +119,20 @@ class _SupportTicketScreenState extends State<SupportTicketScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(_ticket.subject.isNotEmpty ? _ticket.subject : categoryLabel(_ticket.category),
+                Text(
+                    ticket.subject.isNotEmpty
+                        ? ticket.subject
+                        : categoryLabel(ticket.category),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: KafiTheme.fredoka(13, color: const Color(0xFF5A2090), w: FontWeight.w800)),
-                Text(categoryLabel(_ticket.category),
+                    style: KafiTheme.fredoka(13,
+                        color: const Color(0xFF5A2090), w: FontWeight.w800)),
+                Text(categoryLabel(ticket.category),
                     style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600)),
               ],
             ),
           ),
-          statusChip(_ticket.status),
+          statusChip(ticket.status),
         ],
       ),
     );

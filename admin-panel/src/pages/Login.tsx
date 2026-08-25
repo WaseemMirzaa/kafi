@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { AppConfig } from '../config/app';
 import { useAuthStore } from '../hooks/useAuth';
 import { bootstrapFirstAdminIfNeeded } from '../services/bootstrapAdmin';
+import { useLocale } from '../context/LocaleContext';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -98,6 +99,7 @@ function LoginForm({
   error: string | null;
   onSubmit: (e: React.FormEvent) => void;
 }) {
+  const { t } = useLocale();
   return (
     <>
       <div className="flex items-center justify-center gap-1.5 mb-5">
@@ -108,27 +110,27 @@ function LoginForm({
           <circle cx="17" cy="17" r="4.5" fill="#FF8FAB" />
         </svg>
         <span className="font-pacifico text-[18px] text-rose-dark">Kafi</span>
-        <span className="text-[8px] bg-navy text-white px-1.5 py-0.5 rounded-full font-fredoka font-bold">ADMIN</span>
+        <span className="text-[8px] bg-navy text-white px-1.5 py-0.5 rounded-full font-fredoka font-bold">{t('common.admin')}</span>
       </div>
-      <h1 className="text-base font-black text-navy text-center mb-5">Admin login</h1>
+      <h1 className="text-base font-black text-navy text-center mb-5">{t('login.title')}</h1>
 
       {bootstrapping && (
         <p className="text-[9px] font-semibold text-[#8090B0] text-center mb-3">
-          Checking for first-time admin setup…
+          {t('login.checkingSetup')}
         </p>
       )}
 
       {bootstrapCreds && (
         <div className="mb-4 p-3 rounded-lg bg-[#FFF0F5] border border-[#FFD6E5]">
-          <p className="text-[9px] font-black text-navy mb-1">First admin created</p>
+          <p className="text-[9px] font-black text-navy mb-1">{t('login.firstAdminCreated')}</p>
           <p className="text-[8px] font-semibold text-[#5A6480] mb-2">
-            Save these credentials — shown once on first setup.
+            {t('login.saveCredentials')}
           </p>
           <p className="text-[9px] font-bold text-navy">
-            Email: <span className="font-mono">{bootstrapCreds.email}</span>
+            {t('login.email')}: <span className="font-mono">{bootstrapCreds.email}</span>
           </p>
           <p className="text-[9px] font-bold text-navy">
-            Password: <span className="font-mono">{bootstrapCreds.password}</span>
+            {t('login.password')}: <span className="font-mono">{bootstrapCreds.password}</span>
           </p>
         </div>
       )}
@@ -139,7 +141,7 @@ function LoginForm({
 
       <form onSubmit={onSubmit} className="space-y-3">
         <div>
-          <label className="block text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1">Email</label>
+          <label className="block text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1">{t('login.email')}</label>
           <input
             type="email"
             value={email}
@@ -149,7 +151,7 @@ function LoginForm({
           />
         </div>
         <div>
-          <label className="block text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1">Password</label>
+          <label className="block text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1">{t('login.password')}</label>
           <input
             type="password"
             value={password}
@@ -160,7 +162,7 @@ function LoginForm({
         </div>
         {error && <p className="text-[9px] font-bold text-rose-dark">{error}</p>}
         <button type="submit" disabled={loading} className="w-full qa-btn qa-r justify-center mt-2 disabled:opacity-50">
-          {loading ? 'Signing in...' : 'Sign in'}
+          {loading ? t('login.signingIn') : t('login.signIn')}
         </button>
       </form>
     </>

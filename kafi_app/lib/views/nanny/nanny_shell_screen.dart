@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/controllers/chat_controller.dart';
 import 'package:kafi_app/controllers/nanny_shell_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/views/family/chat_screen.dart';
@@ -37,6 +38,14 @@ class NannyShellScreen extends StatelessWidget {
     return Obx(
       () {
         final tab = _shell.tabIndex.value;
+        var msgBadge = 0;
+        if (Get.isRegistered<ChatController>()) {
+          final chat = Get.find<ChatController>();
+          for (final t in chat.threads) {
+            chat.isNanny ? t.unreadCount.nanny : t.unreadCount.family;
+          }
+          msgBadge = tab == 2 ? 0 : chat.navMessageBadgeCount;
+        }
         return Scaffold(
           body: SizedBox.expand(child: _tabBody(tab)),
           bottomNavigationBar: KafiBottomNav(
@@ -55,6 +64,7 @@ class NannyShellScreen extends StatelessWidget {
               KafiBottomNavItem(
                 emoji: '💬',
                 label: AppStrings.navMessages.tr,
+                badgeCount: msgBadge,
                 onTap: () => _shell.goToTab(2),
               ),
               KafiBottomNavItem(

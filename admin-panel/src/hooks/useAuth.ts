@@ -8,6 +8,7 @@ import {
 import { doc, getDoc, serverTimestamp, updateDoc } from 'firebase/firestore';
 import { AppConfig } from '../config/app';
 import { auth, db } from '../config/firebase';
+import { t } from '../locales/t';
 
 interface AdminUser {
   uid: string;
@@ -96,7 +97,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         const u = await toAdminUser(fb);
         if (!u.isAdmin) {
           await signOut(authInstance);
-          set({ user: null, loading: false, error: 'Not an admin account' });
+          set({ user: null, loading: false, error: t('login.notAdminAccount') });
           return;
         }
         localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
@@ -123,7 +124,7 @@ export const useAuthStore = create<AuthState>((set) => ({
         set({ user: mockUser, loading: false });
         return;
       }
-      set({ error: 'Invalid email or password', loading: false });
+      set({ error: t('login.invalidCredentials'), loading: false });
       throw new Error('Invalid credentials');
     }
 
@@ -132,14 +133,20 @@ export const useAuthStore = create<AuthState>((set) => ({
       const u = await toAdminUser(cred.user);
       if (!u.isAdmin) {
         await signOut(auth);
-        set({ error: 'This account is not an admin', loading: false });
+        set({ error: t('login.thisAccountNotAdmin'), loading: false });
         throw new Error('not_admin');
       }
       localStorage.setItem(STORAGE_KEY, JSON.stringify(u));
       set({ user: u, loading: false });
     } catch (e) {
-      const msg = (e as Error).message || 'Login failed';
-      set({ error: msg, loading: false });
+      // 'not_admin' is our own sentinel from above — the translated message
+      // is already set, so re-throwing here must not clobber it with the raw
+      // (untranslated) sentinel text.
+      if ((e as Error).message !== 'not_admin') {
+        set({ error: (e as Error).message || t('login.loginFailed'), loading: false });
+      } else {
+        set({ loading: false });
+      }
       throw e;
     }
   },

@@ -9,6 +9,7 @@ import {
   StatusBadge,
   TableCard,
   TopStat,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import {
   FamilyService,
@@ -19,8 +20,11 @@ import {
   DEFAULT_PLAN_PRICES,
 } from '../../services/firestore';
 import { exportCsv } from '../../utils/csv';
+import { useLocale } from '../../context/LocaleContext';
+import { subscriptionPlanLabel, fmtDate } from '../../utils/nannyLabels';
 
 export default function Subscriptions() {
+  const { t } = useLocale();
   const [families, setFamilies] = useState<FamilyRow[]>([]);
   const [revenue, setRevenue] = useState<RevenueSummary | null>(null);
   // Plan prices come from admin settings (falls back to the shared defaults).
@@ -38,8 +42,9 @@ export default function Subscriptions() {
         setPlanPrice(s.plans);
       }))
       // Without .catch/.finally the page hangs on "Loading…" on any read failure.
-      .catch((e) => setError((e as Error).message || 'Failed to load subscriptions'))
+      .catch((e) => setError((e as Error).message || t('families.failedToLoadSubscriptions')))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const subscribed = families.filter((f) => f.subscription.status === 'active').length;
@@ -76,61 +81,61 @@ export default function Subscriptions() {
   return (
     <PageShell>
       <PageHeader
-        title="Subscriptions"
-        subtitle={`${subscribed} active · View plans & billing`}
+        title={t('families.subscriptionsTitle')}
+        subtitle={t('families.subscriptionsSubtitle', { count: subscribed })}
         actions={
           <button type="button" className="qa-btn qa-g" onClick={onExport}>
-            Export CSV
+            {t('common.exportCsv')}
           </button>
         }
       />
       <PageContent>
         <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 mb-3">
-          <TopStat num={String(subscribed)} label="Active subs" change="↑ Live" />
-          <TopStat num={`AED ${monthly.toLocaleString()}`} label="Monthly revenue" change="↑ Live" numClass="!text-[13px]" />
-          <TopStat num={String(expiringSoon)} label="Expiring (3d)" change="⚠ Watch" numClass="!text-[#FFB347]" />
+          <TopStat num={String(subscribed)} label={t('families.activeSubs')} change={t('families.liveChange')} />
+          <TopStat num={`AED ${monthly.toLocaleString()}`} label={t('families.monthlyRevenue')} change={t('families.liveChange')} numClass="!text-[13px]" />
+          <TopStat num={String(expiringSoon)} label={t('families.expiring3d')} change={t('families.watchChange')} numClass="!text-[#FFB347]" />
         </div>
 
-        {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
+        {loading && <PageLoader compact />}
         {error && <div className="px-3 py-4 text-[10px] text-rose-dark">{error}</div>}
 
-        <TableCard title="Plan breakdown">
+        <TableCard title={t('families.planBreakdown')}>
           {Object.entries(planCounts).map(([plan, count]) => {
             const total = subscribed || 1;
             return (
               <Row key={plan}>
                 <div className="flex-1 text-[10.5px] font-extrabold text-navy">
-                  {plan} · AED {planPrice[plan]}
+                  {subscriptionPlanLabel(plan)} · AED {planPrice[plan]}
                 </div>
                 <BarRow
                   pct={Math.min(100, (count / total) * 100)}
-                  label={`${count} subs`}
+                  label={t('families.subsCount', { count })}
                   color={plan === 'weekly' ? '#FFB347' : plan === 'monthly' ? '#9B6EDB' : '#6DBF8A'}
                 />
               </Row>
             );
           })}
           <Row highlight>
-            <div className="flex-1 text-[10.5px] font-extrabold text-[#8090B0]">Not subscribed (free)</div>
-            <BarRow pct={Math.min(100, (free / (families.length || 1)) * 100)} label={`${free} users`} color="#FFD8E8" />
+            <div className="flex-1 text-[10.5px] font-extrabold text-[#8090B0]">{t('families.notSubscribedFree')}</div>
+            <BarRow pct={Math.min(100, (free / (families.length || 1)) * 100)} label={t('families.usersCount', { count: free })} color="#FFD8E8" />
           </Row>
         </TableCard>
 
-        <TableCard title="Active subscribers">
+        <TableCard title={t('families.activeSubscribers')}>
           {!loading && activeSubs.length === 0 ? (
-            <div className="px-3 py-4 text-[10px] text-[#8090B0]">No active subscribers yet.</div>
+            <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('families.noActiveSubscribersYet')}</div>
           ) : (
             activeSubs.map((f) => (
               <Row key={f.id}>
                 <div className="flex-1 min-w-0">
                   <div className="text-[10.5px] font-extrabold text-navy">{f.fullName}</div>
                   <div className="text-[8.5px] font-semibold text-[#8090B0]">
-                    {f.subscription.plan} · ends {f.subscription.endDate?.toLocaleDateString() ?? '—'}
+                    {subscriptionPlanLabel(f.subscription.plan)} · {t('families.endsOn', { date: f.subscription.endDate ? fmtDate(f.subscription.endDate) : t('common.dash') })}
                   </div>
                 </div>
-                <StatusBadge variant="sub">Active</StatusBadge>
+                <StatusBadge variant="sub">{t('families.activeBadge')}</StatusBadge>
                 <Link to={`/families/${f.id}`} className="text-[9px] font-bold text-purple font-fredoka no-underline ml-1">
-                  View →
+                  {t('common.view')}
                 </Link>
               </Row>
             ))

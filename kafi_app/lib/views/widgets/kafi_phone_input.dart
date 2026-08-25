@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kafi_app/utils/kafi_text_context_menu.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 class KafiPhoneInput extends StatelessWidget {
@@ -55,6 +56,7 @@ class KafiPhoneInput extends StatelessWidget {
           child: TextField(
             controller: controller,
             keyboardType: TextInputType.phone,
+            contextMenuBuilder: kafiEditableTextContextMenu,
             style: KafiTheme.nunito(11, color: KafiColors.td),
             decoration: InputDecoration(
               hintText: '50 123 4567',

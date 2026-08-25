@@ -279,7 +279,7 @@ class PricingScreen extends GetView<SubscriptionController> {
                     TextSpan(
                       style: KafiTheme.nunito(19, color: priceColor, w: FontWeight.w900),
                       children: [
-                        TextSpan(text: 'AED ',
+                        TextSpan(text: AppStrings.currencyAedPrefix.tr,
                             style: KafiTheme.nunito(9.5, color: priceColor, w: FontWeight.w700)),
                         TextSpan(text: '${p.priceAed}'),
                       ],

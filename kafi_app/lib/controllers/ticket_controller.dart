@@ -25,6 +25,7 @@ class TicketController extends GetxController {
   final inputCtrl = TextEditingController();
   final RxBool isSending = false.obs;
   StreamSubscription<List<TicketMessage>>? _sub;
+  StreamSubscription<TicketModel?>? _ticketSub;
 
   @override
   void onInit() {
@@ -35,6 +36,7 @@ class TicketController extends GetxController {
   @override
   void onClose() {
     _sub?.cancel();
+    _ticketSub?.cancel();
     inputCtrl.dispose();
     super.onClose();
   }
@@ -83,20 +85,33 @@ class TicketController extends GetxController {
     }
   }
 
-  /// Binds the live message stream for [t].
+  /// Binds the live message stream for [t] and watches the ticket doc so admin
+  /// status changes (resolved/closed) appear without leaving the screen.
   void openTicketThread(TicketModel t) {
     activeTicket.value = t;
     messages.clear();
     _sub?.cancel();
+    _ticketSub?.cancel();
     _sub = _tickets.watchMessages(t.id).listen(
       (list) => messages.value = list,
       onError: (e) => Get.log('ticket message stream error: $e', isError: true),
+    );
+    _ticketSub = _tickets.watchTicket(t.id).listen(
+      (fresh) {
+        if (fresh == null) return;
+        activeTicket.value = fresh;
+        final idx = tickets.indexWhere((x) => x.id == fresh.id);
+        if (idx >= 0) tickets[idx] = fresh;
+      },
+      onError: (e) => Get.log('ticket status stream error: $e', isError: true),
     );
   }
 
   void closeTicketThread() {
     _sub?.cancel();
     _sub = null;
+    _ticketSub?.cancel();
+    _ticketSub = null;
     activeTicket.value = null;
     messages.clear();
     inputCtrl.clear();
@@ -105,7 +120,7 @@ class TicketController extends GetxController {
   Future<void> sendMessage() async {
     final t = activeTicket.value;
     final text = inputCtrl.text.trim();
-    if (t == null || text.isEmpty || isSending.value) return;
+    if (t == null || text.isEmpty || isSending.value || t.isClosed) return;
     final uid = currentUserId(_auth) ?? '';
     isSending.value = true;
     inputCtrl.clear();

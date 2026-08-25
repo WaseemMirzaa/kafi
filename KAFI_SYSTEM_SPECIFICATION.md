@@ -401,7 +401,9 @@ interface JobPost {
   // - 'helper'
   // - 'pet_caretaker'
   jobType: 'live-in' | 'live-out';
-  schedule: string;
+  employmentType: 'fullTime' | 'partTime';  // max one active of each per family
+  schedule: string;              // display label from selected weekdays (e.g. "Mon, Tue, Wed")
+  workDays?: string[];           // Mon–Sun codes selected on the job form
   startDate: 'immediate' | Date;
   duration: 'permanent' | 'contract';
   contractMonths?: number;
@@ -607,14 +609,17 @@ enum MessageType {
   SYSTEM = 'system'                      // Chat opened, Trial started, etc.
 }
 
-// Trial Offer Bubble Content (displayed in chat)
+// Trial Offer Bubble Content (displayed in chat for family AND nanny)
 interface TrialOfferBubble {
   title: string;                         // "🤝 Trial Offer Sent/Received"
   duration: string;                      // "📅 Duration: 7 days paid trial"
   rate: string;                          // "💰 Rate: AED 150 per day"
+  total: string;                         // "💵 Total: AED 1050"
+  startFrom: string;                     // "🗓 Starting from: May 20, 2026"
   type: string;                          // "🏠 Live-in · Meals & room included"
-  location: string;                      // "📍 Dubai Marina · Start: May 10"
-  actions: ['Accept', 'Counter'];        // Button options
+  location: string;                      // "📍 Location: Dubai Marina"
+  notes?: string;                        // "📝 Notes: …" (optional Additional Notes from Screen 31)
+  actions: ['Accept', 'Counter', 'Decline'];  // Nanny pending; family sees Accept/Decline on counter
 }
 
 interface Attachment {
@@ -748,6 +753,8 @@ interface SystemSettings {
   subscriptionPlans: SubscriptionPlan[];
   freeContactLimit: number;      // Default: 5
   matchAlgorithmWeights: MatchWeights;
+  /** When true, family Browse/search hides nannies inactive for 14+ days (or missing lastActiveAt). */
+  hideInactiveNannies: boolean;  // Default: false
 }
 
 interface SubscriptionPlan {
@@ -1018,12 +1025,15 @@ START
   │     • 🔐 PERMISSION CHECK: Location (optional, pre-fill emirate)
   │     • Family info (name, nationality, city, children)
   │     • Religion & culture preferences
-  │     • Role & job type requirements
+  │     • Role & job type + employment (FT/PT slot)
+  │     • Uber-style location picker (map + search)
+  │     • Working days Mon–Sun multi-select sheet
   │     • Duties checklist
   │     • Benefits offered
   │     • Salary range, trial details, visa sponsorship
   │     • GATE: until ≥1 job is posted, relaunch/resume always returns here;
   │       back navigation cannot open Browse
+  │     • Cap: one active full-time + one active part-time job
   │
   ├─→ [Browse Nannies] Home screen
   │     └─→ Free contacts: 5/5 remaining
@@ -1220,10 +1230,15 @@ START: Family sends trial offer
   │     │
   │     ├─→ [Confirm Payment Received] 
   │     │     └─→ nannyConfirmedPayment = true
+  │     │     └─→ Rate-the-app prompt (throttled)
   │     │
   │     └─→ [Report Payment Issue]
   │           └─→ paymentIssueReported = true
   │           └─→ Contact support flow
+  │
+  ├─→ [Family: Confirm Payment]
+  │     • Same "Confirm payment" control on Screen 19 (settlement)
+  │     └─→ nannyConfirmedPayment = true + rate-the-app prompt (throttled)
   │
   ├─→ [Family: Make Decision]
   │     • Review evaluation checklist
@@ -1820,6 +1835,7 @@ PENDING → ACCEPTED → ACTIVE → COMPLETED → HIRED
 | Delete user | Remove all user data |
 | Export CSV | Download data as CSV file |
 | Send reminder | Send subscription reminder to free users |
+| Hide inactive nannies | Toggle `settings/global.hideInactiveNannies` — when on, family Browse lists only nannies with `lastActiveAt` within 14 days |
 
 ## 12.4 Analytics Events to Track
 
@@ -2107,7 +2123,7 @@ Permission Requested
 | J5 | Apply but profile incomplete | "Complete your profile to apply" | Show what's missing |
 | J6 | Nanny on active trial | "You're on a trial. Apply after it ends." | Show trial info |
 | J7 | Withdraw after viewed | "Application already viewed. Withdraw?" | Confirm |
-| J8 | Family hits job post limit | "You have [X] active jobs. Close one first." | Show jobs list |
+| J8 | Family hits job post limit | Max **one active full-time + one active part-time**. Duplicate type: "You already have an active job of this type…". Both filled: close one in My Jobs first. | Show My Jobs / block Post CTA |
 | J9 | Job post auto-expires | After 7 days → status: expired | Notify family |
 | J10 | Cover message too long | "Max 300 characters" | Counter |
 
@@ -2243,6 +2259,21 @@ Permission Requested
 | R5 | Unblock user | "Unblocked" | Restore visibility |
 | R6 | Reported user takes action | Action recorded for admin review | Admin investigates |
 | R7 | False reporting (3+ rejected) | "Your reports are under review" | Account warning |
+
+### Report document (`disputes/{id}`) — filing payload
+
+In-app **Report user** / **Report a problem** / payment-issue reports write to `disputes` (admin **Reports**). At file time the client denormalizes identity and optional evidence:
+
+| Field | Notes |
+|-------|--------|
+| `reporterId`, `reportedUserId` | Auth UIDs (always) |
+| `reporterName`, `reporterType` | `'family'` \| `'nanny'` |
+| `reportedName`, `reportedType` | Best-effort from profile docs |
+| `reporterSnapshot` / `reportedSnapshot` | Optional `{ phone?, city?, nationality?, status? }` captured at file time so admin retains context if the account is later deleted |
+| `attachments` | Optional array (max **5**), each `{ id, url, storagePath, name, contentType, sizeBytes, uploadedAt }` — **images** and **PDF** only, **10 MB** each. Stored under `disputes/{disputeId}/attachments/{fileId}`. No video in v1 |
+| `category`, `description`, `relatedTrialId?`, `status` | Existing fields |
+
+Reported users never see the report in-app (My reports = reports **filed by** the current user). Admin report detail shows names, **user IDs**, snapshot fields, related trial link, and attachment gallery.
 
 ## 14.14 Content Moderation
 
@@ -2554,6 +2585,50 @@ First Launch
 *Comparison Status: Verified against HTML mockup (kafi-platform-v8-final.html)*
 | 2026-07-17 | Native media and location permissions | Done | Photo capture requires Camera; photo gallery requires Images/Photos; video capture requires Camera + Microphone; video gallery requires Videos/Photos; location picker requires when-in-use location. Android 12− storage fallback, Android 13+ granular image/video access, Android 14 selected-media access, and iOS limited Photos access are supported. |
 
-| 2026-07-31 | Family first-job onboarding gate | Done | Families with no job posts stay on Screen 13 / familyForm on relaunch and resume; back cannot escape to Browse until ≥1 job exists |
+| 2026-07-31 | Family first-job onboarding gate | Done | Families with no job posts stay on Screen 13 / familyForm on relaunch and resume; back, Browse/home, and notification deep links cannot escape until ≥1 job exists |
 
 | 2026-07-17 | Media screen photo/video preview | Done | Nanny media step (§3.2) now correctly previews selected photos (cover + thumbs) and intro video after pick/record in mock and live modes. |
+
+| 2026-07-31 | Post-job location/schedule/FT-PT + browse bugs | Done | JobPost workDays + employmentType cap (J8); family form + Browse CTA; shortlist create rules; browse myJobs refresh |
+| 2026-07-31 | Watch intro video playback | Done | Intro video perk playback resolves Storage/`gs://` refs to download URLs so Screen 16 Watch intro video can play |
+| 2026-07-31 | Select Location iOS crash + map picker | Done | Shared `KafiLocationPicker` (Google map when key present) remains the location UX for family job, trial, About You, experience, refs; iOS sheet text-menu crash fixed |
+| 2026-07-31 | Trial offer form validations | Done | §14.4 V13–V15 + §14.6 T1–T4 + TX1–TX2 enforced on Screen 31 send via `validateTrialOffer` / `Validators.trialDailyRate` / `trialStartDate` |
+| 2026-07-31 | Chat send permission-denied | Done | Client message writes match §6.3 thread party + rules sender identity; mock-sub entitlement sync required for family creates when `useMockSubscription` |
+| 2026-07-31 | Browse home missing nannies | Done | §14 SR2 — All filter clears to full verified catalogue; browse query no longer truncates at 50 |
+| 2026-07-31 | Chat conversation single loader | Done | Screen 17 conversation list uses one loader while opening; no per-message trial spinners |
+| 2026-07-31 | Trial screen empty while in progress | Done | Screen 19 shows accepted/active trial from chat View trial; permanent controller no longer ignores trialId args |
+| 2026-07-31 | Ticket status stale after admin resolve | Done | Mobile support tickets reflect admin resolved/closed via live ticket doc watch |
+| 2026-07-31 | Admin Reports (not Disputes) + hide IDs | Done | Admin Safety “Disputes” label removed — Reports queue only (`disputes` collection unchanged); no IDs in report UI |
+| 2026-07-31 | Mobile reports vs support listings | Done | §14.13 report-user / report-problem → `disputes` + My reports; Contact Support → `tickets` only |
+| 2026-07-31 | Nanny chat report flag | Done | Chat report counterparty from thread membership (not stale role); sheet above shell nav |
+| 2026-07-31 | Admin badges + iOS push + notif deep-links | Done | Admin nav badges hidden at 0; iOS remote push configured; push/inbox taps deep-link to counterpart detail |
+| 2026-08-03 | Trial checklist sync both parties | Done | §6.5 during-trial evaluation checklist persisted live so both parties see the same ticks |
+| 2026-08-03 | Profile quality remaining gaps | Done | Mobile score uses ProfileQualityScore factors (§3.2); dashboard surfaces remaining recommendations |
+| 2026-08-03 | Admin panel + push/inbox notification locale rule | Done | Admin locale is a client-only per-browser preference (`localStorage`, no server persistence) toggled EN\|AR from Settings — all admin data-entity enum values (subscription status/plan, nanny/document/intro-video status, trial/dispute/ticket status, opener/reporter type) are resolved to display labels through a single mapping layer rather than rendered as raw Firestore field values. Push/inbox notification locale resolves from the recipient's `users/{uid}` doc field `locale` \| `preferredLanguage` \| `language` \| `settings.language` (first present, default `en`); the one-time admin-bootstrap HTTP endpoint instead resolves locale from the request's `Accept-Language` header since no user doc exists yet. |
+| 2026-08-03 | Full i18n verification (3 clean cycles) | Done | Mobile UI + AppError messages localized; admin EN/AR via t(); push/inbox templates locale-aware (en/ar) with 3 consecutive clean verification cycles |
+| 2026-08-06 | Nanny trial offer Accept/Decline | Done | Nanny pending trial offer UI exposes accept/decline/counter per §6 trial response flow |
+| 2026-08-06 | Nanny jobs live feed | Done | Active job discovery for nannies is a live feed of `status=active` posts |
+| 2026-08-06 | Family browse live feed | Done | Family discovery is a live feed of `status=approved` + `isVerified=true` nannies (filter pills preserved) |
+| 2026-08-06 | Cancelled trial clears chat active badge | Done | Cancel/decline flips `chatThreads.trialStatus`; `onTrialEnded` syncs thread status so both parties drop active-trial UI |
+| 2026-08-06 | Family counter Accept/Decline in chat | Done | §6.5 family reviews counter — Accept/Decline visible in chat when status is countered or message is trialCountered |
+| 2026-08-06 | Hide chat trial bar when trial ends | Done | Chat trial indicators only while accepted/active and payment not confirmed (§6.5 / §6.6) |
+| 2026-08-06 | Family applicants live inbox | Done | Family Applicants is a live feed of applications for the family; apply requires job.familyId |
+| 2026-08-06 | Admin Verify docs badge stale | Done | Admin sidebar pending-docs badge refreshes with queue (route change + post approve/reject) |
+| 2026-08-06 | Admin↔user report/ticket realtime | Done | Report resolve + support chat live for family and nanny (dispute/ticket doc + messages snapshots; admin detail panes subscribe) |
+| 2026-08-06 | Family Applicants multi-job inbox | Done | Family Applicants lists applications for all of a family's job posts; onNewApplication maintains job applicant counts + familyId |
+| 2026-08-06 | Trial offer gate after end | Done | §14.6 T3/T4 / duplicate-offer: ended trials (payment confirmed, payment issue reported, cancelled) do not block a new offer |
+| 2026-08-06 | Rate app after payment confirm | Done | Screen 19 Confirm payment available to family; triggers throttled rate-the-app dialog |
+
+| 2026-08-06 | Trial offer chat bubble details | Done | §3.7 TrialOfferBubble expanded: duration, rate, total, starting from, type, location, notes for both parties; ensureTrialInList when nanny list misses the offer |
+
+| 2026-08-06 | Applicants job filter names | Done | Family Applicants filters show job names not Firestore job ids |
+
+| 2026-08-06 | Messages bottom-nav badge | Done | §6.6: shell Messages tab badge for new unread; cleared on opening chat list |
+
+| 2026-08-06 | Report user info + attachments | Done | §14.13: disputes denormalize reporter/reported names, types, snapshot + optional image/PDF attachments (max 5×10MB); admin Reports shows IDs, snapshot, trial link, attachment gallery; Storage path disputes/{id}/attachments |
+
+| 2026-08-06 | Hide inactive nannies listing | Done | `SystemSettings.hideInactiveNannies`: family Browse excludes nannies without recent `lastActiveAt` (14 days); null stamp treated as inactive |
+
+| 2026-08-06 | Report attach storage auth | Done | Dispute create→upload→attachments patch; Storage signed-in read for evidence URLs |
+
+| 2026-08-06 | Admin reports + last active | Done | Admin Reports show IDs + attachment gallery; nanny lastActiveAt surfaced for hide-inactive toggle |

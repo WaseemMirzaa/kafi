@@ -4,6 +4,7 @@ import GoogleMaps
 import UserNotifications
 import FirebaseCore
 import FirebaseAuth
+import FirebaseMessaging
 
 @main
 @objc class AppDelegate: FlutterAppDelegate {
@@ -17,11 +18,13 @@ import FirebaseAuth
       FirebaseApp.configure()
     }
 
-    GMSServices.provideAPIKey("YOUR_GOOGLE_MAPS_API_KEY")
+    GMSServices.provideAPIKey("AIzaSyDqQUR6ygHdXRDDUmJ7Xr02A2HCMH92Lvk")
     GeneratedPluginRegistrant.register(with: self)
 
+    // Push: UNUserNotificationCenter + remote registration so FCM can bind an
+    // APNs device token (required for iOS getToken / delivery).
     if #available(iOS 10.0, *) {
-      UNUserNotificationCenter.current().delegate = self
+      UNUserNotificationCenter.current().delegate = self as UNUserNotificationCenterDelegate
     }
     application.registerForRemoteNotifications()
 
@@ -32,14 +35,24 @@ import FirebaseAuth
     _ application: UIApplication,
     didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
   ) {
+    // Phone Auth silent-push + FCM both need the same APNs device token.
     if FirebaseApp.app() != nil {
       #if DEBUG
       Auth.auth().setAPNSToken(deviceToken, type: .sandbox)
       #else
       Auth.auth().setAPNSToken(deviceToken, type: .prod)
       #endif
+      Messaging.messaging().apnsToken = deviceToken
     }
     super.application(application, didRegisterForRemoteNotificationsWithDeviceToken: deviceToken)
+  }
+
+  override func application(
+    _ application: UIApplication,
+    didFailToRegisterForRemoteNotificationsWithError error: Error
+  ) {
+    NSLog("APNs registration failed: \(error.localizedDescription)")
+    super.application(application, didFailToRegisterForRemoteNotificationsWithError: error)
   }
 
   // Phone-auth reCAPTCHA / silent-APNs callbacks must be handed to FirebaseAuth

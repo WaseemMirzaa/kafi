@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/utils/kafi_text_context_menu.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 /// Uber-style searchable picker for a fixed list of options (e.g. nationality /
@@ -106,7 +107,7 @@ class _SearchableSheetState extends State<_SearchableSheet> {
   @override
   void initState() {
     super.initState();
-    _focusNode.requestFocus();
+    // Do not autofocus — avoids iOS text-menu races in modal sheets.
   }
 
   @override
@@ -204,6 +205,8 @@ class _SearchableSheetState extends State<_SearchableSheet> {
                 child: TextField(
                   controller: _searchCtrl,
                   focusNode: _focusNode,
+                  contextMenuBuilder: kafiNoTextContextMenu,
+                  enableInteractiveSelection: false,
                   onChanged: _filter,
                   style: KafiTheme.nunito(14, color: KafiColors.td),
                   decoration: InputDecoration(

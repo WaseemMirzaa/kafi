@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { Locale, resolveLocale } from '../i18n/notifications';
 
 interface NotificationPayload {
   title: string;
@@ -6,12 +7,15 @@ interface NotificationPayload {
   data?: Record<string, string>;
 }
 
-/// A Firestore document that (may) carry cached FCM tokens. The named
-/// `fcmTokens` field lets trigger call sites do `user.fcmTokens?.length` and
-/// pass `user.fcmTokens` straight to `sendNotification`; the index signature
-/// keeps every other document field accessible.
+/// A Firestore document that (may) carry cached FCM tokens and a resolved
+/// locale. The named `fcmTokens` field lets trigger call sites do
+/// `user.fcmTokens?.length` and pass `user.fcmTokens` straight to
+/// `sendNotification`; `locale` is always populated (defaults to 'en') so
+/// call sites can pass it straight to the `tn()`/`notif()` template helpers.
+/// The index signature keeps every other document field accessible.
 export interface TokenBearer {
   fcmTokens?: string[];
+  locale?: Locale;
   [key: string]: unknown;
 }
 
@@ -31,6 +35,24 @@ export async function sendNotification(
     tokens: fcmTokens,
     notification: { title: payload.title, body: payload.body },
     data: payload.data,
+    // iOS needs an explicit APNs payload or banners/sounds are unreliable,
+    // especially when the app is backgrounded.
+    apns: {
+      payload: {
+        aps: {
+          sound: 'default',
+          badge: 1,
+          contentAvailable: true,
+        },
+      },
+    },
+    android: {
+      priority: 'high',
+      notification: {
+        channelId: 'kafi_high_importance',
+        sound: 'default',
+      },
+    },
   };
 
   try {
@@ -136,33 +158,38 @@ export async function writeInbox(
   }
 }
 
-/// Returns the user document (where FCM tokens live).
+/// Returns the user document (where FCM tokens + locale settings live).
 export async function getUser(userId: string): Promise<TokenBearer> {
   const snap = await admin.firestore().collection('users').doc(userId).get();
-  return (snap.data() as TokenBearer) ?? {};
+  const data = (snap.data() as Record<string, unknown>) ?? {};
+  return { ...data, locale: resolveLocale(data) };
 }
 
-/// Returns the nanny profile + FCM tokens (merged from `users/{uid}` since
-/// the nanny doc itself does not carry tokens).
+/// Returns the nanny profile + FCM tokens/locale (merged from `users/{uid}`
+/// since the nanny doc itself does not carry tokens or notification settings).
 export async function getNanny(nannyId: string): Promise<TokenBearer> {
   const [n, u] = await Promise.all([
     admin.firestore().collection('nannies').doc(nannyId).get(),
     admin.firestore().collection('users').doc(nannyId).get(),
   ]);
+  const userData = (u.data() as Record<string, unknown>) ?? {};
   return {
     ...((n.data() as Record<string, unknown>) ?? {}),
-    fcmTokens: ((u.data() as Record<string, unknown> | undefined)?.fcmTokens as string[]) ?? [],
+    fcmTokens: (userData.fcmTokens as string[]) ?? [],
+    locale: resolveLocale(userData),
   };
 }
 
-/// Returns the family profile + FCM tokens (merged from `users/{uid}`).
+/// Returns the family profile + FCM tokens/locale (merged from `users/{uid}`).
 export async function getFamily(familyId: string): Promise<TokenBearer> {
   const [f, u] = await Promise.all([
     admin.firestore().collection('families').doc(familyId).get(),
     admin.firestore().collection('users').doc(familyId).get(),
   ]);
+  const userData = (u.data() as Record<string, unknown>) ?? {};
   return {
     ...((f.data() as Record<string, unknown>) ?? {}),
-    fcmTokens: ((u.data() as Record<string, unknown> | undefined)?.fcmTokens as string[]) ?? [],
+    fcmTokens: (userData.fcmTokens as string[]) ?? [],
+    locale: resolveLocale(userData),
   };
 }

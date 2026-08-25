@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import { Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuthStore } from './hooks/useAuth';
 import Layout from './components/layout/Layout';
 import Login from './pages/Login';
@@ -20,13 +20,26 @@ import SupportTicketDetail from './pages/support/SupportTicketDetail';
 import AllTrials from './pages/trials/AllTrials';
 import TrialDetail from './pages/trials/TrialDetail';
 import Settings from './pages/Settings';
+import { PageLoader } from './components/ui/AdminUI';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { user, loading } = useAuthStore();
-  if (loading) return <div className="flex items-center justify-center h-screen">Loading...</div>;
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <PageLoader />
+      </div>
+    );
+  }
   if (!user) return <Navigate to="/login" replace />;
   if (!user.isAdmin) return <Navigate to="/login" replace />;
   return <>{children}</>;
+}
+
+/** Old /disputes/:id bookmarks → /reports/:id (reports replace disputes in the UI). */
+function DisputeDetailRedirect() {
+  const { id } = useParams();
+  return <Navigate to={id ? `/reports/${id}` : '/reports'} replace />;
 }
 
 export default function App() {
@@ -52,8 +65,10 @@ export default function App() {
                 <Route path="/families/:id" element={<FamilyDetail />} />
                 <Route path="/trials" element={<AllTrials />} />
                 <Route path="/trials/:id" element={<TrialDetail />} />
-                <Route path="/disputes" element={<Disputes />} />
-                <Route path="/disputes/:id" element={<DisputeDetail />} />
+                <Route path="/reports" element={<Disputes />} />
+                <Route path="/reports/:id" element={<DisputeDetail />} />
+                <Route path="/disputes" element={<Navigate to="/reports" replace />} />
+                <Route path="/disputes/:id" element={<DisputeDetailRedirect />} />
                 <Route path="/support" element={<SupportTickets />} />
                 <Route path="/support/:id" element={<SupportTicketDetail />} />
                 <Route path="/revenue" element={<Revenue />} />

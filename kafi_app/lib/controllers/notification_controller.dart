@@ -2,9 +2,12 @@ import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/chat_controller.dart';
 import 'package:kafi_app/models/notification_model.dart';
+import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/services/interfaces/i_dispute_service.dart';
+import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_notification_service.dart';
 import 'package:kafi_app/services/interfaces/i_ticket_service.dart';
+import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
@@ -22,10 +25,12 @@ class NotificationController extends GetxController {
   /// family shell (and [ChatController]) has mounted.
   String? pendingChatThreadId;
   String? pendingChatNannyId;
+  String? pendingChatFamilyId;
 
   void clearPendingChatOpen() {
     pendingChatThreadId = null;
     pendingChatNannyId = null;
+    pendingChatFamilyId = null;
   }
 
   @override
@@ -152,68 +157,75 @@ class NotificationController extends GetxController {
     Get.toNamed(route);
   }
 
+  String? _dataString(Map<String, dynamic> data, String key) {
+    final v = data[key];
+    if (v == null) return null;
+    final s = v.toString().trim();
+    return s.isEmpty ? null : s;
+  }
+
   void handleNotificationTap(AppNotification notif) {
     markAsRead(notif.id);
+
+    final data = notif.data;
+    final dataType = _dataString(data, 'type');
 
     // Support tickets and disputes are written by Cloud Functions with the
     // generic `systemAnnouncement` type (no NotificationType enum value exists
     // for them); the real kind + target id ride in `data`. Route these to the
     // relevant thread so the tap isn't a dead end on the no-op default branch.
-    final dataType = notif.data['type'] as String?;
     if (dataType == 'support_reply' ||
         dataType == 'support_resolved' ||
         dataType == 'support_closed') {
-      _openTicketThread(notif.data['ticketId'] as String?);
+      _openTicketThread(_dataString(data, 'ticketId'));
       return;
     }
     if (dataType == 'dispute_reply' ||
         dataType == 'dispute_resolved' ||
         dataType == 'dispute_dismissed') {
-      _openDisputeThread(notif.data['disputeId'] as String?);
+      _openDisputeThread(_dataString(data, 'disputeId'));
       return;
     }
 
-    final route = notif.data['route'] as String?;
     final isNanny = _auth.currentUser.value?.isNanny ?? false;
+    final threadId = _dataString(data, 'threadId');
+    final nannyId = _dataString(data, 'nannyId');
+    final familyId = _dataString(data, 'familyId');
+    final jobPostId = _dataString(data, 'jobPostId');
+    final trialId = _dataString(data, 'trialId');
+    final route = _dataString(data, 'route');
 
-    if (route != null) {
-      _openRouteForRole(route);
-
-      if (route == Routes.chat) {
-        // If the notification carries a specific thread/nanny, open it.
-        final threadId = notif.data['threadId'] as String?;
-        final nannyId = notif.data['nannyId'] as String?;
-        if (Get.isRegistered<ChatController>()) {
-          final chat = Get.find<ChatController>();
-          if (threadId != null && threadId.isNotEmpty) {
-            chat.openThread(threadId);
-          } else if (nannyId != null && nannyId.isNotEmpty) {
-            chat.openThreadForNanny(nannyId: nannyId);
-          }
-        } else {
-          pendingChatThreadId = threadId;
-          pendingChatNannyId = nannyId;
-        }
-      }
-      return;
-    }
-
-    // Legacy / server-generated notifications often omit `route`.
+    // Prefer concrete counterpart deep-links over generic list routes.
     switch (notif.type) {
+      case NotificationType.newMessage:
+        _openChatDetail(
+          threadId: threadId,
+          nannyId: nannyId,
+          familyId: familyId,
+          isNannyViewer: isNanny,
+        );
+        return;
       case NotificationType.newApplication:
-        if (!isNanny) {
-          Get.toNamed(Routes.familyApplicants);
+        // Family: open the applying nanny's profile detail.
+        if (!isNanny && nannyId != null) {
+          _openNannyDetail(nannyId);
+          return;
         }
+        Get.toNamed(Routes.familyApplicants);
         return;
       case NotificationType.applicationViewed:
       case NotificationType.applicationDeclined:
+        // Nanny: open the family's job detail when we have a job id.
+        if (isNanny && jobPostId != null) {
+          _openJobDetail(jobPostId);
+          return;
+        }
         if (isNanny) {
           Get.toNamed(Routes.nannyApplications);
         } else {
           Get.toNamed(Routes.familyApplicants);
         }
         return;
-      case NotificationType.newMessage:
       case NotificationType.trialOfferReceived:
       case NotificationType.trialAccepted:
       case NotificationType.trialDeclined:
@@ -222,24 +234,159 @@ class NotificationController extends GetxController {
       case NotificationType.trialEndingSoon:
       case NotificationType.trialCompleted:
       case NotificationType.trialOutcomePending:
-        _openRouteForRole(Routes.chat);
+        _openTrialDetail(trialId);
+        return;
+      case NotificationType.hired:
+        _openChatDetail(
+          threadId: threadId,
+          nannyId: nannyId,
+          familyId: familyId,
+          isNannyViewer: isNanny,
+        );
         return;
       case NotificationType.subscriptionExpiring:
       case NotificationType.subscriptionRenewed:
       case NotificationType.subscriptionExpired:
       case NotificationType.freeContactsLow:
-        if (!isNanny) {
-          Get.toNamed(Routes.pricing);
-        }
+        if (!isNanny) Get.toNamed(Routes.pricing);
         return;
-      case NotificationType.profileViewed:
       case NotificationType.documentsApproved:
       case NotificationType.documentsRejected:
       case NotificationType.profileVerified:
-      case NotificationType.hired:
-      case NotificationType.systemAnnouncement:
+        if (isNanny) AppNavigation.nannyGoToTab(0);
         return;
+      case NotificationType.profileViewed:
+        if (isNanny) AppNavigation.nannyGoToTab(0);
+        return;
+      case NotificationType.systemAnnouncement:
+        break;
     }
+
+    // FCM / legacy payloads often put the semantic type only in `data.type`
+    // (snake_case) while the inbox enum falls back to systemAnnouncement.
+    if (dataType == 'new_message' || dataType == 'hired' || dataType == 'hire_ended') {
+      _openChatDetail(
+        threadId: threadId,
+        nannyId: nannyId,
+        familyId: familyId,
+        isNannyViewer: isNanny,
+      );
+      return;
+    }
+    if (dataType == 'new_application' && !isNanny && nannyId != null) {
+      _openNannyDetail(nannyId);
+      return;
+    }
+    if ((dataType == 'application_viewed' || dataType == 'application_declined') &&
+        isNanny &&
+        jobPostId != null) {
+      _openJobDetail(jobPostId);
+      return;
+    }
+    if (dataType != null && dataType.startsWith('trial') && trialId != null) {
+      _openTrialDetail(trialId);
+      return;
+    }
+
+    if (route != null) {
+      if (route == Routes.chat || route == '/chat') {
+        _openChatDetail(
+          threadId: threadId,
+          nannyId: nannyId,
+          familyId: familyId,
+          isNannyViewer: isNanny,
+        );
+        return;
+      }
+      if (route == Routes.trial || route == '/trial') {
+        _openTrialDetail(trialId);
+        return;
+      }
+      _openRouteForRole(route);
+      return;
+    }
+  }
+
+  void _openChatDetail({
+    String? threadId,
+    String? nannyId,
+    String? familyId,
+    required bool isNannyViewer,
+  }) {
+    if (isNannyViewer) {
+      final fam = familyId;
+      if (fam != null && fam.isNotEmpty) {
+        AppNavigation.openChatWithFamily(familyId: fam);
+        if (threadId != null &&
+            threadId.isNotEmpty &&
+            Get.isRegistered<ChatController>()) {
+          Get.find<ChatController>().openThread(threadId);
+        }
+        return;
+      }
+    } else {
+      final nan = nannyId;
+      if (nan != null && nan.isNotEmpty) {
+        AppNavigation.openChat(nannyId: nan);
+        if (threadId != null &&
+            threadId.isNotEmpty &&
+            Get.isRegistered<ChatController>()) {
+          Get.find<ChatController>().openThread(threadId);
+        }
+        return;
+      }
+    }
+
+    _openRouteForRole(Routes.chat);
+    if (Get.isRegistered<ChatController>()) {
+      final chat = Get.find<ChatController>();
+      if (threadId != null && threadId.isNotEmpty) {
+        chat.openThread(threadId);
+      } else if (!isNannyViewer && nannyId != null && nannyId.isNotEmpty) {
+        chat.openThreadForNanny(nannyId: nannyId);
+      } else if (isNannyViewer && familyId != null && familyId.isNotEmpty) {
+        chat.openThreadForFamily(familyId: familyId);
+      }
+    } else {
+      pendingChatThreadId = threadId;
+      pendingChatNannyId = nannyId;
+      pendingChatFamilyId = familyId;
+    }
+  }
+
+  Future<void> _openNannyDetail(String nannyId) async {
+    try {
+      final nanny = await Get.find<IUserService>().getNanny(nannyId);
+      if (nanny != null) {
+        AppNavigation.openNannyProfile(NannyCardModel.fromNanny(nanny));
+        return;
+      }
+    } catch (e) {
+      Get.log('open nanny from notification failed: $e', isError: true);
+    }
+    Get.toNamed(Routes.familyApplicants);
+  }
+
+  Future<void> _openJobDetail(String jobPostId) async {
+    try {
+      final job = await Get.find<IJobService>().getJob(jobPostId);
+      if (job != null) {
+        Get.toNamed(Routes.nannyJobDetail, arguments: job);
+        return;
+      }
+    } catch (e) {
+      Get.log('open job from notification failed: $e', isError: true);
+    }
+    Get.toNamed(Routes.nannyApplications);
+  }
+
+  void _openTrialDetail(String? trialId) {
+    Get.toNamed(
+      Routes.trial,
+      arguments: trialId != null && trialId.isNotEmpty
+          ? <String, dynamic>{'trialId': trialId}
+          : null,
+    );
   }
 
   /// Opens a support ticket from a notification tap. The detail screen needs the

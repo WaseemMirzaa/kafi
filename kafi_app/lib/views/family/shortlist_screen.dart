@@ -146,7 +146,7 @@ class ShortlistScreen extends GetView<ShortlistController> {
           const SizedBox(height: 2),
           Obx(() {
             final n = controller.shortlistedNannies.length;
-            return Text('$n ${n == 1 ? 'nanny' : 'nannies'} saved',
+            return Text(AppStrings.shortlistSavedN.trParams({'n': '$n'}),
                 style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600));
           }),
         ],

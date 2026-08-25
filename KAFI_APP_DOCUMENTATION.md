@@ -209,7 +209,7 @@ Kafi is a mobile-first marketplace connecting:
 - Emirate selection (multi-select grid):
   - Dubai, Abu Dhabi, Sharjah, Ajman, RAK, Fujairah, UAQ, Al Ain
 - Relocation willingness toggle
-- Current area/neighbourhood (optional text)
+- Current area/neighbourhood: same Uber-style Google map picker as Screen 13 (search, current location, drag-to-pin, confirm); curated UAE list only when Maps API key is missing
 
 **D. Personal Status**
 - Marital status (Married, Single, Divorced, Widowed)
@@ -281,7 +281,7 @@ Kafi is a mobile-first marketplace connecting:
 - Card number header with delete button
 - Job title dropdown (Live-in Nanny, Live-out Nanny, Babysitter, Newborn Specialist, Housekeeper & Nanny)
 - Family/Employer name
-- City & Country
+- City & Country — Uber-style Google map picker (same as Screen 13)
 - From/To dates
 - Children cared for (description)
 - Main duties (textarea)
@@ -309,7 +309,7 @@ Kafi is a mobile-first marketplace connecting:
 - Number of references dropdown
 - For each reference:
   - Relationship (Previous employer, Agency supervisor, etc.)
-  - City
+  - City — Uber-style Google map picker (same as Screen 13)
   - Years worked
   - What they can confirm
   - Note: "You will share this contact directly during interview"
@@ -368,16 +368,20 @@ Kafi is a mobile-first marketplace connecting:
 - Stats row: Shortlists, Profile views, Rating
 
 **Profile Quality Card:**
-- Score percentage (e.g., 78%)
+- Live score percentage (0–100) from System Spec §3.2 factors (not a stale stored-only value)
 - Progress bar
-- Checklist:
-  - ✓ Profile 100% complete
-  - ✓ Kafi Verified badge
-  - ✓ Video introduction uploaded
-  - ✓ Multiple photos added
-  - + Add police clearance → +10pts
-  - + Add training certificate → +7pts
-  - + Log in within 7 days → +5pts
+- Full checklist (green ✓ when done; incomplete rows show → +N pts):
+  - Profile complete (name, photo, passport) → +20
+  - Kafi Verified badge → +20
+  - Video introduction uploaded → +15
+  - Multiple photos added → +10
+  - Add police clearance → +10
+  - Add training certificate → +7
+  - Log in within 7 days → +5
+  - Add references → +8
+  - Add work experience → +5
+- When score < 100%: **"Still needed for 100%"** lists every incomplete factor with its point value so the nanny knows what remains (e.g. references +8)
+- When all factors done: completion confirmation message
 
 **Jobs Section:**
 - "Jobs for you" title with "See all" link
@@ -389,7 +393,7 @@ Kafi is a mobile-first marketplace connecting:
   - Tags (English, Live-in, Newborn, Trial paid)
 
 **Bottom Navigation:**
-- Home (active), Jobs, Messages, Profile
+- Home (active), Jobs, Messages (unread count badge for new received messages; clears when Messages is opened), Profile
 
 ---
 
@@ -405,7 +409,7 @@ Kafi is a mobile-first marketplace connecting:
 **A. Your Family Section:**
 - Full name
 - Nationality (comprehensive dropdown by region)
-- City/Emirate dropdown
+- **Location:** full-width Uber-style map picker (search, current location, drag-to-pin, confirm) in Kafi theme — not a half-width city dropdown alone
 - Number of children
 - Children's ages
 - Languages at home (multi-select chips)
@@ -425,7 +429,8 @@ Kafi is a mobile-first marketplace connecting:
 **C. Role & Job Type:**
 - Roles needed (multi-select: Nanny, Maid, Caregiver, Cook, Babysitter, Helper, Pet Caretaker)
 - Job type: Live-in / Live-out
-- Working schedule
+- Employment: Full-time / Part-time — a family may hold **at most one active full-time and one active part-time** job. Opening Post Job (form or Browse CTA) auto-selects the free slot when one type already exists; if both slots are filled, posting is blocked and the family is directed to My Jobs.
+- Working schedule: multi-select **Monday–Sunday** via a themed bottom sheet (same purple form language as this screen); at least one day required
 
 **D. Duties Checklist:**
 - Grid of duties: Newborn, Childcare, Cook family, Light cleaning, Laundry, Pet care, Driving, Tutoring, First Aid
@@ -459,7 +464,13 @@ Kafi is a mobile-first marketplace connecting:
 - Greeting with family name
 - Search bar
 
-**Filter Pills:** All, Live-in, Newborn, Arabic, Filipino, Indian
+**Post a New Job CTA:** Opens Screen 13 for the remaining employment slot (full-time or part-time). Hidden/blocked with My Jobs redirect when both active slots are filled.
+
+**Filter by job:** Lists the family's posted jobs (refreshed when the sheet opens). Empty state only when the family truly has zero posts.
+
+**Filter Pills:** All, Live-in, Live-out, Arabic, Filipino, Indian
+
+**Inactive nannies (admin toggle):** When admin `settings/global.hideInactiveNannies` is **on**, Browse (and its search / filter pills / “new conversation” candidate picker, which uses the same browse results) only shows approved+verified nannies whose `lastActiveAt` is within the last **14 days**. Nannies with no `lastActiveAt` or an older stamp are hidden. When the toggle is **off**, all approved+verified nannies are listed. Shortlist, chat threads, applicants, and direct profile links are unchanged (not discovery listings).
 
 **Nanny Cards (Featured & Regular):**
 - Avatar
@@ -468,7 +479,7 @@ Kafi is a mobile-first marketplace connecting:
 - Match percentage badge
 - Tags (languages, skills, Video indicator)
 
-**Bottom Navigation:** Home, Search, Messages, Profile
+**Bottom Navigation:** Home, Search, Messages (unread count badge for new received messages; clears when Messages is opened), Profile
 
 ---
 
@@ -509,7 +520,8 @@ Kafi is a mobile-first marketplace connecting:
 - Direct phone number displayed
 - WhatsApp button (large)
 - Call button (large)
-- In-app chat button
+- In-app chat button → opens the **message composer / thread** with that nanny (creates the thread if needed), not the chat inbox list
+- Watch intro video button (when `introVideoUrl` is set) → full-screen player; resolves HTTPS, Storage paths, and `gs://` URIs to a playable download URL
 - Full CV button
 
 **Additional Contact Cards:**
@@ -586,6 +598,7 @@ Kafi is a mobile-first marketplace connecting:
 - Date separators
 - System messages
 - Trial offer message card with Accept/Counter buttons
+- When the nanny sends a **counter offer**, the family sees Accept / Decline on the counter bubble (and on the original offer once status is countered)
 - Trial accepted confirmation message
 - Input area with attach button, text input, send button
 
@@ -609,7 +622,7 @@ Kafi is a mobile-first marketplace connecting:
 - Top bar with family avatar (first name only + "Family")
 - Contact strip: "Family number is private · Chat is your connection"
 - Same message bubbles
-- Trial offer received card
+- Trial offer received card with **Accept**, **Counter**, and **Decline** actions (Screen 32A; same actions on application detail when status is trial offered)
 - If family's subscription expired:
   - Banner: "Family's subscription has expired - they may not see new messages"
   - Nanny CAN still send messages (queued; delivered when family renews)
@@ -686,6 +699,10 @@ Kafi is a mobile-first marketplace connecting:
 **Outcome Buttons:**
 - "Hire!" (green)
 - "Not this time" (outline)
+
+**Payment confirmation (family or nanny):**
+- "Confirm payment" marks the trial payment as settled
+- After confirm → rate-the-app popup (throttled; same dialog as after Hire)
 
 ---
 
@@ -1789,6 +1806,15 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 └─────────────────────────────────────────┘
 ```
 
+**Tap destinations (inbox + push):**
+- New message / hire → open that conversation (family ↔ nanny thread)
+- New application (family) → that nanny’s profile detail
+- Application viewed/declined (nanny) → that family’s job detail
+- Trial events → Trial screen for that `trialId`
+- Support / report replies → ticket or report thread
+
+**iOS push:** `AppDelegate` registers for remote notifications, forwards the APNs device token to Firebase Auth + Messaging; `Info.plist` includes `remote-notification` background mode and Push entitlements (`aps-environment`).
+
 ---
 
 ### Screen 29: Settings Screen
@@ -1901,15 +1927,16 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 ┌─────────────────────────────────────────┐
 │  SUPPORT                                │
 │                                         │
-│  ❓ Help Center / FAQs              >   │
-│                                         │
 │  💬 Contact Support                 >   │
+│     → Support tickets listing only      │
 │                                         │
-│  🐛 Report a Problem                >   │
-│                                         │
-│  ⚠️  Report a User                  >   │
+│  🚩 My reports                      >   │
+│     → Reports filed about other users   │
+│       (profile flag, chat/trial report) │
 └─────────────────────────────────────────┘
 ```
+
+**Listing split (mobile):** Contact Support → `tickets` only. Profile / chat / trial “Report” flows write to `disputes` and appear under **My reports** (and admin **Reports**). They must not appear in the support-ticket inbox. Report sheets accept optional image/PDF attachments (max 5 files, 10 MB each); filing stores denormalized reporter/reported names, types, and a profile snapshot for admin review.
 
 **Legal Section:**
 ```
@@ -2211,6 +2238,20 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 ```
 
 **Important:** Kafi only facilitates finding nannies. All trial payments are handled directly between family and nanny outside the app.
+
+**Validations (must pass before send — System Spec §14.4 V13–V15, §14.6 T1–T4, TX1–TX2):**
+- Duration selected (> 0)
+- Daily rate set; between AED 50–1,000
+- Start date selected; today or future (not past)
+- Live-in or live-out selected
+- Trial location selected (map picker; may prefill from family job city)
+- Notes optional, max 300 characters
+- Direct-payment acknowledgement checked
+- Active subscription (T1)
+- Nanny approved / not still verifying (T2)
+- Nanny not on another active trial (T3)
+- Family has no active trial (T4)
+- No pending/countered/accepted offer already open with this nanny
 
 ---
 
@@ -2712,6 +2753,10 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
     - Track delivery
 
 29. **User Reports/Complaints**
+    - Admin Safety nav: **Reports** (`/reports`; legacy `/disputes` redirects here). Same queue as in-app “Report a problem” — not labelled Disputes.
+    - List shows reporter → reported names + category; optional attachment count indicator.
+    - Detail shows reporter/reported **name, type, user ID**, phone/city/nationality snapshot when present, deep-link to nanny/family profile, related trial id + link when present, description, and **attachments** (image thumbs / open PDF).
+    - Mobile report sheets (profile / chat / trial): category + description + optional photo/PDF attachments (max 5 × 10 MB). My reports list/detail shows attachment count and previews for the reporter.
     - View reported users
     - Take action
     - Communication log
@@ -2915,3 +2960,52 @@ Chat → Send Trial Offer → Evaluate Trial → Hire
 | 2026-07-17 | Media screen photo/video preview | Done | Mock mode stored media as data: URIs; Image.network and VideoPlayer could not render them so cover/thumbs and video looked empty. Mock now keeps local file paths; `KafiMediaImage` supports http/data/file; video preview uses File controller and shows a playable frame. |
 
 | 2026-07-17 | Real GPS + Maps location picker | Done | Location picker no longer forced to curated list by Firebase `useMock`. With a valid Maps key it opens a live Google Map (center pin, GPS on open, drag-to-pick reverse geocode, Places search). Fallback list only when key is missing. Places reverse-geocode prefers neighbourhood for short labels. |
+
+| 2026-07-31 | Family first-job onboarding gate | Done | Zero-job families stay on Screen 13 on cold start/OTP/resume; back and Browse/home blocked until first job is posted; shell/deep-link escapes redirected to family form |
+
+| 2026-07-31 | Post-job location/schedule/FT-PT + browse bugs | Done | Screen 13 Uber location, Mon–Sun schedule sheet, one active FT+PT; Screen 14 CTA/filter; shortlist rules + intro video args; refresh myJobs for filter |
+
+| 2026-07-31 | Profile in-app chat opens thread | Done | In-app chat from unlocked nanny profile opens that nanny’s thread/composer (not inbox); pendingOpenTick + post-frame consume |
+| 2026-07-31 | Watch intro video playback | Done | Screen 16 Watch intro video resolves `gs://`/Storage paths via `IStorageService.resolveDownloadUrl`; player shows error+retry instead of endless Loading |
+| 2026-07-31 | Select Location iOS crash + map picker | Done | Fixed SystemContextMenu assert on Select Location search (Flutter-drawn toolbar); deferred autofocus; docs: About You / experience / refs use same Google map picker as Screen 13 |
+| 2026-07-31 | Trial offer form validations | Done | Screen 31 validates duration, rate 50–1000, start date, type, location, notes≤300, payment ack, T1–T4; inline error + snackbar on send |
+| 2026-07-31 | Chat send permission-denied | Done | Message senderType derived from thread familyId/nannyId (not stale users.type); nanny may create threads; mock sub sync errors no longer swallowed on send |
+| 2026-07-31 | Browse home missing nannies | Done | Screen 14 no longer hard-limits Firestore browse to 50 unordered docs; All shows full approved+verified set (SR2) |
+| 2026-07-31 | Chat conversation single loader | Done | Screen 17 thread shows one list-level loader; trial bubbles no longer each show a spinner |
+| 2026-07-31 | Trial screen empty while in progress | Done | Screen 19 resolves chat View-trial trialId on every open; nanny/family active includes accepted; fallback from list |
+| 2026-07-31 | Ticket status stale after admin resolve | Done | Live `watchTicket` updates mobile status chip; Support list refreshes on open/return; composer hidden when resolved |
+| 2026-07-31 | Admin Reports (not Disputes) + hide IDs | Done | Safety nav/page renamed Reports (`/reports`); dropped Dispute # / raw user IDs from report list & detail; `/disputes` redirects |
+| 2026-07-31 | Mobile reports vs support listings | Done | Profile Report user files disputes (My reports), not tickets; Contact Support stays ticket-only |
+| 2026-07-31 | Nanny chat report flag | Done | Conversation report uses thread party ids + root modal sheet so nanny shell report works |
+| 2026-07-31 | Admin badges + iOS push + notif deep-links | Done | Sidebar badges only when count>0; iOS APNs→FCM wiring; taps open nanny/job/chat/trial detail |
+| 2026-08-03 | Trial checklist sync both parties | Done | Family eval ticks persist to trial.evaluation; live watchTrial updates nanny read-only checklist |
+| 2026-08-03 | Admin panel EN/AR toggle | Done | Settings screen adds an EN\|AR language toggle for the admin panel; every admin page/component now renders in the selected language (incl. status badges, filter options, and dates), with instant re-render and no reload |
+| 2026-08-03 | Flutter i18n Cycle 3 FINAL verification | Done | Full scan of lib/views (733 Text widgets) + lib/controllers: zero hardcoded English strings found; 100% coverage: all UI text uses AppStrings.*.tr; allowlist verified (emoji-only, language self-names, enum storage values, phone format examples) |
+| 2026-08-03 | Full i18n verification (3 clean cycles) | Done | Screen-by-screen Flutter localization to AppStrings/.tr (incl. app_error snackbars); 3 consecutive clean scans after error-layer fix; language self-names English/العربية intentionally kept |
+| 2026-08-06 | Nanny trial offer Accept/Decline | Done | Screen 17/32A: chat trial bubble shows Accept + Counter + Decline for nanny; role from thread membership; application detail refreshes trials for action bar |
+| 2026-08-06 | Nanny jobs live feed | Done | Nanny Jobs / dashboard job list updates live when a family posts — no pull-to-refresh required |
+| 2026-08-06 | Family browse live feed | Done | Screen 14 list updates live when a nanny is approved+verified; All / Live-in / Live-out / Arabic / Filipino / Indian pills re-subscribe correctly |
+| 2026-08-06 | Application detail setState-during-build | Done | Screen 32A defers loadApplications/refreshAll to post-frame; removes nested Obx under detail Obx |
+| 2026-08-06 | Cancelled trial clears chat active badge | Done | After cancel/decline, chat list + conversation no longer show active-trial pill / View trial for family or nanny |
+| 2026-08-06 | Family counter Accept/Decline in chat | Done | Screen 17 family sees Accept/Decline on countered trial (offer + counter bubbles); live refresh on counter message |
+| 2026-08-06 | Hide chat trial bar when trial ends | Done | ON TRIAL list badges + conversation "Trial in progress" bar hide on cancel / complete / payment confirmed |
+| 2026-08-06 | Family applicants live inbox | Done | Applicants screen live-watches applications; reloads on open so nanny applies appear without restart |
+| 2026-08-06 | Admin Verify docs badge stale | Done | Admin Verify docs nav badge no longer stays at old count when the queue is empty |
+| 2026-08-06 | Admin↔user report/ticket realtime | Done | My reports + Support threads show admin replies/resolution live; admin report/ticket chat shows user replies live |
+| 2026-08-06 | Family Applicants multi-job inbox | Done | Applicants always subscribes as family inbox (all jobs via familyId); job filter chips; jobTitle on post; CF bumps jobs.applicationsCount + backfills familyId |
+| 2026-08-06 | Trial offer gate after end | Done | Payment confirm / payment-issue / cancel no longer block “already active” on Send Trial Offer (`blocksNewTrialOffer` / `isLiveTrial`; status→completed on confirm/report) |
+| 2026-08-06 | Rate app after payment confirm | Done | Family (and nanny) Confirm payment on Screen 19 → `RateAppPrompt.maybeShow` |
+
+| 2026-08-06 | Trial offer chat bubble details | Done | Screen 17 chat trial bubble lists full Screen 31 fields for family & nanny: duration, rate, total, starting from date, type, location, notes; fetch trial by id when list is stale |
+
+| 2026-08-06 | Applicants job filter names | Done | Family Applicants job chips/cards show job titles (from myJobs), never raw job ids |
+
+| 2026-08-06 | Messages bottom-nav badge | Done | Family/nanny shell Messages tab shows unread count; clears when Messages opened |
+
+| 2026-08-06 | Report user info + attachments | Done | Report sheets attach photos/PDF; My reports shows count + previews; admin Reports detail shows user IDs, snapshot, profile/trial links, attachments; auth bootstrap uses PageLoader |
+
+| 2026-08-06 | Hide inactive nannies listing | Done | Screen 14 Browse/search hides nannies with missing or >14-day `lastActiveAt` when admin toggle on; presence stamped on nanny resume |
+
+| 2026-08-06 | Report attach storage auth | Done | Fixed report submit unauthorized: create report doc before Storage upload; deploy Storage/Firestore rules for attachments |
+
+| 2026-08-06 | Admin reports + last active | Done | Reports detail: full attachment gallery + auto-expand with evidence; list shows user IDs; nanny list/detail show lastActiveAt |

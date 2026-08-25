@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:get/get.dart';
+import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 class KafiProfileQualityScore extends StatelessWidget {
@@ -19,10 +21,10 @@ class KafiProfileQualityScore extends StatelessWidget {
   }
 
   String get _label {
-    if (score >= 80) return 'Excellent';
-    if (score >= 60) return 'Good';
-    if (score >= 40) return 'Fair';
-    return 'Needs work';
+    if (score >= 80) return AppStrings.qualityExcellent.tr;
+    if (score >= 60) return AppStrings.qualityGood.tr;
+    if (score >= 40) return AppStrings.qualityFair.tr;
+    return AppStrings.qualityNeedsWork.tr;
   }
 
   @override
@@ -59,7 +61,8 @@ class KafiProfileQualityScore extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Profile Strength', style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600)),
+                Text(AppStrings.qualityProfileStrength.tr,
+                    style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600)),
                 const SizedBox(height: 2),
                 Text(_label, style: KafiTheme.fredoka(14, color: _color)),
                 if (score < 80) ...[
@@ -81,9 +84,9 @@ class KafiProfileQualityScore extends StatelessWidget {
 
   Widget _tips() {
     final tips = <String>[];
-    if (score < 40) tips.add('Add a profile photo');
-    if (score < 60) tips.add('Upload intro video');
-    if (score < 80) tips.add('Add work references');
+    if (score < 40) tips.add(AppStrings.qualityTipPhoto.tr);
+    if (score < 60) tips.add(AppStrings.qualityTipVideo.tr);
+    if (score < 80) tips.add(AppStrings.qualityTipReferences.tr);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: tips.take(2).map((t) => Row(

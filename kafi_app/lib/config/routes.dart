@@ -142,6 +142,17 @@ class AppRoutes {
     GetPage(name: Routes.privacy, page: () => const LegalScreen.privacy()),
     GetPage(name: Routes.deleteAccount, page: () => const DeleteAccountScreen(), binding: AuthBinding()),
     GetPage(name: Routes.compare, page: () => const CompareScreen(), binding: FamilyBinding()),
-    GetPage(name: Routes.videoPlayer, page: () => const VideoPlayerScreen()),
+    GetPage(
+      name: Routes.videoPlayer,
+      page: () {
+        final raw = Get.arguments;
+        final args =
+            raw is Map ? Map<String, dynamic>.from(raw) : <String, dynamic>{};
+        return VideoPlayerScreen(
+          videoUrl: args['videoUrl'] as String? ?? '',
+          nannyName: args['nannyName'] as String?,
+        );
+      },
+    ),
   ];
 }

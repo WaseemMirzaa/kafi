@@ -9,6 +9,7 @@ import {
   Row,
   StatusBadge,
   TableCard,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import { NannyService, NannyRow } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
@@ -17,6 +18,9 @@ import { NannyProfileView } from '../../components/nanny/NannyProfileView';
 import { DocThumb } from '../../components/nanny/DocFilePreview';
 import { FilterBar, FilterSelect, Pagination } from '../../components/ui/ListControls';
 import { useListControls } from '../../hooks/useListControls';
+import { useLocale } from '../../context/LocaleContext';
+import { docStatusLabel } from '../../utils/nannyLabels';
+import { t as translate, TranslationKey } from '../../locales/t';
 
 // Mirrors the app's real DocumentStatus enum (nanny_model.dart): missing,
 // uploaded, reviewing, approved, rejected. The old list offered 'resubmitted'
@@ -24,13 +28,14 @@ import { useListControls } from '../../hooks/useListControls';
 // 'reviewing', so those filters were always empty.
 const DOC_STATUSES = ['missing', 'uploaded', 'reviewing', 'approved', 'rejected'];
 
-const docLabel: Record<string, string> = {
-  passport: 'Passport',
-  visa: 'Visa',
-  emiratesId: 'Emirates ID',
-  trainingCert: 'Training certificate',
-  policeClearance: 'Police clearance',
+const docLabelKeys: Record<string, TranslationKey> = {
+  passport: 'nannyLabels.docType.passport',
+  visa: 'nannyLabels.docType.visa',
+  emiratesId: 'nannyLabels.docType.emiratesId',
+  trainingCert: 'nannyLabels.docType.trainingCert',
+  policeClearance: 'nannyLabels.docType.policeClearance',
 };
+const docLabel = (type: string): string => (docLabelKeys[type] ? translate(docLabelKeys[type]) : type);
 
 function docVariant(status: string): string {
   if (status === 'approved') return 'verified';
@@ -40,6 +45,7 @@ function docVariant(status: string): string {
 }
 
 export default function VerifyDocuments() {
+  const { t } = useLocale();
   const [items, setItems] = useState<NannyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -68,7 +74,7 @@ export default function VerifyDocuments() {
       setItems(all);
       return all;
     } catch (e) {
-      setError((e as Error).message || 'Failed to load nannies');
+      setError((e as Error).message || t('nannies.failedToLoad'));
       return [];
     } finally {
       setLoading(false);
@@ -139,7 +145,7 @@ export default function VerifyDocuments() {
       const all = await reload();
       syncDocsFor(all);
     } catch (e) {
-      alert((e as Error).message || 'Approve failed');
+      alert((e as Error).message || t('nannies.approveFailed'));
     } finally {
       setBusyId(null);
     }
@@ -158,7 +164,7 @@ export default function VerifyDocuments() {
       if (docsFor?.id === closeId) closeDocs();
       else syncDocsFor(all);
     } catch (e) {
-      alert((e as Error).message || 'Reject failed');
+      alert((e as Error).message || t('nannies.rejectFailed'));
     } finally {
       setBusyId(null);
     }
@@ -171,7 +177,7 @@ export default function VerifyDocuments() {
       const all = await reload();
       syncDocsFor(all);
     } catch (e) {
-      alert((e as Error).message || 'Approve doc failed');
+      alert((e as Error).message || t('nannies.approveDocFailed'));
     } finally {
       setBusyId(null);
     }
@@ -192,7 +198,7 @@ export default function VerifyDocuments() {
       const all = await reload();
       syncDocsFor(all);
     } catch (e) {
-      alert((e as Error).message || 'Reject doc failed');
+      alert((e as Error).message || t('nannies.rejectDocFailed'));
     } finally {
       setBusyId(null);
     }
@@ -201,19 +207,19 @@ export default function VerifyDocuments() {
   return (
     <PageShell>
       <PageHeader
-        title="Verify documents"
-        subtitle={`${pending.length} documents pending review`}
+        title={t('nannies.verifyDocsTitle')}
+        subtitle={t('nannies.verifyDocsSubtitle', { count: pending.length })}
         actions={
           <QaLink to="/nannies" variant="n">
-            All nannies
+            {t('nav.allNannies')}
           </QaLink>
         }
       />
       <PageContent>
         <div className="flex gap-1.5 mb-2.5">
-          <ColStat num={String(pending.length)} label="Pending" change="⚠ Review" numColor="#FFB347" />
-          <ColStat num={String(approved)} label="Approved" change="↑ Verified" />
-          <ColStat num={String(rejected)} label="Rejected" change="Re-upload" numColor="#FF5C8A" />
+          <ColStat num={String(pending.length)} label={t('nannies.pending')} change={t('dashboard.reviewNeeded')} numColor="#FFB347" />
+          <ColStat num={String(approved)} label={t('nannies.approved')} change={t('nannies.verifiedChange')} />
+          <ColStat num={String(rejected)} label={t('nannies.rejected')} change={t('nannies.reUploadShort')} numColor="#FF5C8A" />
         </div>
 
         <FilterBar
@@ -227,22 +233,25 @@ export default function VerifyDocuments() {
             lc.clear();
             setDocStatus('all');
           }}
-          searchPlaceholder="Search by name, nationality, city…"
-          dateLabel="Submitted"
+          searchPlaceholder={t('nannies.searchPlaceholder')}
+          dateLabel={t('nannies.submitted')}
         >
           <FilterSelect
-            label="Document status"
+            label={t('nannies.documentStatus')}
             value={docStatus}
             onChange={setDocStatus}
-            options={[{ value: 'all', label: 'All documents' }, ...DOC_STATUSES.map((s) => ({ value: s, label: s }))]}
+            options={[
+              { value: 'all', label: t('nannies.allDocuments') },
+              ...DOC_STATUSES.map((s) => ({ value: s, label: docStatusLabel(s) })),
+            ]}
           />
         </FilterBar>
 
-        <TableCard title="Document verification queue">
-          {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
+        <TableCard title={t('nannies.documentVerificationQueue')}>
+          {loading && <PageLoader compact />}
           {!loading && lc.total === 0 && (
             <div className="px-3 py-4 text-[10px] text-[#8090B0]">
-              {pending.length === 0 ? 'All caught up — no pending docs.' : 'No nannies match your filters.'}
+              {pending.length === 0 ? t('nannies.allCaughtUpDocs') : t('nannies.noMatchFilters')}
             </div>
           )}
           {lc.pageItems.map((d) => (
@@ -251,12 +260,12 @@ export default function VerifyDocuments() {
               <div className="flex-1 min-w-0">
                 <div className="text-[10.5px] font-extrabold text-navy">{d.fullName}</div>
                 <div className="text-[8.5px] font-semibold text-[#8090B0]">
-                  {d.nationality} · {d.city} · {(d.documents ?? []).length} documents
+                  {d.nationality} · {d.city} · {t('nannies.documentsCount', { count: (d.documents ?? []).length })}
                 </div>
               </div>
-              <StatusBadge variant="verify">Needs review</StatusBadge>
+              <StatusBadge variant="verify">{t('nannies.needsReview')}</StatusBadge>
               <button type="button" className="qa-btn qa-p" onClick={() => openDocs(d)}>
-                View →
+                {t('common.view')}
               </button>
             </Row>
           ))}
@@ -289,18 +298,18 @@ export default function VerifyDocuments() {
                 </div>
                 {showProfile ? (
                   <button type="button" className="qa-btn qa-n" onClick={() => setShowProfile(false)}>
-                    ← Documents
+                    {t('nannies.backToDocuments')}
                   </button>
                 ) : (
                   <button type="button" className="qa-btn qa-p" onClick={() => setShowProfile(true)}>
-                    View full profile
+                    {t('nannies.viewFullProfile')}
                   </button>
                 )}
                 <button
                   type="button"
                   className="text-[16px] font-bold text-[#8090B0] hover:text-navy px-1"
                   onClick={closeDocs}
-                  aria-label="Close"
+                  aria-label={t('common.close')}
                 >
                   ×
                 </button>
@@ -313,10 +322,10 @@ export default function VerifyDocuments() {
                 ) : (
                   <>
                     <div className="text-[9px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">
-                      Submitted documents ({(docsFor.documents ?? []).length})
+                      {t('nannies.submittedDocuments', { count: (docsFor.documents ?? []).length })}
                     </div>
                     {(docsFor.documents ?? []).length === 0 ? (
-                      <div className="text-[10px] text-[#8090B0]">No documents uploaded.</div>
+                      <div className="text-[10px] text-[#8090B0]">{t('nannies.noDocumentsUploaded')}</div>
                     ) : (
                       <div className="flex flex-col gap-2">
                         {(docsFor.documents ?? []).map((doc) => {
@@ -329,10 +338,10 @@ export default function VerifyDocuments() {
                               key={doc.type}
                               className="flex items-center gap-3 rounded-lg border border-[#EBEEF8] p-2"
                             >
-                              <DocThumb url={docUrl} label={docLabel[doc.type] ?? doc.type} />
+                              <DocThumb url={docUrl} label={docLabel(doc.type)} />
                               <div className="flex-1 min-w-0">
                                 <div className="text-[10.5px] font-extrabold text-navy">
-                                  {docLabel[doc.type] ?? doc.type}
+                                  {docLabel(doc.type)}
                                 </div>
                                 {doc.rejectionReason && (
                                   <div className="text-[8.5px] font-semibold text-rose-dark mt-0.5">
@@ -346,11 +355,11 @@ export default function VerifyDocuments() {
                                     rel="noreferrer"
                                     className="text-[8.5px] font-bold text-purple font-fredoka"
                                   >
-                                    Open file ↗
+                                    {t('common.openFile')}
                                   </a>
                                 )}
                               </div>
-                              <StatusBadge variant={docVariant(doc.status)}>{doc.status}</StatusBadge>
+                              <StatusBadge variant={docVariant(doc.status)}>{docStatusLabel(doc.status)}</StatusBadge>
                               {doc.status !== 'approved' && (
                                 <div className="flex gap-1">
                                   <button
@@ -388,7 +397,7 @@ export default function VerifyDocuments() {
                   disabled={busyId === docsFor.id}
                   onClick={() => approve(docsFor)}
                 >
-                  Approve all ✓
+                  {t('nannies.approveAll')}
                 </button>
                 <button
                   type="button"
@@ -396,7 +405,7 @@ export default function VerifyDocuments() {
                   disabled={busyId === docsFor.id}
                   onClick={() => setRejectFor(docsFor)}
                 >
-                  Reject all ✗
+                  {t('nannies.rejectAll')}
                 </button>
               </div>
             </div>
@@ -408,21 +417,21 @@ export default function VerifyDocuments() {
           <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center px-4">
             <div className="admin-card p-4 max-w-sm w-full">
               <div className="text-[12px] font-black text-navy">
-                Reject {docLabel[docRejectFor.docType] ?? docRejectFor.docType} for {docRejectFor.nanny.fullName}
+                {t('nannies.rejectDocumentTitle', { docLabel: docLabel(docRejectFor.docType), name: docRejectFor.nanny.fullName })}
               </div>
               <div className="text-[9px] font-semibold text-[#8090B0] mt-1 mb-3">
-                Tell the nanny why this document was rejected.
+                {t('nannies.rejectDocumentDesc')}
               </div>
               <textarea
                 rows={4}
                 value={docRejectReason}
                 onChange={(e) => setDocRejectReason(e.target.value)}
-                placeholder="e.g. Document is blurry, please re-upload a clear copy."
+                placeholder={t('nannies.rejectDocumentPlaceholder')}
                 className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30 resize-none"
               />
               <div className="flex justify-end gap-1.5 mt-3">
                 <button type="button" className="qa-btn qa-n" onClick={() => setDocRejectFor(null)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -430,7 +439,7 @@ export default function VerifyDocuments() {
                   onClick={submitDocReject}
                   disabled={!docRejectReason.trim()}
                 >
-                  Reject document
+                  {t('nannies.rejectDocumentAction')}
                 </button>
               </div>
             </div>
@@ -441,20 +450,20 @@ export default function VerifyDocuments() {
         {rejectFor && (
           <div className="fixed inset-0 bg-black/40 z-[60] flex items-center justify-center px-4">
             <div className="admin-card p-4 max-w-sm w-full">
-              <div className="text-[12px] font-black text-navy">Reject {rejectFor.fullName}</div>
+              <div className="text-[12px] font-black text-navy">{t('nannies.rejectProfileTitle', { name: rejectFor.fullName })}</div>
               <div className="text-[9px] font-semibold text-[#8090B0] mt-1 mb-3">
-                Provide a clear reason — the nanny will see this in-app.
+                {t('nannies.rejectProfileDesc')}
               </div>
               <textarea
                 rows={4}
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="e.g. Emirates ID photo is blurry, please re-upload a clear copy."
+                placeholder={t('nannies.rejectProfilePlaceholder')}
                 className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30 resize-none"
               />
               <div className="flex justify-end gap-1.5 mt-3">
                 <button type="button" className="qa-btn qa-n" onClick={() => setRejectFor(null)}>
-                  Cancel
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
@@ -462,7 +471,7 @@ export default function VerifyDocuments() {
                   onClick={submitReject}
                   disabled={!rejectReason.trim() || busyId === rejectFor.id}
                 >
-                  Send rejection
+                  {t('nannies.sendRejection')}
                 </button>
               </div>
             </div>

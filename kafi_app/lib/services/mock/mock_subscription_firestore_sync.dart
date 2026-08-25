@@ -30,10 +30,13 @@ class MockSubscriptionFirestoreSync {
     }
   }
 
+  /// Writes subscription entitlement via [syncMockSubscription]. Throws on
+  /// failure so chat/send can surface the error instead of a silent rules deny.
   static Future<void> syncSubscription(
     String familyId,
     SubscriptionState state, {
     String? planId,
+    bool swallowErrors = false,
   }) async {
     try {
       await FirebaseFunctions.instance.httpsCallable('syncMockSubscription').call({
@@ -42,6 +45,7 @@ class MockSubscriptionFirestoreSync {
       });
     } catch (e, st) {
       debugPrint('[MockSubscriptionFirestoreSync] subscription: $e\n$st');
+      if (!swallowErrors) rethrow;
     }
   }
 }

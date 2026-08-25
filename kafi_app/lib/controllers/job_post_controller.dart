@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
@@ -16,36 +18,63 @@ class JobPostController extends GetxController {
   final RxString searchQuery = ''.obs;
   final Rx<JobFilter> filter = JobFilter().obs;
 
+  StreamSubscription<List<JobPostModel>>? _activeJobsSub;
+
   @override
   void onInit() {
     super.onInit();
     loadJobs();
   }
 
+  @override
+  void onClose() {
+    _activeJobsSub?.cancel();
+    super.onClose();
+  }
+
+  /// Nanny: live Firestore/mock watch so a family post appears without pull-to-refresh.
+  /// Family: one-shot load of own posts.
   Future<void> loadJobs() async {
+    final user = _auth.currentUser.value;
+    if (user?.isNanny ?? false) {
+      _startActiveJobsWatch();
+      return;
+    }
+
     isLoading.value = true;
     loadError.value = null;
     try {
-      final user = _auth.currentUser.value;
-      if (user?.isNanny ?? false) {
-        final jobs = await _jobService.browseJobs(filter: filter.value);
-        // Newest-first as the stable default order; the nanny job list re-ranks
-        // by match score on top of this once a profile is loaded.
-        jobs.sort((a, b) =>
-            (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970)));
-        allJobs.value = jobs;
-      } else {
-        final familyId = user?.id;
-        if (familyId == null) return;
-        myJobs.value = await _jobService.getJobsByFamily(familyId);
-      }
+      final familyId = user?.id;
+      if (familyId == null) return;
+      myJobs.value = await _jobService.getJobsByFamily(familyId);
     } catch (e) {
-      // A live read failure (undeployed index / permission / network) must not
-      // crash uncaught and masquerade as "no results".
       loadError.value = e.toString();
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void _startActiveJobsWatch() {
+    _activeJobsSub?.cancel();
+    isLoading.value = true;
+    loadError.value = null;
+    // Emirate is the only server-side filter; jobType/duties stay client-side.
+    final serverFilter = filter.value.emirate != null
+        ? JobFilter(emirate: filter.value.emirate)
+        : null;
+    _activeJobsSub = _jobService.watchActiveJobs(filter: serverFilter).listen(
+      (jobs) {
+        jobs.sort((a, b) =>
+            (b.createdAt ?? DateTime(1970)).compareTo(a.createdAt ?? DateTime(1970)));
+        allJobs.value = jobs;
+        loadError.value = null;
+        isLoading.value = false;
+      },
+      onError: (Object e) {
+        loadError.value = e.toString();
+        isLoading.value = false;
+      },
+    );
   }
 
   void applyFilter(JobFilter newFilter) {

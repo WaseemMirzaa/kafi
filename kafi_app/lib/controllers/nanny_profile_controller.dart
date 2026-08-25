@@ -20,6 +20,7 @@ import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
+import 'package:kafi_app/utils/profile_quality.dart';
 import 'package:kafi_app/utils/validators.dart';
 import 'package:kafi_app/views/shared/rate_app_dialog.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
@@ -210,7 +211,7 @@ class NannyProfileController extends GetxController {
       activeHire.value = await _hireService.activeHireForNanny(user.id);
       if (activeHire.value == null) {
         final trials = await _trialService.listTrialsForNanny(user.id);
-        activeTrial.value = trials.firstWhereOrNull((t) => t.isAcceptedOrActive);
+        activeTrial.value = trials.firstWhereOrNull((t) => t.isLiveTrial);
       } else {
         activeTrial.value = null;
       }
@@ -562,6 +563,9 @@ class NannyProfileController extends GetxController {
       maxWidth: 1200,
     );
     if (picked == null) return;
+    // Re-check after the async picker — overlapping taps can exceed maxPhotos
+    // and crash the media screen empty-slot List.generate.
+    if (photoUrls.length >= NannyConstants.maxPhotos) return;
     isLoading.value = true;
     try {
       // Mock mode: keep the local file path so Image.file / VideoPlayer can
@@ -571,11 +575,13 @@ class NannyProfileController extends GetxController {
         return;
       }
       final bytes = await picked.readAsBytes();
+      if (photoUrls.length >= NannyConstants.maxPhotos) return;
       final url = await _storageService.uploadBytes(
         path: 'nannies/${user.id}/photos/${_uuid.v4()}.jpg',
         bytes: bytes,
         contentType: 'image/jpeg',
       );
+      if (photoUrls.length >= NannyConstants.maxPhotos) return;
       photoUrls.add(url);
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
@@ -1087,23 +1093,28 @@ class NannyProfileController extends GetxController {
     }
   }
 
+  /// Live checklist + score for the dashboard (System Spec §3.2). Prefer this
+  /// over the stored [NannyModel.profileScore] field so remaining gaps always
+  /// match what the nanny can still add. Uses draft Rx fields when present.
+  ProfileQualityScore get profileQuality {
+    final n = nanny.value;
+    if (n == null) return ProfileQualityScore.fromNanny(null);
+    return ProfileQualityScore.fromNanny(
+      n.copyWith(
+        photoUrls: List.of(photoUrls),
+        introVideoUrl: introVideoUrl.value,
+        experiences: List.of(experiences),
+        references: List.of(references),
+        documents: documents.values.toList(),
+      ),
+    );
+  }
+
   void calculateProfileScore() {
-    var score = 0;
     final n = nanny.value;
     if (n == null) return;
-    if (n.fullName.isNotEmpty) score += 15;
-    if (n.photoUrls.isNotEmpty) score += 15;
-    if (n.introVideoUrl != null) score += 15;
-    if (n.experiences.isNotEmpty) score += 15;
-    if (n.references.isNotEmpty) score += 10;
-    if (n.documents.any((d) => d.type == DocumentType.passport && d.status != DocumentStatus.missing)) score += 15;
-    if (n.documents.any((d) => d.type == DocumentType.policeClearance && d.status != DocumentStatus.missing)) {
-      score += NannyConstants.scorePoliceClearance;
-    }
-    if (n.documents.any((d) => d.type == DocumentType.trainingCert && d.status != DocumentStatus.missing)) {
-      score += NannyConstants.scoreTrainingCert;
-    }
-    nanny.value = n.copyWith(profileScore: score.clamp(0, 100));
+    final quality = profileQuality;
+    nanny.value = n.copyWith(profileScore: quality.totalScore);
   }
 }
 

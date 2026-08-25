@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
+import 'package:kafi_app/controllers/auth_controller.dart';
+import 'package:kafi_app/controllers/chat_controller.dart';
 import 'package:kafi_app/controllers/family_shell_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
@@ -38,11 +40,35 @@ class FamilyShellScreen extends StatelessWidget {
     final subs = Get.find<SubscriptionController>();
     return Obx(
       () {
+        // First-job gate: never show Browse/home until ≥1 job exists.
+        final auth = Get.isRegistered<AuthController>()
+            ? Get.find<AuthController>()
+            : null;
+        if (auth?.familyMustPostFirstJob.value == true) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (Get.currentRoute != Routes.familyForm) {
+              Get.offAllNamed(Routes.familyForm);
+            }
+          });
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        }
         final tab = _shell.tabIndex.value;
         final inGrace = subs.state.value == SubscriptionState.paymentGrace;
         // Browse tab (0) already renders its own grace banner with full
         // styling, so we only show the shell-level slim banner on other tabs.
         final showShellGrace = inGrace && tab != 0;
+        var msgBadge = 0;
+        if (Get.isRegistered<ChatController>()) {
+          final chat = Get.find<ChatController>();
+          // Depend on thread snapshots so unread changes rebuild the badge.
+          for (final t in chat.threads) {
+            chat.isNanny ? t.unreadCount.nanny : t.unreadCount.family;
+          }
+          // Hide while on Messages; badge returns only for mail after leaving.
+          msgBadge = tab == 2 ? 0 : chat.navMessageBadgeCount;
+        }
         return Scaffold(
           body: SafeArea(
             top: false,
@@ -69,6 +95,7 @@ class FamilyShellScreen extends StatelessWidget {
               KafiBottomNavItem(
                 emoji: '💬',
                 label: AppStrings.navMessages.tr,
+                badgeCount: msgBadge,
                 onTap: () => _shell.goToTab(2),
               ),
               KafiBottomNavItem(

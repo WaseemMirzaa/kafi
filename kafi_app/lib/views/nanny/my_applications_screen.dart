@@ -6,6 +6,7 @@ import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_search_field.dart';
 
@@ -24,7 +25,7 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
     super.initState();
     // Reload on entry so family-driven status transitions (viewed → shortlisted
     // → trial-offered → hired) surface without an app restart.
-    controller.loadApplications();
+    controller.subscribeNannyOutbox();
   }
 
   @override
@@ -151,7 +152,7 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
     final title = (app.jobTitle?.isNotEmpty ?? false)
         ? app.jobTitle!
         : job != null
-            ? '${job.jobType.name == 'liveOut' ? 'Live-out' : 'Live-in'} Nanny${job.city.isNotEmpty ? ' · ${job.city}' : ''}'
+            ? '${job.jobType.name == 'liveOut' ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr} ${AppStrings.nannySuffix.tr}${job.city.isNotEmpty ? ' · ${job.city}' : ''}'
             : AppStrings.nannyMyApplications.tr;
 
     return GestureDetector(
@@ -194,7 +195,8 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                     children: [
                       Text(title,
                           style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
-                      Text('Applied ${_formatDate(app.createdAt)}',
+                      Text(
+                          '${AppStrings.appDetailApplied.tr} ${formatRelativeTime(app.createdAt)}',
                           style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
                     ],
                   ),
@@ -238,31 +240,31 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
       case ApplicationStatus.pending:
         bg = KafiColors.ambL;
         fg = KafiColors.ambD;
-        label = 'Pending';
+        label = AppStrings.nannyAppStatusPending.tr;
       case ApplicationStatus.viewed:
         bg = KafiColors.purpL;
         fg = KafiColors.purpD;
-        label = 'Viewed';
+        label = AppStrings.nannyAppStatusViewed.tr;
       case ApplicationStatus.shortlisted:
         bg = KafiColors.grnL;
         fg = KafiColors.grnD;
-        label = 'Shortlisted';
+        label = AppStrings.nannyAppStatusShortlisted.tr;
       case ApplicationStatus.trialOffered:
         bg = KafiColors.roseL;
         fg = KafiColors.roseD;
-        label = 'Trial Offered!';
+        label = AppStrings.nannyAppStatusTrialOffered.tr;
       case ApplicationStatus.declined:
         bg = KafiColors.redL;
         fg = KafiColors.redD;
-        label = 'Declined';
+        label = AppStrings.nannyAppStatusDeclined.tr;
       case ApplicationStatus.withdrawn:
         bg = KafiColors.grey.withValues(alpha: 0.2);
         fg = KafiColors.grey;
-        label = 'Withdrawn';
+        label = AppStrings.nannyAppStatusWithdrawn.tr;
       case ApplicationStatus.hired:
         bg = KafiColors.grnL;
         fg = KafiColors.grnD;
-        label = 'Hired! 🎉';
+        label = AppStrings.nannyAppStatusHired.tr;
     }
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -272,13 +274,6 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
       ),
       child: Text(label, style: KafiTheme.fredoka(9, w: FontWeight.w700, color: fg)),
     );
-  }
-
-  String _formatDate(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    return '${diff.inMinutes}m ago';
   }
 
   /// Confirm before withdrawing (the in-card action was previously

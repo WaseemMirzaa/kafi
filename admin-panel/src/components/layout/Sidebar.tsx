@@ -1,19 +1,22 @@
-import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
+import { useCallback, useEffect, useState } from 'react';
+import { NavLink, useLocation } from 'react-router-dom';
 import clsx from 'clsx';
 import { useAuthStore } from '../../hooks/useAuth';
 import { FamilyService, NannyService, TrialService } from '../../services/firestore';
+import { useLocale } from '../../context/LocaleContext';
+import { TranslationKey } from '../../locales/en';
+import { ADMIN_BADGES_REFRESH } from '../../utils/adminBadges';
 
 type NavItem = {
   to: string;
-  label: string;
+  labelKey: TranslationKey;
   icon: React.ReactNode;
 };
 
 const overview: NavItem[] = [
   {
     to: '/',
-    label: 'Dashboard',
+    labelKey: 'nav.dashboard',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <rect x="3" y="3" width="7" height="7" />
@@ -28,7 +31,7 @@ const overview: NavItem[] = [
 const nannies: NavItem[] = [
   {
     to: '/nannies',
-    label: 'All nannies',
+    labelKey: 'nav.allNannies',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
@@ -38,7 +41,7 @@ const nannies: NavItem[] = [
   },
   {
     to: '/nannies/verify',
-    label: 'Verify docs',
+    labelKey: 'nav.verifyDocs',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
@@ -48,7 +51,7 @@ const nannies: NavItem[] = [
   },
   {
     to: '/nannies/verify-videos',
-    label: 'Review videos',
+    labelKey: 'nav.reviewVideos',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <polygon points="23 7 16 12 23 17 23 7" />
@@ -61,7 +64,7 @@ const nannies: NavItem[] = [
 const families: NavItem[] = [
   {
     to: '/families',
-    label: 'All families',
+    labelKey: 'nav.allFamilies',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
@@ -70,7 +73,7 @@ const families: NavItem[] = [
   },
   {
     to: '/families/subscriptions',
-    label: 'Subscriptions',
+    labelKey: 'nav.subscriptions',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <rect x="1" y="4" width="22" height="16" rx="2" />
@@ -83,7 +86,7 @@ const families: NavItem[] = [
 const operations: NavItem[] = [
   {
     to: '/trials',
-    label: 'Active trials',
+    labelKey: 'nav.activeTrials',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M3 12h4l2 5 4-12 2 7h6" />
@@ -94,8 +97,8 @@ const operations: NavItem[] = [
 
 const safety: NavItem[] = [
   {
-    to: '/disputes',
-    label: 'Disputes',
+    to: '/reports',
+    labelKey: 'nav.reports',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <path d="M12 9v4M12 17h.01" />
@@ -105,7 +108,7 @@ const safety: NavItem[] = [
   },
   {
     to: '/support',
-    label: 'Support tickets',
+    labelKey: 'nav.supportTickets',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
@@ -117,7 +120,7 @@ const safety: NavItem[] = [
 const business: NavItem[] = [
   {
     to: '/revenue',
-    label: 'Revenue',
+    labelKey: 'nav.revenue',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <line x1="12" y1="1" x2="12" y2="23" />
@@ -127,7 +130,7 @@ const business: NavItem[] = [
   },
   {
     to: '/broadcast',
-    label: 'Broadcast',
+    labelKey: 'nav.broadcast',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
         <circle cx="12" cy="12" r="10" />
@@ -140,7 +143,7 @@ const business: NavItem[] = [
 const system: NavItem[] = [
   {
     to: '/settings',
-    label: 'Settings',
+    labelKey: 'nav.settings',
     icon: (
       <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="3" />
@@ -150,11 +153,12 @@ const system: NavItem[] = [
   },
 ];
 
-function NavSection({ label, items, counts }: { label: string; items: NavItem[]; counts: Record<string, number> }) {
+function NavSection({ labelKey, items, counts }: { labelKey: TranslationKey; items: NavItem[]; counts: Record<string, number> }) {
+  const { t } = useLocale();
   return (
     <>
       <p className="text-[8px] font-bold text-white/20 uppercase tracking-widest px-[13px] pt-2 pb-1 font-fredoka">
-        {label}
+        {t(labelKey)}
       </p>
       {items.map((item) => (
         <NavLink
@@ -176,9 +180,9 @@ function NavSection({ label, items, counts }: { label: string; items: NavItem[];
                 {item.icon}
               </span>
               <span className={clsx('text-[10px] font-bold flex-1', isActive ? 'text-rose' : 'text-white/40')}>
-                {item.label}
+                {t(item.labelKey)}
               </span>
-              {counts[item.to] != null && (
+              {counts[item.to] != null && counts[item.to]! > 0 && (
                 <span className="bg-rose-dark text-white text-[8px] font-bold px-[5px] py-0.5 rounded-full">
                   {counts[item.to]}
                 </span>
@@ -193,10 +197,12 @@ function NavSection({ label, items, counts }: { label: string; items: NavItem[];
 
 export default function Sidebar() {
   const { user, logout } = useAuthStore();
-  // Live badge counts keyed by route. Badges stay hidden until loaded.
+  const { t } = useLocale();
+  const location = useLocation();
+  // Live badge counts keyed by route. Badges stay hidden until loaded / when 0.
   const [counts, setCounts] = useState<Record<string, number>>({});
 
-  useEffect(() => {
+  const loadCounts = useCallback(() => {
     let cancelled = false;
     Promise.all([
       NannyService.list(),
@@ -222,6 +228,20 @@ export default function Sidebar() {
     };
   }, []);
 
+  // Refresh on mount, every route change, and after approve/reject mutations.
+  useEffect(() => {
+    const cancel = loadCounts();
+    return cancel;
+  }, [location.pathname, loadCounts]);
+
+  useEffect(() => {
+    const onRefresh = () => {
+      loadCounts();
+    };
+    window.addEventListener(ADMIN_BADGES_REFRESH, onRefresh);
+    return () => window.removeEventListener(ADMIN_BADGES_REFRESH, onRefresh);
+  }, [loadCounts]);
+
   return (
     <aside className="w-[182px] flex-shrink-0 bg-navy flex flex-col py-3.5 h-screen sticky top-0 overflow-hidden">
       <div className="flex items-center gap-1.5 px-[13px] pb-3.5 mb-2.5 border-b border-white/[0.07]">
@@ -237,18 +257,18 @@ export default function Sidebar() {
         </svg>
         <span className="font-pacifico text-[15px] text-[#FF8FAB]">Kafi</span>
         <span className="text-[8px] bg-rose-dark text-white px-1.5 py-0.5 rounded-full font-fredoka font-bold ml-auto">
-          ADMIN
+          {t('common.admin')}
         </span>
       </div>
 
       <nav className="flex-1 overflow-hidden">
-        <NavSection label="Overview" items={overview} counts={counts} />
-        <NavSection label="Nannies" items={nannies} counts={counts} />
-        <NavSection label="Families" items={families} counts={counts} />
-        <NavSection label="Operations" items={operations} counts={counts} />
-        <NavSection label="Safety" items={safety} counts={counts} />
-        <NavSection label="Business" items={business} counts={counts} />
-        <NavSection label="System" items={system} counts={counts} />
+        <NavSection labelKey="nav.overview" items={overview} counts={counts} />
+        <NavSection labelKey="nav.nannies" items={nannies} counts={counts} />
+        <NavSection labelKey="nav.families" items={families} counts={counts} />
+        <NavSection labelKey="nav.operations" items={operations} counts={counts} />
+        <NavSection labelKey="nav.safety" items={safety} counts={counts} />
+        <NavSection labelKey="nav.business" items={business} counts={counts} />
+        <NavSection labelKey="nav.system" items={system} counts={counts} />
       </nav>
 
       <div className="px-[13px] pt-3 border-t border-white/[0.07] mt-2">
@@ -258,9 +278,9 @@ export default function Sidebar() {
           onClick={logout}
           className="text-[10px] font-fredoka font-bold text-rose-light hover:text-white transition"
         >
-          Log out
+          {t('nav.logout')}
         </button>
-        <p className="text-[10px] text-white/25 mt-3">© 2026 Kafi</p>
+        <p className="text-[10px] text-white/25 mt-3">{t('common.copyright')}</p>
       </div>
     </aside>
   );

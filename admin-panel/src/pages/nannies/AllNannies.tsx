@@ -9,6 +9,7 @@ import {
   Row,
   StatusBadge,
   TableCard,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import { FilterBar, FilterSelect, Pagination } from '../../components/ui/ListControls';
 import { useListControls } from '../../hooks/useListControls';
@@ -23,8 +24,9 @@ import {
   emiratesList,
   listOr,
   yesNo,
-  label,
+  nannyProfileStatusLabel,
 } from '../../utils/nannyLabels';
+import { useLocale } from '../../context/LocaleContext';
 
 const statusVariant: Record<string, string> = {
   approved: 'verified',
@@ -36,6 +38,7 @@ const statusVariant: Record<string, string> = {
 const STATUSES = ['draft', 'pending', 'approved', 'rejected'];
 
 export default function AllNannies() {
+  const { t } = useLocale();
   const [items, setItems] = useState<NannyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -48,10 +51,10 @@ export default function AllNannies() {
       .then(setItems)
       .catch((e) => {
         setItems([]);
-        setLoadError((e as Error).message || 'Failed to load nannies');
+        setLoadError((e as Error).message || t('nannies.failedToLoad'));
       })
       .finally(() => setLoading(false));
-  }, []);
+  }, [t]);
 
   const toggleBlock = async (n: NannyRow) => {
     setBusyId(n.id);
@@ -63,7 +66,7 @@ export default function AllNannies() {
       }
       setItems((prev) => prev.map((x) => x.id === n.id ? { ...x, blocked: !x.blocked } : x));
     } catch (e) {
-      alert((e as Error).message || 'Block toggle failed');
+      alert((e as Error).message || t('nannies.blockToggleFailed'));
     } finally {
       setBusyId(null);
     }
@@ -101,11 +104,11 @@ export default function AllNannies() {
       { header: 'Age', value: (r) => String(r.age ?? '') },
       { header: 'Experience (yrs)', value: (r) => String(r.experienceYears ?? '') },
       { header: 'Languages', value: (r) => listOr(r.languages).replace('—', '') },
-      { header: 'Visa status', value: (r) => label(visaStatusLabel, r.visaStatus).replace('—', '') },
+      { header: 'Visa status', value: (r) => visaStatusLabel(r.visaStatus).replace('—', '') },
       { header: 'Emirates ID', value: (r) => yesNo(r.hasEmiratesId) },
       { header: 'Work emirates', value: (r) => emiratesList(r.workEmirates).replace('—', '') },
-      { header: 'Availability', value: (r) => label(availabilityLabel, r.availability).replace('—', '') },
-      { header: 'Job type', value: (r) => label(jobTypeLabel, r.jobTypePreference).replace('—', '') },
+      { header: 'Availability', value: (r) => availabilityLabel(r.availability).replace('—', '') },
+      { header: 'Job type', value: (r) => jobTypeLabel(r.jobTypePreference).replace('—', '') },
       { header: 'Salary (AED)', value: (r) => salaryRange(r.expectedSalaryMin, r.expectedSalaryMax).replace('—', '') },
       { header: 'Can cook', value: (r) => yesNo(r.canCook) },
       { header: 'Live-in OK', value: (r) => (r.jobTypePreference === 'liveOut' ? 'no' : 'yes') },
@@ -118,19 +121,19 @@ export default function AllNannies() {
   return (
     <PageShell>
       <PageHeader
-        title="All nannies"
-        subtitle={`${items.length} total · Manage profiles & verifications`}
+        title={t('nannies.allNanniesTitle')}
+        subtitle={t('nannies.allNanniesSubtitle', { count: items.length })}
         actions={
           <button type="button" className="qa-btn qa-g" onClick={onExport}>
-            Export CSV
+            {t('common.exportCsv')}
           </button>
         }
       />
       <PageContent>
         <div className="flex gap-1.5 mb-2.5">
-          <ColStat num={String(stats.approved)} label="Active" change="↑ verified" />
-          <ColStat num={String(stats.pendingDocs)} label="Pending docs" change="⚠ Review" numColor="#FFB347" />
-          <ColStat num={String(stats.rejected)} label="Rejected" change="re-upload" numColor="#FF5C8A" />
+          <ColStat num={String(stats.approved)} label={t('nannies.active')} change={t('nannies.verifiedChange')} />
+          <ColStat num={String(stats.pendingDocs)} label={t('dashboard.pendingDocs')} change={t('dashboard.reviewNeeded')} numColor="#FFB347" />
+          <ColStat num={String(stats.rejected)} label={t('nannies.rejected')} change={t('nannies.reUpload')} numColor="#FF5C8A" />
         </div>
 
         <FilterBar
@@ -144,27 +147,28 @@ export default function AllNannies() {
             lc.clear();
             setStatus('all');
           }}
-          searchPlaceholder="Search by name, nationality, city, language…"
-          dateLabel="Submitted"
+          searchPlaceholder={t('nannies.searchPlaceholder')}
+          dateLabel={t('nannies.submitted')}
         >
           <FilterSelect
-            label="Status"
+            label={t('common.status')}
             value={status}
             onChange={setStatus}
-            options={[{ value: 'all', label: 'All statuses' }, ...STATUSES.map((s) => ({ value: s, label: s }))]}
+            options={[
+              { value: 'all', label: t('nannies.allStatuses') },
+              ...STATUSES.map((s) => ({ value: s, label: nannyProfileStatusLabel(s as NannyRow['status']) })),
+            ]}
           />
         </FilterBar>
 
-        <TableCard title="All nannies">
-          {loading && (
-            <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>
-          )}
+        <TableCard title={t('nannies.allNanniesTitle')}>
+          {loading && <PageLoader compact />}
           {!loading && loadError && (
             <div className="px-3 py-4 text-[10px] font-bold text-rose-dark">{loadError}</div>
           )}
           {!loading && !loadError && lc.total === 0 && (
             <div className="px-3 py-4 text-[10px] text-[#8090B0]">
-              No nannies in Firestore yet. Complete nanny signup in the mobile app first.
+              {t('nannies.emptyFirestore')}
             </div>
           )}
           {lc.pageItems.map((n) => (
@@ -173,21 +177,24 @@ export default function AllNannies() {
               <div className="flex-1 min-w-0">
                 <div className="text-[10.5px] font-extrabold text-navy">
                   {n.fullName}
-                  {n.blocked && <span className="ml-1.5 text-[8px] font-bold text-rose-dark">[BLOCKED]</span>}
+                  {n.blocked && <span className="ml-1.5 text-[8px] font-bold text-rose-dark">{t('nannies.blocked')}</span>}
                 </div>
                 <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">
                   {n.nationality} · {n.city}
-                  {n.age ? ` · ${n.age}y` : ''}
-                  {n.experienceYears ? ` · ${n.experienceYears} yrs` : ''}
-                  {n.visaStatus ? ` · ${visaStatusLabel[n.visaStatus]}` : ''}
+                  {n.age ? ` · ${t('common.ageShort', { age: n.age })}` : ''}
+                  {n.experienceYears ? ` · ${t('nannies.yrsExp', { count: n.experienceYears })}` : ''}
+                  {n.visaStatus ? ` · ${visaStatusLabel(n.visaStatus)}` : ''}
+                  {n.lastActiveAt
+                    ? ` · ${t('nannies.lastActiveShort', { date: n.lastActiveAt.toLocaleDateString() })}`
+                    : ` · ${t('nannies.neverActive')}`}
                 </div>
                 <div className="text-[8px] font-semibold text-[#A0ADC8] truncate mt-0.5">
                   {[
-                    n.jobTypePreference ? jobTypeLabel[n.jobTypePreference] : null,
-                    salaryRange(n.expectedSalaryMin, n.expectedSalaryMax) !== '—'
+                    n.jobTypePreference ? jobTypeLabel(n.jobTypePreference) : null,
+                    salaryRange(n.expectedSalaryMin, n.expectedSalaryMax) !== t('common.dash')
                       ? salaryRange(n.expectedSalaryMin, n.expectedSalaryMax)
                       : null,
-                    listOr(n.languages) !== '—' ? listOr(n.languages) : null,
+                    listOr(n.languages) !== t('common.dash') ? listOr(n.languages) : null,
                   ]
                     .filter(Boolean)
                     .join(' · ')}
@@ -195,11 +202,15 @@ export default function AllNannies() {
               </div>
               {n.availability && (
                 <StatusBadge variant={n.availability === 'availableNow' ? 'verified' : n.availability === 'onTrial' ? 'new' : 'pending'}>
-                  {availabilityLabel[n.availability]}
+                  {availabilityLabel(n.availability)}
                 </StatusBadge>
               )}
               <StatusBadge variant={statusVariant[n.status] ?? 'pending'}>
-                {n.status === 'approved' ? 'Verified' : n.status === 'pending' ? 'Needs review' : n.status}
+                {n.status === 'approved'
+                  ? t('nannies.verified')
+                  : n.status === 'pending'
+                    ? t('nannies.needsReview')
+                    : nannyProfileStatusLabel(n.status)}
               </StatusBadge>
               <button
                 type="button"
@@ -207,10 +218,10 @@ export default function AllNannies() {
                 disabled={busyId === n.id}
                 onClick={() => toggleBlock(n)}
               >
-                {n.blocked ? 'Unblock' : 'Block'}
+                {n.blocked ? t('common.unblock') : t('common.block')}
               </button>
               <Link to={`/nannies/${n.id}`} className="text-[9px] font-bold text-purple font-fredoka no-underline ml-1">
-                View →
+                {t('common.view')}
               </Link>
             </Row>
           ))}

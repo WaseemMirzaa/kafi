@@ -1,6 +1,7 @@
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getUser } from '../utils/notifications';
+import { tn } from '../i18n/notifications';
 
 /// When admin replies to a support ticket, notify the opener (inbox + push).
 /// User→admin messages are surfaced in the admin panel's ticket queue, and
@@ -22,8 +23,9 @@ export const onNewTicketMessage = onDocumentCreated(
     const openerId = ticket.openerId as string | undefined;
     if (!openerId) return;
     const opener = await getUser(openerId);
+    const locale = opener.locale ?? 'en';
 
-    const title = '🎧 Support replied';
+    const title = tn('ticket.reply.title', locale);
     const body = (message.content || '').toString().substring(0, 90);
     const data = { type: 'support_reply', ticketId: event.params.ticketId };
 
@@ -52,14 +54,13 @@ export const onTicketStatusChanged = onDocumentUpdated(
     const openerId = after.openerId as string | undefined;
     if (!openerId) return;
     const opener = await getUser(openerId);
+    const locale = opener.locale ?? 'en';
 
     const resolved = after.status === 'resolved';
-    const title = resolved ? '✅ Ticket resolved' : '📋 Ticket closed';
+    const title = tn(resolved ? 'ticket.resolved.title' : 'ticket.closed.title', locale);
     const body =
       (after.resolution as string) ||
-      (resolved
-        ? 'Our team has resolved your support ticket.'
-        : 'Our team has closed your support ticket.');
+      tn(resolved ? 'ticket.resolved.defaultBody' : 'ticket.closed.defaultBody', locale);
     const data = { type: `support_${after.status}`, ticketId: event.params.ticketId };
 
     await writeInbox(openerId, 'systemAnnouncement', title, body, data);

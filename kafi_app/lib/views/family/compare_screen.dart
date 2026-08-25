@@ -107,7 +107,7 @@ class _CompareScreenState extends State<CompareScreen> {
           ),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 8),
-            child: Text('vs',
+            child: Text(AppStrings.compareVs.tr,
                 style: KafiTheme.fredoka(9, color: KafiColors.tm)),
           ),
           Expanded(
@@ -162,12 +162,15 @@ class _CompareScreenState extends State<CompareScreen> {
       child: Column(
         children: [
           _row(
-              'Match',
-              a.matchPercent > 0 ? '${a.matchPercent}%' : '—',
-              b.matchPercent > 0 ? '${b.matchPercent}%' : '—'),
-          _row('Type', a.jobType, b.jobType),
-          _row('Exp', '${a.yearsExp}y', '${b.yearsExp}y'),
-          _row('City', a.city, b.city),
+              AppStrings.compareMatch.tr,
+              a.matchPercent > 0 ? '${a.matchPercent}%' : AppStrings.dashPlaceholder.tr,
+              b.matchPercent > 0 ? '${b.matchPercent}%' : AppStrings.dashPlaceholder.tr),
+          _row(AppStrings.compareType.tr, a.jobType, b.jobType),
+          _row(
+              AppStrings.compareExp.tr,
+              AppStrings.yearsAbbrevN.trParams({'n': '${a.yearsExp}'}),
+              AppStrings.yearsAbbrevN.trParams({'n': '${b.yearsExp}'})),
+          _row(AppStrings.compareCity.tr, a.city, b.city),
         ],
       ),
     );

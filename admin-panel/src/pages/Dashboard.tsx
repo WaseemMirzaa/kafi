@@ -15,6 +15,14 @@ import {
 import { gradientFor, initials } from '../utils/avatar';
 import { useAuthStore } from '../hooks/useAuth';
 import { exportCsv } from '../utils/csv';
+import { useLocale } from '../context/LocaleContext';
+import { PageLoader } from '../components/ui/AdminUI';
+import {
+  nannyProfileStatusLabel,
+  subscriptionStatusLabel,
+  subscriptionPlanLabel,
+  trialStatusLabel,
+} from '../utils/nannyLabels';
 
 const muted = '#8090B0';
 
@@ -155,14 +163,15 @@ function Row({ children, highlight }: { children: React.ReactNode; highlight?: b
 // Plan display metadata: name + color (design constants). Prices are NOT baked
 // in here — they come from admin settings and are formatted into the label at
 // render time, so a price change on the Settings page flows through.
-const planMeta: Record<string, { name: string; color: string }> = {
-  weekly:    { name: 'Weekly',   color: '#FFB347' },
-  monthly:   { name: 'Monthly',  color: '#9B6EDB' },
-  twoMonths: { name: '2 months', color: '#2E9A58' },
+const planMeta: Record<string, { nameKey: 'dashboard.plan.weekly' | 'dashboard.plan.monthly' | 'dashboard.plan.twoMonths'; color: string }> = {
+  weekly:    { nameKey: 'dashboard.plan.weekly',    color: '#FFB347' },
+  monthly:   { nameKey: 'dashboard.plan.monthly',   color: '#9B6EDB' },
+  twoMonths: { nameKey: 'dashboard.plan.twoMonths', color: '#2E9A58' },
 };
 
 export default function Dashboard() {
-  const today = new Date().toLocaleDateString('en-GB', {
+  const { t, locale } = useLocale();
+  const today = new Date().toLocaleDateString(locale === 'ar' ? 'ar-AE' : 'en-GB', {
     weekday: 'long',
     day: 'numeric',
     month: 'long',
@@ -208,7 +217,7 @@ export default function Dashboard() {
       setPlans(settings.plans);
       setVatRate(settings.vatRate);
     } catch (e) {
-      setError((e as Error).message || 'Failed to load dashboard');
+      setError((e as Error).message || t('dashboard.failedToLoad'));
     } finally {
       setLoading(false);
     }
@@ -233,21 +242,21 @@ export default function Dashboard() {
       await NannyService.approve(id, adminId);
       await load();
     } catch (e) {
-      alert((e as Error).message || 'Approve failed');
+      alert((e as Error).message || t('dashboard.approveFailed'));
     } finally {
       setActingId(null);
     }
   }
 
   async function handleReject(id: string) {
-    const reason = prompt('Reason for rejection?');
+    const reason = prompt(t('dashboard.rejectPrompt'));
     if (reason == null) return;
     setActingId(id);
     try {
-      await NannyService.reject(id, reason || 'No reason provided', adminId);
+      await NannyService.reject(id, reason || t('dashboard.noReasonProvided'), adminId);
       await load();
     } catch (e) {
-      alert((e as Error).message || 'Reject failed');
+      alert((e as Error).message || t('dashboard.rejectFailed'));
     } finally {
       setActingId(null);
     }
@@ -262,8 +271,8 @@ export default function Dashboard() {
       {/* Header */}
       <div className="flex flex-wrap justify-between items-start gap-2.5 px-[18px] pt-4 pb-0 mb-3">
         <div>
-          <h1 className="text-base font-black text-navy">Dashboard</h1>
-          <p className="text-[10px] font-semibold text-[#8090B0] mt-0.5">Welcome back 🌸 — {today}</p>
+          <h1 className="text-base font-black text-navy">{t('dashboard.title')}</h1>
+          <p className="text-[10px] font-semibold text-[#8090B0] mt-0.5">{t('dashboard.welcome', { date: today })}</p>
         </div>
         <div className="flex flex-wrap gap-1.5">
           <Link to="/nannies/verify" className="qa-btn qa-r">
@@ -271,21 +280,21 @@ export default function Dashboard() {
               <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
               <polyline points="22 4 12 14.01 9 11.01" />
             </svg>
-            Verify docs ({pendingDocs.length})
+            {t('dashboard.verifyDocsCount', { count: pendingDocs.length })}
           </Link>
           <Link to="/revenue" className="qa-btn qa-g">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <line x1="12" y1="1" x2="12" y2="23" />
               <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
             </svg>
-            View revenue
+            {t('dashboard.viewRevenue')}
           </Link>
           <Link to="/broadcast" className="qa-btn qa-p">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
               <polyline points="22,6 12,13 2,6" />
             </svg>
-            Broadcast
+            {t('dashboard.broadcast')}
           </Link>
         </div>
       </div>
@@ -298,13 +307,13 @@ export default function Dashboard() {
 
       {/* Top stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 px-[18px] pb-3">
-        <TopStat num={loading ? '—' : String(totalUsers)} label="Total users" change="" />
-        <TopStat num={loading ? '—' : String(activeSubs)} label="Active subs" change="" />
-        <TopStat num={loading ? '—' : `AED ${monthlyRevenue.toLocaleString()}`} label="This month revenue" change="" numClass="!text-[13px]" />
+        <TopStat num={loading ? '—' : String(totalUsers)} label={t('dashboard.totalUsers')} change="" />
+        <TopStat num={loading ? '—' : String(activeSubs)} label={t('dashboard.activeSubs')} change="" />
+        <TopStat num={loading ? '—' : `AED ${monthlyRevenue.toLocaleString()}`} label={t('dashboard.thisMonthRevenue')} change="" numClass="!text-[13px]" />
         <div className="admin-card p-2.5">
           <div className="text-[17px] font-black text-navy">{loading ? '—' : `AED ${monthlyVat.toLocaleString()}`}</div>
-          <div className="text-[11px] font-black text-[#8090B0] mt-0.5">VAT collected</div>
-          <div className="text-[8px] font-bold mt-0.5 text-[#8090B0]">→ FTA</div>
+          <div className="text-[11px] font-black text-[#8090B0] mt-0.5">{t('dashboard.vatCollected')}</div>
+          <div className="text-[8px] font-bold mt-0.5 text-[#8090B0]">{t('dashboard.vatToFta')}</div>
         </div>
       </div>
 
@@ -315,18 +324,18 @@ export default function Dashboard() {
           return (
             <RevCard
               key={key}
-              label={`${meta.name} · AED ${plans[key] ?? 0}`}
+              label={`${t(meta.nameKey)} · AED ${plans[key] ?? 0}`}
               amount={loading ? '—' : `AED ${(p?.revenue ?? 0).toLocaleString()}`}
-              sub={loading ? '' : `${p?.subs ?? 0} active`}
+              sub={loading ? '' : `${p?.subs ?? 0} ${t('dashboard.active').toLowerCase()}`}
               pct={Math.round(((p?.revenue ?? 0) / maxRevenue) * 100)}
               color={meta.color}
             />
           );
         })}
         <RevCard
-          label={`VAT (${Math.round(vatRate * 100)}%)`}
+          label={t('dashboard.vatLabel', { pct: Math.round(vatRate * 100) })}
           amount={loading ? '—' : `AED ${monthlyVat.toLocaleString()}`}
-          sub="Due to FTA"
+          sub={t('dashboard.dueToFta')}
           pct={100}
           color="#FF8FAB"
           borderRose
@@ -344,23 +353,23 @@ export default function Dashboard() {
               <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
               <circle cx="12" cy="7" r="4" />
             </svg>
-            <h2 className="text-[13px] font-black text-navy">Nannies</h2>
-            <span className="text-[10px] font-bold text-white bg-rose-dark px-2 py-0.5 rounded-full ml-1">{loading ? '—' : `${nannies.length} total`}</span>
+            <h2 className="text-[13px] font-black text-navy">{t('nav.nannies')}</h2>
+            <span className="text-[10px] font-bold text-white bg-rose-dark px-2 py-0.5 rounded-full ml-1">{loading ? '—' : `${nannies.length} ${t('common.total')}`}</span>
           </div>
-          <p className="text-[9px] font-semibold text-[#8090B0] mb-2.5">Manage profiles & verifications</p>
+          <p className="text-[9px] font-semibold text-[#8090B0] mb-2.5">{t('dashboard.nanniesSectionSubtitle')}</p>
 
           <div className="flex gap-1.5 mb-2.5">
-            <ColStat num={loading ? '—' : String(activeNannies)} label="Active" change="" />
-            <ColStat num={loading ? '—' : String(pendingDocs.length)} label="Pending docs" change="⚠ Review" numColor="#FFB347" />
+            <ColStat num={loading ? '—' : String(activeNannies)} label={t('dashboard.active')} change="" />
+            <ColStat num={loading ? '—' : String(pendingDocs.length)} label={t('dashboard.pendingDocs')} change={t('dashboard.reviewNeeded')} numColor="#FFB347" />
           </div>
 
-          <TableCard title="📋 Document verification queue" action={`View all (${pendingDocs.length})`} actionTo="/nannies/verify">
+          <TableCard title={t('dashboard.docVerificationQueue')} action={t('dashboard.viewAllCount', { count: pendingDocs.length })} actionTo="/nannies/verify">
             {pendingDocs.length === 0 && !loading ? (
-              <div className="px-3 py-4 text-[10.5px] text-[#8090B0]">No nannies awaiting verification.</div>
+              <div className="px-3 py-4 text-[10.5px] text-[#8090B0]">{t('dashboard.noNanniesAwaitingVerification')}</div>
             ) : null}
             {pendingDocs.slice(0, 5).map((n) => {
               const docs = n.documents ?? [];
-              const subtitle = `${n.nationality || '—'} · ${docs.length ? docs.map((d) => `${d.type} ${d.status === 'approved' ? '✓' : d.status === 'rejected' ? '✗' : '⏳'}`).join(' · ') : 'Awaiting docs'}`;
+              const subtitle = `${n.nationality || '—'} · ${docs.length ? docs.map((d) => `${d.type} ${d.status === 'approved' ? '✓' : d.status === 'rejected' ? '✗' : '⏳'}`).join(' · ') : t('dashboard.awaitingDocs')}`;
               const letter = (n.fullName || 'N').charAt(0).toUpperCase();
               return (
                 <Row key={n.id}>
@@ -370,7 +379,7 @@ export default function Dashboard() {
                     <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">{subtitle}</div>
                   </div>
                   <div className="flex flex-col items-end gap-1">
-                    <StatusBadge variant="verify">Needs review</StatusBadge>
+                    <StatusBadge variant="verify">{t('dashboard.needsReview')}</StatusBadge>
                     <div className="flex gap-1">
                       <button
                         type="button"
@@ -378,7 +387,7 @@ export default function Dashboard() {
                         disabled={actingId === n.id}
                         onClick={() => handleApprove(n.id)}
                       >
-                        {actingId === n.id ? '…' : 'Approve ✓'}
+                        {actingId === n.id ? '…' : t('common.approve')}
                       </button>
                       <button
                         type="button"
@@ -386,7 +395,7 @@ export default function Dashboard() {
                         disabled={actingId === n.id}
                         onClick={() => handleReject(n.id)}
                       >
-                        {actingId === n.id ? '…' : 'Reject ✗'}
+                        {actingId === n.id ? '…' : t('common.reject')}
                       </button>
                     </div>
                   </div>
@@ -395,15 +404,15 @@ export default function Dashboard() {
             })}
           </TableCard>
 
-          <TableCard title="All nannies" action="View all" actionTo="/nannies">
-            {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
+          <TableCard title={t('dashboard.allNannies')} action={t('common.viewAll')} actionTo="/nannies">
+            {loading && <PageLoader compact />}
             {nannies.slice(0, 5).map((n) => {
               const badgeVariant = n.status === 'approved' ? 'active' : n.status === 'pending' ? 'verify' : 'pending';
               const sub = [
                 n.nationality,
                 n.city,
-                n.experienceYears ? `${n.experienceYears}y` : null,
-                n.introVideoUrl ? (n.introVideoStatus === 'approved' ? 'Video ✓' : 'Video ⏳') : 'No video',
+                n.experienceYears ? t('dashboard.yearsShort', { years: n.experienceYears }) : null,
+                n.introVideoUrl ? (n.introVideoStatus === 'approved' ? t('dashboard.videoStatus') : t('dashboard.videoPending')) : t('dashboard.noVideo'),
               ].filter(Boolean).join(' · ');
               return (
                 <Row key={n.id}>
@@ -412,7 +421,7 @@ export default function Dashboard() {
                     <div className="text-[10.5px] font-extrabold text-navy">{n.fullName}</div>
                     <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">{sub}</div>
                   </div>
-                  <StatusBadge variant={badgeVariant}>{n.status}</StatusBadge>
+                  <StatusBadge variant={badgeVariant}>{nannyProfileStatusLabel(n.status)}</StatusBadge>
                 </Row>
               );
             })}
@@ -427,8 +436,8 @@ export default function Dashboard() {
             const colors = ['#FF8FAB', '#FFB347', '#6DBF8A', '#9B6EDB', muted];
             return (
               <TableCard
-                title="Nationality breakdown"
-                action="Export CSV"
+                title={t('dashboard.nationalityBreakdown')}
+                action={t('common.exportCsv')}
                 onAction={() =>
                   exportCsv(
                     'nanny-nationality-breakdown.csv',
@@ -447,7 +456,7 @@ export default function Dashboard() {
                     <BarRow pct={Math.round((cnt / total) * 100)} label={`${Math.round((cnt / total) * 100)}%`} color={colors[i % colors.length]} />
                   </Row>
                 ))}
-                {sorted.length === 0 && <div className="px-3 py-4 text-[10px] text-[#8090B0]">No data yet.</div>}
+                {sorted.length === 0 && <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('common.noData')}</div>}
               </TableCard>
             );
           })()}
@@ -462,8 +471,8 @@ export default function Dashboard() {
             const colors = ['#FF5C8A', '#9B6EDB', '#0EA5A0', muted];
             return (
               <TableCard
-                title="Active nannies by city"
-                action="Export"
+                title={t('dashboard.activeNanniesByCity')}
+                action={t('common.export')}
                 onAction={() =>
                   exportCsv('active-nannies-by-city.csv', sorted, [
                     { header: 'City', value: ([city]) => city },
@@ -477,7 +486,7 @@ export default function Dashboard() {
                     <BarRow pct={Math.round((cnt / max) * 100)} label={String(cnt)} color={colors[i % colors.length]} />
                   </Row>
                 ))}
-                {sorted.length === 0 && <div className="px-3 py-4 text-[10px] text-[#8090B0]">No data yet.</div>}
+                {sorted.length === 0 && <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('common.noData')}</div>}
               </TableCard>
             );
           })()}
@@ -489,23 +498,23 @@ export default function Dashboard() {
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#9B6EDB" strokeWidth="2.5" strokeLinecap="round">
               <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
             </svg>
-            <h2 className="text-[13px] font-black text-navy">Families</h2>
-            <span className="text-[10px] font-bold text-white bg-purple px-2 py-0.5 rounded-full ml-1">{loading ? '—' : `${families.length} total`}</span>
+            <h2 className="text-[13px] font-black text-navy">{t('nav.families')}</h2>
+            <span className="text-[10px] font-bold text-white bg-purple px-2 py-0.5 rounded-full ml-1">{loading ? '—' : `${families.length} ${t('common.total')}`}</span>
           </div>
-          <p className="text-[9px] font-semibold text-[#8090B0] mb-2.5">Manage family accounts, subscriptions & billing</p>
+          <p className="text-[9px] font-semibold text-[#8090B0] mb-2.5">{t('dashboard.familiesSectionSubtitle')}</p>
 
           <div className="flex gap-1.5 mb-2.5">
-            <ColStat num={loading ? '—' : String(subscribedCount)} label="Subscribed" change="" />
-            <ColStat num={loading ? '—' : String(freeCount)} label="Free users" change="Convert" numColor={muted} />
-            <ColStat num={loading ? '—' : String(newTodayCount)} label="New today" change="" numColor="#9B6EDB" />
+            <ColStat num={loading ? '—' : String(subscribedCount)} label={t('dashboard.subscribed')} change="" />
+            <ColStat num={loading ? '—' : String(freeCount)} label={t('dashboard.freeUsers')} change={t('dashboard.convert')} numColor={muted} />
+            <ColStat num={loading ? '—' : String(newTodayCount)} label={t('dashboard.newToday')} change="" numColor="#9B6EDB" />
           </div>
 
-          <TableCard title="Recent family accounts" action="View all" actionTo="/families">
-            {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
+          <TableCard title={t('dashboard.recentFamilyAccounts')} action={t('common.viewAll')} actionTo="/families">
+            {loading && <PageLoader compact />}
             {families.slice(0, 5).map((f) => {
               const isActive = f.subscription.status === 'active';
               const variant = isActive ? 'sub' : f.subscription.status === 'free' ? 'unsub' : 'pending';
-              const sub = [f.nationality, f.city, f.subscription.plan ? `${f.subscription.plan} plan` : null].filter(Boolean).join(' · ');
+              const sub = [f.nationality, f.city, f.subscription.plan ? t('dashboard.planLabel', { plan: subscriptionPlanLabel(f.subscription.plan) }) : null].filter(Boolean).join(' · ');
               return (
                 <Row key={f.id}>
                   <Avatar letter={initials(f.fullName)} gradient={gradientFor(f.id)} />
@@ -513,12 +522,12 @@ export default function Dashboard() {
                     <div className="text-[10.5px] font-extrabold text-navy">{f.fullName}</div>
                     <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">{sub}</div>
                   </div>
-                  <StatusBadge variant={variant}>{f.subscription.status}</StatusBadge>
+                  <StatusBadge variant={variant}>{subscriptionStatusLabel(f.subscription.status)}</StatusBadge>
                 </Row>
               );
             })}
             {!loading && families.length === 0 && (
-              <div className="px-3 py-4 text-[10px] text-[#8090B0]">No families yet.</div>
+              <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('dashboard.noFamiliesYet')}</div>
             )}
           </TableCard>
 
@@ -533,8 +542,8 @@ export default function Dashboard() {
             const max = Math.max(...Object.values(planCounts), freeCount2, 1);
             return (
               <TableCard
-                title="Subscription breakdown"
-                action="Export CSV"
+                title={t('dashboard.subscriptionBreakdown')}
+                action={t('common.exportCsv')}
                 onAction={() =>
                   exportCsv(
                     'subscription-breakdown.csv',
@@ -551,12 +560,12 @@ export default function Dashboard() {
                   )
                 }
               >
-                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">Weekly · AED {plans.weekly ?? 0}/wk</div><BarRow pct={Math.round(((planCounts.weekly ?? 0) / max) * 100)} label={`${planCounts.weekly ?? 0} subs`} color="#FFB347" /></Row>
-                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">Monthly · AED {plans.monthly ?? 0}/mo</div><BarRow pct={Math.round(((planCounts.monthly ?? 0) / max) * 100)} label={`${planCounts.monthly ?? 0} subs`} color="#9B6EDB" /></Row>
-                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">2-months · AED {plans.twoMonths ?? 0}</div><BarRow pct={Math.round(((planCounts.twoMonths ?? 0) / max) * 100)} label={`${planCounts.twoMonths ?? 0} subs`} color="#6DBF8A" /></Row>
+                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">{t('dashboard.plan.weekly')} · {t('dashboard.weeklyAedPerWeek', { amount: plans.weekly ?? 0 })}</div><BarRow pct={Math.round(((planCounts.weekly ?? 0) / max) * 100)} label={t('dashboard.subsCount', { count: planCounts.weekly ?? 0 })} color="#FFB347" /></Row>
+                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">{t('dashboard.plan.monthly')} · {t('dashboard.monthlyAedPerMonth', { amount: plans.monthly ?? 0 })}</div><BarRow pct={Math.round(((planCounts.monthly ?? 0) / max) * 100)} label={t('dashboard.subsCount', { count: planCounts.monthly ?? 0 })} color="#9B6EDB" /></Row>
+                <Row><div className="flex-1 text-[10.5px] font-extrabold text-navy">{t('dashboard.plan.twoMonths')} · AED {plans.twoMonths ?? 0}</div><BarRow pct={Math.round(((planCounts.twoMonths ?? 0) / max) * 100)} label={t('dashboard.subsCount', { count: planCounts.twoMonths ?? 0 })} color="#6DBF8A" /></Row>
                 <Row highlight>
-                  <div className="flex-1 text-[10.5px] font-extrabold text-[#8090B0]">Not subscribed</div>
-                  <BarRow pct={Math.round((freeCount2 / max) * 100)} label={`${freeCount2} users`} color="#FFD8E8" />
+                  <div className="flex-1 text-[10.5px] font-extrabold text-[#8090B0]">{t('dashboard.notSubscribed')}</div>
+                  <BarRow pct={Math.round((freeCount2 / max) * 100)} label={t('dashboard.usersCount', { count: freeCount2 })} color="#FFD8E8" />
                 </Row>
               </TableCard>
             );
@@ -570,8 +579,8 @@ export default function Dashboard() {
             const colors2 = ['#9B6EDB', '#0EA5A0', '#FF8FAB', '#FFB347'];
             return (
               <TableCard
-                title="Family nationality breakdown"
-                action="Export"
+                title={t('dashboard.familyNationalityBreakdown')}
+                action={t('common.export')}
                 onAction={() =>
                   exportCsv('family-nationality-breakdown.csv', sorted2, [
                     { header: 'Nationality', value: ([nat]) => nat },
@@ -586,36 +595,38 @@ export default function Dashboard() {
                     <BarRow pct={Math.round((cnt / total2) * 100)} label={`${Math.round((cnt / total2) * 100)}%`} color={colors2[i % colors2.length]} />
                   </Row>
                 ))}
-                {sorted2.length === 0 && <div className="px-3 py-4 text-[10px] text-[#8090B0]">No data yet.</div>}
+                {sorted2.length === 0 && <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('common.noData')}</div>}
               </TableCard>
             );
           })()}
 
-          <TableCard title="🤝 Active trials" action="Monitor all" actionTo="/trials">
-            {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
-            {activeTrials.map((t) => {
-              const dayNum = Math.max(1, Math.ceil((Date.now() - t.startDate.getTime()) / 86400000));
-              const msLeft = t.endDate.getTime() - Date.now();
+          <TableCard title={t('dashboard.activeTrials')} action={t('dashboard.monitorAll')} actionTo="/trials">
+            {loading && <PageLoader compact />}
+            {activeTrials.map((trial) => {
+              const dayNum = Math.max(1, Math.ceil((Date.now() - trial.startDate.getTime()) / 86400000));
+              const msLeft = trial.endDate.getTime() - Date.now();
               const dLeft = Math.max(0, Math.floor(msLeft / 86400000));
               const hLeft = Math.max(0, Math.floor((msLeft % 86400000) / 3600000));
-              const label = `${t.nannyName ?? t.nannyId} ↔ ${t.familyName ?? t.familyId}`;
-              const sub = `${t.durationDays}-day trial · Day ${dayNum}/${t.durationDays}${t.location ? ` · ${t.location}` : ''}`;
+              const label = `${trial.nannyName ?? trial.nannyId} ↔ ${trial.familyName ?? trial.familyId}`;
+              const sub =
+                t('trials.dayTrial', { days: trial.durationDays, day: dayNum, total: trial.durationDays }) +
+                (trial.location ? ` · ${trial.location}` : '');
               return (
-                <Row key={t.id}>
-                  <Avatar letter={initials(t.nannyName ?? 'N')} gradient={gradientFor(t.id)} />
+                <Row key={trial.id}>
+                  <Avatar letter={initials(trial.nannyName ?? 'N')} gradient={gradientFor(trial.id)} />
                   <div className="flex-1 min-w-0">
                     <div className="text-[10.5px] font-extrabold text-navy">{label}</div>
                     <div className="text-[8.5px] font-semibold text-[#8090B0]">{sub}</div>
                   </div>
                   <div className="flex flex-col items-end">
-                    <StatusBadge variant="active">{t.status}</StatusBadge>
-                    <span className="text-[8px] font-bold text-green-dark mt-0.5">{dLeft}d {hLeft}h left</span>
+                    <StatusBadge variant="active">{trialStatusLabel(trial.status)}</StatusBadge>
+                    <span className="text-[8px] font-bold text-green-dark mt-0.5">{t('dashboard.daysLeft', { days: dLeft, hours: hLeft })}</span>
                   </div>
                 </Row>
               );
             })}
             {!loading && activeTrials.length === 0 && (
-              <div className="px-3 py-4 text-[10px] text-[#8090B0]">No active trials.</div>
+              <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('dashboard.noActiveTrials')}</div>
             )}
           </TableCard>
         </div>

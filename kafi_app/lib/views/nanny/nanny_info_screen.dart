@@ -143,7 +143,7 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
                 child: GestureDetector(
                   onTap: _pickAvailableFrom,
                   child: AbsorbPointer(
-                    child: KafiTextField(label: AppStrings.nannyAvailableFromDate.tr, controller: controller.availableFromCtrl, hint: 'DD/MM/YYYY', purple: true),
+                    child: KafiTextField(label: AppStrings.nannyAvailableFromDate.tr, controller: controller.availableFromCtrl, hint: AppStrings.dateFormatHint.tr, purple: true),
                   ),
                 ),
               )
@@ -159,13 +159,13 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
       title: AppStrings.secBasic.tr,
       icon: Icons.person_outline,
       children: [
-        KafiTextField(label: AppStrings.fldFullName.tr, controller: controller.fullNameCtrl, hint: 'e.g. Maria Santos Reyes'),
+        KafiTextField(label: AppStrings.fldFullName.tr, controller: controller.fullNameCtrl, hint: AppStrings.nannyFullNameHint.tr),
         Row(children: [
           Expanded(
             child: GestureDetector(
               onTap: _pickDob,
               child: AbsorbPointer(
-                child: KafiTextField(label: AppStrings.fldDob.tr, controller: controller.dobCtrl, hint: 'DD/MM/YYYY'),
+                child: KafiTextField(label: AppStrings.fldDob.tr, controller: controller.dobCtrl, hint: AppStrings.dateFormatHint.tr),
               ),
             ),
           ),
@@ -225,17 +225,17 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           color: const Color(0xFFE0F8F7),
           borderColor: const Color(0xFF80DEEA),
           icon: '🛡️',
-          text: 'This helps families understand your availability and whether they need to provide visa sponsorship. Be honest — it is used for matching only.',
+          text: AppStrings.nannyVisaInfoBanner.tr,
         ),
         const SizedBox(height: 8),
         Text(AppStrings.fldVisaStatus.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 5),
         Column(children: [
-          _visaTile(AppStrings.visaVisit.tr, 'First time in UAE · Short-term · Needs sponsorship', VisaStatus.visit),
-          _visaTile(AppStrings.visaSponsored.tr, 'Currently employed · Active work permit · Valid EID', VisaStatus.residenceSponsored),
-          _visaTile(AppStrings.visaOwn.tr, 'Self-sponsored · Golden visa · Family visa holder', VisaStatus.ownResidence),
-          _visaTile(AppStrings.visaCancelled.tr, 'Previous visa cancelled · Still in UAE · Needs urgent sponsorship', VisaStatus.cancelled),
-          _visaTile(AppStrings.visaOutside.tr, 'Ready to come to UAE · Needs entry visa + sponsorship', VisaStatus.outsideUae),
+          _visaTile(AppStrings.visaVisit.tr, AppStrings.visaVisitSub.tr, VisaStatus.visit),
+          _visaTile(AppStrings.visaSponsored.tr, AppStrings.visaSponsoredSub.tr, VisaStatus.residenceSponsored),
+          _visaTile(AppStrings.visaOwn.tr, AppStrings.visaOwnSub.tr, VisaStatus.ownResidence),
+          _visaTile(AppStrings.visaCancelled.tr, AppStrings.visaCancelledSub.tr, VisaStatus.cancelled),
+          _visaTile(AppStrings.visaOutside.tr, AppStrings.visaOutsideSub.tr, VisaStatus.outsideUae),
         ]),
         const SizedBox(height: 8),
         // EID amber card
@@ -250,11 +250,11 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
             Row(children: [
               const Icon(Icons.warning_amber_rounded, size: 13, color: Color(0xFF7A4A00)),
               const SizedBox(width: 5),
-              Text('About your Emirates ID', style: KafiTheme.nunito(10, color: const Color(0xFF7A4A00), w: FontWeight.w800)),
+              Text(AppStrings.nannyEidCardTitle.tr, style: KafiTheme.nunito(10, color: const Color(0xFF7A4A00), w: FontWeight.w800)),
             ]),
             const SizedBox(height: 5),
             Text(
-              'Emirates ID is not required if you are on a visit visa or applying from outside UAE. You can still create a complete, verified profile without it.',
+              AppStrings.nannyEidCardDesc.tr,
               style: KafiTheme.nunito(9, color: const Color(0xFF7A4A00)),
             ),
             const SizedBox(height: 8),
@@ -263,14 +263,14 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
             Obx(() => Row(children: [
               Expanded(child: KafiToggleBox(
                 icon: '🪪',
-                label: 'Yes — I have valid EID',
+                label: AppStrings.nannyEidYes.tr,
                 selected: controller.hasEid.value,
                 onTap: () => controller.hasEid.value = true,
               )),
               const SizedBox(width: 6),
               Expanded(child: KafiToggleBox(
                 icon: '🚫',
-                label: 'No — visit visa / new to UAE',
+                label: AppStrings.nannyEidNo.tr,
                 selected: !controller.hasEid.value,
                 onTap: () => controller.hasEid.value = false,
               )),
@@ -281,9 +281,9 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
         Text(AppStrings.fldTransferVisa.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
         Obx(() => Column(children: [
-          _visaTile("Yes — I'm open to visa transfer / sponsorship", null, null, selected: controller.willingTransferVisa.value == true, onTap: () => controller.willingTransferVisa.value = true),
-          _visaTile('No — I have my own visa / self-sponsored', null, null, selected: controller.willingTransferVisa.value == false, onTap: () => controller.willingTransferVisa.value = false),
-          _visaTile('Depends on the family and the offer', null, null, selected: controller.willingTransferVisa.value == null, onTap: () => controller.willingTransferVisa.value = null),
+          _visaTile(AppStrings.nannyTransferYes.tr, null, null, selected: controller.willingTransferVisa.value == true, onTap: () => controller.willingTransferVisa.value = true),
+          _visaTile(AppStrings.nannyTransferNo.tr, null, null, selected: controller.willingTransferVisa.value == false, onTap: () => controller.willingTransferVisa.value = false),
+          _visaTile(AppStrings.nannyTransferDepends.tr, null, null, selected: controller.willingTransferVisa.value == null, onTap: () => controller.willingTransferVisa.value = null),
         ])),
       ],
     );
@@ -357,7 +357,7 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
         // 2) Preferred job locations — multi-select ("Any Emirate" selects all 7).
         _infoBannerPurple(
           icon: Icons.location_on_outlined,
-          text: 'Select every emirate you are willing to work in. Families can only find you for their emirate if you select it. You can select all if you are flexible.',
+          text: AppStrings.nannyWorkLocBanner.tr,
         ),
         const SizedBox(height: 8),
         Text(AppStrings.fldEmirates.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
@@ -391,7 +391,7 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
         Obx(() => Row(children: [
           Expanded(child: KafiToggleBox(
             icon: '✈️',
-            label: 'Yes — for the right family',
+            label: AppStrings.nannyRelocateYes.tr,
             selected: controller.willingRelocate.value,
             variant: KafiToggleVariant.purple,
             onTap: () => controller.willingRelocate.value = true,
@@ -399,7 +399,7 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           const SizedBox(width: 6),
           Expanded(child: KafiToggleBox(
             icon: '📍',
-            label: 'Prefer to stay in current emirate',
+            label: AppStrings.nannyRelocateNo.tr,
             selected: !controller.willingRelocate.value,
             variant: KafiToggleVariant.purple,
             onTap: () => controller.willingRelocate.value = false,
@@ -469,19 +469,19 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           crossAxisSpacing: 6,
           childAspectRatio: 2.8,
           children: [
-            _maritalBox('💍', 'Married', MaritalStatus.married),
-            _maritalBox('🌸', 'Single', MaritalStatus.single),
-            _maritalBox('💔', 'Divorced', MaritalStatus.divorced),
-            _maritalBox('🕊️', 'Widowed', MaritalStatus.widowed),
+            _maritalBox('💍', AppStrings.maritalMarried.tr, MaritalStatus.married),
+            _maritalBox('🌸', AppStrings.maritalSingle.tr, MaritalStatus.single),
+            _maritalBox('💔', AppStrings.maritalDivorced.tr, MaritalStatus.divorced),
+            _maritalBox('🕊️', AppStrings.maritalWidowed.tr, MaritalStatus.widowed),
           ],
         ),
         const SizedBox(height: 8),
         Text(AppStrings.fldChildren.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
         Obx(() => Row(children: [
-          Expanded(child: KafiToggleBox(icon: '👶', label: 'Yes, I have children', selected: controller.hasChildren.value, onTap: () => controller.hasChildren.value = true)),
+          Expanded(child: KafiToggleBox(icon: '👶', label: AppStrings.nannyHasChildrenYes.tr, selected: controller.hasChildren.value, onTap: () => controller.hasChildren.value = true)),
           const SizedBox(width: 6),
-          Expanded(child: KafiToggleBox(icon: '🚫', label: 'No children', selected: !controller.hasChildren.value, onTap: () => controller.hasChildren.value = false)),
+          Expanded(child: KafiToggleBox(icon: '🚫', label: AppStrings.nannyHasChildrenNo.tr, selected: !controller.hasChildren.value, onTap: () => controller.hasChildren.value = false)),
         ])),
         const SizedBox(height: 6),
         Obx(() => controller.hasChildren.value
@@ -511,20 +511,20 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           color: KafiColors.grnL,
           borderColor: KafiColors.grn,
           icon: '💚',
-          text: 'Health information is kept private and only shared with families you apply to.',
+          text: AppStrings.nannyHealthBanner.tr,
         ),
         const SizedBox(height: 10),
         Text(AppStrings.fldHealth.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
-        _healthToggle(controller.healthCtrl, '⚕️', 'Yes — I\'ll describe', '✅', 'No health conditions'),
+        _healthToggle(controller.healthCtrl, '⚕️', AppStrings.healthYesDescribe.tr, '✅', AppStrings.fldHealthNo.tr),
         const SizedBox(height: 8),
         Text(AppStrings.fldMeds.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
-        _healthToggle(controller.medsCtrl, '💊', 'Yes — I\'ll describe', '✅', 'No medication'),
+        _healthToggle(controller.medsCtrl, '💊', AppStrings.healthYesDescribe.tr, '✅', AppStrings.fldMedsNo.tr),
         const SizedBox(height: 8),
         Text(AppStrings.fldAllergies.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
-        _healthToggle(controller.allergiesCtrl, '🤧', 'Yes — I\'ll describe', '✅', 'No allergies'),
+        _healthToggle(controller.allergiesCtrl, '🤧', AppStrings.healthYesDescribe.tr, '✅', AppStrings.fldAllergiesNo.tr),
       ],
     );
   }
@@ -551,24 +551,24 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           color: KafiColors.purL,
           borderColor: KafiColors.purB,
           icon: '✨',
-          text: 'Be honest — families filter by these preferences to find the best match for their household.',
+          text: AppStrings.nannyComfortBanner.tr,
         ),
         const SizedBox(height: 10),
         Text(AppStrings.fldComfortCameras.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
-        Obx(() => _comfortRow(controller.comfortCameras.value, (v) => controller.comfortCameras.value = v, '📹', 'Yes, I\'m comfortable', '🚫', 'Not comfortable')),
+        Obx(() => _comfortRow(controller.comfortCameras.value, (v) => controller.comfortCameras.value = v, '📹', AppStrings.comfortCamerasYes.tr, '🚫', AppStrings.comfortCamerasNo.tr)),
         const SizedBox(height: 8),
         Text(AppStrings.fldComfortPets.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
-        Obx(() => _comfortRow(controller.comfortPets.value, (v) => controller.comfortPets.value = v, '🐾', 'Yes, I love pets', '🚫', 'No pets please')),
+        Obx(() => _comfortRow(controller.comfortPets.value, (v) => controller.comfortPets.value = v, '🐾', AppStrings.comfortPetsYes.tr, '🚫', AppStrings.comfortPetsNo.tr)),
         const SizedBox(height: 8),
         Text(AppStrings.fldCooks.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
-        Obx(() => _comfortRow(controller.cooks.value, (v) => controller.cooks.value = v, '🍳', 'Yes, I can cook', '🚫', 'Childcare only')),
+        Obx(() => _comfortRow(controller.cooks.value, (v) => controller.cooks.value = v, '🍳', AppStrings.comfortCooksYes.tr, '🚫', AppStrings.comfortCooksNo.tr)),
         const SizedBox(height: 8),
         Text(AppStrings.fldNightShifts.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
-        Obx(() => _comfortRow(controller.nightShifts.value, (v) => controller.nightShifts.value = v, '🌙', 'Yes, night shifts ok', '🌞', 'Day shifts only')),
+        Obx(() => _comfortRow(controller.nightShifts.value, (v) => controller.nightShifts.value = v, '🌙', AppStrings.comfortNightYes.tr, '🌞', AppStrings.comfortNightNo.tr)),
       ],
     );
   }
@@ -606,40 +606,42 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           crossAxisSpacing: 6,
           childAspectRatio: 2.5,
           children: [
-            _religionTile('☪️', 'Muslim'),
-            _religionTile('✝️', 'Christian'),
-            _religionTile('🕉️', 'Hindu'),
-            _religionTile('☸️', 'Buddhist'),
-            _religionTile('✡️', 'Jewish'),
-            _religionTile('🌐', 'Other'),
+            _religionTile('☪️', 'Muslim', AppStrings.religionMuslim.tr),
+            _religionTile('✝️', 'Christian', AppStrings.religionChristian.tr),
+            _religionTile('🕉️', 'Hindu', AppStrings.religionHindu.tr),
+            _religionTile('☸️', 'Buddhist', AppStrings.religionBuddhist.tr),
+            _religionTile('✡️', 'Jewish', AppStrings.religionJewish.tr),
+            _religionTile('🌐', 'Other', AppStrings.religionOther.tr),
           ],
         ),
         const SizedBox(height: 8),
         Text(AppStrings.nannyComfortFaith.tr, style: KafiTheme.nunito(9, color: KafiColors.tm, w: FontWeight.w800)),
         const SizedBox(height: 4),
         Obx(() => Row(children: [
-          Expanded(child: KafiToggleBox(icon: '✅', label: 'Yes — fully comfortable', selected: controller.comfortDifferentFaith.value, variant: KafiToggleVariant.purple, onTap: () => controller.comfortDifferentFaith.value = true)),
+          Expanded(child: KafiToggleBox(icon: '✅', label: AppStrings.nannyFaithYes.tr, selected: controller.comfortDifferentFaith.value, variant: KafiToggleVariant.purple, onTap: () => controller.comfortDifferentFaith.value = true)),
           const SizedBox(width: 6),
-          Expanded(child: KafiToggleBox(icon: '🤔', label: 'Prefer same faith home', selected: !controller.comfortDifferentFaith.value, variant: KafiToggleVariant.purple, onTap: () => controller.comfortDifferentFaith.value = false)),
+          Expanded(child: KafiToggleBox(icon: '🤔', label: AppStrings.nannyFaithNo.tr, selected: !controller.comfortDifferentFaith.value, variant: KafiToggleVariant.purple, onTap: () => controller.comfortDifferentFaith.value = false)),
         ])),
         const SizedBox(height: 6),
         KafiTextField(
           label: AppStrings.nannyReligiousPractices.tr,
           controller: controller.religionCtrl,
           maxLines: 2,
-          hint: 'e.g. Prayer times, dietary restrictions, fasting periods...',
+          hint: AppStrings.nannyReligiousPracticesHint.tr,
         ),
       ],
     );
   }
 
-  Widget _religionTile(String emoji, String label) {
+  // `canonical` is the value persisted to the model (kept in English so
+  // stored data stays locale-independent); `label` is the translated text shown to the user.
+  Widget _religionTile(String emoji, String canonical, String label) {
     return ValueListenableBuilder<TextEditingValue>(
       valueListenable: controller.religionCtrl,
       builder: (_, value, __) {
-        final selected = value.text == label;
+        final selected = value.text == canonical;
         return GestureDetector(
-          onTap: () => controller.religionCtrl.text = selected ? '' : label,
+          onTap: () => controller.religionCtrl.text = selected ? '' : canonical,
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 8),
             decoration: BoxDecoration(
@@ -812,7 +814,7 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
           controller: controller.bioCtrl,
           maxLines: 4,
           maxLength: NannyConstants.maxBioChars,
-          hint: 'Tell families a little about yourself...',
+          hint: AppStrings.fldBioHint.tr,
         ),
         ValueListenableBuilder<TextEditingValue>(
           valueListenable: controller.bioCtrl,
@@ -910,10 +912,10 @@ class _HealthToggleFieldState extends State<_HealthToggleField> {
       if (_yes) ...[
         const SizedBox(height: 6),
         KafiTextField(
-          label: 'Please describe',
+          label: AppStrings.healthDescribeLabel.tr,
           controller: widget.controller,
           maxLines: 2,
-          hint: 'Describe briefly...',
+          hint: AppStrings.healthDescribeHint.tr,
         ),
       ],
     ]);

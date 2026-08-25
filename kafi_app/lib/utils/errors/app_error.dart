@@ -1,3 +1,5 @@
+import 'package:get/get.dart';
+import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 /// Base error class per Technical Architecture §13.1
@@ -28,12 +30,12 @@ class UnknownError extends AppError {
 
 class PermissionDeniedError extends AppError {
   PermissionDeniedError()
-      : super(code: 'perm/denied', message: 'Permission denied');
+      : super(code: 'perm/denied', message: AppStrings.errPermissionDenied.tr);
 }
 
 class RateLimitError extends AppError {
   RateLimitError()
-      : super(code: 'rate/limit', message: 'Too many requests. Try later.');
+      : super(code: 'rate/limit', message: AppStrings.errRateLimitMessage.tr);
 }
 
 /// Auth errors per §13.1
@@ -47,47 +49,48 @@ class AuthError extends AppError {
 
   factory AuthError.invalidPhone() => AuthError(
         code: 'auth/invalid-phone',
-        message: 'Please enter a valid phone number',
+        message: AppStrings.authPhoneInvalid.tr,
       );
 
   factory AuthError.otpExpired() => AuthError(
         code: 'auth/otp-expired',
-        message: 'Code expired. Tap resend.',
+        message: AppStrings.otpExpiredMessage.tr,
       );
 
   factory AuthError.otpIncorrect(int remaining) => AuthError(
         code: 'auth/otp-incorrect',
-        message: 'Invalid code. $remaining attempts remaining.',
+        message: AppStrings.errAuthOtpIncorrectAttempts
+            .trParams({'remaining': '$remaining'}),
       );
 
   factory AuthError.rateLimited() => AuthError(
         code: 'auth/rate-limited',
-        message: 'Too many attempts. Try again later.',
+        message: AppStrings.authOtpRateLimited.tr,
       );
 
   factory AuthError.accountSuspended() => AuthError(
         code: 'auth/suspended',
-        message: 'Account suspended. Contact support.',
+        message: AppStrings.errAuthAccountSuspended.tr,
       );
 
   factory AuthError.sessionExpired() => AuthError(
         code: 'auth/session-expired',
-        message: 'Session expired. Please sign in again.',
+        message: AppStrings.errAuthSessionExpiredMessage.tr,
       );
 
   factory AuthError.accountDeleted() => AuthError(
         code: 'auth/deleted',
-        message: 'Account has been deleted.',
+        message: AppStrings.accountDeletedMessage.tr,
       );
 
   factory AuthError.weakPassword() => AuthError(
         code: 'auth/weak-password',
-        message: 'Password too weak. Use 8+ characters.',
+        message: AppStrings.errAuthWeakPasswordMessage.tr,
       );
 
   factory AuthError.wrongPassword() => AuthError(
         code: 'auth/wrong-password',
-        message: 'Incorrect password.',
+        message: AppStrings.authWrongPassword.tr,
       );
 }
 
@@ -107,14 +110,14 @@ class PermissionError extends AppError {
         permission: perm,
         isPermanent: false,
         code: 'perm/denied',
-        message: 'Permission denied',
+        message: AppStrings.errPermissionDenied.tr,
       );
 
   factory PermissionError.permanentlyDenied(Permission perm) => PermissionError(
         permission: perm,
         isPermanent: true,
         code: 'perm/permanent',
-        message: 'Permission permanently denied. Enable in settings.',
+        message: AppStrings.permissionPermanentlyDeniedBody.tr,
       );
 }
 
@@ -124,27 +127,28 @@ class UploadError extends AppError {
 
   factory UploadError.fileTooLarge(int maxMB) => UploadError._(
         code: 'upload/too-large',
-        message: 'File too large. Max ${maxMB}MB.',
+        message: AppStrings.errUploadFileTooLarge
+            .trParams({'maxMB': '$maxMB'}),
       );
 
   factory UploadError.invalidFormat() => UploadError._(
         code: 'upload/invalid-format',
-        message: 'File type not supported',
+        message: AppStrings.errUploadInvalidFormat.tr,
       );
 
   factory UploadError.videoTooLong() => UploadError._(
         code: 'upload/video-too-long',
-        message: 'Video must be 60 seconds or less',
+        message: AppStrings.nannyVideoTooLong.tr,
       );
 
   factory UploadError.networkFailure() => UploadError._(
         code: 'upload/network',
-        message: 'Upload failed. Tap to retry.',
+        message: AppStrings.errUploadNetworkFailure.tr,
       );
 
   factory UploadError.quota() => UploadError._(
         code: 'upload/quota',
-        message: 'Upload failed. Contact support.',
+        message: AppStrings.errUploadQuotaExceeded.tr,
       );
 }
 
@@ -154,27 +158,27 @@ class TrialError extends AppError {
 
   factory TrialError.notSubscribed() => TrialError._(
         code: 'trial/not-subscribed',
-        message: 'Subscribe to send trial offers',
+        message: AppStrings.trialOfferSubRequired.tr,
       );
 
   factory TrialError.nannyOnAnotherTrial() => TrialError._(
         code: 'trial/nanny-busy',
-        message: 'Nanny is currently on another trial',
+        message: AppStrings.trialOfferNannyOnTrial.tr,
       );
 
   factory TrialError.startDatePassed() => TrialError._(
         code: 'trial/start-passed',
-        message: 'Start date has passed',
+        message: AppStrings.trialOfferStartPast.tr,
       );
 
   factory TrialError.alreadyOffered() => TrialError._(
         code: 'trial/already-offered',
-        message: 'You already sent a trial offer to this nanny',
+        message: AppStrings.trialAlreadyActive.tr,
       );
 
   factory TrialError.expired() => TrialError._(
         code: 'trial/expired',
-        message: 'Trial offer has expired',
+        message: AppStrings.errTrialOfferExpiredMessage.tr,
       );
 }
 
@@ -184,27 +188,27 @@ class SubscriptionError extends AppError {
 
   factory SubscriptionError.paymentDeclined() => SubscriptionError._(
         code: 'sub/declined',
-        message: 'Payment failed. Try another method.',
+        message: AppStrings.errSubPaymentDeclined.tr,
       );
 
   factory SubscriptionError.contactsExhausted() => SubscriptionError._(
         code: 'sub/contacts-exhausted',
-        message: 'All 5 free views used. Subscribe to continue.',
+        message: AppStrings.noFreeViewsLeft.tr,
       );
 
   factory SubscriptionError.restoreFailed() => SubscriptionError._(
         code: 'sub/restore-failed',
-        message: "Couldn't restore. Try again.",
+        message: AppStrings.errSubRestoreFailed.tr,
       );
 
   factory SubscriptionError.expired() => SubscriptionError._(
         code: 'sub/expired',
-        message: 'Your subscription has expired.',
+        message: AppStrings.subscriptionExpiredMessage.tr,
       );
 
   factory SubscriptionError.featureLocked() => SubscriptionError._(
         code: 'sub/feature-locked',
-        message: 'Subscribe to access this feature.',
+        message: AppStrings.subscribeToAccess.tr,
       );
 }
 
@@ -214,17 +218,17 @@ class NetworkError extends AppError {
 
   factory NetworkError.noConnection() => NetworkError._(
         code: 'net/no-connection',
-        message: 'No internet. Check your connection.',
+        message: AppStrings.errNetNoConnectionMessage.tr,
       );
 
   factory NetworkError.timeout() => NetworkError._(
         code: 'net/timeout',
-        message: 'Action took too long. Retry.',
+        message: AppStrings.errNetTimeoutMessage.tr,
       );
 
   factory NetworkError.serverDown() => NetworkError._(
         code: 'net/server-down',
-        message: "We're experiencing issues. Try again.",
+        message: AppStrings.errNetServerDownMessage.tr,
       );
 }
 
@@ -241,7 +245,7 @@ class ValidationError extends AppError {
   factory ValidationError.required(String field) => ValidationError(
         field: field,
         code: 'validation/required',
-        message: '$field is required',
+        message: AppStrings.errValRequiredField.trParams({'field': field}),
       );
 
   factory ValidationError.invalid(String field, String hint) => ValidationError(
@@ -254,6 +258,10 @@ class ValidationError extends AppError {
       ValidationError(
         field: field,
         code: 'validation/length',
-        message: '$field must be $min-$max characters',
+        message: AppStrings.errValLengthField.trParams({
+          'field': field,
+          'min': '$min',
+          'max': '$max',
+        }),
       );
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/controllers/application_controller.dart';
+import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
@@ -11,14 +12,37 @@ import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/services/mock/mock_subscription_service.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_search_field.dart';
 
 /// Family "Applicants" inbox — the nannies who applied to this family's jobs
 /// (Spec §6: family receives applications). Backed by
 /// [ApplicationController.receivedApplications], which is loaded for families.
-class FamilyApplicantsScreen extends GetView<ApplicationController> {
+class FamilyApplicantsScreen extends StatefulWidget {
   const FamilyApplicantsScreen({super.key});
+
+  @override
+  State<FamilyApplicantsScreen> createState() => _FamilyApplicantsScreenState();
+}
+
+class _FamilyApplicantsScreenState extends State<FamilyApplicantsScreen> {
+  ApplicationController get controller => Get.find<ApplicationController>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Permanent controller may still hold an empty list from shell bind time —
+    // before any nanny applied. Re-subscribe on every open.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      controller.subscribeFamilyInbox();
+      // Needed so job filter chips resolve titles (not job ids) from myJobs.
+      if (Get.isRegistered<JobPostController>()) {
+        Get.find<JobPostController>().loadJobs();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -34,6 +58,36 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
               hint: AppStrings.searchHint.tr,
               onChanged: (v) => controller.receivedQuery.value = v,
             ),
+            Obx(() {
+              // Touch myJobs so chips rebuild once titles load (not job ids).
+              if (Get.isRegistered<JobPostController>()) {
+                Get.find<JobPostController>().myJobs.length;
+              }
+              final jobs = controller.receivedJobFilters;
+              if (jobs.length < 2) return const SizedBox.shrink();
+              final selected = controller.receivedJobFilter.value;
+              return SizedBox(
+                height: 40,
+                child: ListView(
+                  scrollDirection: Axis.horizontal,
+                  padding: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+                  children: [
+                    _jobChip(
+                      label: AppStrings.applicantsAllJobs.tr,
+                      selected: selected.isEmpty,
+                      onTap: () => controller.receivedJobFilter.value = '',
+                    ),
+                    ...jobs.map(
+                      (j) => _jobChip(
+                        label: j.label,
+                        selected: selected == j.jobPostId,
+                        onTap: () => controller.receivedJobFilter.value = j.jobPostId,
+                      ),
+                    ),
+                  ],
+                ),
+              );
+            }),
             Expanded(
               child: Obx(() {
                 final all = controller.receivedApplications;
@@ -49,7 +103,7 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
                 if (apps.isEmpty) return _noMatchState();
                 return RefreshIndicator(
                   color: KafiColors.pur,
-                  onRefresh: controller.loadApplications,
+                  onRefresh: controller.subscribeFamilyInbox,
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
                     itemCount: apps.length,
@@ -59,6 +113,38 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
               }),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _jobChip({
+    required String label,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(right: 8),
+      child: GestureDetector(
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: selected ? KafiColors.pur : Colors.white,
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(
+              color: selected ? KafiColors.pur : const Color(0xFFEFE2FF),
+              width: 1.5,
+            ),
+          ),
+          child: Text(
+            label,
+            style: KafiTheme.fredoka(
+              10,
+              color: selected ? Colors.white : KafiColors.pur,
+              w: FontWeight.w700,
+            ),
+          ),
         ),
       ),
     );
@@ -151,7 +237,7 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
           ),
           const SizedBox(height: 14),
           TextButton(
-            onPressed: controller.loadApplications,
+            onPressed: controller.subscribeFamilyInbox,
             child: Text(AppStrings.retry.tr,
                 style: KafiTheme.fredoka(12, color: KafiColors.pur, w: FontWeight.w700)),
           ),
@@ -161,7 +247,9 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
   }
 
   Widget _applicantCard(ApplicationModel app) {
-    final name = (app.nannyName?.isNotEmpty ?? false) ? app.nannyName! : 'Nanny';
+    final name = (app.nannyName?.isNotEmpty ?? false)
+        ? app.nannyName!
+        : AppStrings.roleFallbackNanny.tr;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'N';
     final canAct = app.status == ApplicationStatus.pending ||
         app.status == ApplicationStatus.viewed;
@@ -208,11 +296,14 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
                     children: [
                       Text(name,
                           style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w800)),
-                      if ((app.jobTitle ?? '').isNotEmpty)
-                        Text(app.jobTitle!,
+                      Builder(builder: (_) {
+                        final jobLabel = controller.jobLabelForApplication(app);
+                        if (jobLabel.isEmpty) return const SizedBox.shrink();
+                        return Text(jobLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600)),
+                            style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600));
+                      }),
                       Text(_formatDate(app.createdAt),
                           style: KafiTheme.nunito(8.5, color: KafiColors.ts, w: FontWeight.w500)),
                     ],
@@ -237,7 +328,7 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
                     color: const Color(0xFFE8F8EE),
                     borderRadius: BorderRadius.circular(10),
                   ),
-                  child: Text('⭐ ${app.matchScore}% match',
+                  child: Text('⭐ ${app.matchScore}${AppStrings.matchSuffix.tr}',
                       style: KafiTheme.fredoka(9, color: const Color(0xFF2A8A50), w: FontWeight.w700)),
                 ),
                 const Spacer(),
@@ -322,10 +413,5 @@ class FamilyApplicantsScreen extends GetView<ApplicationController> {
     );
   }
 
-  String _formatDate(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    return '${diff.inMinutes}m ago';
-  }
+  String _formatDate(DateTime dt) => RelativeTime.ago(dt);
 }

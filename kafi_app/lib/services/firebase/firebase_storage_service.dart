@@ -23,4 +23,22 @@ class FirebaseStorageServiceImpl implements IStorageService {
 
   @override
   Future<void> deleteFile(String path) => _bucket.child(path).delete();
+
+  @override
+  Future<String?> resolveDownloadUrl(String pathOrUrl) async {
+    final raw = pathOrUrl.trim();
+    if (raw.isEmpty) return null;
+    if (raw.startsWith('http://') || raw.startsWith('https://')) return raw;
+    try {
+      final Reference ref;
+      if (raw.startsWith('gs://')) {
+        ref = FirebaseStorage.instance.refFromURL(raw);
+      } else {
+        ref = _bucket.child(raw.startsWith('/') ? raw.substring(1) : raw);
+      }
+      return await ref.getDownloadURL();
+    } catch (_) {
+      return null;
+    }
+  }
 }

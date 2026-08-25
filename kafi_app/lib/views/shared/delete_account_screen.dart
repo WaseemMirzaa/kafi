@@ -22,14 +22,14 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
   final RxString _selectedReason = ''.obs;
   final RxBool _isDeleting = false.obs;
 
-  final List<String> _reasons = [
-    'Found a nanny/job',
-    'Not satisfied with service',
-    'Privacy concerns',
-    'Too expensive',
-    'App issues',
-    'Other',
-  ];
+  List<String> get _reasons => [
+        AppStrings.deleteReasonFoundNannyJob.tr,
+        AppStrings.deleteReasonNotSatisfied.tr,
+        AppStrings.deleteReasonPrivacy.tr,
+        AppStrings.deleteReasonTooExpensive.tr,
+        AppStrings.deleteReasonAppIssues.tr,
+        AppStrings.deleteReasonOther.tr,
+      ];
 
   @override
   void dispose() {
@@ -272,7 +272,7 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
             textAlign: TextAlign.center,
             style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w800),
             decoration: InputDecoration(
-              hintText: 'DELETE',
+              hintText: AppStrings.deleteConfirmWord.tr,
               hintStyle: KafiTheme.nunito(14, color: KafiColors.ts),
               filled: true,
               fillColor: Colors.white,
@@ -309,7 +309,8 @@ class _DeleteAccountScreenState extends State<DeleteAccountScreen> {
               const SizedBox(width: 12),
               Expanded(
                 child: Obx(() => ElevatedButton(
-                      onPressed: _confirmController.text.toUpperCase() == 'DELETE' &&
+                      onPressed: _confirmController.text.toUpperCase() ==
+                                  AppStrings.deleteConfirmWord.tr.toUpperCase() &&
                               !_isDeleting.value
                           ? _deleteAccount
                           : null,

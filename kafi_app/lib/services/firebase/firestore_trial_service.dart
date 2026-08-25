@@ -124,6 +124,10 @@ class FirestoreTrialService implements ITrialService {
     await _trials.doc(trialId).update({
       'nannyConfirmedPayment': true,
       'nannyConfirmedPaymentAt': FieldValue.serverTimestamp(),
+      // Close the live trial so T3/T4 and Applicants “already active” gates
+      // allow a new offer after payment is settled.
+      'status': TrialStatus.completed.name,
+      'completedAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -133,6 +137,9 @@ class FirestoreTrialService implements ITrialService {
       'paymentIssueReported': true,
       'paymentIssueDescription': description,
       'paymentIssueReportedAt': FieldValue.serverTimestamp(),
+      // Reported trials no longer block a fresh offer to the same nanny.
+      'status': TrialStatus.completed.name,
+      'completedAt': FieldValue.serverTimestamp(),
     });
   }
 
@@ -214,6 +221,20 @@ class FirestoreTrialService implements ITrialService {
     return snap.docs.map((d) => DayProof.fromMap(d.data())).toList()
       ..sort((a, b) => a.dayIndex.compareTo(b.dayIndex));
   }
+
+  @override
+  Future<void> saveEvaluation(String trialId, TrialEvaluation evaluation) async {
+    await _trials.doc(trialId).update({
+      'evaluation': evaluation.toMap(),
+    });
+  }
+
+  @override
+  Stream<TrialModel?> watchTrial(String trialId) =>
+      _trials.doc(trialId).snapshots().map((snap) {
+        if (!snap.exists) return null;
+        return _trialFromMap(snap.id, snap.data()!);
+      });
 
   TrialModel _trialFromMap(String id, Map<String, dynamic> m) =>
       TrialModel.fromMap({...m, 'id': id});

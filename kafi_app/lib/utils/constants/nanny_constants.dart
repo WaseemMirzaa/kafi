@@ -7,10 +7,21 @@ class NannyConstants {
   static const maxVideoSeconds = 60;
   static const maxBioChars = 300;
 
-  // §profile score bonuses
+  // Profile quality score (§3.2 ProfileQualityScore) — factors sum to 100.
+  static const scoreProfileComplete = 20;
+  static const scoreVerified = 20;
+  static const scoreVideo = 15;
+  static const scoreMultiplePhotos = 10;
   static const scorePoliceClearance = 10;
   static const scoreTrainingCert = 7;
-  static const scoreLoginBonus = 5;
+  static const scoreLoginBonus = 5; // recentlyActive: login within 7 days
+  static const scoreReferences = 8;
+  static const scoreWorkExperience = 5;
+  static const recentlyActiveDays = 7;
+
+  /// Admin `hideInactiveNannies`: family Browse hides nannies whose
+  /// `lastActiveAt` is older than this many days (or missing).
+  static const hideInactiveListingDays = 14;
 
   /// Comprehensive world nationalities (demonyms), alphabetical so the
   /// searchable picker finds any entry. 'Other' stays last as a catch-all.

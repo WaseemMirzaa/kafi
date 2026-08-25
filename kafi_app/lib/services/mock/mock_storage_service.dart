@@ -36,4 +36,18 @@ class MockStorageService implements IStorageService {
       await file.delete();
     }
   }
+
+  @override
+  Future<String?> resolveDownloadUrl(String pathOrUrl) async {
+    final raw = pathOrUrl.trim();
+    if (raw.isEmpty) return null;
+    if (raw.startsWith('http://') ||
+        raw.startsWith('https://') ||
+        raw.startsWith('/')) {
+      return raw;
+    }
+    final file = File(raw);
+    if (await file.exists()) return raw;
+    return 'https://mock.kafi/storage/$raw';
+  }
 }

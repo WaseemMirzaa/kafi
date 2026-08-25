@@ -13,11 +13,30 @@ import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/support/report_problem_sheet.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
-class TrialScreen extends GetView<TrialController> {
+class TrialScreen extends StatefulWidget {
   const TrialScreen({super.key});
 
+  @override
+  State<TrialScreen> createState() => _TrialScreenState();
+}
+
+class _TrialScreenState extends State<TrialScreen> {
+  TrialController get controller => Get.find<TrialController>();
+
   bool get _isNanny =>
-      Get.isRegistered<AuthController>() && Get.find<AuthController>().currentUser.value?.isNanny == true;
+      Get.isRegistered<AuthController>() &&
+      Get.find<AuthController>().currentUser.value?.isNanny == true;
+
+  @override
+  void initState() {
+    super.initState();
+    // Permanent TrialController only runs onReady once — re-apply route args
+    // (e.g. chat "View trial" trialId) on every push of this screen.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      controller.onTrialRouteOpened(Get.arguments);
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -27,6 +46,11 @@ class TrialScreen extends GetView<TrialController> {
         top: true,
         bottom: false,
         child: Obx(() {
+          if (controller.isOpeningRoute.value) {
+            return const Center(
+              child: CircularProgressIndicator(color: KafiColors.grnD),
+            );
+          }
           final t = controller.displayed;
           if (t == null) return _emptyState();
           return Column(
@@ -40,7 +64,11 @@ class TrialScreen extends GetView<TrialController> {
                       const SizedBox(height: 4),
                       _evalSection(t),
                       if (t.isActive) _dayProofSection(t),
-                      if (_isNanny) ...[
+                      // Family or nanny can mark trial payment as settled; both
+                      // then get the throttled rate-the-app prompt.
+                      if (t.isAcceptedOrActive ||
+                          t.nannyConfirmedPayment ||
+                          t.paymentIssueReported) ...[
                         Padding(
                           padding: const EdgeInsets.fromLTRB(13, 8, 13, 0),
                           child: _paymentBlock(context, t),
@@ -450,14 +478,19 @@ class TrialScreen extends GetView<TrialController> {
               style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
           const SizedBox(height: 4),
           for (final (i, item) in items.indexed)
-            Obx(() => _evalItem(
-                  item.$2,
-                  editable
-                      ? (controller.evalDraft[item.$1] ?? false)
-                      : _evalValue(t.evaluation, item.$1),
-                  i == items.length - 1,
-                  onTap: editable ? () => controller.toggleEval(item.$1) : null,
-                )),
+            if (editable)
+              Obx(() => _evalItem(
+                    item.$2,
+                    controller.evalDraft[item.$1] ?? false,
+                    i == items.length - 1,
+                    onTap: () => controller.toggleEval(item.$1),
+                  ))
+            else
+              _evalItem(
+                item.$2,
+                _evalValue(t.evaluation, item.$1),
+                i == items.length - 1,
+              ),
         ],
       ),
     );
@@ -745,7 +778,7 @@ class TrialScreen extends GetView<TrialController> {
     );
   }
 
-  // ── Nanny-only payment block (preserved) ───────────────────────────────────
+  // ── Payment block (family or nanny) ────────────────────────────────────────
   Widget _paymentBlock(BuildContext context, TrialModel t) {
     if (t.nannyConfirmedPayment) {
       return _banner(KafiColors.grnL, KafiColors.grnD, Icons.check_circle, AppStrings.trialPaymentConfirmed.tr);
@@ -778,13 +811,20 @@ class TrialScreen extends GetView<TrialController> {
   // about the trial counterparty (no-show, abuse, fraud, payment, other). The
   // report then appears under Settings → My reports and in the admin panel.
   Widget _reportProblemLink(TrialModel t) {
+    final me = Get.find<AuthController>().currentUser.value?.id;
+    final reportedId = (me != null && t.nannyId == me)
+        ? t.familyId
+        : (me != null && t.familyId == me)
+            ? t.nannyId
+            : (_isNanny ? t.familyId : t.nannyId);
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
         padding: const EdgeInsets.fromLTRB(9, 6, 13, 0),
         child: TextButton.icon(
           onPressed: () => showReportProblemSheet(
-            reportedUserId: _isNanny ? t.familyId : t.nannyId,
+            context: context,
+            reportedUserId: reportedId,
             relatedTrialId: t.id,
           ),
           style: TextButton.styleFrom(
@@ -864,12 +904,30 @@ class TrialScreen extends GetView<TrialController> {
 
   String _remainingLabel(TrialModel t) {
     final d = t.remaining;
-    if (d.isNegative) return '0d 0h 0m';
-    return '${d.inDays}d ${d.inHours.remainder(24)}h ${d.inMinutes.remainder(60)}m';
+    if (d.isNegative) {
+      return AppStrings.trialCountdown.trParams({'days': '0', 'hours': '0', 'mins': '0'});
+    }
+    return AppStrings.trialCountdown.trParams({
+      'days': '${d.inDays}',
+      'hours': '${d.inHours.remainder(24)}',
+      'mins': '${d.inMinutes.remainder(60)}',
+    });
   }
 
-  String _fmtEnd(DateTime dt) {
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${months[dt.month - 1]} ${dt.day}';
-  }
+  static const List<String> _monthKeys = [
+    AppStrings.monthJan,
+    AppStrings.monthFeb,
+    AppStrings.monthMar,
+    AppStrings.monthApr,
+    AppStrings.monthMay,
+    AppStrings.monthJun,
+    AppStrings.monthJul,
+    AppStrings.monthAug,
+    AppStrings.monthSep,
+    AppStrings.monthOct,
+    AppStrings.monthNov,
+    AppStrings.monthDec,
+  ];
+
+  String _fmtEnd(DateTime dt) => '${_monthKeys[dt.month - 1].tr} ${dt.day}';
 }

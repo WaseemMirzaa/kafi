@@ -19,6 +19,10 @@ abstract class ITicketService {
   /// A single ticket (for the detail screen header).
   Future<TicketModel?> getTicket(String ticketId);
 
+  /// Live ticket document (status / lastMessage) so admin resolves show up
+  /// without a manual pull-to-refresh.
+  Stream<TicketModel?> watchTicket(String ticketId);
+
   /// Live message stream for a ticket.
   Stream<List<TicketMessage>> watchMessages(String ticketId);
 

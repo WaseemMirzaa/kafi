@@ -10,14 +10,18 @@ import {
   PageShell,
   QaLink,
   StatusBadge,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import { NannyService, NannyRow, ChatService, ChatThreadRow } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
 import { useAuthStore } from '../../hooks/useAuth';
 import { NannyProfileView, Section } from '../../components/nanny/NannyProfileView';
 import { ConversationsPanel } from '../../components/chat/ConversationsPanel';
+import { useLocale } from '../../context/LocaleContext';
+import { nannyProfileStatusLabel } from '../../utils/nannyLabels';
 
 export default function NannyDetail() {
+  const { t } = useLocale();
   const { id } = useParams();
   const nav = useNavigate();
   const [nanny, setNanny] = useState<NannyRow | null>(null);
@@ -59,7 +63,7 @@ export default function NannyDetail() {
     return (
       <PageShell>
         <PageContent>
-          <div className="text-[10px] text-[#8090B0]">Loading…</div>
+          <PageLoader />
         </PageContent>
       </PageShell>
     );
@@ -69,7 +73,7 @@ export default function NannyDetail() {
     return (
       <PageShell>
         <PageContent>
-          <div className="text-[10px] text-[#8090B0]">Not found.</div>
+          <div className="text-[10px] text-[#8090B0]">{t('common.notFound')}</div>
         </PageContent>
       </PageShell>
     );
@@ -83,7 +87,7 @@ export default function NannyDetail() {
       const fresh = await fetchMerged(nanny.id);
       if (fresh) setNanny(fresh);
     } catch (e) {
-      alert((e as Error).message || 'Save failed');
+      alert((e as Error).message || t('nannies.saveFailed'));
     } finally {
       setBusy(false);
     }
@@ -96,21 +100,21 @@ export default function NannyDetail() {
       const fresh = await fetchMerged(nanny.id);
       if (fresh) setNanny(fresh);
     } catch (e) {
-      alert((e as Error).message || 'Approve failed');
+      alert((e as Error).message || t('nannies.approveFailed'));
     } finally {
       setBusy(false);
     }
   };
 
   const reject = async () => {
-    const reason = window.prompt('Reason for rejection (visible to nanny):');
+    const reason = window.prompt(t('nannies.rejectPrompt'));
     if (!reason) return;
     setBusy(true);
     try {
       await NannyService.reject(nanny.id, reason, user?.uid ?? 'unknown');
       nav('/nannies');
     } catch (e) {
-      alert((e as Error).message || 'Reject failed');
+      alert((e as Error).message || t('nannies.rejectFailed'));
       setBusy(false);
     }
   };
@@ -126,7 +130,7 @@ export default function NannyDetail() {
       const fresh = await fetchMerged(nanny.id);
       if (fresh) setNanny(fresh);
     } catch (e) {
-      alert((e as Error).message || 'Block toggle failed');
+      alert((e as Error).message || t('nannies.blockFailed'));
     } finally {
       setBusy(false);
     }
@@ -135,7 +139,7 @@ export default function NannyDetail() {
   const reviewVideo = async (status: 'approved' | 'rejected') => {
     let reason: string | undefined;
     if (status === 'rejected') {
-      reason = window.prompt('Reason (visible to nanny — prompts a re-record):') ?? undefined;
+      reason = window.prompt(t('nannies.videoRejectPrompt')) ?? undefined;
       if (!reason) return;
     }
     setBusy(true);
@@ -144,7 +148,7 @@ export default function NannyDetail() {
       const fresh = await fetchMerged(nanny.id);
       if (fresh) setNanny(fresh);
     } catch (e) {
-      alert((e as Error).message || 'Video review failed');
+      alert((e as Error).message || t('nannies.videoReviewFailed'));
     } finally {
       setBusy(false);
     }
@@ -153,21 +157,21 @@ export default function NannyDetail() {
   return (
     <PageShell>
       <PageHeader
-        title={nanny.fullName || 'Nanny profile'}
-        subtitle={`Profile #${nanny.id}`}
+        title={nanny.fullName || t('nannies.profileFallback')}
+        subtitle={t('nannies.profileHash', { id: nanny.id })}
         actions={
           <>
             <QaLink to="/nannies" variant="n">
-              ← All nannies
+              {t('nannies.allNanniesLink')}
             </QaLink>
             {nanny.status !== 'approved' && (
               <button type="button" className="qa-btn qa-g" onClick={approve} disabled={busy}>
-                Approve ✓
+                {t('common.approve')}
               </button>
             )}
             {nanny.status !== 'rejected' && (
               <button type="button" className="qa-btn qa-r" onClick={reject} disabled={busy}>
-                Reject ✗
+                {t('common.reject')}
               </button>
             )}
             <button
@@ -176,7 +180,7 @@ export default function NannyDetail() {
               onClick={toggleBlock}
               disabled={busy}
             >
-              {nanny.blocked ? 'Unblock' : 'Block'}
+              {nanny.blocked ? t('common.unblock') : t('common.block')}
             </button>
           </>
         }
@@ -204,16 +208,16 @@ export default function NannyDetail() {
                 <div className="text-[13px] font-black text-navy">{nanny.fullName}</div>
               )}
               <div className="text-[9px] font-semibold text-[#8090B0] mt-0.5">
-                {nanny.nationality} · {nanny.city} {nanny.experienceYears ? `· ${nanny.experienceYears} yrs exp` : ''}
+                {nanny.nationality} · {nanny.city} {nanny.experienceYears ? `· ${t('nannies.yrsExp', { count: nanny.experienceYears })}` : ''}
               </div>
               <div className="mt-2 flex gap-1.5 flex-wrap">
                 <StatusBadge variant={nanny.isVerified ? 'verified' : 'verify'}>
-                  {nanny.isVerified ? 'Kafi Verified ✓' : 'Awaiting verification'}
+                  {nanny.isVerified ? t('nannies.kafiVerified') : t('nannies.awaitingVerification')}
                 </StatusBadge>
                 <StatusBadge variant={nanny.status === 'approved' ? 'active' : nanny.status === 'rejected' ? 'rejected' : 'pending'}>
-                  {nanny.status}
+                  {nannyProfileStatusLabel(nanny.status)}
                 </StatusBadge>
-                {nanny.blocked && <StatusBadge variant="rejected">Blocked</StatusBadge>}
+                {nanny.blocked && <StatusBadge variant="rejected">{t('nannies.blockedBadge')}</StatusBadge>}
               </div>
             </div>
             <button
@@ -222,7 +226,7 @@ export default function NannyDetail() {
               onClick={editing ? save : () => setEditing(true)}
               disabled={busy}
             >
-              {editing ? 'Save' : 'Edit'}
+              {editing ? t('common.save') : t('common.edit')}
             </button>
           </div>
 
@@ -230,7 +234,7 @@ export default function NannyDetail() {
             {editing ? (
               <>
                 <div>
-                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">Nationality</div>
+                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">{t('nannies.nationality')}</div>
                   <input
                     value={form.nationality ?? ''}
                     onChange={(e) => setForm({ ...form, nationality: e.target.value })}
@@ -238,7 +242,7 @@ export default function NannyDetail() {
                   />
                 </div>
                 <div>
-                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">City</div>
+                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">{t('nannies.city')}</div>
                   <input
                     value={form.city ?? ''}
                     onChange={(e) => setForm({ ...form, city: e.target.value })}
@@ -248,12 +252,12 @@ export default function NannyDetail() {
               </>
             ) : (
               <>
-                <Field label="Nationality" value={nanny.nationality || '—'} />
-                <Field label="City" value={nanny.city || '—'} />
-                <Field label="Experience" value={nanny.experienceYears ? `${nanny.experienceYears} yrs` : '—'} />
-                <Field label="Profile score" value={`${nanny.profileScore ?? 0}%`} />
-                <Field label="Status" value={nanny.status} />
-                <Field label="Verified" value={nanny.isVerified ? 'Yes' : 'No'} />
+                <Field label={t('nannies.nationality')} value={nanny.nationality || t('common.dash')} />
+                <Field label={t('nannies.city')} value={nanny.city || t('common.dash')} />
+                <Field label={t('nannies.experience')} value={nanny.experienceYears ? t('nannies.yrs', { count: nanny.experienceYears }) : t('common.dash')} />
+                <Field label={t('nannies.profileScore')} value={`${nanny.profileScore ?? 0}%`} />
+                <Field label={t('common.status')} value={nannyProfileStatusLabel(nanny.status)} />
+                <Field label={t('nannies.verifiedField')} value={nanny.isVerified ? t('common.yes') : t('common.no')} />
               </>
             )}
           </FieldGrid>
@@ -261,7 +265,7 @@ export default function NannyDetail() {
 
         <NannyProfileView nanny={nanny} onReviewVideo={reviewVideo} videoBusy={busy} />
 
-        <Section title={`Conversations with families (${threads.length})`}>
+        <Section title={t('nannies.conversationsWithFamilies', { count: threads.length })}>
           <ConversationsPanel threads={threads} counterpart="family" />
         </Section>
       </PageContent>

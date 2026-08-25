@@ -1,3 +1,5 @@
+import { useLocale } from '../../context/LocaleContext';
+
 const inputCls =
   'admin-card text-[10px] font-semibold text-navy px-2.5 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30';
 
@@ -11,8 +13,10 @@ export function FilterBar({
   to,
   setTo,
   onClear,
-  searchPlaceholder = 'Search…',
-  dateLabel = 'Submitted',
+  searchPlaceholder,
+  dateLabel,
+  /** True when a child filter (e.g. status) is not at its default. */
+  extraDirty = false,
   children,
 }: {
   query: string;
@@ -24,33 +28,36 @@ export function FilterBar({
   onClear: () => void;
   searchPlaceholder?: string;
   dateLabel?: string;
+  extraDirty?: boolean;
   children?: React.ReactNode;
 }) {
-  const dirty = !!(query || from || to);
+  const { t } = useLocale();
+  const resolvedDateLabel = dateLabel ?? t('nannies.submitted');
+  const dirty = !!(query || from || to || extraDirty);
   return (
     <div className="admin-card p-2.5 mb-2.5 flex flex-wrap items-end gap-2">
       <div className="flex flex-col gap-1 flex-1 min-w-[160px]">
-        <label className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">Search</label>
+        <label className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">{t('common.search')}</label>
         <input
           type="search"
           value={query}
           onChange={(e) => setQuery(e.target.value)}
-          placeholder={searchPlaceholder}
+          placeholder={searchPlaceholder ?? t('common.searchPlaceholder')}
           className={`${inputCls} w-full`}
         />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">{dateLabel} from</label>
+        <label className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">{t('common.dateFrom', { label: resolvedDateLabel })}</label>
         <input type="date" value={from} onChange={(e) => setFrom(e.target.value)} className={inputCls} />
       </div>
       <div className="flex flex-col gap-1">
-        <label className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">{dateLabel} to</label>
+        <label className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">{t('common.dateTo', { label: resolvedDateLabel })}</label>
         <input type="date" value={to} onChange={(e) => setTo(e.target.value)} className={inputCls} />
       </div>
       {children}
       {dirty && (
         <button type="button" className="qa-btn qa-n" onClick={onClear}>
-          Clear
+          {t('common.clear')}
         </button>
       )}
     </div>
@@ -99,6 +106,7 @@ export function Pagination({
   total: number;
   onPage: (p: number) => void;
 }) {
+  const { t } = useLocale();
   if (total === 0) return null;
   // Compact window of page numbers around the current page.
   const pages: number[] = [];
@@ -111,7 +119,7 @@ export function Pagination({
   return (
     <div className="flex items-center justify-between gap-2 px-[11px] py-2 border-t border-[#EBEEF8]">
       <div className="text-[8.5px] font-semibold text-[#8090B0]">
-        {rangeStart}–{rangeEnd} of {total}
+        {t('common.rangeOfTotal', { start: rangeStart, end: rangeEnd, total })}
       </div>
       <div className="flex items-center gap-1">
         <button type="button" className={btn} onClick={() => onPage(page - 1)} disabled={page <= 1}>

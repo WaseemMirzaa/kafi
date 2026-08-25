@@ -1,4 +1,5 @@
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/utils/constants/family_constants.dart';
 
 /// Centralised form validators for auth + onboarding.
 ///
@@ -68,6 +69,28 @@ class Validators {
     if (min <= 0 || max <= 0) return AppStrings.valRequired;
     if (min > max) return AppStrings.valSalaryOrder;
     if (max > maxMonthlySalary) return AppStrings.valSalaryTooHigh;
+    return null;
+  }
+
+  /// Trial offer daily rate: must be set (V13) and within TX1/TX2 bounds.
+  static String? trialDailyRate(int rate) {
+    if (rate <= 0) return AppStrings.trialOfferRateRequired;
+    if (rate < FamilyConstants.minTrialDailyRateAed) {
+      return AppStrings.trialOfferRateTooLow;
+    }
+    if (rate > FamilyConstants.maxTrialDailyRateAed) {
+      return AppStrings.trialOfferRateTooHigh;
+    }
+    return null;
+  }
+
+  /// Trial start calendar day must not be before today (V15; TX3 allows today).
+  static String? trialStartDate(DateTime? start) {
+    if (start == null) return AppStrings.trialOfferStartRequired;
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final day = DateTime(start.year, start.month, start.day);
+    if (day.isBefore(today)) return AppStrings.trialOfferStartPast;
     return null;
   }
 

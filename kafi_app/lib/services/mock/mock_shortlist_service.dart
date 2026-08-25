@@ -18,12 +18,16 @@ class MockShortlistService implements IShortlistService {
     required String familyId,
     required String nannyId,
     String? notes,
+    String? nannyName,
+    String? nannyPhoto,
   }) async {
     await Future.delayed(const Duration(milliseconds: 300));
     final item = ShortlistItem(
       id: _uuid.v4(),
       familyId: familyId,
       nannyId: nannyId,
+      nannyName: nannyName,
+      nannyPhoto: nannyPhoto,
       notes: notes,
       addedAt: DateTime.now(),
     );

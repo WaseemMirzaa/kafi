@@ -30,6 +30,31 @@ export function PageContent({ children }: { children: React.ReactNode }) {
   return <div className="px-[18px] pb-[18px] flex-1">{children}</div>;
 }
 
+/** Centered spinner for page / section loading (replaces "Loading…" text). */
+export function PageLoader({
+  compact = false,
+  label,
+}: {
+  /** Smaller vertical pad for use inside a table card. */
+  compact?: boolean;
+  /** Accessible label; defaults to "Loading". */
+  label?: string;
+}) {
+  return (
+    <div
+      className={`flex w-full items-center justify-center ${compact ? 'min-h-[140px] py-8' : 'min-h-[50vh]'}`}
+      role="status"
+      aria-label={label ?? 'Loading'}
+    >
+      <span className="sr-only">{label ?? 'Loading'}</span>
+      <div
+        className="h-9 w-9 rounded-full border-[3px] border-[#EBEEF8] border-t-rose-dark animate-spin"
+        aria-hidden
+      />
+    </div>
+  );
+}
+
 export function TopStat({ num, label, change, numClass = '' }: { num: string; label: string; change: string; numClass?: string }) {
   return (
     <div className="admin-card p-2.5">
@@ -180,7 +205,7 @@ export function FieldGrid({ children }: { children: React.ReactNode }) {
   return <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-4">{children}</div>;
 }
 
-export function Field({ label, value }: { label: string; value: string }) {
+export function Field({ label, value }: { label: string; value: React.ReactNode }) {
   return (
     <div>
       <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide">{label}</div>

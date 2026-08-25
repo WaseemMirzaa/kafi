@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:kafi_app/utils/constants/auth_constants.dart';
+import 'package:kafi_app/utils/kafi_text_context_menu.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 class KafiOtpBoxes extends StatefulWidget {
@@ -47,6 +48,7 @@ class _KafiOtpBoxesState extends State<KafiOtpBoxes> {
             maxLength: 1,
             keyboardType: TextInputType.number,
             inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+            contextMenuBuilder: kafiEditableTextContextMenu,
             style: KafiTheme.nunito(20, color: KafiColors.td, w: FontWeight.w900),
             decoration: InputDecoration(
               counterText: '',

@@ -9,4 +9,8 @@ abstract class IStorageService {
   });
 
   Future<void> deleteFile(String path);
+
+  /// Turns a Storage path or `gs://` URI into an HTTPS download URL.
+  /// HTTP(S) URLs are returned unchanged. Returns null when unresolvable.
+  Future<String?> resolveDownloadUrl(String pathOrUrl);
 }

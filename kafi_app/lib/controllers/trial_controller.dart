@@ -1,8 +1,11 @@
+import 'dart:async';
+
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/chat_controller.dart';
+import 'package:kafi_app/controllers/dispute_controller.dart';
 import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
@@ -13,20 +16,22 @@ import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/models/trial_outcome_reasons.dart';
 import 'package:kafi_app/services/interfaces/i_application_service.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
-import 'package:kafi_app/services/interfaces/i_dispute_service.dart';
 import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
+import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
+import 'package:kafi_app/utils/constants/family_constants.dart';
+import 'package:kafi_app/utils/validators.dart';
+import 'package:kafi_app/views/shared/rate_app_dialog.dart';
 import 'package:uuid/uuid.dart';
 
 class TrialController extends GetxController {
   final ITrialService _trials = Get.find<ITrialService>();
   final IChatService _chat = Get.find<IChatService>();
   final AuthController _auth = Get.find<AuthController>();
-  final IDisputeService _disputes = Get.find<IDisputeService>();
   final IUserService _users = Get.find<IUserService>();
   final IHireService _hires = Get.find<IHireService>();
   final IApplicationService _apps = Get.find<IApplicationService>();
@@ -70,6 +75,8 @@ class TrialController extends GetxController {
   /// Trial shown on Screen 18 — deep-linked trial wins over `active`.
   TrialModel? get displayed => selected.value ?? active.value;
   final RxBool isLoading = false.obs;
+  /// True while [onTrialRouteOpened] is refreshing / resolving a trialId.
+  final RxBool isOpeningRoute = false.obs;
 
   final RxInt durationDays = 7.obs;
   // Starts at 0 so an offer can't be sent at a fabricated 150/day without the
@@ -78,8 +85,76 @@ class TrialController extends GetxController {
   final Rx<DateTime?> startDate = Rx<DateTime?>(null);
   final RxString trialType = 'live-in'.obs;
   final RxString notes = ''.obs;
-  final RxString location = 'Dubai Marina'.obs;
+  /// Empty until the family picks (or we prefill from their job city).
+  final RxString location = ''.obs;
   final RxBool paymentAcknowledged = false.obs;
+
+  /// Sync form-field errors for Screen 31 (System Spec §14.4 V13–V15 + notes).
+  /// Does not cover async T2/T3/T4 checks — those run in [validateTrialOffer].
+  String? get trialOfferFormError {
+    if (durationDays.value <= 0) return AppStrings.trialOfferDurationRequired;
+    final rateErr = Validators.trialDailyRate(dailyRate.value);
+    if (rateErr != null) return rateErr;
+    final startErr = Validators.trialStartDate(startDate.value);
+    if (startErr != null) return startErr;
+    if (trialType.value != 'live-in' && trialType.value != 'live-out') {
+      return AppStrings.trialOfferTypeRequired;
+    }
+    if (location.value.trim().isEmpty) return AppStrings.trialOfferLocationRequired;
+    if (notes.value.length > FamilyConstants.maxTrialNotesLength) {
+      return AppStrings.trialOfferNotesTooLong;
+    }
+    if (!paymentAcknowledged.value) return AppStrings.trialOfferAckRequired;
+    return null;
+  }
+
+  bool get canSendOffer {
+    final subs = Get.find<SubscriptionController>();
+    return subs.hasActiveAccess && trialOfferFormError == null;
+  }
+
+  /// Full Screen 31 send gate: form fields + §14.6 T1–T4.
+  Future<String?> validateTrialOffer({required String nannyId}) async {
+    final subs = Get.find<SubscriptionController>();
+    if (!subs.hasActiveAccess) return AppStrings.trialOfferSubRequired;
+
+    final formErr = trialOfferFormError;
+    if (formErr != null) return formErr;
+
+    final familyId = currentFamilyId(_auth);
+    if (familyId == null) return AppStrings.errorTitle;
+
+    // Pick up cancel / payment-confirm / report from Firestore before gating.
+    await refreshAll();
+
+    // T4 — family already on a live accepted/active trial (not paid/cancelled/reported).
+    if (all.any((t) => t.familyId == familyId && t.isLiveTrial)) {
+      return AppStrings.trialOfferFamilyActive;
+    }
+
+    // T3 — nanny already on a live trial with anyone.
+    if (all.any((t) => t.nannyId == nannyId && t.isLiveTrial)) {
+      return AppStrings.trialOfferNannyOnTrial;
+    }
+
+    // Duplicate / pending offer with this nanny (pending/countered/accepted/active
+    // unless payment confirmed, payment issue reported, or otherwise terminal).
+    if (all.any((t) => t.nannyId == nannyId && t.blocksNewTrialOffer)) {
+      return AppStrings.trialAlreadyActive;
+    }
+
+    // T2 — nanny must be approved (still in verification otherwise).
+    try {
+      final nanny = await _users.getNanny(nannyId);
+      if (nanny == null || nanny.status != NannyOnboardingStatus.approved) {
+        return AppStrings.trialOfferNannyUnverified;
+      }
+    } catch (_) {
+      return AppStrings.trialOfferNannyUnverified;
+    }
+
+    return null;
+  }
 
   @override
   void onInit() {
@@ -87,23 +162,43 @@ class TrialController extends GetxController {
     refreshAll();
   }
 
-  @override
-  void onReady() {
-    super.onReady();
-    final args = Get.arguments;
-    if (args is Map && args['trialId'] is String) {
-      openTrialById(args['trialId'] as String);
+  /// Called every time Screen 19 is pushed so deep-links and chat "View trial"
+  /// still resolve when [TrialController] was already alive (permanent).
+  Future<void> onTrialRouteOpened(dynamic args) async {
+    isOpeningRoute.value = true;
+    try {
+      await refreshAll();
+      final id = args is Map ? args['trialId'] as String? : null;
+      if (id != null && id.isNotEmpty) {
+        await openTrialById(id);
+        return;
+      }
+      // No explicit id — show the current accepted/active trial, not a stale selection.
+      if (selected.value != null &&
+          active.value != null &&
+          selected.value!.id != active.value!.id &&
+          !selected.value!.isAcceptedOrActive) {
+        selected.value = null;
+      }
+      final d = displayed;
+      _hydrateEvalDraft(d?.evaluation);
+      _bindDisplayedTrialWatch(d?.id);
+      if (d != null) await loadDayProofs(d.id);
+    } finally {
+      isOpeningRoute.value = false;
     }
   }
 
   Future<void> openTrialById(String trialId) async {
-    final t = await getTrial(trialId);
+    var t = await getTrial(trialId);
+    t ??= all.firstWhereOrNull((x) => x.id == trialId);
     selected.value = t;
     await _resolveFamilyName();
     // Seed the evaluation checklist from any already-recorded evaluation so the
     // family resumes where it left off (and switching trials never carries a
     // stale draft over).
     _hydrateEvalDraft(t?.evaluation);
+    _bindDisplayedTrialWatch(t?.id);
     if (t != null) await loadDayProofs(t.id);
   }
 
@@ -116,6 +211,46 @@ class TrialController extends GetxController {
       'cookingFamilyFood': e?.cookingFamilyFood ?? false,
       'honestyAndTrustworthiness': e?.honestyAndTrustworthiness ?? false,
     };
+  }
+
+  StreamSubscription<TrialModel?>? _displayedTrialSub;
+  String? _watchedTrialId;
+
+  /// Live-sync the on-screen trial so the nanny sees checklist ticks as the
+  /// family saves them (and either side sees status/payment changes).
+  void _bindDisplayedTrialWatch(String? trialId) {
+    if (trialId == null || trialId.isEmpty) {
+      _displayedTrialSub?.cancel();
+      _displayedTrialSub = null;
+      _watchedTrialId = null;
+      return;
+    }
+    if (_watchedTrialId == trialId && _displayedTrialSub != null) return;
+    _watchedTrialId = trialId;
+    _displayedTrialSub?.cancel();
+    _displayedTrialSub = _trials.watchTrial(trialId).listen(
+      (t) {
+        if (t == null) return;
+        if (selected.value?.id == t.id) {
+          selected.value = t;
+        }
+        if (active.value?.id == t.id) {
+          active.value = t;
+        }
+        final idx = all.indexWhere((x) => x.id == t.id);
+        if (idx >= 0) all[idx] = t;
+        // Keep family's draft aligned with the persisted checklist (and update
+        // the nanny's read-only view via [displayed].evaluation).
+        _hydrateEvalDraft(t.evaluation);
+      },
+      onError: (e) => Get.log('watchTrial failed: $e', isError: true),
+    );
+  }
+
+  @override
+  void onClose() {
+    _displayedTrialSub?.cancel();
+    super.onClose();
   }
 
   /// Resolves the counterparty family's name for the nanny's trial view. The
@@ -145,19 +280,31 @@ class TrialController extends GetxController {
     final nannyId = _auth.currentUser.value?.isNanny == true ? currentUserId(_auth) : null;
     if (familyId != null) {
       all.value = await _trials.listTrials(familyId);
-      active.value = await _trials.activeTrial(familyId);
-    } else if (nannyId != null) {
-      all.value = await _trials.listTrialsForNanny(nannyId);
       TrialModel? act;
-      for (final t in all) {
-        // Includes awaitingOutcome — see FirestoreTrialService.activeTrial
-        // for why (mirrors the family-side query above).
-        if (t.isActive || t.isAwaitingOutcome) {
-          act = t;
-          break;
-        }
+      try {
+        act = await _trials.activeTrial(familyId);
+      } catch (e) {
+        Get.log('activeTrial query failed: $e', isError: true);
+      }
+      // Fallback: derive from the already-loaded list so a missing composite
+      // index or empty whereIn result never leaves Screen 19 blank while chat
+      // still shows "Trial in progress".
+      act ??= all.firstWhereOrNull((t) => t.isLiveTrial || t.isAwaitingOutcome);
+      // Prefer a still-current trial even if the status query returned something
+      // stale from cache; awaitingOutcome remains a valid destination too.
+      if (act != null && !(act.isLiveTrial || act.isAwaitingOutcome)) {
+        act = all.firstWhereOrNull((t) => t.isLiveTrial || t.isAwaitingOutcome);
       }
       active.value = act;
+    } else if (nannyId != null) {
+      try {
+        all.value = await _trials.listTrialsForNanny(nannyId);
+      } catch (e) {
+        Get.log('listTrialsForNanny failed: $e', isError: true);
+        // Keep prior [all]; chat bubbles still call ensureTrialInList by id.
+      }
+      // Match chat banner / family activeTrial: live accepted OR active.
+      active.value = all.firstWhereOrNull((t) => t.isLiveTrial);
     }
     await _loadNannyCards();
     await _resolveFamilyName();
@@ -233,9 +380,24 @@ class TrialController extends GetxController {
 
   Future<TrialModel?> getTrial(String trialId) => _trials.getTrial(trialId);
 
-  bool get canSendOffer {
-    final subs = Get.find<SubscriptionController>();
-    return subs.hasActiveAccess && paymentAcknowledged.value && dailyRate.value > 0;
+  /// Chat offer bubbles look up trials in [all]. If a nanny's list query is
+  /// empty/stale, fetch by id once and merge so both sides see full details
+  /// (System Spec §3.7 TrialOfferBubble).
+  final Set<String> _ensuringTrialIds = {};
+
+  Future<void> ensureTrialInList(String trialId) async {
+    if (trialId.isEmpty || all.any((t) => t.id == trialId)) return;
+    if (!_ensuringTrialIds.add(trialId)) return;
+    try {
+      final t = await _trials.getTrial(trialId);
+      if (t != null && !all.any((x) => x.id == trialId)) {
+        all.add(t);
+      }
+    } catch (_) {
+      // Bubble falls back to title-only until the next refreshAll.
+    } finally {
+      _ensuringTrialIds.remove(trialId);
+    }
   }
 
   /// Family sends trial offer → trial record + chat bubble (HTML + §6.5).
@@ -244,28 +406,14 @@ class TrialController extends GetxController {
     required String nannyName,
     String? threadId,
   }) async {
-    final subs = Get.find<SubscriptionController>();
-    if (!subs.hasActiveAccess) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.trialOfferSubRequired.tr);
-      return false;
-    }
-    if (!paymentAcknowledged.value) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.trialOfferAckRequired.tr);
+    final validationError = await validateTrialOffer(nannyId: nannyId);
+    if (validationError != null) {
+      Get.snackbar(AppStrings.errorTitle.tr, validationError.tr);
       return false;
     }
 
     final familyId = currentFamilyId(_auth);
     if (familyId == null) return false;
-
-    // Guard: no duplicate offer for the same nanny while one is active/pending/countered/accepted.
-    final blocked = all.any((t) =>
-        t.nannyId == nannyId &&
-        const {TrialStatus.pending, TrialStatus.countered, TrialStatus.accepted, TrialStatus.active}
-            .contains(t.status));
-    if (blocked) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.trialAlreadyActive.tr);
-      return false;
-    }
 
     isLoading.value = true;
     try {
@@ -289,7 +437,7 @@ class TrialController extends GetxController {
       }
 
       final trialId = 'trial_${_uuid.v4()}';
-      final start = startDate.value ?? DateTime.now().add(const Duration(days: 1));
+      final start = startDate.value!;
       final trial = TrialModel(
         id: trialId,
         familyId: familyId,
@@ -337,7 +485,7 @@ class TrialController extends GetxController {
       await _chat.linkTrialToThread(
         thread.id,
         trialId,
-        lastMessage: '🤝 Trial offer sent',
+        lastMessage: AppStrings.trialOfferSentPreview.tr,
         trialStatus: 'pending',
       );
 
@@ -443,6 +591,13 @@ class TrialController extends GetxController {
         type: MessageType.trialDeclined,
         content: AppStrings.trialCounterDeclined.tr,
       );
+      final t = all.firstWhereOrNull((x) => x.id == trialId) ??
+          await _trials.getTrial(trialId);
+      if (t != null) {
+        await _flipThreadTrialStatus(t, TrialStatus.declined.name);
+      } else if (threadId != null) {
+        _updateThreadTrialStatus(threadId, TrialStatus.declined.name);
+      }
       await refreshAll();
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
@@ -468,6 +623,26 @@ class TrialController extends GetxController {
     }
   }
 
+  /// Best-effort thread-status sync when the caller has a [TrialModel] but not
+  /// the thread id. Keeps chat pills/bypass state aligned after decline,
+  /// cancellation, payment confirmation, or payment-issue flows.
+  Future<void> _flipThreadTrialStatus(TrialModel trial, String trialStatus) async {
+    try {
+      final lookupUserId = currentUserId(_auth) ?? trial.familyId;
+      final threads = await _chat.listThreads(lookupUserId);
+      final thread = threads.firstWhereOrNull(
+        (t) =>
+            t.trialId == trial.id ||
+            (t.familyId == trial.familyId && t.nannyId == trial.nannyId),
+      );
+      if (thread != null) {
+        _updateThreadTrialStatus(thread.id, trialStatus);
+      }
+    } catch (_) {
+      // Non-fatal — the next thread refresh or backend trigger will reconcile it.
+    }
+  }
+
   Future<void> declineTrial(String trialId, {String? threadId}) async {
     isLoading.value = true;
     try {
@@ -478,6 +653,13 @@ class TrialController extends GetxController {
         type: MessageType.trialDeclined,
         content: AppStrings.trialDeclinedMessage.tr,
       );
+      final t = all.firstWhereOrNull((x) => x.id == trialId) ??
+          await _trials.getTrial(trialId);
+      if (t != null) {
+        await _flipThreadTrialStatus(t, TrialStatus.declined.name);
+      } else if (threadId != null) {
+        _updateThreadTrialStatus(threadId, TrialStatus.declined.name);
+      }
       await refreshAll();
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
@@ -496,7 +678,7 @@ class TrialController extends GetxController {
         CounterOffer(
           dailyRate: dailyRate,
           startDate: trial.startDate,
-          message: 'Counter offer',
+          message: AppStrings.trialCounterOfferLabel.tr,
           createdAt: DateTime.now(),
         ),
       );
@@ -506,6 +688,7 @@ class TrialController extends GetxController {
         type: MessageType.trialCountered,
         content: AppStrings.trialCounteredMessage.trParams({'rate': '$dailyRate'}),
       );
+      _updateThreadTrialStatus(threadId, TrialStatus.countered.name);
       await refreshAll();
       Get.snackbar(AppStrings.successTitle.tr, AppStrings.trialCounteredToast.tr);
     } catch (e) {
@@ -516,11 +699,23 @@ class TrialController extends GetxController {
   }
 
   /// The family's in-progress evaluation checklist for the trial being viewed,
-  /// keyed by [TrialEvaluation] field name. Ticked in the trial screen and read
-  /// back into a [TrialEvaluation] when an outcome is recorded.
+  /// keyed by [TrialEvaluation] field name. Ticked in the trial screen, persisted
+  /// immediately so the nanny's view stays in sync, and included again when an
+  /// outcome is recorded.
   final RxMap<String, bool> evalDraft = <String, bool>{}.obs;
 
-  void toggleEval(String key) => evalDraft[key] = !(evalDraft[key] ?? false);
+  Future<void> toggleEval(String key) async {
+    evalDraft[key] = !(evalDraft[key] ?? false);
+    final t = displayed;
+    if (t == null) return;
+    try {
+      await _trials.saveEvaluation(t.id, buildEvaluation());
+    } catch (e) {
+      // Revert the local tick so UI matches the failed write.
+      evalDraft[key] = !(evalDraft[key] ?? false);
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    }
+  }
 
   TrialEvaluation buildEvaluation() => TrialEvaluation(
         childInteractionAndPatience: evalDraft['childInteractionAndPatience'] ?? false,
@@ -604,7 +799,7 @@ class TrialController extends GetxController {
     try {
       final hires = await _hires.getHiresForNanny(nannyId);
       final activeHires = hires.where((h) => h.isActive).length;
-      final activeTrials = all.where((t) => t.isAcceptedOrActive).length;
+      final activeTrials = all.where((t) => t.isLiveTrial).length;
       return activeHires + activeTrials >= 2;
     } catch (_) {
       return false;
@@ -615,8 +810,16 @@ class TrialController extends GetxController {
     isLoading.value = true;
     try {
       await _trials.cancelTrial(trialId, reason: reason);
+      // Drop the chat "active trial" badge / lockdown bypass for both parties
+      // (same path as setOutcome). Without this, thread.trialStatus stays
+      // accepted/active and chat keeps showing the trial pill.
+      final t = all.firstWhereOrNull((x) => x.id == trialId) ??
+          await _trials.getTrial(trialId);
+      if (t != null) {
+        await _flipThreadTrialStatus(t, TrialStatus.cancelled.name);
+      }
       await refreshAll();
-      Get.snackbar(AppStrings.successTitle.tr, 'Trial cancelled');
+      Get.snackbar(AppStrings.successTitle.tr, AppStrings.trialCancelledToast.tr);
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     } finally {
@@ -628,8 +831,19 @@ class TrialController extends GetxController {
     isLoading.value = true;
     try {
       await _trials.confirmPaymentReceived(trialId);
+      final t = all.firstWhereOrNull((x) => x.id == trialId) ??
+          await _trials.getTrial(trialId);
+      if (t != null) {
+        // Payment confirm is post-trial — retire the chat "ON TRIAL" bar/badges.
+        await _flipThreadTrialStatus(
+          t,
+          t.isAcceptedOrActive ? TrialStatus.completed.name : t.status.name,
+        );
+      }
       await refreshAll();
-      Get.snackbar(AppStrings.successTitle.tr, 'Payment confirmed');
+      Get.snackbar(AppStrings.successTitle.tr, AppStrings.trialPaymentConfirmedToast.tr);
+      // Positive settlement moment — invite a store rating (throttled).
+      await RateAppPrompt.maybeShow();
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     } finally {
@@ -644,21 +858,30 @@ class TrialController extends GetxController {
       await _trials.reportPaymentIssue(trialId, description);
 
       // Also write a `disputes` document so admin panel can action it
-      final trial = all.firstWhereOrNull((t) => t.id == trialId);
+      // (snapshot-only — payment sheet has no attachment UI in v1).
+      final trial = all.firstWhereOrNull((t) => t.id == trialId) ??
+          await _trials.getTrial(trialId);
       if (trial != null) {
-        final uid = _auth.currentUser.value?.id ?? '';
-        final reportedId = (_auth.currentUser.value?.isNanny ?? false) ? trial.familyId : trial.nannyId;
-        await _disputes.fileDispute(
-          reporterId: uid,
+        final reportedId =
+            (_auth.currentUser.value?.isNanny ?? false) ? trial.familyId : trial.nannyId;
+        if (!Get.isRegistered<DisputeController>()) {
+          Get.put(DisputeController(), permanent: true);
+        }
+        final filed = await Get.find<DisputeController>().createDispute(
           reportedUserId: reportedId,
           category: DisputeCategory.payment,
           description: description,
           relatedTrialId: trialId,
+          showSuccessToast: false,
         );
+        if (!filed) {
+          throw Exception(AppStrings.reportUnavailable.tr);
+        }
+        await _flipThreadTrialStatus(trial, TrialStatus.completed.name);
       }
 
       await refreshAll();
-      Get.snackbar(AppStrings.successTitle.tr, 'Issue reported');
+      Get.snackbar(AppStrings.successTitle.tr, AppStrings.trialIssueReportedToast.tr);
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
     } finally {
@@ -687,12 +910,15 @@ class TrialController extends GetxController {
           );
     if (thread == null) return;
 
-    final senderId = currentUserId(_auth) ?? trial.nannyId;
+    final senderId = currentUserId(_auth);
+    if (senderId == null) return;
+    final senderType = thread.senderTypeFor(senderId);
+    if (senderType == null) return;
     final msg = ChatMessage(
       id: _uuid.v4(),
       threadId: thread.id,
       senderId: senderId,
-      senderType: _auth.currentUser.value?.isNanny == true ? 'nanny' : 'family',
+      senderType: senderType,
       content: content,
       createdAt: DateTime.now(),
       type: type,
@@ -715,6 +941,7 @@ class TrialController extends GetxController {
     startDate.value = null;
     trialType.value = 'live-in';
     notes.value = '';
+    location.value = '';
     paymentAcknowledged.value = false;
   }
 }

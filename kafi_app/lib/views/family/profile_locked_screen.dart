@@ -93,9 +93,9 @@ class ProfileLockedScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Contact & full profile locked 🔒',
+                    Text(AppStrings.profileLockedTitle.tr,
                         style: KafiTheme.nunito(11, color: const Color(0xFF5A2090), w: FontWeight.w800)),
-                    Text('Subscribe to contact $firstName directly',
+                    Text(AppStrings.profileLockedSubtitle.trParams({'name': firstName}),
                         style: KafiTheme.nunito(9, color: KafiColors.pur, w: FontWeight.w600)),
                   ],
                 ),
@@ -105,9 +105,9 @@ class ProfileLockedScreen extends StatelessWidget {
           const SizedBox(height: 9),
           // Neutral masked glyphs behind the blur — no fabricated phone/CV/length
           // that could read as the nanny's real (leaked) data (P24).
-          _lockedRow(Icons.call, KafiColors.purL, KafiColors.pur, 'Phone number', '••• ••• ••••'),
-          _lockedRow(Icons.description_outlined, KafiColors.purL, KafiColors.pur, 'Full CV', '••••••••'),
-          _lockedRow(Icons.videocam_outlined, KafiColors.purL, KafiColors.pur, 'Intro video', '••••••'),
+          _lockedRow(Icons.call, KafiColors.purL, KafiColors.pur, AppStrings.lockedPhoneNumber.tr, '••• ••• ••••'),
+          _lockedRow(Icons.description_outlined, KafiColors.purL, KafiColors.pur, AppStrings.lockedFullCv.tr, '••••••••'),
+          _lockedRow(Icons.videocam_outlined, KafiColors.purL, KafiColors.pur, AppStrings.lockedIntroVideo.tr, '••••••'),
           const SizedBox(height: 3),
           _subBox(firstName),
         ],
@@ -195,11 +195,11 @@ class ProfileLockedScreen extends StatelessWidget {
         ),
         child: Column(
           children: [
-            Text('🌸 Unlock $firstName\'s full profile',
+            Text(AppStrings.unlockProfileTitle.trParams({'name': firstName}),
                 textAlign: TextAlign.center,
                 style: KafiTheme.fredoka(12.5, color: Colors.white, w: FontWeight.w700)),
             const SizedBox(height: 2),
-            Text('See all contacts, CVs & videos for every nanny',
+            Text(AppStrings.unlockProfileSubtitle.tr,
                 textAlign: TextAlign.center,
                 style: KafiTheme.nunito(9, color: Colors.white.withValues(alpha: 0.85), w: FontWeight.w600)),
             const SizedBox(height: 6),

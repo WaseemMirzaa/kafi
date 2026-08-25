@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/data/mock/mock_demo_seed.dart';
 import 'package:kafi_app/models/trial_model.dart';
@@ -6,9 +8,15 @@ import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 class MockTrialService implements ITrialService {
   final Map<String, TrialModel> _trials = {};
   final Map<String, Map<int, DayProof>> _dayProofs = {};
+  final Map<String, StreamController<TrialModel?>> _watchers = {};
 
   MockTrialService() {
     _trials.addAll(buildMockTrials(DateTime.now()));
+  }
+
+  void _emit(String trialId) {
+    final c = _watchers[trialId];
+    if (c != null && !c.isClosed) c.add(_trials[trialId]);
   }
 
   @override
@@ -105,14 +113,22 @@ class MockTrialService implements ITrialService {
   Future<void> confirmPaymentReceived(String trialId) async {
     final t = _trials[trialId];
     if (t == null) return;
-    _trials[trialId] = t.copyWith(nannyConfirmedPayment: true);
+    _trials[trialId] = t.copyWith(
+      nannyConfirmedPayment: true,
+      status: TrialStatus.completed,
+      completedAt: DateTime.now(),
+    );
   }
 
   @override
   Future<void> reportPaymentIssue(String trialId, String description) async {
     final t = _trials[trialId];
     if (t == null) return;
-    _trials[trialId] = t.copyWith(paymentIssueReported: true);
+    _trials[trialId] = t.copyWith(
+      paymentIssueReported: true,
+      status: TrialStatus.completed,
+      completedAt: DateTime.now(),
+    );
   }
 
   @override
@@ -214,5 +230,26 @@ class MockTrialService implements ITrialService {
     await Future<void>.delayed(AppConfig.mockDelay);
     final map = _dayProofs[trialId] ?? const {};
     return map.values.toList()..sort((a, b) => a.dayIndex.compareTo(b.dayIndex));
+  }
+
+  @override
+  Future<void> saveEvaluation(String trialId, TrialEvaluation evaluation) async {
+    await Future<void>.delayed(AppConfig.mockDelay);
+    final t = _trials[trialId];
+    if (t == null) return;
+    _trials[trialId] = t.copyWith(evaluation: evaluation);
+    _emit(trialId);
+  }
+
+  @override
+  Stream<TrialModel?> watchTrial(String trialId) {
+    final c = _watchers.putIfAbsent(
+      trialId,
+      () => StreamController<TrialModel?>.broadcast(),
+    );
+    scheduleMicrotask(() {
+      if (!c.isClosed) c.add(_trials[trialId]);
+    });
+    return c.stream;
   }
 }

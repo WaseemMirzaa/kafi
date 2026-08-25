@@ -1,4 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
+import { useLocale } from '../../context/LocaleContext';
+import { getLocale } from '../../locales/t';
 
 /** Normalized message shape the thread renders. Pages map their domain
  *  messages (chat messages, dispute messages) into this shape. */
@@ -14,7 +16,7 @@ export interface ThreadMessage {
 }
 
 function timeLabel(d: Date): string {
-  return d.toLocaleString('en-GB', {
+  return d.toLocaleString(getLocale() === 'ar' ? 'ar-AE' : 'en-GB', {
     day: '2-digit',
     month: 'short',
     hour: '2-digit',
@@ -57,10 +59,10 @@ function Bubble({ m }: { m: ThreadMessage }) {
 
 export function MessageThread({
   messages,
-  emptyText = 'No messages yet.',
+  emptyText,
   onSend,
   sending,
-  placeholder = 'Type a reply…',
+  placeholder,
   fill = false,
 }: {
   messages: ThreadMessage[];
@@ -72,6 +74,7 @@ export function MessageThread({
   /** Fill the parent's height (for modal/full-screen) instead of capping at 360px. */
   fill?: boolean;
 }) {
+  const { t } = useLocale();
   const [text, setText] = useState('');
   const listRef = useRef<HTMLDivElement>(null);
 
@@ -101,7 +104,7 @@ export function MessageThread({
         {/* Bottom-anchor short threads so messages sit at the composer like a real chat. */}
         <div className={`min-h-full flex flex-col ${messages.length ? 'justify-end' : 'justify-center items-center'}`}>
           {messages.length === 0 ? (
-            <div className="text-[10px] text-[#8090B0] px-2 py-4">{emptyText}</div>
+            <div className="text-[10px] text-[#8090B0] px-2 py-4">{emptyText ?? t('chat.noMessagesYetShort')}</div>
           ) : (
             messages.map((m) => <Bubble key={m.id} m={m} />)
           )}
@@ -116,7 +119,7 @@ export function MessageThread({
             onKeyDown={(e) => {
               if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) submit();
             }}
-            placeholder={placeholder}
+            placeholder={placeholder ?? t('chat.typeReplyPlaceholder')}
             className="flex-1 admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none resize-none"
           />
           <button
@@ -125,7 +128,7 @@ export function MessageThread({
             onClick={submit}
             disabled={!text.trim() || sending}
           >
-            Send
+            {t('common.send')}
           </button>
         </div>
       )}

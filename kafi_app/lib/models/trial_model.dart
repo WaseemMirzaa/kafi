@@ -197,8 +197,27 @@ class TrialModel {
   /// Accepted but not yet started — used for pre-start UI.
   bool get isAccepted => status == TrialStatus.accepted;
 
-  /// Counts both accepted (pre-start) and active (running) — used to lock new trial offers.
-  bool get isAcceptedOrActive => status == TrialStatus.accepted || status == TrialStatus.active;
+  /// Counts both accepted (pre-start) and active (running) — used for trial UI
+  /// that is still in progress (chat bypass, Screen 19).
+  bool get isAcceptedOrActive =>
+      status == TrialStatus.accepted || status == TrialStatus.active;
+
+  /// True while this trial should block sending another offer to the same nanny
+  /// (or occupying the family's single active-trial slot). Payment confirmed,
+  /// payment-issue reported, and terminal statuses (cancelled / declined /
+  /// completed) do **not** block — matching chat “trial ended” rules.
+  bool get blocksNewTrialOffer {
+    if (nannyConfirmedPayment || paymentIssueReported) return false;
+    return status == TrialStatus.pending ||
+        status == TrialStatus.countered ||
+        status == TrialStatus.accepted ||
+        status == TrialStatus.active;
+  }
+
+  /// Live for chat / lockdown bypass: accepted or active, and not finished via
+  /// payment confirm (or escalated via payment-issue report).
+  bool get isLiveTrial =>
+      isAcceptedOrActive && !nannyConfirmedPayment && !paymentIssueReported;
 
   /// Execution window closed; waiting on the mutual hired/notHired resolution.
   bool get isAwaitingOutcome => status == TrialStatus.awaitingOutcome;

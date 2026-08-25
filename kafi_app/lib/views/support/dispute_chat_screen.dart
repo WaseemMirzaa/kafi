@@ -7,6 +7,7 @@ import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/support/disputes_screen.dart'
     show disputeStatusChip, disputeCategoryLabel;
+import 'package:url_launcher/url_launcher.dart';
 
 /// The support conversation for a single dispute (reporter ↔ admin), realtime.
 class DisputeChatScreen extends StatefulWidget {
@@ -44,6 +45,7 @@ class _DisputeChatScreenState extends State<DisputeChatScreen> {
           children: [
             _header(),
             _resolutionBanner(),
+            _attachmentsStrip(),
             Expanded(
               child: Obx(() {
                 final msgs = controller.messages;
@@ -60,9 +62,34 @@ class _DisputeChatScreenState extends State<DisputeChatScreen> {
                 );
               }),
             ),
-            _composer(),
+            Obx(() {
+              if (controller.isDisputeClosed) {
+                final d = controller.activeDispute.value ?? _dispute;
+                return _closedBanner(d);
+              }
+              return _composer();
+            }),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _closedBanner(DisputeModel d) {
+    final label = d.status == DisputeStatus.resolved
+        ? AppStrings.supportStatusResolved.tr
+        : AppStrings.supportStatusClosed.tr;
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
+      decoration: const BoxDecoration(
+        color: Color(0xFFF0FFF5),
+        border: Border(top: BorderSide(color: Color(0xFFDCEFE4))),
+      ),
+      child: Text(
+        label,
+        textAlign: TextAlign.center,
+        style: KafiTheme.nunito(11, color: KafiColors.grnD, w: FontWeight.w700),
       ),
     );
   }
@@ -140,6 +167,82 @@ class _DisputeChatScreenState extends State<DisputeChatScreen> {
         ),
       );
     });
+  }
+
+  Widget _attachmentsStrip() {
+    return Obx(() {
+      final d = controller.activeDispute.value ?? _dispute;
+      if (d.attachments.isEmpty) return const SizedBox.shrink();
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.fromLTRB(12, 10, 12, 0),
+        padding: const EdgeInsets.all(11),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFEFE2FF), width: 1.2),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(AppStrings.reportAttachmentsTitle.tr,
+                style: KafiTheme.fredoka(10, color: KafiColors.pur, w: FontWeight.w800)),
+            const SizedBox(height: 8),
+            SizedBox(
+              height: 72,
+              child: ListView.separated(
+                scrollDirection: Axis.horizontal,
+                itemCount: d.attachments.length,
+                separatorBuilder: (_, __) => const SizedBox(width: 8),
+                itemBuilder: (_, i) {
+                  final a = d.attachments[i];
+                  return GestureDetector(
+                    onTap: () => _openAttachment(a),
+                    child: Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        color: KafiColors.inputBgP,
+                        borderRadius: BorderRadius.circular(10),
+                        border: Border.all(color: KafiColors.purB),
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: a.isImage
+                          ? Image.network(a.url, fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                    Icons.broken_image_outlined,
+                                    color: KafiColors.ts,
+                                  ))
+                          : Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.picture_as_pdf, color: KafiColors.pur, size: 22),
+                                Padding(
+                                  padding: const EdgeInsets.symmetric(horizontal: 4),
+                                  child: Text(
+                                    a.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: KafiTheme.nunito(7, color: KafiColors.tm),
+                                  ),
+                                ),
+                              ],
+                            ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      );
+    });
+  }
+
+  Future<void> _openAttachment(DisputeAttachment a) async {
+    final uri = Uri.tryParse(a.url);
+    if (uri == null) return;
+    await launchUrl(uri, mode: LaunchMode.externalApplication);
   }
 
   Widget _bubble(DisputeMessage m) {

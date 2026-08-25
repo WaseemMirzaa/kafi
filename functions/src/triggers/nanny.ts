@@ -1,5 +1,6 @@
 import { onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import { sendNotification, writeInbox, getUser } from '../utils/notifications';
+import { notif, tn } from '../i18n/notifications';
 
 interface NannyDoc {
   type?: string;
@@ -45,20 +46,22 @@ export const onDocumentReviewed = onDocumentUpdated(
     const nannyId = event.params.nannyId;
     const user = await getUser(nannyId);
     const tokens = (user.fcmTokens as string[]) ?? [];
+    const locale = user.locale ?? 'en';
 
     // 1. Per-document approved / rejected notifications.
     for (const d of changed) {
       const payload =
         d.status === 'approved'
           ? {
-              title: '✅ Document approved',
-              body: `${d.type} verified — keep going!`,
+              ...notif('nanny.docApproved', locale, { docType: d.type ?? '' }),
               type: 'documentsApproved' as const,
             }
           : d.status === 'rejected'
           ? {
-              title: '❌ Action needed',
-              body: `${d.type} rejected: ${d.rejectionReason || 'Please re-upload'}`,
+              ...notif('nanny.docRejected', locale, {
+                docType: d.type ?? '',
+                reason: d.rejectionReason || tn('nanny.docRejected.defaultReason', locale),
+              }),
               type: 'documentsRejected' as const,
             }
           : null;
@@ -78,22 +81,14 @@ export const onDocumentReviewed = onDocumentUpdated(
     ) {
       const payload =
         after.status === 'approved'
-          ? {
-              title: '🎉 Profile approved!',
-              body: 'Your profile is now visible to families.',
-              type: 'profileVerified' as const,
-            }
+          ? { ...notif('nanny.profileApproved', locale), type: 'profileVerified' as const }
           : after.status === 'rejected'
           ? {
-              title: '❌ Profile rejected',
-              body: after.rejectionReason || 'Please review the feedback and re-submit.',
+              title: tn('nanny.profileRejected.title', locale),
+              body: after.rejectionReason || tn('nanny.profileRejected.defaultBody', locale),
               type: 'documentsRejected' as const,
             }
-          : {
-              title: '📋 Profile submitted',
-              body: 'Admin is reviewing your profile (1–24 hours).',
-              type: 'systemAnnouncement' as const,
-            };
+          : { ...notif('nanny.profileSubmitted', locale), type: 'systemAnnouncement' as const };
       const data = { type: `profile_${after.status}` };
       await writeInbox(nannyId, payload.type, payload.title, payload.body, data);
       await sendNotification(tokens, { title: payload.title, body: payload.body, data });
@@ -104,14 +99,8 @@ export const onDocumentReviewed = onDocumentUpdated(
     if (blockedChanged) {
       const payload =
         after.blocked === true
-          ? {
-              title: '🚫 Account disabled',
-              body: 'Your Kafi account has been disabled by an administrator. Please contact support.',
-            }
-          : {
-              title: '✅ Account restored',
-              body: 'Your Kafi account has been re-enabled. Welcome back!',
-            };
+          ? notif('nanny.accountDisabled', locale)
+          : notif('nanny.accountRestored', locale);
       const data = { type: after.blocked === true ? 'account_blocked' : 'account_unblocked' };
       await writeInbox(nannyId, 'systemAnnouncement', payload.title, payload.body, data);
       await sendNotification(tokens, { title: payload.title, body: payload.body, data });
@@ -126,16 +115,12 @@ export const onDocumentReviewed = onDocumentUpdated(
     ) {
       const payload =
         after.introVideoStatus === 'approved'
-          ? {
-              title: '✅ Intro video approved',
-              body: 'Your introduction video is now visible to families.',
-              type: 'documentsApproved' as const,
-            }
+          ? { ...notif('nanny.introVideoApproved', locale), type: 'documentsApproved' as const }
           : {
-              title: '❌ Intro video needs changes',
+              title: tn('nanny.introVideoRejected.title', locale),
               body:
                 (after.introVideoRejectionReason as string) ||
-                'Please re-record your introduction video.',
+                tn('nanny.introVideoRejected.defaultBody', locale),
               type: 'documentsRejected' as const,
             };
       const data = { type: `intro_video_${after.introVideoStatus}` };

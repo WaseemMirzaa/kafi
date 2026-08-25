@@ -6,6 +6,7 @@
  * extension before the `?alt=media&token=…` query, so we can infer how to
  * render each file.
  */
+import { useLocale } from '../../context/LocaleContext';
 
 export type DocKind = 'image' | 'video' | 'pdf' | 'other';
 
@@ -24,10 +25,11 @@ export function docKind(url?: string | null): DocKind {
 
 /** Small type-aware thumbnail used in the verification queue list. */
 export function DocThumb({ url, label }: { url?: string | null; label: string }) {
+  const { t } = useLocale();
   if (!url) {
     return (
       <div className="w-16 h-12 rounded-md bg-[#F4F5FC] flex items-center justify-center text-[8px] font-bold text-[#A0ADC8] flex-shrink-0">
-        None
+        {t('common.none')}
       </div>
     );
   }
@@ -41,7 +43,7 @@ export function DocThumb({ url, label }: { url?: string | null; label: string })
         <video src={url} className={wrap} muted preload="metadata" />
       ) : (
         <div className={`${wrap} flex items-center justify-center text-[8px] font-extrabold text-purple`}>
-          {kind === 'pdf' ? 'PDF' : 'FILE'}
+          {kind === 'pdf' ? t('common.pdf') : t('common.file')}
         </div>
       )}
     </a>
@@ -50,10 +52,11 @@ export function DocThumb({ url, label }: { url?: string | null; label: string })
 
 /** Full inline viewer used on the nanny profile / detail view. */
 export function DocViewer({ url, label }: { url?: string | null; label: string }) {
+  const { t } = useLocale();
   if (!url) {
     return (
       <div className="w-full h-28 rounded-lg bg-[#F4F5FC] flex items-center justify-center text-[10px] font-bold text-[#A0ADC8]">
-        Not uploaded
+        {t('common.notUploaded')}
       </div>
     );
   }
@@ -80,7 +83,7 @@ export function DocViewer({ url, label }: { url?: string | null; label: string }
       <div className="flex flex-col gap-1">
         <iframe src={url} title={label} className="w-full h-72 rounded-lg border border-[#EBEEF8] bg-white" />
         <a href={url} target="_blank" rel="noreferrer" className="text-[9px] font-bold text-purple font-fredoka self-end">
-          Open PDF ↗
+          {t('common.openPdf')}
         </a>
       </div>
     );
@@ -93,7 +96,7 @@ export function DocViewer({ url, label }: { url?: string | null; label: string }
       className="w-full h-24 rounded-lg border border-[#EBEEF8] bg-[#F4F5FC] flex flex-col items-center justify-center gap-1 text-[10px] font-bold text-purple"
     >
       <span className="text-lg">📄</span>
-      Download file ↗
+      {t('common.downloadFile')}
     </a>
   );
 }

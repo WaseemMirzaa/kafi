@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
+import 'package:kafi_app/controllers/browse_controller.dart';
 import 'package:kafi_app/controllers/family_jobs_controller.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
@@ -84,7 +85,13 @@ class MyJobsScreen extends GetView<FamilyJobsController> {
             ),
           ),
           GestureDetector(
-            onTap: () => Get.toNamed(Routes.familyForm),
+            onTap: () {
+              if (Get.isRegistered<BrowseController>()) {
+                Get.find<BrowseController>().openPostNewJob();
+              } else {
+                Get.toNamed(Routes.familyForm, arguments: {'isNewPost': true});
+              }
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
               decoration: BoxDecoration(
@@ -121,7 +128,13 @@ class MyJobsScreen extends GetView<FamilyJobsController> {
               style: KafiTheme.nunito(10, color: KafiColors.ts)),
           const SizedBox(height: 16),
           GestureDetector(
-            onTap: () => Get.toNamed(Routes.familyForm),
+            onTap: () {
+              if (Get.isRegistered<BrowseController>()) {
+                Get.find<BrowseController>().openPostNewJob();
+              } else {
+                Get.toNamed(Routes.familyForm, arguments: {'isNewPost': true});
+              }
+            },
             child: Container(
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
               decoration: BoxDecoration(
@@ -169,8 +182,10 @@ class MyJobsScreen extends GetView<FamilyJobsController> {
   Widget _jobCard(JobPostModel job) {
     final hire = controller.hireForJob(job.id);
     final typeLine = [
-      job.jobType == JobType.liveOut ? 'Live-out' : 'Live-in',
-      job.employmentType == JobEmploymentType.partTime ? 'Part-time' : 'Full-time',
+      job.jobType == JobType.liveOut ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr,
+      job.employmentType == JobEmploymentType.partTime
+          ? AppStrings.employmentPartTime.tr
+          : AppStrings.employmentFullTime.tr,
       if (job.city.isNotEmpty) job.city,
     ].join(' · ');
 

@@ -5,14 +5,32 @@ import 'package:kafi_app/controllers/ticket_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/ticket_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_chip.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
 
 /// Support inbox — the user's tickets, with a "New ticket" flow. Shared by both
 /// families and nannies (drives [TicketController]).
-class SupportScreen extends GetView<TicketController> {
+class SupportScreen extends StatefulWidget {
   const SupportScreen({super.key});
+
+  @override
+  State<SupportScreen> createState() => _SupportScreenState();
+}
+
+class _SupportScreenState extends State<SupportScreen> {
+  TicketController get controller => Get.find<TicketController>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Permanent TicketController only loads once on first create — refresh
+    // whenever Support is opened so admin status changes aren't stale.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) controller.loadTickets();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +166,10 @@ class SupportScreen extends GetView<TicketController> {
 
   Widget _ticketCard(TicketModel t) {
     return GestureDetector(
-      onTap: () => Get.toNamed(Routes.supportTicket, arguments: t),
+      onTap: () async {
+        await Get.toNamed(Routes.supportTicket, arguments: t);
+        await controller.loadTickets();
+      },
       child: Container(
         margin: const EdgeInsets.only(bottom: 8),
         padding: const EdgeInsets.all(11),
@@ -208,13 +229,7 @@ class SupportScreen extends GetView<TicketController> {
     );
   }
 
-  String _time(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-    return AppStrings.supportJustNow.tr;
-  }
+  String _time(DateTime dt) => RelativeTime.ago(dt);
 }
 
 /// Shared label + status-chip helpers (also used by the ticket thread screen).

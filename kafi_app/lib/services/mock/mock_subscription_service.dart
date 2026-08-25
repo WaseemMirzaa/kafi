@@ -68,6 +68,7 @@ class MockSubscriptionService implements ISubscriptionService {
       familyId,
       SubscriptionState.active,
       planId: planId,
+      swallowErrors: true,
     );
     await MockSubscriptionFirestoreSync.syncAllProfileViews(
       familyId,
@@ -87,6 +88,7 @@ class MockSubscriptionService implements ISubscriptionService {
       familyId,
       state,
       planId: planId,
+      swallowErrors: true,
     );
   }
 

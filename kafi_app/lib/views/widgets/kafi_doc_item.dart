@@ -32,7 +32,7 @@ class KafiDocItem extends StatelessWidget {
       DocumentStatus.uploaded || DocumentStatus.approved => (AppStrings.docUploaded.tr, KafiColors.grnL, KafiColors.grnD),
       DocumentStatus.reviewing => (AppStrings.docReviewing.tr, KafiColors.ambL, const Color(0xFFA06010)),
       DocumentStatus.missing => (required ? AppStrings.docMissing.tr : AppStrings.docOptional.tr, KafiColors.ambL, const Color(0xFFA06010)),
-      DocumentStatus.rejected => ('Rejected', KafiColors.roseP, KafiColors.roseD),
+      DocumentStatus.rejected => (AppStrings.docRejected.tr, KafiColors.roseP, KafiColors.roseD),
     };
 
     return GestureDetector(
@@ -99,7 +99,7 @@ class KafiDocItem extends StatelessWidget {
                       color: variant == KafiDocVariant.green ? KafiColors.grnL : KafiColors.purL,
                       borderRadius: BorderRadius.circular(6),
                     ),
-                    child: Text('Upload',
+                    child: Text(AppStrings.docUploadBtn.tr,
                         style: KafiTheme.fredoka(8.5,
                             color: variant == KafiDocVariant.green ? KafiColors.grnD : KafiColors.pur,
                             w: FontWeight.w700)),

@@ -223,7 +223,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Text(
-                d.status == DocumentStatus.uploaded ? '✓ Uploaded' : 'Conditional',
+                d.status == DocumentStatus.uploaded ? '✓ ${AppStrings.docUploaded.tr}' : AppStrings.docConditional.tr,
                 style: KafiTheme.fredoka(9,
                     color: d.status == DocumentStatus.uploaded
                         ? KafiColors.grnD

@@ -7,6 +7,7 @@ class KafiBottomNavItem {
     this.emoji,
     required this.label,
     required this.onTap,
+    this.badgeCount = 0,
   }) : assert(icon != null || emoji != null, 'Provide an icon or an emoji');
 
   /// Material icon (used when [emoji] is null).
@@ -16,6 +17,9 @@ class KafiBottomNavItem {
   final String? emoji;
   final String label;
   final VoidCallback onTap;
+
+  /// Unread / new-item count shown as a rose pill on the icon (0 = hidden).
+  final int badgeCount;
 }
 
 class KafiBottomNav extends StatelessWidget {
@@ -59,13 +63,24 @@ class KafiBottomNav extends StatelessWidget {
                     child: Column(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        if (item.emoji != null)
-                          Opacity(
-                            opacity: active ? 1 : 0.55,
-                            child: Text(item.emoji!, style: const TextStyle(fontSize: 19)),
-                          )
-                        else
-                          Icon(item.icon, color: color, size: 22),
+                        Stack(
+                          clipBehavior: Clip.none,
+                          children: [
+                            if (item.emoji != null)
+                              Opacity(
+                                opacity: active ? 1 : 0.55,
+                                child: Text(item.emoji!, style: const TextStyle(fontSize: 19)),
+                              )
+                            else
+                              Icon(item.icon, color: color, size: 22),
+                            if (item.badgeCount > 0)
+                              Positioned(
+                                top: -2,
+                                right: -8,
+                                child: _NavBadge(count: item.badgeCount),
+                              ),
+                          ],
+                        ),
                         const SizedBox(height: 2),
                         Text(item.label, style: KafiTheme.fredoka(9, color: color)),
                       ],
@@ -76,6 +91,31 @@ class KafiBottomNav extends StatelessWidget {
             }),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _NavBadge extends StatelessWidget {
+  const _NavBadge({required this.count});
+
+  final int count;
+
+  @override
+  Widget build(BuildContext context) {
+    final label = count > 99 ? '99+' : '$count';
+    return Container(
+      constraints: const BoxConstraints(minWidth: 14, minHeight: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 3),
+      decoration: BoxDecoration(
+        color: KafiColors.roseD,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.white, width: 1.5),
+      ),
+      alignment: Alignment.center,
+      child: Text(
+        label,
+        style: KafiTheme.fredoka(7.5, color: Colors.white, w: FontWeight.w700),
       ),
     );
   }

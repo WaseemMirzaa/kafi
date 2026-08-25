@@ -8,17 +8,20 @@ import {
   TableCard,
 } from '../../components/ui/AdminUI';
 import { BroadcastService } from '../../services/firestore';
+import { useLocale } from '../../context/LocaleContext';
+import { TranslationKey } from '../../locales/t';
 
 type Audience = 'all' | 'nannies' | 'families' | 'subscribers';
 
-const audienceLabel: Record<Audience, string> = {
-  all: 'All users',
-  nannies: 'Nannies only',
-  families: 'Families only',
-  subscribers: 'Subscribers only',
+const audienceLabelKeys: Record<Audience, TranslationKey> = {
+  all: 'broadcast.audience.all',
+  nannies: 'broadcast.audience.nannies',
+  families: 'broadcast.audience.families',
+  subscribers: 'broadcast.audience.subscribers',
 };
 
 export default function Broadcast() {
+  const { t } = useLocale();
   const [audience, setAudience] = useState<Audience>('all');
   const [title, setTitle] = useState('');
   const [message, setMessage] = useState('');
@@ -32,7 +35,7 @@ export default function Broadcast() {
     try {
       setRecent(await BroadcastService.listRecent());
     } catch (e) {
-      setError((e as Error).message || 'Failed to load history');
+      setError((e as Error).message || t('broadcast.failedToLoadHistory'));
     }
   };
   useEffect(() => {
@@ -47,12 +50,12 @@ export default function Broadcast() {
     setError(null);
     try {
       const id = await BroadcastService.send(audience, title.trim(), message.trim());
-      setOk(`Queued #${id}`);
+      setOk(t('broadcast.queued', { id }));
       setTitle('');
       setMessage('');
       await load();
     } catch (e) {
-      setError((e as Error).message || 'Failed to send broadcast');
+      setError((e as Error).message || t('broadcast.failedToSend'));
     } finally {
       setBusy(false);
     }
@@ -60,40 +63,40 @@ export default function Broadcast() {
 
   return (
     <PageShell>
-      <PageHeader title="Broadcast" subtitle="Send push notifications to users" />
+      <PageHeader title={t('broadcast.title')} subtitle={t('broadcast.subtitle')} />
       <PageContent>
         <DetailCard>
           <div className="mb-4">
-            <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">Target audience</div>
+            <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">{t('broadcast.targetAudience')}</div>
             <div className="flex gap-1.5 flex-wrap">
-              {(['all', 'nannies', 'families', 'subscribers'] as Audience[]).map((t) => (
+              {(['all', 'nannies', 'families', 'subscribers'] as Audience[]).map((a) => (
                 <button
-                  key={t}
+                  key={a}
                   type="button"
-                  onClick={() => setAudience(t)}
-                  className={`qa-btn ${audience === t ? 'qa-r' : 'qa-n'}`}
+                  onClick={() => setAudience(a)}
+                  className={`qa-btn ${audience === a ? 'qa-r' : 'qa-n'}`}
                 >
-                  {audienceLabel[t]}
+                  {t(audienceLabelKeys[a])}
                 </button>
               ))}
             </div>
           </div>
           <div className="mb-3">
-            <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">Title</div>
+            <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">{t('broadcast.notifTitle')}</div>
             <input
               value={title}
               onChange={(e) => setTitle(e.target.value)}
-              placeholder="Notification title (shown in push)"
+              placeholder={t('broadcast.notifTitlePlaceholder')}
               className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30"
             />
           </div>
           <div className="mb-4">
-            <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">Message</div>
+            <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">{t('broadcast.message')}</div>
             <textarea
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               rows={4}
-              placeholder="Enter your broadcast message..."
+              placeholder={t('broadcast.messagePlaceholder')}
               className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30 resize-none"
             />
           </div>
@@ -104,7 +107,7 @@ export default function Broadcast() {
               disabled={!title.trim() || !message.trim() || busy}
               onClick={() => setConfirming(true)}
             >
-              {busy ? 'Sending…' : 'Send broadcast'}
+              {busy ? t('broadcast.sending') : t('broadcast.sendBroadcast')}
             </button>
             {ok && <span className="text-[10px] font-bold text-[#2A8A50]">{ok}</span>}
             {error && <span className="text-[10px] font-bold text-rose-dark">{error}</span>}
@@ -112,9 +115,9 @@ export default function Broadcast() {
         </DetailCard>
 
         <div className="mt-3">
-          <TableCard title="Recent broadcasts">
+          <TableCard title={t('broadcast.recentBroadcasts')}>
             {recent.length === 0 && (
-              <div className="px-3 py-4 text-[10px] text-[#8090B0]">No broadcasts yet.</div>
+              <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('broadcast.noneYet')}</div>
             )}
             {recent.map((b) => (
               <Row key={b.id}>
@@ -136,19 +139,16 @@ export default function Broadcast() {
           onClick={() => setConfirming(false)}
         >
           <div className="admin-card w-full max-w-sm p-4" onClick={(e) => e.stopPropagation()}>
-            <div className="text-[12px] font-extrabold text-navy mb-1.5">Send this broadcast?</div>
+            <div className="text-[12px] font-extrabold text-navy mb-1.5">{t('broadcast.confirmTitle')}</div>
             <div className="text-[10px] font-semibold text-[#8090B0] leading-relaxed mb-3">
-              This sends a push notification titled{' '}
-              <span className="font-bold text-navy">“{title.trim()}”</span> to{' '}
-              <span className="font-bold text-navy">{audienceLabel[audience]}</span> right away.
-              Push notifications can’t be recalled once sent.
+              {t('broadcast.confirmDesc', { title: title.trim(), audience: t(audienceLabelKeys[audience]) })}
             </div>
             <div className="flex items-center justify-end gap-2">
               <button type="button" className="qa-btn qa-n" onClick={() => setConfirming(false)}>
-                Cancel
+                {t('common.cancel')}
               </button>
               <button type="button" className="qa-btn qa-r" disabled={busy} onClick={send}>
-                {busy ? 'Sending…' : 'Send now'}
+                {busy ? t('broadcast.sending') : t('broadcast.sendNow')}
               </button>
             </div>
           </div>

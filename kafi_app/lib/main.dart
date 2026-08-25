@@ -77,6 +77,16 @@ class KafiApp extends StatelessWidget {
         GlobalWidgetsLocalizations.delegate,
         GlobalCupertinoLocalizations.delegate,
       ],
+      // Flutter 3.35 iOS: SystemContextMenu asserts when shown without an
+      // active TextInputConnection (modal sheets / autofocus). Force
+      // Flutter-drawn toolbars instead of the native menu app-wide.
+      builder: (context, child) {
+        final mq = MediaQuery.of(context);
+        return MediaQuery(
+          data: mq.copyWith(supportsShowingSystemContextMenu: false),
+          child: child ?? const SizedBox.shrink(),
+        );
+      },
       initialBinding: InitialBinding(),
       initialRoute: Routes.splash,
       getPages: AppRoutes.routes,

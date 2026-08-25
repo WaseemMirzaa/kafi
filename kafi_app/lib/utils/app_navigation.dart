@@ -1,3 +1,4 @@
+import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
@@ -20,13 +21,16 @@ class AppNavigation {
   /// case where a previous route exists.
   ///
   /// Families still gated on their first job post cannot leave Screen 13 via
-  /// this helper — Browse is blocked until a job exists.
+  /// this helper — Browse / home is blocked until a job exists.
   static void back() {
     final auth = Get.isRegistered<AuthController>()
         ? Get.find<AuthController>()
         : null;
-    if (auth?.familyMustPostFirstJob.value == true &&
-        Get.currentRoute == Routes.familyForm) {
+    // First-job onboarding gate: back must not open Browse/home at all.
+    if (auth?.familyMustPostFirstJob.value == true) {
+      if (Get.currentRoute != Routes.familyForm) {
+        Get.offAllNamed(Routes.familyForm);
+      }
       return;
     }
     if (Get.key.currentState?.canPop() ?? false) {
@@ -38,12 +42,15 @@ class AppNavigation {
       Get.offAllNamed(Routes.welcome);
     } else if (user.isNanny) {
       Get.offAllNamed(Routes.nannyHome);
-    } else if (auth?.familyMustPostFirstJob.value == true) {
-      Get.offAllNamed(Routes.familyForm);
     } else {
       Get.offAllNamed(Routes.browse);
     }
   }
+
+  /// True when a family must finish Screen 13 before any home/shell route.
+  static bool get _familyFirstJobGated =>
+      Get.isRegistered<AuthController>() &&
+      Get.find<AuthController>().familyMustPostFirstJob.value;
 
   static void openNotifications() => Get.toNamed(Routes.notifications);
 
@@ -62,8 +69,12 @@ class AppNavigation {
   }
 
   static void openChat({String? nannyId, String? nannyName}) {
+    if (_familyFirstJobGated) {
+      Get.offAllNamed(Routes.familyForm);
+      return;
+    }
     // Queue the conversation so the Messages tab opens straight into the
-    // thread (rather than the inbox) once it builds.
+    // thread (rather than the inbox) once it builds / reacts.
     if (nannyId != null && Get.isRegistered<ChatController>()) {
       Get.find<ChatController>().setPendingOpen(nannyId: nannyId, nannyName: nannyName);
     }
@@ -76,7 +87,18 @@ class AppNavigation {
       Get.until((route) => route.isFirst);
       Get.find<NannyShellController>().goToTab(2);
     } else {
-      Get.toNamed(Routes.chat, arguments: nannyId != null ? {'nannyId': nannyId} : null);
+      Get.toNamed(Routes.chat, arguments: nannyId != null
+          ? <String, dynamic>{'nannyId': nannyId, 'nannyName': nannyName}
+          : null);
+    }
+    // ChatScreen may already be mounted (shell tab kept / rebuild without
+    // initState). Open the thread explicitly on the next frame.
+    if (nannyId != null && Get.isRegistered<ChatController>()) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (Get.isRegistered<ChatController>()) {
+          Get.find<ChatController>().consumePendingOpen();
+        }
+      });
     }
   }
 
@@ -96,6 +118,13 @@ class AppNavigation {
     } else {
       Get.toNamed(Routes.chat);
     }
+    if (familyId.isNotEmpty && Get.isRegistered<ChatController>()) {
+      SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (Get.isRegistered<ChatController>()) {
+          Get.find<ChatController>().consumePendingOpen();
+        }
+      });
+    }
   }
 
   static Future<void> toggleShortlist(NannyCardModel card) async {
@@ -107,11 +136,25 @@ class AppNavigation {
     // Only confirm once the write succeeds; the controller surfaces any error.
     final ok = wasShortlisted
         ? await sl.removeFromShortlist(card.id)
-        : await sl.addToShortlist(card.id);
-    if (!ok) return;
+        : await sl.addToShortlist(
+            card.id,
+            nannyName: card.name,
+          );
+    if (!ok) {
+      if (!wasShortlisted && sl.isShortlisted(card.id)) {
+        // Already shortlisted in memory — treat as success feedback.
+        Get.snackbar(
+          AppStrings.shortlistTitle.tr,
+          AppStrings.shortlistAlreadyAdded.tr,
+        );
+      }
+      return;
+    }
     Get.snackbar(
       AppStrings.shortlistTitle.tr,
-      wasShortlisted ? 'Removed from shortlist' : 'Added to shortlist',
+      wasShortlisted
+          ? AppStrings.shortlistRemoved.tr
+          : AppStrings.shortlistAdded.tr,
     );
   }
 
@@ -126,7 +169,35 @@ class AppNavigation {
     );
   }
 
+  /// Opens the full-screen intro video player for a nanny (Screen 16 perk).
+  /// No-ops when [introVideoUrl] is missing.
+  static void openIntroVideo({
+    required String? introVideoUrl,
+    String? nannyName,
+  }) {
+    final url = (introVideoUrl ?? '').trim();
+    if (url.isEmpty) {
+      Get.snackbar(
+        AppStrings.errorTitle.tr,
+        AppStrings.videoUnavailable.tr,
+      );
+      return;
+    }
+    Get.toNamed(
+      Routes.videoPlayer,
+      arguments: <String, dynamic>{
+        'videoUrl': url,
+        if (nannyName != null && nannyName.isNotEmpty) 'nannyName': nannyName,
+      },
+    );
+  }
+
   static void familyGoToTab(int index) {
+    // Notifications / deep links must not open Browse while the first job is due.
+    if (_familyFirstJobGated) {
+      Get.offAllNamed(Routes.familyForm);
+      return;
+    }
     if (Get.isRegistered<FamilyShellController>()) {
       Get.find<FamilyShellController>().goToTab(index);
       return;

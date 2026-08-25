@@ -7,9 +7,10 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 /// Prompts the user to rate Kafi on the app store. Replaces the old peer
-/// (nanny↔family) review dialog — shown after a completed trial or an ended
-/// hire. Throttled with `shared_preferences`: never shown again once the user
-/// taps "Rate now", and at most once per [_minGap] otherwise.
+/// (nanny↔family) review dialog — shown after a completed hire, ended hire,
+/// or when trial payment is confirmed. Throttled with `shared_preferences`:
+/// never shown again once the user taps "Rate now", and at most once per
+/// [_minGap] otherwise.
 class RateAppPrompt {
   RateAppPrompt._();
 

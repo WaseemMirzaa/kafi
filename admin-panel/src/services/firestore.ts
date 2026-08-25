@@ -4,17 +4,21 @@ import {
   getDoc,
   getDocs,
   limit,
+  onSnapshot,
   orderBy,
   query,
   Timestamp,
+  Unsubscribe,
   updateDoc,
   where,
   serverTimestamp,
   setDoc,
   addDoc,
 } from 'firebase/firestore';
+import { refreshAdminBadges } from '../utils/adminBadges';
 import { db } from '../config/firebase';
 import { AppConfig } from '../config/app';
+import { t } from '../locales/t';
 
 const useMock = () => AppConfig.useMock || !db;
 
@@ -133,6 +137,8 @@ export interface NannyRow {
   documents?: { type: string; status: string; url?: string; rejectionReason?: string }[];
   // ── Engagement stats ──
   stats?: NannyStatsRow;
+  /** Last time the nanny opened the app (drives hide-inactive listings). */
+  lastActiveAt?: Date;
 }
 
 export type NannyReligionPreference = 'noPreference' | 'preferMuslim' | 'preferSame' | 'openWithRespect';
@@ -278,6 +284,23 @@ export interface ChatThreadRow {
   status?: 'active' | 'archived';
 }
 
+export interface DisputeUserSnapshot {
+  phone?: string;
+  city?: string;
+  nationality?: string;
+  status?: string;
+}
+
+export interface DisputeAttachment {
+  id: string;
+  url: string;
+  storagePath: string;
+  name: string;
+  contentType: string;
+  sizeBytes: number;
+  uploadedAt: Date;
+}
+
 export interface DisputeRow {
   id: string;
   reporterId: string;
@@ -285,12 +308,16 @@ export interface DisputeRow {
   reporterType?: 'family' | 'nanny';
   reportedUserId: string;
   reportedName?: string;
+  reportedType?: 'family' | 'nanny';
   category: 'fraud' | 'abuse' | 'no_show' | 'payment' | 'other';
   description: string;
   status: 'open' | 'investigating' | 'resolved' | 'dismissed';
   relatedTrialId?: string;
   resolution?: string;
   createdAt: Date;
+  reporterSnapshot?: DisputeUserSnapshot;
+  reportedSnapshot?: DisputeUserSnapshot;
+  attachments?: DisputeAttachment[];
 }
 
 // Support chat between admin and the reporting user, scoped to a dispute.
@@ -656,11 +683,92 @@ const mockDisputeMessages: DisputeMessageRow[] = [
 ];
 
 const mockDisputes: DisputeRow[] = [
-  { id: 'd1', reporterId: 'f1', reporterName: 'Al Mansoori Family', reporterType: 'family', reportedUserId: 'n2', reportedName: 'Priya Sharma', category: 'no_show', description: 'Nanny did not arrive for scheduled trial day.', status: 'open', relatedTrialId: 't1', createdAt: new Date(Date.now() - 2 * 86400000) },
-  { id: 'd2', reporterId: 'n3', reporterName: 'Amara Kebede', reporterType: 'nanny', reportedUserId: 'f4', reportedName: 'Mohammed Al Rashid', category: 'payment', description: 'Trial payment was not made on day 3 as agreed.', status: 'investigating', relatedTrialId: 't2', createdAt: new Date(Date.now() - 5 * 86400000) },
-  { id: 'd3', reporterId: 'f3', reporterName: 'Lin Chen', reporterType: 'family', reportedUserId: 'n5', reportedName: 'Kezia Wanjiru', category: 'other', description: 'Nanny stopped responding after agreeing to an interview.', status: 'open', createdAt: new Date(Date.now() - 1 * 86400000) },
-  { id: 'd4', reporterId: 'n4', reporterName: 'Grace Nkemelu', reporterType: 'nanny', reportedUserId: 'f4', reportedName: 'Mohammed Al Rashid', category: 'abuse', description: 'Felt disrespected and overworked during the trial period.', status: 'resolved', resolution: 'Mediated between both parties; family agreed to revised hours.', createdAt: new Date(Date.now() - 14 * 86400000) },
-  { id: 'd5', reporterId: 'f2', reporterName: 'James & Sarah K.', reporterType: 'family', reportedUserId: 'n2', reportedName: 'Priya Sharma', category: 'fraud', description: 'Suspected fake references provided.', status: 'dismissed', resolution: 'References verified as genuine. No action taken.', createdAt: new Date(Date.now() - 20 * 86400000) },
+  {
+    id: 'd1',
+    reporterId: 'f1',
+    reporterName: 'Al Mansoori Family',
+    reporterType: 'family',
+    reportedUserId: 'n2',
+    reportedName: 'Priya Sharma',
+    reportedType: 'nanny',
+    category: 'no_show',
+    description: 'Nanny did not arrive for scheduled trial day.',
+    status: 'open',
+    relatedTrialId: 't1',
+    createdAt: new Date(Date.now() - 2 * 86400000),
+    reporterSnapshot: { phone: '+971501111111', city: 'Dubai', nationality: 'Emirati' },
+    reportedSnapshot: { city: 'Dubai', nationality: 'Indian', status: 'approved' },
+    attachments: [
+      {
+        id: 'a1',
+        url: 'https://www.w3.org/WAI/ER/tests/xhtml/testfiles/resources/pdf/dummy.pdf',
+        storagePath: 'disputes/d1/attachments/a1.pdf',
+        name: 'chat-screenshot.pdf',
+        contentType: 'application/pdf',
+        sizeBytes: 12000,
+        uploadedAt: new Date(Date.now() - 2 * 86400000),
+      },
+    ],
+  },
+  {
+    id: 'd2',
+    reporterId: 'n3',
+    reporterName: 'Amara Kebede',
+    reporterType: 'nanny',
+    reportedUserId: 'f4',
+    reportedName: 'Mohammed Al Rashid',
+    reportedType: 'family',
+    category: 'payment',
+    description: 'Trial payment was not made on day 3 as agreed.',
+    status: 'investigating',
+    relatedTrialId: 't2',
+    createdAt: new Date(Date.now() - 5 * 86400000),
+    reporterSnapshot: { city: 'Abu Dhabi', nationality: 'Ethiopian', status: 'approved' },
+    reportedSnapshot: { phone: '+971502222222', city: 'Abu Dhabi', nationality: 'Emirati' },
+  },
+  {
+    id: 'd3',
+    reporterId: 'f3',
+    reporterName: 'Lin Chen',
+    reporterType: 'family',
+    reportedUserId: 'n5',
+    reportedName: 'Kezia Wanjiru',
+    reportedType: 'nanny',
+    category: 'other',
+    description: 'Nanny stopped responding after agreeing to an interview.',
+    status: 'open',
+    createdAt: new Date(Date.now() - 1 * 86400000),
+    reporterSnapshot: { city: 'Sharjah', nationality: 'Chinese' },
+    reportedSnapshot: { city: 'Sharjah', nationality: 'Kenyan', status: 'approved' },
+  },
+  {
+    id: 'd4',
+    reporterId: 'n4',
+    reporterName: 'Grace Nkemelu',
+    reporterType: 'nanny',
+    reportedUserId: 'f4',
+    reportedName: 'Mohammed Al Rashid',
+    reportedType: 'family',
+    category: 'abuse',
+    description: 'Felt disrespected and overworked during the trial period.',
+    status: 'resolved',
+    resolution: 'Mediated between both parties; family agreed to revised hours.',
+    createdAt: new Date(Date.now() - 14 * 86400000),
+  },
+  {
+    id: 'd5',
+    reporterId: 'f2',
+    reporterName: 'James & Sarah K.',
+    reporterType: 'family',
+    reportedUserId: 'n2',
+    reportedName: 'Priya Sharma',
+    reportedType: 'nanny',
+    category: 'fraud',
+    description: 'Suspected fake references provided.',
+    status: 'dismissed',
+    resolution: 'References verified as genuine. No action taken.',
+    createdAt: new Date(Date.now() - 20 * 86400000),
+  },
 ];
 
 // ── Support tickets (admin ↔ user) ──
@@ -722,12 +830,13 @@ function mapNannyFromFirestore(id: string, data: Record<string, unknown>): Nanny
     v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : undefined;
   return {
     ...row,
-    fullName: row.fullName?.trim() || 'Unnamed nanny',
+    fullName: row.fullName?.trim() || t('nannies.unnamedFallback'),
     nationality: row.nationality?.trim() || '—',
     city: row.city?.trim() || '—',
     status: row.status ?? 'draft',
     isVerified: row.isVerified ?? false,
     createdAt: toDateOrUndef(data.createdAt) ?? row.createdAt,
+    lastActiveAt: toDateOrUndef(data.lastActiveAt),
     documents: asArr(row.documents) as NannyRow['documents'],
     experiences: asArr(row.experiences) as NannyRow['experiences'],
     references: asArr(row.references) as NannyRow['references'],
@@ -777,6 +886,7 @@ export const NannyService = {
     if (useMock()) {
       const i = mockNannies.findIndex((n) => n.id === id);
       if (i >= 0) mockNannies[i] = { ...mockNannies[i], status: 'approved', isVerified: true };
+      refreshAdminBadges();
       return;
     }
     await updateDoc(doc(db!, 'nannies', id), {
@@ -785,11 +895,13 @@ export const NannyService = {
       verifiedAt: serverTimestamp(),
       verifiedBy: adminId,
     });
+    refreshAdminBadges();
   },
   async reject(id: string, reason: string, adminId: string): Promise<void> {
     if (useMock()) {
       const i = mockNannies.findIndex((n) => n.id === id);
       if (i >= 0) mockNannies[i] = { ...mockNannies[i], status: 'rejected' };
+      refreshAdminBadges();
       return;
     }
     await updateDoc(doc(db!, 'nannies', id), {
@@ -798,6 +910,7 @@ export const NannyService = {
       rejectedAt: serverTimestamp(),
       rejectedBy: adminId,
     });
+    refreshAdminBadges();
   },
   async reviewVideo(nannyId: string, status: 'approved' | 'rejected', adminId: string, reason?: string): Promise<void> {
     if (useMock()) {
@@ -809,6 +922,7 @@ export const NannyService = {
           introVideoRejectionReason: status === 'rejected' ? reason : undefined,
         };
       }
+      refreshAdminBadges();
       return;
     }
     await updateDoc(doc(db!, 'nannies', nannyId), {
@@ -817,6 +931,7 @@ export const NannyService = {
       introVideoReviewedAt: serverTimestamp(),
       introVideoReviewedBy: adminId,
     });
+    refreshAdminBadges();
   },
   async block(id: string): Promise<void> {
     if (useMock()) {
@@ -852,7 +967,7 @@ export const NannyService = {
     // matching entry in the array and write the parent doc back.
     const ref = doc(db!, 'nannies', nannyId);
     const snap = await getDoc(ref);
-    if (!snap.exists()) throw new Error('Nanny not found');
+    if (!snap.exists()) throw new Error(t('nannies.notFoundError'));
     const data = snap.data() as Record<string, unknown>;
     const docs = Array.isArray(data.documents)
       ? ((data.documents as Array<Record<string, unknown>>) ?? [])
@@ -1259,6 +1374,34 @@ export const ChatService = {
 // ─────────────────────────────────────────────────────────
 // Disputes service
 // ─────────────────────────────────────────────────────────
+function parseDisputeSnapshot(raw: unknown): DisputeUserSnapshot | undefined {
+  if (!raw || typeof raw !== 'object') return undefined;
+  const m = raw as Record<string, unknown>;
+  const snap: DisputeUserSnapshot = {
+    phone: typeof m.phone === 'string' ? m.phone : undefined,
+    city: typeof m.city === 'string' ? m.city : undefined,
+    nationality: typeof m.nationality === 'string' ? m.nationality : undefined,
+    status: typeof m.status === 'string' ? m.status : undefined,
+  };
+  if (!snap.phone && !snap.city && !snap.nationality && !snap.status) return undefined;
+  return snap;
+}
+
+function parseDisputeAttachments(raw: unknown): DisputeAttachment[] | undefined {
+  if (!Array.isArray(raw) || raw.length === 0) return undefined;
+  return raw
+    .filter((item): item is Record<string, unknown> => !!item && typeof item === 'object')
+    .map((m) => ({
+      id: String(m.id ?? ''),
+      url: String(m.url ?? ''),
+      storagePath: String(m.storagePath ?? ''),
+      name: String(m.name ?? ''),
+      contentType: String(m.contentType ?? ''),
+      sizeBytes: typeof m.sizeBytes === 'number' ? m.sizeBytes : 0,
+      uploadedAt: parseTimestamp(m.uploadedAt),
+    }));
+}
+
 function parseDispute(id: string, data: Record<string, unknown>): DisputeRow {
   return {
     id,
@@ -1267,12 +1410,16 @@ function parseDispute(id: string, data: Record<string, unknown>): DisputeRow {
     reporterType: data.reporterType as 'family' | 'nanny' | undefined,
     reportedUserId: (data.reportedUserId as string) ?? '',
     reportedName: data.reportedName as string | undefined,
+    reportedType: data.reportedType as 'family' | 'nanny' | undefined,
     category: (data.category as DisputeRow['category']) ?? 'other',
     description: (data.description as string) ?? '',
     status: (data.status as DisputeRow['status']) ?? 'open',
     relatedTrialId: data.relatedTrialId as string | undefined,
     resolution: data.resolution as string | undefined,
     createdAt: parseTimestamp(data.createdAt),
+    reporterSnapshot: parseDisputeSnapshot(data.reporterSnapshot),
+    reportedSnapshot: parseDisputeSnapshot(data.reportedSnapshot),
+    attachments: parseDisputeAttachments(data.attachments),
   };
 }
 
@@ -1292,6 +1439,28 @@ function parseTicket(id: string, data: Record<string, unknown>): TicketRow {
   };
 }
 
+function mapDisputeMessage(id: string, disputeId: string, data: Record<string, unknown>): DisputeMessageRow {
+  return {
+    id,
+    disputeId,
+    senderType: (data.senderType as 'admin' | 'user') ?? 'admin',
+    senderName: data.senderName as string | undefined,
+    content: (data.content as string) ?? '',
+    createdAt: parseTimestamp(data.createdAt),
+  };
+}
+
+function mapTicketMessage(id: string, ticketId: string, data: Record<string, unknown>): TicketMessageRow {
+  return {
+    id,
+    ticketId,
+    senderType: (data.senderType as 'admin' | 'user') ?? 'admin',
+    senderName: data.senderName as string | undefined,
+    content: (data.content as string) ?? '',
+    createdAt: parseTimestamp(data.createdAt),
+  };
+}
+
 export const DisputeService = {
   async list(): Promise<DisputeRow[]> {
     if (useMock()) return mockDisputes;
@@ -1302,6 +1471,18 @@ export const DisputeService = {
     if (useMock()) return mockDisputes.find((d) => d.id === id) ?? null;
     const snap = await getDoc(doc(db!, 'disputes', id));
     return snap.exists() ? parseDispute(snap.id, snap.data() as Record<string, unknown>) : null;
+  },
+  /** Live dispute doc (status / resolution) for the admin detail pane. */
+  watch(id: string, onData: (row: DisputeRow | null) => void, onError?: (e: Error) => void): Unsubscribe {
+    if (useMock()) {
+      void this.get(id).then(onData).catch((e) => onError?.(e as Error));
+      return () => undefined;
+    }
+    return onSnapshot(
+      doc(db!, 'disputes', id),
+      (snap) => onData(snap.exists() ? parseDispute(snap.id, snap.data() as Record<string, unknown>) : null),
+      (err) => onError?.(err),
+    );
   },
   async resolve(id: string, resolution: string, status: 'resolved' | 'dismissed'): Promise<void> {
     if (useMock()) {
@@ -1325,17 +1506,24 @@ export const DisputeService = {
     const snap = await getDocs(
       query(collection(db!, 'disputes', disputeId, 'messages'), orderBy('createdAt', 'asc'), limit(500)),
     );
-    return snap.docs.map((d) => {
-      const data = d.data() as Record<string, unknown>;
-      return {
-        id: d.id,
-        disputeId,
-        senderType: (data.senderType as 'admin' | 'user') ?? 'admin',
-        senderName: data.senderName as string | undefined,
-        content: (data.content as string) ?? '',
-        createdAt: parseTimestamp(data.createdAt),
-      };
-    });
+    return snap.docs.map((d) => mapDisputeMessage(d.id, disputeId, d.data() as Record<string, unknown>));
+  },
+  /** Live message stream for the report support chat. */
+  watchMessages(
+    disputeId: string,
+    onData: (msgs: DisputeMessageRow[]) => void,
+    onError?: (e: Error) => void,
+  ): Unsubscribe {
+    if (useMock()) {
+      void this.listMessages(disputeId).then(onData).catch((e) => onError?.(e as Error));
+      return () => undefined;
+    }
+    return onSnapshot(
+      query(collection(db!, 'disputes', disputeId, 'messages'), orderBy('createdAt', 'asc'), limit(500)),
+      (snap) =>
+        onData(snap.docs.map((d) => mapDisputeMessage(d.id, disputeId, d.data() as Record<string, unknown>))),
+      (err) => onError?.(err),
+    );
   },
   async sendMessage(disputeId: string, content: string, senderName = 'Support'): Promise<DisputeMessageRow> {
     if (useMock()) {
@@ -1385,6 +1573,18 @@ export const TicketService = {
     const snap = await getDoc(doc(db!, 'tickets', id));
     return snap.exists() ? parseTicket(snap.id, snap.data() as Record<string, unknown>) : null;
   },
+  /** Live ticket doc (status / lastMessage) for the admin detail pane. */
+  watch(id: string, onData: (row: TicketRow | null) => void, onError?: (e: Error) => void): Unsubscribe {
+    if (useMock()) {
+      void this.get(id).then(onData).catch((e) => onError?.(e as Error));
+      return () => undefined;
+    }
+    return onSnapshot(
+      doc(db!, 'tickets', id),
+      (snap) => onData(snap.exists() ? parseTicket(snap.id, snap.data() as Record<string, unknown>) : null),
+      (err) => onError?.(err),
+    );
+  },
   async updateStatus(id: string, status: TicketRow['status']): Promise<void> {
     if (useMock()) {
       const i = mockTickets.findIndex((t) => t.id === id);
@@ -1403,17 +1603,24 @@ export const TicketService = {
     const snap = await getDocs(
       query(collection(db!, 'tickets', ticketId, 'messages'), orderBy('createdAt', 'asc'), limit(500)),
     );
-    return snap.docs.map((d) => {
-      const data = d.data() as Record<string, unknown>;
-      return {
-        id: d.id,
-        ticketId,
-        senderType: (data.senderType as 'admin' | 'user') ?? 'admin',
-        senderName: data.senderName as string | undefined,
-        content: (data.content as string) ?? '',
-        createdAt: parseTimestamp(data.createdAt),
-      };
-    });
+    return snap.docs.map((d) => mapTicketMessage(d.id, ticketId, d.data() as Record<string, unknown>));
+  },
+  /** Live message stream for the support ticket conversation. */
+  watchMessages(
+    ticketId: string,
+    onData: (msgs: TicketMessageRow[]) => void,
+    onError?: (e: Error) => void,
+  ): Unsubscribe {
+    if (useMock()) {
+      void this.listMessages(ticketId).then(onData).catch((e) => onError?.(e as Error));
+      return () => undefined;
+    }
+    return onSnapshot(
+      query(collection(db!, 'tickets', ticketId, 'messages'), orderBy('createdAt', 'asc'), limit(500)),
+      (snap) =>
+        onData(snap.docs.map((d) => mapTicketMessage(d.id, ticketId, d.data() as Record<string, unknown>))),
+      (err) => onError?.(err),
+    );
   },
   async sendMessage(ticketId: string, content: string, senderName = 'Kafi Support'): Promise<TicketMessageRow> {
     if (useMock()) {

@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/job_type_label.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/support/report_user_sheet.dart';
 
@@ -36,7 +38,7 @@ class ProfileHero extends StatelessWidget {
             child: _circleBtn(Icons.favorite, () => AppNavigation.toggleShortlist(card),
                 filled: true),
           ),
-          // Report this nanny — files a support ticket to the admin team.
+          // Report this nanny — files a report under Settings → My reports.
           Positioned(
             top: 11,
             right: 45,
@@ -96,7 +98,7 @@ class ProfileHero extends StatelessWidget {
                 Text(card.name,
                     style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w900)),
                 const SizedBox(height: 1),
-                Text('${card.jobType} · ${card.city} · ${card.nationality}',
+                Text('${localizeJobTypeLabel(card.jobType)} · ${card.city} · ${card.nationality}',
                     style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600)),
                 // Shown only when the nanny was scored against the family's job
                 // (matchPercent > 0); otherwise there's no "your job" to match.
@@ -115,7 +117,9 @@ class ProfileHero extends StatelessWidget {
                       children: [
                         const Icon(Icons.star, color: Colors.white, size: 11),
                         const SizedBox(width: 4),
-                        Text('${card.matchPercent}% match with your job',
+                        Text(
+                            AppStrings.matchWithJobN
+                                .trParams({'n': '${card.matchPercent}'}),
                             style: KafiTheme.fredoka(11.5, color: Colors.white, w: FontWeight.w600)),
                       ],
                     ),

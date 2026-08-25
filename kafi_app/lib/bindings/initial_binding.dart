@@ -54,6 +54,7 @@ class InitialBinding extends Bindings {
     final mockSubscription = AppConfig.subscriptionUsesMock;
 
     if (AppConfig.useMock) {
+      Get.log('Kafi mode: MOCK (in-memory seed listings)');
       Get.put<IAuthService>(MockAuthService(), permanent: true);
       Get.put<IUserService>(MockUserService(), permanent: true);
       Get.put<IStorageService>(MockStorageService(), permanent: true);
@@ -68,6 +69,10 @@ class InitialBinding extends Bindings {
       Get.put<IHireService>(MockHireService(), permanent: true);
       Get.put<ITicketService>(MockTicketService(), permanent: true);
     } else {
+      Get.log(
+        'Kafi mode: LIVE Firestore'
+        '${mockSubscription ? ' (subscription still mock)' : ''}',
+      );
       Get.put<IAuthService>(FirebaseAuthService(), permanent: true);
       Get.put<IUserService>(FirestoreUserService(), permanent: true);
       Get.put<IStorageService>(FirebaseStorageServiceImpl(), permanent: true);

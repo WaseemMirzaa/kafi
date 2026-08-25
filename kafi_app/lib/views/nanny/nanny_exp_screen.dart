@@ -216,10 +216,13 @@ class _ExpCardState extends State<_ExpCard> {
     }
   }
 
-  String _fmt(DateTime d) {
-    const m = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-    return '${m[d.month - 1]} ${d.year}';
-  }
+  static const _monthKeys = [
+    AppStrings.monthJan, AppStrings.monthFeb, AppStrings.monthMar, AppStrings.monthApr,
+    AppStrings.monthMay, AppStrings.monthJun, AppStrings.monthJul, AppStrings.monthAug,
+    AppStrings.monthSep, AppStrings.monthOct, AppStrings.monthNov, AppStrings.monthDec,
+  ];
+
+  String _fmt(DateTime d) => '${_monthKeys[d.month - 1].tr} ${d.year}';
 
   @override
   Widget build(BuildContext context) {
@@ -270,9 +273,9 @@ class _ExpCardState extends State<_ExpCard> {
             setState(() => _jobTitle = v ?? _jobTitle);
             _emit();
           }),
-          KafiTextField(label: AppStrings.expEmployer.tr, controller: _employer, hint: 'e.g. Al Mansoori Family'),
-          KafiTextField(label: AppStrings.expCountry.tr, controller: _country, hint: 'e.g. Philippines'),
-          KafiTextField(label: AppStrings.expCity.tr, controller: _city, hint: 'e.g. Dubai'),
+          KafiTextField(label: AppStrings.expEmployer.tr, controller: _employer, hint: AppStrings.expEmployerHint.tr),
+          KafiTextField(label: AppStrings.expCountry.tr, controller: _country),
+          KafiTextField(label: AppStrings.expCity.tr, controller: _city),
           Row(
             children: [
               Expanded(child: _dateField(AppStrings.expFrom.tr, _from, () => _pickDate(true))),
@@ -281,8 +284,8 @@ class _ExpCardState extends State<_ExpCard> {
             ],
           ),
           const SizedBox(height: 7),
-          KafiTextField(label: AppStrings.expChildren.tr, controller: _children, hint: 'e.g. 2 kids, ages 1 & 4'),
-          KafiTextField(label: AppStrings.expDuties.tr, controller: _duties, maxLines: 3, hint: 'Cooking, school pickup, homework help…'),
+          KafiTextField(label: AppStrings.expChildren.tr, controller: _children, hint: AppStrings.expChildrenHint.tr),
+          KafiTextField(label: AppStrings.expDuties.tr, controller: _duties, maxLines: 3, hint: AppStrings.expDutiesHint.tr),
           _label(AppStrings.expReason.tr),
           const SizedBox(height: 4),
           _dropdown(_reason, NannyConstants.reasonsLeaving, (v) {

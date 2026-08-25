@@ -39,7 +39,7 @@ class ErrorHandler {
 
     return UnknownError(
       code: 'unknown',
-      message: 'Something went wrong. Try again.',
+      message: AppStrings.errUnknownSomethingWrong.tr,
       originalError: error,
     );
   }
@@ -63,7 +63,7 @@ class ErrorHandler {
       case 'weak-password':
         return AuthError.weakPassword();
       default:
-        return UnknownError(code: e.code, message: 'Auth error');
+        return UnknownError(code: e.code, message: AppStrings.errUnknownAuthError.tr);
     }
   }
 
@@ -78,7 +78,7 @@ class ErrorHandler {
       case 'resource-exhausted':
         return RateLimitError();
       default:
-        return UnknownError(code: e.code, message: 'Service error');
+        return UnknownError(code: e.code, message: AppStrings.errUnknownServiceError.tr);
     }
   }
 

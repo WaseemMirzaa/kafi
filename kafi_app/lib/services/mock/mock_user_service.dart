@@ -4,6 +4,7 @@ import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
+import 'package:kafi_app/services/mock/mock_browse_bus.dart';
 import 'package:kafi_app/utils/constants/mock_constants.dart';
 
 class MockUserService implements IUserService {
@@ -44,6 +45,7 @@ class MockUserService implements IUserService {
     await Future<void>.delayed(AppConfig.mockDelay);
     _nannies[nanny.id] = nanny;
     _streams[nanny.id]?.add(nanny);
+    MockBrowseBus.notify();
     if (AppConfig.useMock && nanny.status == NannyOnboardingStatus.pending) {
       _scheduleMockAutoApprove(id: nanny.id);
     }
@@ -70,10 +72,16 @@ class MockUserService implements IUserService {
     final updated = n.copyWith(status: NannyOnboardingStatus.pending);
     _nannies[id] = updated;
     _streams[id]?.add(updated);
+    MockBrowseBus.notify();
     if (AppConfig.useMock) {
       _scheduleMockAutoApprove(id: id);
     }
   }
+
+  /// Approved+verified profiles created in this session (for family browse).
+  Iterable<NannyModel> get browseableNannies => _nannies.values.where(
+        (n) => n.status == NannyOnboardingStatus.approved && n.isVerified,
+      );
 
   void _scheduleMockAutoApprove({required String id}) {
     _approveTimers[id]?.cancel();
@@ -99,6 +107,7 @@ class MockUserService implements IUserService {
       );
       _nannies[id] = approved;
       _streams[id]?.add(approved);
+      MockBrowseBus.notify();
       _approveTimers.remove(id);
     });
   }

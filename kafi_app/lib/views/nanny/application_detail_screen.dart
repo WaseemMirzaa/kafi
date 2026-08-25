@@ -48,11 +48,21 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
   @override
   void initState() {
     super.initState();
-    // Reload on entry so a status change since the list loaded is reflected —
-    // the family may have viewed/shortlisted/offered a trial in the meantime.
-    if (Get.isRegistered<ApplicationController>()) {
-      Get.find<ApplicationController>().loadApplications();
-    }
+    // Defer Rx writes until after this route finishes building. Calling
+    // loadApplications/refreshAll here (they set isLoading / all synchronously
+    // before the first await) marks the still-mounted My Applications Obx dirty
+    // mid-transition → "setState() called during build".
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      if (Get.isRegistered<ApplicationController>()) {
+        Get.find<ApplicationController>().loadApplications();
+      }
+      // Pending trial offers need TrialController.all hydrated so Accept/Decline
+      // render on this screen (Screen 32A), not only "View in Messages".
+      if (Get.isRegistered<TrialController>()) {
+        Get.find<TrialController>().refreshAll();
+      }
+    });
   }
 
   /// The live application from the controller (falls back to the passed
@@ -91,8 +101,12 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      // Register trial loading so Accept/Decline buttons rebuild without a
+      // nested Obx (nested Obx under an outer Obx is a common GetX pitfall).
+      final trialLoading = Get.isRegistered<TrialController>() &&
+          Get.find<TrialController>().isLoading.value;
       final app = _app;
-      final bottomBar = _buildActionBar(app);
+      final bottomBar = _buildActionBar(app, trialLoading: trialLoading);
       return Scaffold(
       backgroundColor: KafiColors.nannyBg,
       body: SafeArea(
@@ -124,7 +138,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     });
   }
 
-  Widget? _buildActionBar(ApplicationModel app) {
+  Widget? _buildActionBar(ApplicationModel app, {required bool trialLoading}) {
     switch (app.status) {
       case ApplicationStatus.pending:
       case ApplicationStatus.viewed:
@@ -158,16 +172,19 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
         );
       case ApplicationStatus.trialOffered:
         final trial = _trial;
-        if (trial == null) {
-          return _actionBar(
-            child: KafiPrimaryButton(
-              label: 'View in Messages',
-              icon: Icons.chat_bubble_outline,
-              onPressed: () => AppNavigation.openChatWithFamily(familyId: app.familyId, familyName: app.familyName),
-            ),
-          );
+        // Only pending offers get Accept / Counter / Decline (Screen 32A).
+        if (trial != null && trial.status == TrialStatus.pending) {
+          return _actionBar(child: _trialActions(trial, isLoading: trialLoading));
         }
-        return _actionBar(child: _trialActions(trial));
+        // Trial still loading, or already responded — keep a path into chat.
+        return _actionBar(
+          child: KafiPrimaryButton(
+            label: AppStrings.appDetailViewInMessages.tr,
+            icon: Icons.chat_bubble_outline,
+            onPressed: () => AppNavigation.openChatWithFamily(
+                familyId: app.familyId, familyName: app.familyName),
+          ),
+        );
       case ApplicationStatus.hired:
         // Hired → the ongoing relationship lives in Messages (hire badge +
         // chat). "View Active Trial" was wrong (a hire is not a trial, and
@@ -239,7 +256,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     final confirm = await _showNannyDialog(
       icon: Icons.undo,
       accentColor: KafiColors.redD,
-      title: 'Withdraw Application',
+      title: AppStrings.appDetailWithdrawTitle.tr,
       message: AppStrings.appDetailWithdrawConfirm.tr,
       confirmLabel: AppStrings.appDetailWithdrawYes.tr,
       confirmVariant: KafiButtonVariant.red,
@@ -319,7 +336,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       case ApplicationStatus.pending:
         return _BannerConfig(
           icon: Icons.schedule,
-          title: 'Pending Review',
+          title: AppStrings.appDetailPendingTitle.tr,
           message: AppStrings.appDetailPendingMsg.tr,
           bg: KafiColors.ambL,
           border: const Color(0xFFFFD080),
@@ -329,7 +346,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       case ApplicationStatus.viewed:
         return _BannerConfig(
           icon: Icons.visibility_outlined,
-          title: 'Profile Viewed',
+          title: AppStrings.appDetailViewedTitle.tr,
           message: AppStrings.appDetailViewedMsg.tr,
           bg: KafiColors.purpL,
           border: KafiColors.purpD.withValues(alpha: 0.25),
@@ -390,13 +407,17 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
   }
 
   Widget _jobCard(JobPostModel? job, ApplicationModel app) {
-    final typeLabel = job?.jobType.name == 'liveOut' ? 'Live-out' : 'Live-in';
+    final typeLabel =
+        job?.jobType.name == 'liveOut' ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr;
     final city = job?.city ?? '—';
-    final title = job?.jobTitle ?? '$typeLabel Nanny';
+    final title = job?.jobTitle ?? '$typeLabel ${AppStrings.nannySuffix.tr}';
     final family = job?.familyName ?? '—';
     final initial = family.isNotEmpty ? family[0].toUpperCase() : 'F';
     final salary = job != null && job.salaryMax > 0
-        ? 'AED ${job.salaryMin}–${job.salaryMax}/mo'
+        ? AppStrings.jobSalaryRange.trParams({
+            'min': '${job.salaryMin}',
+            'max': '${job.salaryMax}',
+          })
         : null;
 
     return Container(
@@ -534,10 +555,10 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
   }
 
   List<_TimelineStep> _timelineSteps(ApplicationStatus s) {
-    final applied = _TimelineStep('Applied', true);
-    final viewed = _TimelineStep('Viewed', s != ApplicationStatus.pending);
+    final applied = _TimelineStep(AppStrings.appDetailApplied.tr, true);
+    final viewed = _TimelineStep(AppStrings.nannyAppStatusViewed.tr, s != ApplicationStatus.pending);
     final responded = _TimelineStep(
-      'Responded',
+      AppStrings.appDetailStepResponded.tr,
       [
         ApplicationStatus.shortlisted,
         ApplicationStatus.trialOffered,
@@ -545,9 +566,9 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
         ApplicationStatus.hired,
       ].contains(s),
     );
-    final hired = _TimelineStep('Hired!', s == ApplicationStatus.hired);
+    final hired = _TimelineStep(AppStrings.appDetailStepHired.tr, s == ApplicationStatus.hired);
     if (s == ApplicationStatus.withdrawn) {
-      return [applied, _TimelineStep('Withdrawn', true)];
+      return [applied, _TimelineStep(AppStrings.nannyAppStatusWithdrawn.tr, true)];
     }
     if (s == ApplicationStatus.hired) {
       return [applied, viewed, responded, hired];
@@ -585,13 +606,13 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
           ),
         if (app.coverMessage != null && app.coverMessage!.isNotEmpty) const SizedBox(height: 10),
         _sectionCard(
-          title: 'Application Timeline',
+          title: AppStrings.appDetailTimelineTitle.tr,
           icon: Icons.schedule,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _dateRow('Applied', app.createdAt),
-              if (app.viewedAt != null) _dateRow('Viewed', app.viewedAt!),
+              _dateRow(AppStrings.appDetailApplied.tr, app.createdAt),
+              if (app.viewedAt != null) _dateRow(AppStrings.nannyAppStatusViewed.tr, app.viewedAt!),
             ],
           ),
         ),
@@ -612,14 +633,15 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
           ),
         if (app.coverMessage != null && app.coverMessage!.isNotEmpty) const SizedBox(height: 10),
         _sectionCard(
-          title: 'Application Timeline',
+          title: AppStrings.appDetailTimelineTitle.tr,
           icon: Icons.schedule,
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _dateRow('Applied', app.createdAt),
-              if (app.viewedAt != null) _dateRow('Viewed', app.viewedAt!),
-              if (app.respondedAt != null) _dateRow('Shortlisted', app.respondedAt!),
+              _dateRow(AppStrings.appDetailApplied.tr, app.createdAt),
+              if (app.viewedAt != null) _dateRow(AppStrings.nannyAppStatusViewed.tr, app.viewedAt!),
+              if (app.respondedAt != null)
+                _dateRow(AppStrings.nannyAppStatusShortlisted.tr, app.respondedAt!),
             ],
           ),
         ),
@@ -633,10 +655,10 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       return _trialOfferCard(trial);
     }
     return _sectionCard(
-      title: 'Trial Offer',
+      title: AppStrings.appDetailNoTrialTitle.tr,
       icon: Icons.handshake_outlined,
       child: Text(
-        'A trial offer has been sent. Open your messages to view the full details and respond.',
+        AppStrings.appDetailNoTrialBody.tr,
         style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w600),
       ),
     );
@@ -655,18 +677,20 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
               color: KafiColors.roseP,
               borderRadius: BorderRadius.circular(8),
             ),
-            child: Text('🤝 Trial Offer Details',
+            child: Text('🤝 ${AppStrings.appDetailTrialOfferDetails.tr}',
                 style: KafiTheme.fredoka(10, color: KafiColors.roseD, w: FontWeight.w700)),
           ),
           const SizedBox(height: 12),
           _trialRow(Icons.calendar_month_outlined,
-              AppStrings.appDetailTrialDuration.tr, '${trial.durationDays} days'),
+              AppStrings.appDetailTrialDuration.tr,
+              AppStrings.familyTrialDaysN.trParams({'n': '${trial.durationDays}'})),
           _trialRow(Icons.payments_outlined,
-              AppStrings.appDetailTrialRate.tr, 'AED ${trial.dailyRate}/day'),
+              AppStrings.appDetailTrialRate.tr,
+              AppStrings.aedPerDay.trParams({'rate': '${trial.dailyRate}'})),
           _trialRow(Icons.today_outlined, AppStrings.appDetailTrialStart.tr,
               _fmtDate(trial.startDate)),
           _trialRow(Icons.home_work_outlined, AppStrings.appDetailTrialType.tr,
-              trial.trialType == 'live-in' ? 'Live-in' : 'Live-out'),
+              trial.trialType == 'live-in' ? AppStrings.jobLiveIn.tr : AppStrings.jobLiveOut.tr),
           if (trial.location.isNotEmpty)
             _trialRow(Icons.location_on_outlined,
                 AppStrings.appDetailTrialLocation.tr, trial.location),
@@ -682,7 +706,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
               children: [
                 Text(AppStrings.appDetailTrialTotal.tr,
                     style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
-                Text('AED ${trial.totalAmount}',
+                Text(AppStrings.aedAmount.trParams({'amount': '${trial.totalAmount}'}),
                     style: KafiTheme.nunito(14, color: KafiColors.roseD, w: FontWeight.w900)),
               ],
             ),
@@ -726,42 +750,37 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     );
   }
 
-  Widget _trialActions(TrialModel trial) {
-    return Obx(() {
-      final isLoading = Get.isRegistered<TrialController>()
-          ? Get.find<TrialController>().isLoading.value
-          : false;
-      final threadId = _threadId;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          KafiPrimaryButton(
-            label: AppStrings.trialOfferAccept.tr,
-            icon: Icons.check_circle_outline,
-            variant: KafiButtonVariant.green,
-            loading: isLoading,
-            onPressed: () => _confirmAndAccept(trial.id, threadId),
+  Widget _trialActions(TrialModel trial, {required bool isLoading}) {
+    final threadId = _threadId;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        KafiPrimaryButton(
+          label: AppStrings.trialOfferAccept.tr,
+          icon: Icons.check_circle_outline,
+          variant: KafiButtonVariant.green,
+          loading: isLoading,
+          onPressed: () => _confirmAndAccept(trial.id, threadId),
+        ),
+        const SizedBox(height: 8),
+        _outlineButton(
+          label: AppStrings.trialOfferCounter.tr,
+          icon: Icons.swap_horiz,
+          onPressed: isLoading ? null : () => _showCounterSheet(trial),
+        ),
+        const SizedBox(height: 6),
+        TextButton(
+          onPressed: isLoading ? null : () => _confirmAndDecline(trial.id, threadId),
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(vertical: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
           ),
-          const SizedBox(height: 8),
-          _outlineButton(
-            label: AppStrings.trialOfferCounter.tr,
-            icon: Icons.swap_horiz,
-            onPressed: isLoading ? null : () => _showCounterSheet(trial),
-          ),
-          const SizedBox(height: 6),
-          TextButton(
-            onPressed: isLoading ? null : () => _confirmAndDecline(trial.id, threadId),
-            style: TextButton.styleFrom(
-              padding: const EdgeInsets.symmetric(vertical: 4),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-            ),
-            child: Text(AppStrings.trialOfferDecline.tr,
-                style: KafiTheme.nunito(11, color: KafiColors.redD, w: FontWeight.w700)),
-          ),
-        ],
-      );
-    });
+          child: Text(AppStrings.trialOfferDecline.tr,
+              style: KafiTheme.nunito(11, color: KafiColors.redD, w: FontWeight.w700)),
+        ),
+      ],
+    );
   }
 
   Widget _outlineButton({
@@ -802,14 +821,15 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
 
   Widget _buildHiredBody(ApplicationModel app) {
     return _sectionCard(
-      title: 'Application Timeline',
+      title: AppStrings.appDetailTimelineTitle.tr,
       icon: Icons.schedule,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _dateRow('Applied', app.createdAt),
-          if (app.viewedAt != null) _dateRow('Viewed', app.viewedAt!),
-          if (app.respondedAt != null) _dateRow('Hired', app.respondedAt!),
+          _dateRow(AppStrings.appDetailApplied.tr, app.createdAt),
+          if (app.viewedAt != null) _dateRow(AppStrings.nannyAppStatusViewed.tr, app.viewedAt!),
+          if (app.respondedAt != null)
+            _dateRow(AppStrings.appDetailLabelHired.tr, app.respondedAt!),
         ],
       ),
     );
@@ -817,19 +837,22 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
 
   Widget _buildClosedBody(ApplicationModel app) {
     return _sectionCard(
-      title: 'Application Timeline',
+      title: AppStrings.appDetailTimelineTitle.tr,
       icon: Icons.schedule,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          _dateRow('Applied', app.createdAt),
-          if (app.viewedAt != null) _dateRow('Viewed', app.viewedAt!),
+          _dateRow(AppStrings.appDetailApplied.tr, app.createdAt),
+          if (app.viewedAt != null) _dateRow(AppStrings.nannyAppStatusViewed.tr, app.viewedAt!),
           if (app.respondedAt != null)
             _dateRow(
-              app.status == ApplicationStatus.declined ? 'Declined' : 'Responded',
+              app.status == ApplicationStatus.declined
+                  ? AppStrings.nannyAppStatusDeclined.tr
+                  : AppStrings.appDetailStepResponded.tr,
               app.respondedAt!,
             ),
-          if (app.withdrawnAt != null) _dateRow('Withdrawn', app.withdrawnAt!),
+          if (app.withdrawnAt != null)
+            _dateRow(AppStrings.nannyAppStatusWithdrawn.tr, app.withdrawnAt!),
         ],
       ),
     );
@@ -888,9 +911,10 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     required String title,
     String? message,
     required String confirmLabel,
-    String cancelLabel = 'Cancel',
+    String? cancelLabel,
     KafiButtonVariant confirmVariant = KafiButtonVariant.green,
   }) {
+    final resolvedCancelLabel = cancelLabel ?? AppStrings.cancel.tr;
     return Get.dialog<bool>(
       Dialog(
         backgroundColor: Colors.transparent,
@@ -936,7 +960,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
               const SizedBox(height: 6),
               TextButton(
                 onPressed: () => Get.back(result: false),
-                child: Text(cancelLabel,
+                child: Text(resolvedCancelLabel,
                     style: KafiTheme.nunito(12, color: KafiColors.ts, w: FontWeight.w700)),
               ),
             ],
@@ -952,7 +976,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       icon: Icons.check_circle_outline,
       accentColor: KafiColors.grnD,
       title: AppStrings.appDetailAcceptConfirm.tr,
-      confirmLabel: 'Accept Offer',
+      confirmLabel: AppStrings.appDetailAcceptOfferLabel.tr,
       confirmVariant: KafiButtonVariant.green,
     );
     if (ok == true && Get.isRegistered<TrialController>()) {
@@ -966,7 +990,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       icon: Icons.cancel_outlined,
       accentColor: KafiColors.redD,
       title: AppStrings.appDetailDeclineConfirm.tr,
-      confirmLabel: 'Decline Offer',
+      confirmLabel: AppStrings.appDetailDeclineOfferLabel.tr,
       confirmVariant: KafiButtonVariant.red,
     );
     if (ok == true && Get.isRegistered<TrialController>()) {
@@ -1023,7 +1047,9 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                     Text(AppStrings.appDetailCounterTitle.tr,
                         style: KafiTheme.pacifico(16, color: KafiColors.roseD)),
                     const SizedBox(height: 4),
-                    Text('Original offer: AED ${trial.dailyRate}/day',
+                    Text(
+                        AppStrings.appDetailOriginalOffer
+                            .trParams({'rate': '${trial.dailyRate}'}),
                         style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600)),
                   ],
                 ),
@@ -1038,8 +1064,8 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                 autofocus: true,
                 style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w800),
                 decoration: InputDecoration(
-                  prefixText: 'AED ',
-                  suffixText: '/day',
+                  prefixText: AppStrings.currencyAedPrefix.tr,
+                  suffixText: AppStrings.perDaySuffix.tr,
                   filled: true,
                   fillColor: KafiColors.nannyBg,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
@@ -1081,7 +1107,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
               const SizedBox(height: 4),
               TextButton(
                 onPressed: () => Get.back(),
-                child: Text('Cancel',
+                child: Text(AppStrings.cancel.tr,
                     style: KafiTheme.nunito(12, color: KafiColors.ts, w: FontWeight.w700)),
               ),
             ],

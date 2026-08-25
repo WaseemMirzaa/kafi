@@ -51,7 +51,15 @@ Create / use a Firebase project and register an **Android** app and an **iOS** a
   ```
 - Enable **Cloud Storage** (used for nanny photos / video / documents).
 
-## 5. Run
+## 5. Push Notifications (iOS)
+
+1. Apple Developer → App ID → enable **Push Notifications**.
+2. Upload an APNs key (or certificates) in Firebase Console → Project settings → Cloud Messaging → Apple app configuration.
+3. Xcode target → **Signing & Capabilities** → Push Notifications (+ Background Modes → Remote notifications). `Runner/Runner.entitlements` already has `aps-environment`.
+4. `AppDelegate` registers for remote notifications and sets `Messaging.messaging().apnsToken` (and Auth APNs token) on device-token receipt.
+5. Rebuild on a **physical device** (Simulator does not receive real APNs). Grant notification permission when prompted after login.
+
+## 6. Run
 
 ```bash
 cd kafi_app

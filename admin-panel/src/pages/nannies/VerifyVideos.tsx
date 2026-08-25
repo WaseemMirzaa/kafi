@@ -7,10 +7,12 @@ import {
   PageShell,
   StatusBadge,
   TableCard,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import { NannyService, NannyRow } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
 import { useAuthStore } from '../../hooks/useAuth';
+import { useLocale } from '../../context/LocaleContext';
 
 /**
  * Intro-video review queue. Previously the only way to review a nanny's intro
@@ -19,6 +21,7 @@ import { useAuthStore } from '../../hooks/useAuth';
  * a real queue with inline approve / request-re-record actions.
  */
 export default function VerifyVideos() {
+  const { t } = useLocale();
   const [items, setItems] = useState<NannyRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -31,18 +34,19 @@ export default function VerifyVideos() {
     setLoadError(null);
     NannyService.listPendingVideos()
       .then(setItems)
-      .catch((e) => setLoadError((e as Error).message || 'Failed to load pending videos'))
+      .catch((e) => setLoadError((e as Error).message || t('nannies.failedToLoadVideos')))
       .finally(() => setLoading(false));
   };
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const review = async (n: NannyRow, status: 'approved' | 'rejected') => {
     let reason: string | undefined;
     if (status === 'rejected') {
-      reason = window.prompt('Reason (visible to the nanny — prompts a re-record):') ?? undefined;
+      reason = window.prompt(t('nannies.videoRejectPrompt')) ?? undefined;
       if (!reason) return;
     }
     setBusyId(n.id);
@@ -52,7 +56,7 @@ export default function VerifyVideos() {
       // No longer pending — drop it from the queue.
       setItems((prev) => prev.filter((x) => x.id !== n.id));
     } catch (e) {
-      setActionError((e as Error).message || 'Video review failed');
+      setActionError((e as Error).message || t('nannies.videoReviewFailed'));
     } finally {
       setBusyId(null);
     }
@@ -61,21 +65,21 @@ export default function VerifyVideos() {
   return (
     <PageShell>
       <PageHeader
-        title="Review intro videos"
-        subtitle={`${items.length} pending · Approve or request a re-record`}
+        title={t('nannies.reviewIntroVideosTitle')}
+        subtitle={t('nannies.reviewIntroVideosSubtitle', { count: items.length })}
       />
       <PageContent>
         {actionError && (
           <div className="px-3 py-2 text-[10px] font-bold text-rose-dark">{actionError}</div>
         )}
-        <TableCard title="Pending intro videos">
-          {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
+        <TableCard title={t('nannies.pendingIntroVideos')}>
+          {loading && <PageLoader compact />}
           {!loading && loadError && (
             <div className="px-3 py-4 text-[10px] font-bold text-rose-dark">{loadError}</div>
           )}
           {!loading && !loadError && items.length === 0 && (
             <div className="px-3 py-4 text-[10px] text-[#8090B0]">
-              All caught up — no pending videos.
+              {t('nannies.allCaughtUpVideos')}
             </div>
           )}
           {items.map((n) => (
@@ -88,12 +92,12 @@ export default function VerifyVideos() {
                     {n.nationality} · {n.city}
                   </div>
                 </div>
-                <StatusBadge variant="verify">Video pending</StatusBadge>
+                <StatusBadge variant="verify">{t('nannies.videoPendingBadge')}</StatusBadge>
                 <Link
                   to={`/nannies/${n.id}`}
                   className="text-[9px] font-bold text-purple font-fredoka no-underline ml-1"
                 >
-                  Profile →
+                  {t('nannies.profileLink')}
                 </Link>
               </div>
               {n.introVideoUrl ? (
@@ -104,7 +108,7 @@ export default function VerifyVideos() {
                   className="w-full max-h-72 rounded-lg bg-black mt-2"
                 />
               ) : (
-                <div className="text-[9px] text-[#8090B0] mt-2">No video URL on record.</div>
+                <div className="text-[9px] text-[#8090B0] mt-2">{t('nannies.noVideoOnRecord')}</div>
               )}
               <div className="flex gap-1.5 mt-2">
                 <button
@@ -113,7 +117,7 @@ export default function VerifyVideos() {
                   disabled={busyId === n.id}
                   onClick={() => review(n, 'approved')}
                 >
-                  Approve ✓
+                  {t('common.approve')}
                 </button>
                 <button
                   type="button"
@@ -121,7 +125,7 @@ export default function VerifyVideos() {
                   disabled={busyId === n.id}
                   onClick={() => review(n, 'rejected')}
                 >
-                  Request re-record ✗
+                  {t('nannies.requestReRecord')}
                 </button>
               </div>
             </div>

@@ -10,6 +10,7 @@ import 'package:kafi_app/services/location_service.dart';
 import 'package:kafi_app/services/places_service.dart';
 import 'package:kafi_app/utils/constants/app_constants.dart';
 import 'package:kafi_app/utils/constants/location_constants.dart';
+import 'package:kafi_app/utils/kafi_text_context_menu.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 /// A selected location value. Carries the structured pieces the DB persists:
@@ -181,7 +182,7 @@ class _FallbackLocationSheetState extends State<_FallbackLocationSheet> {
       _selectedName = widget.initial.trim();
       _filter(widget.initial.trim());
     }
-    _focusNode.requestFocus();
+    // Do not autofocus — iOS SystemContextMenu races with sheet mount.
   }
 
   @override
@@ -295,7 +296,7 @@ class _FallbackLocationSheetState extends State<_FallbackLocationSheet> {
         displayName: name,
         fullAddress: _selectedSubtitle != null ? '$name, ${_selectedSubtitle!}' : name,
         city: name,
-        country: 'United Arab Emirates',
+        country: AppStrings.countryUae.tr,
       ),
     );
   }
@@ -385,6 +386,8 @@ class _FallbackLocationSheetState extends State<_FallbackLocationSheet> {
                 child: TextField(
                   controller: _searchCtrl,
                   focusNode: _focusNode,
+                  contextMenuBuilder: kafiNoTextContextMenu,
+                  enableInteractiveSelection: false,
                   onChanged: (v) {
                     _selectedName = null;
                     _selectedSubtitle = null;
@@ -842,6 +845,8 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                 child: TextField(
                   controller: _searchCtrl,
                   focusNode: _focusNode,
+                  contextMenuBuilder: kafiNoTextContextMenu,
+                  enableInteractiveSelection: false,
                   onChanged: _onSearchChanged,
                   style: KafiTheme.nunito(14, color: KafiColors.td),
                   decoration: InputDecoration(
@@ -873,7 +878,6 @@ class _LocationPickerSheetState extends State<_LocationPickerSheet> {
                       _predictions = [];
                       _selectedPlace = null;
                     });
-                    _focusNode.requestFocus();
                   },
                 ),
             ],

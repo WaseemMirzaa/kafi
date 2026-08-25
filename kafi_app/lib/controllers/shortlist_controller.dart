@@ -128,18 +128,34 @@ class ShortlistController extends GetxController {
   /// Adds a nanny to the shortlist. Returns true on success so the caller only
   /// confirms when the write actually landed (was previously unguarded — a
   /// failed write threw an unhandled async error from the tap handler).
-  Future<bool> addToShortlist(String nannyId, {String? notes}) async {
+  Future<bool> addToShortlist(
+    String nannyId, {
+    String? notes,
+    String? nannyName,
+    String? nannyPhoto,
+  }) async {
     final familyId = currentFamilyId(_auth);
-    if (familyId == null || shortlistedIds.contains(nannyId)) return false;
+    if (familyId == null) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.shortlistNeedFamily.tr);
+      return false;
+    }
+    if (shortlistedIds.contains(nannyId)) return false;
     try {
-      final item = await _shortlistService.add(familyId: familyId, nannyId: nannyId, notes: notes);
+      final item = await _shortlistService.add(
+        familyId: familyId,
+        nannyId: nannyId,
+        notes: notes,
+        nannyName: nannyName,
+        nannyPhoto: nannyPhoto,
+      );
       shortlistedNannies.add(item);
       shortlistedIds.add(nannyId);
       // Enrich only the newly-added nanny, not the whole list (DISC-8).
       await _loadCardFor(nannyId);
       return true;
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      Get.log('addToShortlist failed: $e', isError: true);
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.shortlistSaveFailed.tr);
       return false;
     }
   }

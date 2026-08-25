@@ -28,8 +28,10 @@ service cloud.firestore {
       return exists(/databases/$(database)/documents/nannies/$(uid));
     }
     function familySub(uid) {
-      let fam = get(/databases/$(database)/documents/families/$(uid)).data;
-      return fam == null ? null : fam.get('subscription', null);
+      let path = /databases/$(database)/documents/families/$(uid);
+      return exists(path)
+        ? get(path).data.get('subscription', null)
+        : null;
     }
     function familyHasAccess(uid) {
       let s = familySub(uid);
@@ -40,8 +42,11 @@ service cloud.firestore {
       return s != null && s.mockDev == true;
     }
     function hasActiveTrialWith(familyId, nannyId) {
-      let f = get(/databases/$(database)/documents/families/$(familyId)).data;
-      return f.activeTrialNannyIds is list && f.activeTrialNannyIds.hasAny([nannyId]);
+      let path = /databases/$(database)/documents/families/$(familyId);
+      let ids = exists(path)
+        ? get(path).data.get('activeTrialNannyIds', [])
+        : [];
+      return ids is list && ids.hasAny([nannyId]);
     }
 
     // ---------- users ----------
@@ -126,9 +131,20 @@ service cloud.firestore {
 
     // ---------- shortlists ----------
     match /shortlists/{shortlistId} {
-      allow read, write: if isAdmin()
-        || (isSignedIn() && (existing().familyId == request.auth.uid
-                            || incoming().familyId == request.auth.uid));
+      // Create must not touch `resource` (null). Get of a missing doc (idempotent
+      // add checks) also has resource == null — allow that for signed-in users so
+      // `doc(...).get()` before create is not permission-denied.
+      allow get: if isAdmin()
+        || (isSignedIn() && (resource == null
+            || existing().familyId == request.auth.uid));
+      allow list: if isAdmin()
+        || (isSignedIn() && existing().familyId == request.auth.uid);
+      allow create: if isSignedIn()
+        && incoming().familyId == request.auth.uid
+        && incoming().nannyId is string
+        && incoming().nannyId.size() > 0;
+      allow update, delete: if isAdmin()
+        || (isSignedIn() && existing().familyId == request.auth.uid);
     }
 
     // ---------- contactReveals (gated phone reveal) ----------
@@ -162,10 +178,23 @@ service cloud.firestore {
             && (existing().familyId == request.auth.uid
                 || existing().nannyId == request.auth.uid));
       allow create: if isSignedIn()
-        && incoming().familyId == request.auth.uid
-        && (familyHasAccess(request.auth.uid)
-            || familyHasMockDevAccess(request.auth.uid)
-            || hasActiveTrialWith(incoming().familyId, incoming().nannyId));
+        && (
+          (
+            incoming().familyId == request.auth.uid
+            && (familyHasAccess(request.auth.uid)
+                || familyHasMockDevAccess(request.auth.uid)
+                || hasActiveTrialWith(incoming().familyId, incoming().nannyId))
+          )
+          ||
+          (
+            incoming().nannyId == request.auth.uid
+            && incoming().familyId is string
+            && incoming().familyId.size() > 0
+            && (familyHasAccess(incoming().familyId)
+                || familyHasMockDevAccess(incoming().familyId)
+                || hasActiveTrialWith(incoming().familyId, incoming().nannyId))
+          )
+        );
       allow update: if isAdmin()
         || (isSignedIn()
             && (existing().familyId == request.auth.uid
@@ -278,7 +307,14 @@ service cloud.firestore {
             && (existing().reporterId == request.auth.uid
                 || existing().reportedUserId == request.auth.uid));
       allow create: if isSignedIn() && incoming().reporterId == request.auth.uid;
-      allow update, delete: if isAdmin();
+      // Admin may resolve/dismiss; the reporter may only patch `attachments`
+      // after uploading evidence (create → upload → attach metadata).
+      allow update: if isAdmin()
+        || (isSignedIn()
+            && existing().reporterId == request.auth.uid
+            && request.resource.data.diff(resource.data).affectedKeys()
+                .hasOnly(['attachments']));
+      allow delete: if isAdmin();
 
       // Support chat about this dispute, between an admin and the person who
       // filed it (the reporter). The reported user is NOT a participant. A

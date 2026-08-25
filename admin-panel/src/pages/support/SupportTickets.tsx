@@ -8,8 +8,12 @@ import {
   Row,
   StatusBadge,
   TableCard,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import { TicketService, TicketRow } from '../../services/firestore';
+import { useLocale } from '../../context/LocaleContext';
+import { TranslationKey } from '../../locales/t';
+import { ticketStatusLabel, personTypeLabel } from '../../utils/nannyLabels';
 
 const statusVariant: Record<TicketRow['status'], string> = {
   open: 'verify',
@@ -18,16 +22,17 @@ const statusVariant: Record<TicketRow['status'], string> = {
   closed: 'rejected',
 };
 
-const categoryLabel: Record<TicketRow['category'], string> = {
-  account: 'Account',
-  payment: 'Payment',
-  trial: 'Trial',
-  hiring: 'Hiring',
-  technical: 'Technical',
-  other: 'Other',
+const categoryLabelKeys: Record<TicketRow['category'], TranslationKey> = {
+  account: 'support.category.account',
+  payment: 'support.category.payment',
+  trial: 'support.category.trial',
+  hiring: 'support.category.hiring',
+  technical: 'support.category.technical',
+  other: 'support.category.other',
 };
 
 export default function SupportTickets() {
+  const { t } = useLocale();
   const [items, setItems] = useState<TicketRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -35,49 +40,50 @@ export default function SupportTickets() {
   useEffect(() => {
     TicketService.list()
       .then(setItems)
-      .catch((e) => setError((e as Error).message || 'Failed to load tickets'))
+      .catch((e) => setError((e as Error).message || t('support.failedToLoad')))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const openCount = items.filter((t) => t.status === 'open').length;
-  const investigating = items.filter((t) => t.status === 'investigating').length;
-  const resolved = items.filter((t) => t.status === 'resolved' || t.status === 'closed').length;
+  const openCount = items.filter((tk) => tk.status === 'open').length;
+  const investigating = items.filter((tk) => tk.status === 'investigating').length;
+  const resolved = items.filter((tk) => tk.status === 'resolved' || tk.status === 'closed').length;
 
   return (
     <PageShell>
-      <PageHeader title="Support tickets" subtitle={`${openCount} open · ${investigating} in progress`} />
+      <PageHeader title={t('support.title')} subtitle={t('support.subtitle', { open: openCount, investigating })} />
       <PageContent>
         <div className="flex gap-1.5 mb-2.5">
-          <ColStat num={String(openCount)} label="Open" change="⚠ New" numColor="#FFB347" />
-          <ColStat num={String(investigating)} label="In progress" change="• Active" numColor="#9B6EDB" />
-          <ColStat num={String(resolved)} label="Resolved" change="↑ Closed" />
+          <ColStat num={String(openCount)} label={t('support.open')} change={t('support.newChange')} numColor="#FFB347" />
+          <ColStat num={String(investigating)} label={t('support.inProgress')} change={t('support.activeChange')} numColor="#9B6EDB" />
+          <ColStat num={String(resolved)} label={t('support.resolved')} change={t('support.closedChange')} />
         </div>
 
-        <TableCard title="Tickets queue">
-          {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
+        <TableCard title={t('support.queue')}>
+          {loading && <PageLoader compact />}
           {!loading && error && (
             <div className="px-3 py-4 text-[10px] font-bold text-rose-dark">{error}</div>
           )}
           {!loading && !error && items.length === 0 && (
-            <div className="px-3 py-4 text-[10px] text-[#8090B0]">No tickets yet.</div>
+            <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('support.noneYet')}</div>
           )}
-          {items.map((t) => (
-            <Row key={t.id}>
+          {items.map((tk) => (
+            <Row key={tk.id}>
               <div className="flex-1 min-w-0">
                 <div className="text-[10.5px] font-extrabold text-navy truncate">
-                  {t.subject || categoryLabel[t.category]}
+                  {tk.subject || t(categoryLabelKeys[tk.category])}
                 </div>
                 <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">
-                  {categoryLabel[t.category]} · {t.openerName ?? t.openerId} ({t.openerType}) ·{' '}
-                  {t.createdAt.toLocaleDateString()}
+                  {t(categoryLabelKeys[tk.category])} · {tk.openerName ?? tk.openerId} ({personTypeLabel(tk.openerType)}) ·{' '}
+                  {tk.createdAt.toLocaleDateString()}
                 </div>
               </div>
-              <StatusBadge variant={statusVariant[t.status]}>{t.status}</StatusBadge>
+              <StatusBadge variant={statusVariant[tk.status]}>{ticketStatusLabel(tk.status)}</StatusBadge>
               <Link
-                to={`/support/${t.id}`}
+                to={`/support/${tk.id}`}
                 className="text-[9px] font-bold text-purple font-fredoka no-underline ml-1"
               >
-                Open →
+                {t('support.openLink')}
               </Link>
             </Row>
           ))}

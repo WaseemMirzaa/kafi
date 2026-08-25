@@ -156,7 +156,7 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
             controller: controller.childrenAgesCtrl,
             // Comma-separated to match the parser (was "2 & 5", which the
             // comma-only split rejected) — FAM-5.
-            hint: 'e.g. 2, 5',
+            hint: AppStrings.familyChildrenAgesHint.tr,
             purple: true,
           ),
           KafiTextField(
@@ -348,7 +348,9 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
                               value: controller.trialDays.value,
                               items: FamilyConstants.trialDurations
                                   .map((d) => DropdownMenuItem(
-                                      value: d, child: Text('$d days')))
+                                      value: d,
+                                      child: Text(AppStrings.familyTrialDaysN
+                                          .trParams({'n': '$d'}))))
                                   .toList(),
                               onChanged: (v) => controller.trialDays.value =
                                   v ?? controller.trialDays.value,

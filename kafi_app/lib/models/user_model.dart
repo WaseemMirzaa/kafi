@@ -146,7 +146,7 @@ class UserModel {
         id: m['id'] ?? '',
         phone: m['phone'] ?? '',
         type: UserType.values.firstWhere(
-            (e) => e.name == m['userType'],
+            (e) => e.name == (m['userType'] ?? m['type']),
             orElse: () => UserType.family),
         fullName: m['fullName'],
         email: m['email'],

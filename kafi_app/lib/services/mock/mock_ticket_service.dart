@@ -9,12 +9,27 @@ class MockTicketService implements ITicketService {
   final List<TicketModel> _tickets = [];
   final Map<String, List<TicketMessage>> _messages = {};
   final Map<String, StreamController<List<TicketMessage>>> _controllers = {};
+  final Map<String, StreamController<TicketModel?>> _ticketControllers = {};
   final _uuid = const Uuid();
   int _seq = 0;
 
   StreamController<List<TicketMessage>> _ctrl(String ticketId) =>
       _controllers.putIfAbsent(ticketId, () => StreamController.broadcast());
 
+  StreamController<TicketModel?> _ticketCtrl(String ticketId) =>
+      _ticketControllers.putIfAbsent(ticketId, () => StreamController.broadcast());
+
+  void _emitTicket(String ticketId) {
+    TicketModel? found;
+    for (final t in _tickets) {
+      if (t.id == ticketId) {
+        found = t;
+        break;
+      }
+    }
+    final c = _ticketControllers[ticketId];
+    if (c != null && !c.isClosed) c.add(found);
+  }
   @override
   Future<String> openTicket({
     required String openerId,
@@ -70,6 +85,22 @@ class MockTicketService implements ITicketService {
   }
 
   @override
+  Stream<TicketModel?> watchTicket(String ticketId) {
+    final c = _ticketCtrl(ticketId);
+    scheduleMicrotask(() {
+      TicketModel? found;
+      for (final t in _tickets) {
+        if (t.id == ticketId) {
+          found = t;
+          break;
+        }
+      }
+      c.add(found);
+    });
+    return c.stream;
+  }
+
+  @override
   Stream<List<TicketMessage>> watchMessages(String ticketId) {
     final c = _ctrl(ticketId);
     scheduleMicrotask(() => c.add(List.of(_messages[ticketId] ?? const [])));
@@ -94,6 +125,7 @@ class MockTicketService implements ITicketService {
         lastMessage: message.content,
         lastMessageAt: message.createdAt,
       );
+      _emitTicket(ticketId);
     }
   }
 }

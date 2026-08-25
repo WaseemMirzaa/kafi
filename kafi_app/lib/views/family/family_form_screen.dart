@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
@@ -12,19 +13,37 @@ import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/family_job_selectors.dart';
 import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
-import 'package:kafi_app/views/widgets/kafi_searchable_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_section.dart';
+import 'package:kafi_app/views/widgets/kafi_searchable_picker.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
 
-class FamilyFormScreen extends GetView<FamilyProfileController> {
+class FamilyFormScreen extends StatefulWidget {
   const FamilyFormScreen({super.key});
 
+  @override
+  State<FamilyFormScreen> createState() => _FamilyFormScreenState();
+}
+
+class _FamilyFormScreenState extends State<FamilyFormScreen> {
   static const _purpleLabel = Color(0xFF5A2090);
 
+  // The first element of each tuple is the stored value (kept in English so
+  // it matches existing profile data); the display label is localized
+  // separately via [_religionLabel].
   static const List<(String, String)> _religions = [
     ('Muslim', '☪️'), ('Christian', '✝️'), ('Hindu', '🕉️'),
     ('Buddhist', '☸️'), ('Jewish', '✡️'), ('Other', '🌍'),
   ];
+
+  String _religionLabel(String stored) => switch (stored) {
+        'Muslim' => AppStrings.religionMuslim.tr,
+        'Christian' => AppStrings.religionChristian.tr,
+        'Hindu' => AppStrings.religionHindu.tr,
+        'Buddhist' => AppStrings.religionBuddhist.tr,
+        'Jewish' => AppStrings.religionJewish.tr,
+        'Other' => AppStrings.religionOther.tr,
+        _ => stored,
+      };
 
   // Labels are localized at read time, so this can't be `const`. The enum in
   // each tuple is the stored value; only the second element is display text.
@@ -35,7 +54,26 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
     (NannyReligionPreference.openWithRespect, AppStrings.familyReligionPrefOpen.tr),
   ];
 
+  FamilyProfileController get controller => Get.find<FamilyProfileController>();
   AuthController get _auth => Get.find<AuthController>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Re-assert the first-job gate whenever this screen is opened (cold start
+    // already routes here; this covers resume / deep-link races).
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      _auth.enforceFamilyFirstJobGate();
+      // Permanent FamilyProfileController — re-apply FT/PT slot + new-post args.
+      final raw = Get.arguments;
+      if (raw is Map && raw['isNewPost'] == true) {
+        controller.prepareNewPostFromRoute();
+      } else if (Get.currentRoute == Routes.familyForm) {
+        controller.prepareNewPostFromRoute();
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -163,18 +201,29 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
         const SizedBox(height: 4),
         FamilyEmirateSelector(controller),
         const SizedBox(height: 8),
-        KafiTextField(
-          label: AppStrings.fldChildrenCount.tr,
-          controller: controller.childrenCtrl,
-          keyboardType: TextInputType.number,
-          purple: true,
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: KafiTextField(
+                label: AppStrings.fldChildrenCount.tr,
+                controller: controller.childrenCtrl,
+                keyboardType: TextInputType.number,
+                purple: true,
+              ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: KafiTextField(
+                label: AppStrings.fldChildrenAges.tr,
+                controller: controller.childrenAgesCtrl,
+                hint: AppStrings.familyChildrenAgesHint.tr,
+                purple: true,
+              ),
+            ),
+          ],
         ),
-        KafiTextField(
-          label: AppStrings.fldChildrenAges.tr,
-          controller: controller.childrenAgesCtrl,
-          hint: AppStrings.familyChildrenAgesHint.tr,
-          purple: true,
-        ),
+        const SizedBox(height: 8),
         _label(AppStrings.fldHomeLanguages.tr),
         const SizedBox(height: 4),
         Obx(() => Wrap(
@@ -229,6 +278,12 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
     );
   }
 
+  String _petLabel(String stored) => switch (stored) {
+        'Dog' => AppStrings.petDog.tr,
+        'Cat' => AppStrings.petCat.tr,
+        _ => stored,
+      };
+
   Widget _petTile(String emoji, String type) {
     final selected = controller.petTypes.contains(type);
     return GestureDetector(
@@ -246,7 +301,7 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
           children: [
             Text(emoji, style: const TextStyle(fontSize: 15)),
             const SizedBox(width: 5),
-            Text(type,
+            Text(_petLabel(type),
                 style: KafiTheme.nunito(10.5,
                     color: selected ? KafiColors.pur : KafiColors.tm, w: FontWeight.w800)),
           ],
@@ -305,7 +360,7 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
               crossAxisSpacing: 5,
               childAspectRatio: 2.6,
               children: _religions
-                  .map((r) => _religionTile(r.$2, r.$1, controller.religion.value == r.$1))
+                  .map((r) => _religionTile(r.$2, r.$1, _religionLabel(r.$1), controller.religion.value == r.$1))
                   .toList(),
             )),
         const SizedBox(height: 8),
@@ -332,9 +387,9 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
     );
   }
 
-  Widget _religionTile(String emoji, String label, bool selected) {
+  Widget _religionTile(String emoji, String storedValue, String label, bool selected) {
     return GestureDetector(
-      onTap: () => controller.religion.value = selected ? '' : label,
+      onTap: () => controller.religion.value = selected ? '' : storedValue,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
         decoration: BoxDecoration(
@@ -430,30 +485,49 @@ class FamilyFormScreen extends GetView<FamilyProfileController> {
         const SizedBox(height: 8),
         _label(AppStrings.fldEmployment.tr),
         const SizedBox(height: 4),
-        Obx(() => Row(
-              children: [
-                Expanded(
-                  child: KafiToggleTile(
-                    label: AppStrings.employmentFullTime.tr,
-                    icon: Icons.work_outline,
-                    purple: true,
-                    selected: controller.employmentType.value == JobEmploymentType.fullTime,
-                    onTap: () => controller.employmentType.value = JobEmploymentType.fullTime,
+        Obx(() {
+          final locked = controller.employmentLocked.value;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: KafiToggleTile(
+                      label: AppStrings.employmentFullTime.tr,
+                      icon: Icons.work_outline,
+                      purple: true,
+                      selected: controller.employmentType.value == JobEmploymentType.fullTime,
+                      onTap: locked
+                          ? () {}
+                          : () => controller.employmentType.value =
+                              JobEmploymentType.fullTime,
+                    ),
                   ),
-                ),
-                const SizedBox(width: 6),
-                Expanded(
-                  child: KafiToggleTile(
-                    label: AppStrings.employmentPartTime.tr,
-                    icon: Icons.schedule,
-                    purple: true,
-                    selected: controller.employmentType.value == JobEmploymentType.partTime,
-                    onTap: () => controller.employmentType.value = JobEmploymentType.partTime,
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: KafiToggleTile(
+                      label: AppStrings.employmentPartTime.tr,
+                      icon: Icons.schedule,
+                      purple: true,
+                      selected: controller.employmentType.value == JobEmploymentType.partTime,
+                      onTap: locked
+                          ? () {}
+                          : () => controller.employmentType.value =
+                              JobEmploymentType.partTime,
+                    ),
                   ),
-                ),
+                ],
+              ),
+              if (locked) ...[
+                const SizedBox(height: 6),
+                Text(AppStrings.familyEmploymentLockedHint.tr,
+                    style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600)),
               ],
-            )),
-        const SizedBox(height: 8),
+            ],
+          );
+        }),
+        const SizedBox(height: 6),
         _label(AppStrings.fldDaysOff.tr),
         const SizedBox(height: 4),
         FamilyDaysOffSelector(controller),

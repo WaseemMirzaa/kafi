@@ -1,5 +1,6 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import { ensureFirstAdmin } from './utils/ensureFirstAdmin';
+import { resolveLocaleFromHeader, tn } from './i18n/notifications';
 
 /** One-time HTTPS bootstrap — only creates an admin when `admins` is empty. */
 export const bootstrapFirstAdmin = onRequest(
@@ -14,12 +15,17 @@ export const bootstrapFirstAdmin = onRequest(
       return;
     }
 
+    // No admin/user doc exists yet at this point in the flow, so there is no
+    // Firestore locale preference to read — fall back to the browser's
+    // Accept-Language (the admin panel's own fetch call carries it).
+    const locale = resolveLocaleFromHeader(req.headers['accept-language']);
+
     try {
-      const result = await ensureFirstAdmin();
+      const result = await ensureFirstAdmin(locale);
       if (!result.created) {
         res.status(409).json({
           created: false,
-          message: 'An admin account already exists.',
+          message: tn('error.adminAlreadyExists', locale),
           email: result.email,
         });
         return;
@@ -27,8 +33,7 @@ export const bootstrapFirstAdmin = onRequest(
 
       res.status(201).json({
         created: true,
-        message:
-          'First admin created. Sign in with the credentials below and change the password in Firebase Console.',
+        message: tn('error.firstAdminCreated', locale),
         email: result.email,
         password: result.password,
         uid: result.uid,
@@ -37,7 +42,7 @@ export const bootstrapFirstAdmin = onRequest(
       console.error('[bootstrapFirstAdmin]', err);
       res.status(500).json({
         error: 'bootstrap_failed',
-        message: err instanceof Error ? err.message : 'Unknown error',
+        message: err instanceof Error ? err.message : tn('error.unknownError', locale),
       });
     }
   },

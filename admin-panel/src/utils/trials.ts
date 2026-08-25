@@ -1,27 +1,28 @@
 import { TrialAdminRow } from '../services/firestore';
+import { t } from '../locales/t';
 
 /** Day X of Y, matching the mobile app (day = ceil(elapsed since start)). */
-export function trialDayNumber(t: Pick<TrialAdminRow, 'startDate'>): number {
-  return Math.max(1, Math.ceil((Date.now() - t.startDate.getTime()) / 86400000));
+export function trialDayNumber(row: Pick<TrialAdminRow, 'startDate'>): number {
+  return Math.max(1, Math.ceil((Date.now() - row.startDate.getTime()) / 86400000));
 }
 
 /** "4d 23h 12m" countdown to the trial end, mirroring TrialModel.remaining. */
-export function trialCountdown(t: Pick<TrialAdminRow, 'endDate'>): string {
-  const ms = t.endDate.getTime() - Date.now();
-  if (ms <= 0) return '0d 0h 0m';
+export function trialCountdown(row: Pick<TrialAdminRow, 'endDate'>): string {
+  const ms = row.endDate.getTime() - Date.now();
+  if (ms <= 0) return t('trials.countdownExpired');
   const d = Math.floor(ms / 86400000);
   const h = Math.floor((ms % 86400000) / 3600000);
   const m = Math.floor((ms % 3600000) / 60000);
-  return `${d}d ${h}h ${m}m`;
+  return t('trials.countdownFull', { d, h, m });
 }
 
 /** Short "4d 23h left" used in compact rows. */
-export function trialShortLeft(t: Pick<TrialAdminRow, 'endDate'>): string {
-  const ms = t.endDate.getTime() - Date.now();
-  if (ms <= 0) return '0d 0h left';
+export function trialShortLeft(row: Pick<TrialAdminRow, 'endDate'>): string {
+  const ms = row.endDate.getTime() - Date.now();
+  if (ms <= 0) return t('trials.countdownShortExpired');
   const d = Math.floor(ms / 86400000);
   const h = Math.floor((ms % 86400000) / 3600000);
-  return `${d}d ${h}h left`;
+  return t('trials.countdownShort', { d, h });
 }
 
 export function trialTotalAmount(t: Pick<TrialAdminRow, 'dailyRate' | 'durationDays'>): number {

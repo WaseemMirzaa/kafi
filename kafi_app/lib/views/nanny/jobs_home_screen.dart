@@ -185,39 +185,55 @@ class JobsHomeScreen extends GetView<JobPostController> {
 
   Widget _divider() => Container(width: 1, height: 28, color: const Color(0xFFFFE8EF));
 
+  // Internal filter ids stay in English (they drive matching logic against
+  // JobFilter.jobType/duties); only the rendered label is localized.
+  static const _filterIds = ['all', 'liveIn', 'liveOut', 'newborn'];
+
+  String _filterLabel(String id) {
+    switch (id) {
+      case 'liveIn':
+        return AppStrings.jobLiveIn.tr;
+      case 'liveOut':
+        return AppStrings.jobLiveOut.tr;
+      case 'newborn':
+        return AppStrings.jobsFilterNewborn.tr;
+      default:
+        return AppStrings.jobsFilterAll.tr;
+    }
+  }
+
   Widget _buildFilters() {
-    final filters = ['All', 'Live-in', 'Live-out', 'Newborn'];
     return Obx(() {
-      // Map the current filter back to its display label so the selected pill
-      // highlights (the raw jobType is 'liveIn'/'liveOut', not the label).
+      // Map the current filter back to its id so the selected pill highlights
+      // (the raw jobType is 'liveIn'/'liveOut', not the display label).
       final f = controller.filter.value;
-      final active = f.jobType == 'liveIn'
-          ? 'Live-in'
+      final activeId = f.jobType == 'liveIn'
+          ? 'liveIn'
           : f.jobType == 'liveOut'
-              ? 'Live-out'
+              ? 'liveOut'
               : f.duties.contains('newborn')
-                  ? 'Newborn'
-                  : 'All';
+                  ? 'newborn'
+                  : 'all';
       return Container(
         height: 38,
         margin: const EdgeInsets.fromLTRB(0, 10, 0, 0),
         child: ListView.builder(
           scrollDirection: Axis.horizontal,
           padding: const EdgeInsets.symmetric(horizontal: 14),
-          itemCount: filters.length,
+          itemCount: _filterIds.length,
           itemBuilder: (_, i) {
-            final label = filters[i];
-            final isActive = active == label;
+            final id = _filterIds[i];
+            final isActive = activeId == id;
             return GestureDetector(
               onTap: () {
-                if (label == 'All') {
+                if (id == 'all') {
                   controller.setFilter(JobFilter());
-                } else if (label == 'Live-in') {
+                } else if (id == 'liveIn') {
                   controller.setFilter(JobFilter(jobType: 'liveIn'));
-                } else if (label == 'Live-out') {
+                } else if (id == 'liveOut') {
                   controller.setFilter(JobFilter(jobType: 'liveOut'));
                 } else {
-                  controller.setFilter(JobFilter(duties: [label.toLowerCase()]));
+                  controller.setFilter(JobFilter(duties: [id]));
                 }
               },
               child: Center(
@@ -233,7 +249,7 @@ class JobsHomeScreen extends GetView<JobPostController> {
                       width: 1.5,
                     ),
                   ),
-                  child: Text(label,
+                  child: Text(_filterLabel(id),
                       textAlign: TextAlign.center,
                       style: KafiTheme.nunito(10,
                           color: isActive ? Colors.white : KafiColors.td,
@@ -332,7 +348,8 @@ class JobsHomeScreen extends GetView<JobPostController> {
 
   Widget _jobCard(JobPostModel job, int? matchScore) {
     final isHotMatch = (matchScore ?? 0) >= 90;
-    final typeLabel = job.jobType == JobType.liveOut ? 'Live-out' : 'Live-in';
+    final typeLabel =
+        job.jobType == JobType.liveOut ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr;
     final initial = job.familyName.isNotEmpty ? job.familyName[0].toUpperCase() : 'F';
 
     return GestureDetector(
@@ -379,9 +396,13 @@ class JobsHomeScreen extends GetView<JobPostController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('$typeLabel Nanny · ${job.city}',
+                      Text('$typeLabel ${AppStrings.nannySuffix.tr} · ${job.city}',
                           style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
-                      Text('AED ${job.salaryMin}–${job.salaryMax}/mo · ${job.familyName}',
+                      Text(
+                          '${AppStrings.jobSalaryRange.trParams({
+                                'min': '${job.salaryMin}',
+                                'max': '${job.salaryMax}',
+                              })} · ${job.familyName}',
                           style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
                       // The nanny-side numeric "% match" is suppressed (M8): the
                       // canonical match is scored from the FAMILY's household +

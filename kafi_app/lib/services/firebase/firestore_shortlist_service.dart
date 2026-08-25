@@ -21,6 +21,8 @@ class FirestoreShortlistService implements IShortlistService {
     required String familyId,
     required String nannyId,
     String? notes,
+    String? nannyName,
+    String? nannyPhoto,
   }) async {
     // Deterministic id makes add idempotent — a re-tap/retry won't create a
     // duplicate doc or double-increment the counter.
@@ -31,15 +33,27 @@ class FirestoreShortlistService implements IShortlistService {
       return ShortlistItem.fromMap(existing.data()!);
     }
 
-    final nannySnap = await _nannies.doc(nannyId).get();
-    final nannyData = nannySnap.data();
+    // Prefer caller-supplied denormalized fields (from the browse card). Reading
+    // `nannies/{id}` can permission-deny for some profiles and must not block add.
+    String? name = nannyName;
+    String? photo = nannyPhoto;
+    if (name == null || photo == null) {
+      try {
+        final nannySnap = await _nannies.doc(nannyId).get();
+        final nannyData = nannySnap.data();
+        name ??= nannyData?['fullName'] as String?;
+        photo ??= (nannyData?['photoUrls'] as List?)?.firstOrNull?.toString();
+      } catch (_) {
+        // Non-fatal — shortlist still saves with the ids we have.
+      }
+    }
 
     final item = ShortlistItem(
       id: id,
       familyId: familyId,
       nannyId: nannyId,
-      nannyName: nannyData?['fullName'],
-      nannyPhoto: (nannyData?['photoUrls'] as List?)?.firstOrNull?.toString(),
+      nannyName: name,
+      nannyPhoto: photo,
       notes: notes,
       addedAt: DateTime.now(),
     );

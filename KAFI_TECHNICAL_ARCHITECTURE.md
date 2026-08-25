@@ -529,6 +529,8 @@ abstract class IJobService {
   Future<void> updateJob(String id, Map<String, dynamic> data);
   Future<JobPost?> getJob(String id);
   Stream<List<JobPost>> watchActiveJobs(JobFilter filter);
+  /// Family Screen 14 — live approved+verified nanny catalogue (filter pills applied).
+  Stream<List<NannyCard>> watchBrowseNannies({String? filter, JobPost? matchJob});
   Stream<List<JobPost>> watchFamilyJobs(String familyId);
   Future<void> closeJob(String id);
 }
@@ -557,6 +559,8 @@ abstract class IStorageService {
   Future<String> uploadDocument(File file, String userId, DocumentType type);
   Future<void> deleteFile(String url);
   Future<String> getDownloadUrl(String path);
+  /// App impl also exposes `resolveDownloadUrl(pathOrUrl)` — HTTPS passthrough,
+  /// `gs://` via `refFromURL`, Storage object paths via `ref(path).getDownloadURL()`.
 }
 
 abstract class INotificationService {
@@ -896,9 +900,11 @@ firestore/
     ├── jobPostVisibilityDays: number
     ├── freeContactLimit: number
     ├── subscriptionPlans: array
-    └── matchAlgorithmWeights: map
+    ├── matchAlgorithmWeights: map
+    └── hideInactiveNannies: boolean       # When true, family Browse hides nannies with lastActiveAt older than 14 days (or missing)
 ```
 
+`nannies/{id}.lastActiveAt` is written by the mobile app on nanny sign-in / app resume (`IUserService.touchNannyActive`). Family discovery (`IJobService.browseNannies` / `watchBrowseNannies`) applies the admin toggle client-side after the approved+verified query.
 ## 6.2 Required Indexes (composite)
 
 | Collection | Fields |
@@ -1678,6 +1684,11 @@ admin-panel/
 | `/families/:id` | Family detail + edit |
 | `/revenue` | Revenue dashboard + export |
 | `/broadcast` | Send broadcast notifications |
+| `/reports` | User reports queue (in-app “Report a problem”; Firestore `disputes`) |
+| `/reports/:id` | Report detail + support chat; shows user IDs, profile snapshot, attachments, trial link |
+| `/disputes`, `/disputes/:id` | Redirect to `/reports` (legacy) |
+| `/support` | Support tickets queue |
+| `/support/:id` | Support ticket detail |
 | `/settings` | System settings (free contact limit, plans, etc.) |
 
 ## 11.4 Sample Service
@@ -1936,9 +1947,27 @@ service firebase.storage {
     match /messages/{threadId}/attachments/{fileId} {
       allow read, write: if isAuth();
     }
+
+    // Report / dispute evidence (images + PDF, max 10 MB). Path:
+    // disputes/{disputeId}/attachments/{fileId}. Write: signed-in (file-time
+    // upload before/with dispute create). Read: admin or dispute reporter.
+    match /disputes/{disputeId}/attachments/{fileId} {
+      allow read: if isAdmin()
+        || (isAuth()
+            && firestore.get(/databases/(default)/documents/disputes/$(disputeId)).data.reporterId
+                == request.auth.uid);
+      allow write: if isAuth()
+                   && request.resource.size < 10 * 1024 * 1024
+                   && (request.resource.contentType.matches('image/.*')
+                       || request.resource.contentType == 'application/pdf');
+    }
   }
 }
 ```
+
+### Dispute / report model (mobile + admin)
+
+`DisputeModel` / admin `DisputeRow` include denormalized `reporterName` / `reporterType` / `reportedName` / `reportedType`, optional `reporterSnapshot` / `reportedSnapshot`, and optional `attachments[]`. `IDisputeService.fileDispute` accepts these fields; Storage uploads go to `disputes/{id}/attachments/` before/with the Firestore create.
 
 ---
 
@@ -3084,3 +3113,50 @@ Profile screens → phone blurred, Call/WA buttons removed
 | 2026-07-17 | Media screen photo/video preview | Done | `MockStorageService` writes temp files instead of data URIs. New `kafi_media_image.dart`. `nanny_media_screen` cover/thumbs use `KafiMediaImage`; `_IntroVideoPreview` uses `VideoPlayerController.file` for local paths + visible player. `NannyProfileController` mock picks store `picked.path` directly. |
 
 | 2026-07-17 | Real GPS + Maps location picker | Done | `KafiLocationPicker` gates on API key only (not `AppConfig.useMock`). `_LocationPickerSheet` always shows `GoogleMap` + fixed pin, auto GPS, camera-idle reverse geocode. `PlaceDetails.shortLabel` / neighbourhood. Still requires key in `app_constants.dart`, AndroidManifest, AppDelegate. |
+
+| 2026-07-31 | Family first-job onboarding gate | Done | `AuthController.familyMustPostFirstJob` + resume `enforceFamilyFirstJobGate`; `FamilyFormScreen` PopScope/hide back; `AppNavigation.back`/`familyGoToTab`/`openChat` blocked; `FamilyShellScreen` redirects gated families to `/family-form` |
+
+| 2026-07-31 | Post-job location/schedule/FT-PT + browse bugs | Done | Family form Uber location + work-days sheet; FT/PT slot prep; BrowseController myJobs refresh; shortlist rules create; VideoPlayer args Map cast; toggleShortlist feedback |
+| 2026-07-31 | Watch intro video playback | Done | `IStorageService.resolveDownloadUrl` (Firebase + mock); `VideoPlayerScreen` resolves gs:// and Storage paths before `networkUrl`; error + retry UI; `AppNavigation.openIntroVideo` |
+| 2026-07-31 | Select Location iOS crash + map picker | Done | `kafiEditableTextContextMenu` avoids iOS SystemContextMenu assert in sheets; wired on location/search/OTP/phone TextFields; deferred Select Location autofocus |
+| 2026-07-31 | SystemContextMenu assert (global) | Done | `GetMaterialApp.builder` sets `supportsShowingSystemContextMenu: false`; location/search sheets use no-op context menu + no autofocus |
+| 2026-07-31 | Trial offer form validations | Done | `TrialController.validateTrialOffer` + form error getter; `Validators.trialDailyRate`/`trialStartDate`; TrialOfferScreen notes maxLength + inline error |
+| 2026-07-31 | Chat send permission-denied | Done | `ChatThread.senderTypeFor`; auth reads `type`/`userType`; rules: safe `familySub`/`hasActiveTrialWith`, nanny thread create; mock sync rethrows on chat path |
+| 2026-07-31 | Browse home missing nannies | Done | `FirestoreJobService.browseNannies` removed `.limit(50)`; fetches full approved+verified query result |
+| 2026-07-31 | Chat conversation single loader | Done | `ChatController.isLoadingMessages` + conversation list Center loader; `KafiTrialOfferBubble` drops FutureBuilder spinners |
+| 2026-07-31 | Trial screen empty while in progress | Done | `TrialController.onTrialRouteOpened` + `isAcceptedOrActive` for nanny; list fallback when activeTrial query fails |
+| 2026-07-31 | Ticket status stale after admin resolve | Done | `ITicketService.watchTicket`; TicketController updates activeTicket + list; SupportScreen reloads on open |
+| 2026-07-31 | Admin Reports (not Disputes) + hide IDs | Done | Admin UI routes `/reports` (+ `/disputes` redirect); Safety nav label Reports; report detail omits document/user IDs |
+| 2026-07-31 | Mobile reports vs support listings | Done | `report_user_sheet` uses `DisputeController.createDispute` (not `TicketController`); My reports vs Support split |
+| 2026-07-31 | Nanny chat report flag | Done | `_reportCounterparty` resolves via thread.nannyId/familyId; `showReportProblemSheet` uses root `showModalBottomSheet` |
+| 2026-07-31 | Admin badges + iOS push + notif deep-links | Done | Sidebar `count>0`; AppDelegate Messaging.apnsToken; FCM APNs payload; notification taps → profile/job/chat/trial |
+| 2026-08-03 | Trial checklist sync both parties | Done | `ITrialService.saveEvaluation` + `watchTrial`; `toggleEval` writes Firestore; Screen 19 binds live trial snap |
+| 2026-08-03 | Profile quality remaining gaps | Done | `ProfileQualityScore` helper + `NannyProfileController.profileQuality`; dashboard card lists remaining factors |
+| 2026-08-03 | Admin panel + Functions i18n (EN/AR) | Done | `admin-panel/src/locales/{en,ar,t}.ts` (692 flat keys, `{param}` interpolation) + `context/LocaleContext.tsx` (`useSyncExternalStore`, EN\|AR toggle in Settings, `dir` RTL/LTR); every page/component/hook/service wired via `t()`, incl. cross-domain status-label helpers (`nannyProfileStatusLabel`, `subscriptionStatusLabel/PlanLabel`, `trialStatusLabel`, `disputeStatusLabel`, `ticketStatusLabel`, `docStatusLabel`, `personTypeLabel` in `utils/nannyLabels.ts`) so badges/filters/options never render raw Firestore enum strings; date formatters (`MessageThread`, `nannyLabels.formatDate/fmtDate`, `Revenue` trend) switch `en-GB`/`ar-AE` via `getLocale()`. `functions/src/i18n/notifications.ts` — new module with `Locale`, `resolveLocale` (Firestore user doc `locale`/`preferredLanguage`/`language`/`settings.language`, default `en`), `resolveLocaleFromHeader` (`Accept-Language`, for bootstrap), `tn()`/`notif()` template helpers; all push/inbox title+body in `triggers/{nanny,trial,scheduled,webhook,chat,dispute,ticket,stats}.ts` plus `mockSubscription.ts`/`bootstrapAdmin.ts` client-facing errors now resolve through the recipient's locale (`ensureFirstAdmin`/`resolvePassword` take `locale` for the bootstrap-password config error). `admin-panel npm run build` and `functions npm run build` both pass. |
+| 2026-08-03 | Full i18n verification (3 clean cycles) | Done | Flutter: AppStrings + relative_time + job_type_label + app_error/.tr; admin locales + LocaleContext; functions i18n/notifications; 3 consecutive zero-leftover scans FE+BE |
+| 2026-08-06 | Nanny trial offer Accept/Decline | Done | `KafiTrialOfferBubble.onDecline` + chat `_viewerIsNannyOnActiveThread`; application detail refreshes `TrialController` for pending actions |
+| 2026-08-06 | Nanny jobs live feed | Done | Implemented `IJobService.watchActiveJobs`; `JobPostController` subscribes for nannies; removed browseJobs hard limit of 50 |
+| 2026-08-06 | Family browse live feed | Done | `IJobService.watchBrowseNannies`; `BrowseController` subscribes (restarts on filter/job); mock merges session-approved nannies via `MockBrowseBus` |
+| 2026-08-06 | Cancelled trial clears chat active badge | Done | `TrialController.cancelTrial`/`declineTrial` call `_flipThreadTrialStatus`; `onTrialEnded` updates `chatThreads.trialStatus` |
+| 2026-08-06 | Family counter Accept/Decline in chat | Done | `KafiTrialOfferBubble` family counter CTAs; chat message watch refreshes trials on newest counter/accept/decline |
+| 2026-08-06 | Hide chat trial bar when trial ends | Done | `ChatController.showsActiveTrialUi` + payment-confirm flips thread status; list/conversation bars reactive to TrialController |
+| 2026-08-06 | Family applicants live inbox | Done | `watchApplicationsForFamily/Nanny`; ApplicationController subscribes; Applicants screen reloads on open |
+| 2026-08-06 | Admin Verify docs badge stale | Done | Sidebar badges re-fetch on route change + `refreshAdminBadges` after nanny approve/reject/video review so Verify docs counter matches the empty queue |
+| 2026-08-06 | Admin↔user report/ticket realtime | Done | Mobile `IDisputeService.watchDispute` + DisputeController status stream (mirrors tickets); admin `DisputeService`/`TicketService.watch` + `watchMessages` on report & support detail so family/nanny↔admin chat and resolution are live |
+| 2026-08-06 | Family Applicants multi-job inbox | Done | `subscribeFamilyInbox` (role-explicit); familyId query without orderBy; Applicants job chips; `onNewApplication` increments `jobs.applicationsCount` and backfills `familyId`; My Jobs overlays live counts |
+| 2026-08-06 | Trial offer gate after end | Done | `TrialModel.blocksNewTrialOffer` / `isLiveTrial`; validateTrialOffer refresh; confirmPayment/reportPaymentIssue set `completed` |
+| 2026-08-06 | Rate app after payment confirm | Done | `confirmPaymentReceived` → `RateAppPrompt.maybeShow`; trial screen payment block shown to family |
+
+| 2026-08-06 | Trial offer chat bubble details | Done | `KafiTrialOfferBubble` full Screen 31 rows (incl. starting from + notes + total); `TrialController.ensureTrialInList`; `openThread` prefetches offer trials by id |
+
+| 2026-08-06 | Applicants job filter names | Done | Applicants job filter labels resolve via JobPostController.myJobs display names |
+
+| 2026-08-06 | Messages bottom-nav badge | Done | `KafiBottomNavItem.badgeCount` + `ChatController.navMessageBadgeCount` / `onMessagesTabOpened` |
+
+| 2026-08-06 | Report user info + attachments | Done | `DisputeModel` snapshot + attachments; `IDisputeService.fileDispute` extended; Storage rules `disputes/{id}/attachments`; admin `DisputeRow`/`DisputeDetail` IDs+gallery; `App.tsx` ProtectedRoute `PageLoader` |
+
+| 2026-08-06 | Hide inactive nannies listing | Done | `NannyListingActivity` + fixed `browseNannies` filter (null lastActiveAt hidden); `touchNannyActive` on app resume; `settings/global.hideInactiveNannies` documented |
+
+| 2026-08-06 | Report attach storage auth | Done | Report filing: create dispute then upload; Storage read for signed-in on dispute attachments; reporter may patch `attachments` only |
+
+| 2026-08-06 | Admin reports + last active | Done | Admin Reports attachment DocViewer gallery; list shows reporter/reported IDs; `NannyRow.lastActiveAt` on All Nannies + profile |

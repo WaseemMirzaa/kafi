@@ -12,16 +12,35 @@ class FirestoreDisputeService implements IDisputeService {
     required DisputeCategory category,
     required String description,
     String? relatedTrialId,
+    String? disputeId,
+    String? reporterName,
+    String? reporterType,
+    String? reportedName,
+    String? reportedType,
+    DisputeUserSnapshot? reporterSnapshot,
+    DisputeUserSnapshot? reportedSnapshot,
+    List<DisputeAttachment> attachments = const [],
   }) async {
     final dispute = DisputeModel(
-      id: '',
+      id: disputeId ?? '',
       reporterId: reporterId,
       reportedUserId: reportedUserId,
       category: category,
       description: description,
       relatedTrialId: relatedTrialId,
       createdAt: DateTime.now(),
+      reporterName: reporterName,
+      reporterType: reporterType,
+      reportedName: reportedName,
+      reportedType: reportedType,
+      reporterSnapshot: reporterSnapshot,
+      reportedSnapshot: reportedSnapshot,
+      attachments: attachments,
     );
+    if (disputeId != null && disputeId.isNotEmpty) {
+      await _disputes.doc(disputeId).set(dispute.toMap());
+      return disputeId;
+    }
     final ref = await _disputes.add(dispute.toMap());
     return ref.id;
   }
@@ -42,6 +61,13 @@ class FirestoreDisputeService implements IDisputeService {
     if (!doc.exists) return null;
     return DisputeModel.fromMap(doc.id, doc.data()!);
   }
+
+  @override
+  Stream<DisputeModel?> watchDispute(String disputeId) =>
+      _disputes.doc(disputeId).snapshots().map((doc) {
+        if (!doc.exists || doc.data() == null) return null;
+        return DisputeModel.fromMap(doc.id, doc.data()!);
+      });
 
   Query<Map<String, dynamic>> _msgQuery(String disputeId) => _disputes
       .doc(disputeId)
@@ -70,6 +96,16 @@ class FirestoreDisputeService implements IDisputeService {
       if (message.senderName != null) 'senderName': message.senderName,
       'content': message.content,
       'createdAt': FieldValue.serverTimestamp(),
+    });
+  }
+
+  @override
+  Future<void> updateAttachments(
+    String disputeId,
+    List<DisputeAttachment> attachments,
+  ) async {
+    await _disputes.doc(disputeId).update({
+      'attachments': attachments.map((a) => a.toMap()).toList(),
     });
   }
 }

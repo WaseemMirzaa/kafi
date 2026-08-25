@@ -189,9 +189,9 @@ class ProfileUnlockedScreen extends StatelessWidget {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text('Contact fully unlocked ✅',
+                        Text(AppStrings.contactFullyUnlocked.tr,
                             style: KafiTheme.nunito(11, color: const Color(0xFF1A6A38), w: FontWeight.w800)),
-                        Text('Call or WhatsApp $firstName directly — right now',
+                        Text(AppStrings.contactCallOrWhatsapp.trParams({'name': firstName}),
                             style: KafiTheme.nunito(9, color: const Color(0xFF4A9A65), w: FontWeight.w600)),
                       ],
                     ),
@@ -210,7 +210,7 @@ class ProfileUnlockedScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('📞 $firstName\'s direct number',
+                    Text(AppStrings.contactDirectNumber.trParams({'name': firstName}),
                         style: KafiTheme.fredoka(8.5, color: KafiColors.grnD, w: FontWeight.w700)),
                     const SizedBox(height: 3),
                     _revealValue(loading, failed, phone, retry),
@@ -221,12 +221,12 @@ class ProfileUnlockedScreen extends StatelessWidget {
               Row(
                 children: [
                   Expanded(
-                    child: _gridBtn('💬', 'WhatsApp her', const [Color(0xFF25D366), Color(0xFF128C42)],
+                    child: _gridBtn('💬', AppStrings.whatsappHerBtn.tr, const [Color(0xFF25D366), Color(0xFF128C42)],
                         whatsapp),
                   ),
                   const SizedBox(width: 7),
                   Expanded(
-                    child: _gridBtn('📞', 'Call her', const [Color(0xFF34B87A), Color(0xFF1A8A50)],
+                    child: _gridBtn('📞', AppStrings.callHerBtn.tr, const [Color(0xFF34B87A), Color(0xFF1A8A50)],
                         call, icon: Icons.call),
                   ),
                 ],
@@ -241,10 +241,10 @@ class ProfileUnlockedScreen extends StatelessWidget {
                 const SizedBox(height: 7),
                 _gridBtn('🎬', AppStrings.watchIntroVideo.tr,
                     const [KafiColors.pur, Color(0xFF7B5BD5)],
-                    () => Get.toNamed(Routes.videoPlayer, arguments: {
-                          'videoUrl': card.introVideoUrl,
-                          'nannyName': card.name,
-                        }),
+                    () => AppNavigation.openIntroVideo(
+                          introVideoUrl: card.introVideoUrl,
+                          nannyName: card.name,
+                        ),
                     small: true),
               ],
             ],
@@ -252,8 +252,8 @@ class ProfileUnlockedScreen extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         // WhatsApp shortcut row using the real revealed number.
-        _contactRow('💬', const Color(0xFF25D366), 'WhatsApp', phoneText,
-            'Chat', KafiColors.grnD, KafiColors.grnL, whatsapp),
+        _contactRow('💬', const Color(0xFF25D366), AppStrings.contactWhatsappLabel.tr, phoneText,
+            AppStrings.chatActionLabel.tr, KafiColors.grnD, KafiColors.grnL, whatsapp),
       ],
     );
   }
@@ -320,6 +320,7 @@ class ProfileUnlockedScreen extends StatelessWidget {
       {bool small = false, IconData? icon}) {
     final size = small ? 17.0 : 22.0;
     return GestureDetector(
+      behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
         padding: EdgeInsets.symmetric(vertical: small ? 10 : 12, horizontal: 8),
@@ -399,6 +400,7 @@ class ProfileUnlockedScreen extends StatelessWidget {
       children: [
         Expanded(
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () => AppNavigation.toggleShortlist(card),
             child: Container(
               alignment: Alignment.center,
@@ -415,6 +417,7 @@ class ProfileUnlockedScreen extends StatelessWidget {
         const SizedBox(width: 6),
         Expanded(
           child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
             onTap: () => AppNavigation.openTrialOffer(nannyId: card.id, nannyName: card.name),
             child: Container(
               alignment: Alignment.center,
@@ -523,12 +526,13 @@ class ProfileUnlockedScreen extends StatelessWidget {
               const Text('🧪', style: TextStyle(fontSize: 13)),
               const SizedBox(width: 6),
               Expanded(
-                child: Text('Active trial — ${trial.durationDays} days',
+                child: Text(
+                    AppStrings.trialActiveDaysN.trParams({'n': '${trial.durationDays}'}),
                     style: KafiTheme.nunito(10, color: KafiColors.pur, w: FontWeight.w700)),
               ),
               TextButton(
                 onPressed: () => Get.toNamed(Routes.trial),
-                child: Text('Details', style: KafiTheme.fredoka(10, color: KafiColors.pur)),
+                child: Text(AppStrings.detailsLabel.tr, style: KafiTheme.fredoka(10, color: KafiColors.pur)),
               ),
             ],
           ),

@@ -37,13 +37,29 @@ class ShortlistItem {
         'addedAt': addedAt.toIso8601String(),
       };
 
-  factory ShortlistItem.fromMap(Map<String, dynamic> m) => ShortlistItem(
-        id: m['id'] as String,
-        familyId: m['familyId'] as String,
-        nannyId: m['nannyId'] as String,
-        nannyName: m['nannyName'] as String?,
-        nannyPhoto: m['nannyPhoto'] as String?,
-        notes: m['notes'] as String?,
-        addedAt: DateTime.parse(m['addedAt'] as String),
-      );
+  factory ShortlistItem.fromMap(Map<String, dynamic> m) {
+    final rawAdded = m['addedAt'];
+    DateTime addedAt;
+    if (rawAdded is DateTime) {
+      addedAt = rawAdded;
+    } else if (rawAdded is String) {
+      addedAt = DateTime.tryParse(rawAdded) ?? DateTime.now();
+    } else {
+      // Firestore Timestamp without importing cloud_firestore here.
+      try {
+        addedAt = (rawAdded as dynamic).toDate() as DateTime;
+      } catch (_) {
+        addedAt = DateTime.now();
+      }
+    }
+    return ShortlistItem(
+      id: (m['id'] ?? '').toString(),
+      familyId: (m['familyId'] ?? '').toString(),
+      nannyId: (m['nannyId'] ?? '').toString(),
+      nannyName: m['nannyName'] as String?,
+      nannyPhoto: m['nannyPhoto'] as String?,
+      notes: m['notes'] as String?,
+      addedAt: addedAt,
+    );
+  }
 }

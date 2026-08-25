@@ -1,5 +1,6 @@
 import { onCall, HttpsError } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
+import { resolveLocale, tn } from './i18n/notifications';
 
 function mockSubscriptionAllowed(): boolean {
   const projectId = process.env.GCLOUD_PROJECT ?? process.env.GCP_PROJECT ?? '';
@@ -10,10 +11,17 @@ function mockSubscriptionAllowed(): boolean {
 /// Firestore rules and onContactRevealRequested see the same entitlement as the app.
 export const syncMockSubscription = onCall(async (request) => {
   if (!request.auth) {
-    throw new HttpsError('unauthenticated', 'Sign in required.');
+    // No signed-in user yet, so there's no locale preference to read — the
+    // client's own locale-aware handling of this rare unauthenticated case
+    // is the fallback (mirrors bootstrapAdmin's pre-auth default of 'en').
+    throw new HttpsError('unauthenticated', tn('error.signInRequired', 'en'));
   }
+
+  const userSnap = await admin.firestore().collection('users').doc(request.auth.uid).get();
+  const locale = resolveLocale(userSnap.data());
+
   if (!mockSubscriptionAllowed()) {
-    throw new HttpsError('permission-denied', 'Mock subscription sync is disabled.');
+    throw new HttpsError('permission-denied', tn('error.mockSubscriptionDisabled', locale));
   }
 
   const familyId = request.auth.uid;
@@ -21,7 +29,7 @@ export const syncMockSubscription = onCall(async (request) => {
   const planId = request.data?.planId as string | undefined;
 
   if (!state) {
-    throw new HttpsError('invalid-argument', 'state is required.');
+    throw new HttpsError('invalid-argument', tn('error.stateRequired', locale));
   }
 
   const db = admin.firestore();

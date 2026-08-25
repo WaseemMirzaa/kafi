@@ -9,18 +9,21 @@ import {
   Row,
   StatusBadge,
   TableCard,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import { FilterBar, FilterSelect, Pagination } from '../../components/ui/ListControls';
 import { useListControls } from '../../hooks/useListControls';
 import { TrialService, TrialAdminRow } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
 import { exportCsv } from '../../utils/csv';
-import { trialStatusVariant, fmtDate } from '../../utils/nannyLabels';
+import { trialStatusVariant, trialStatusLabel, fmtDate } from '../../utils/nannyLabels';
 import { trialDayNumber, trialShortLeft } from '../../utils/trials';
+import { useLocale } from '../../context/LocaleContext';
 
 const STATUSES = ['pending', 'countered', 'accepted', 'active', 'completed', 'declined', 'cancelled'];
 
 export default function AllTrials() {
+  const { t: translate } = useLocale();
   const [items, setItems] = useState<TrialAdminRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -29,8 +32,9 @@ export default function AllTrials() {
   useEffect(() => {
     TrialService.listAll()
       .then(setItems)
-      .catch((e) => setError((e as Error).message || 'Failed to load trials'))
+      .catch((e) => setError((e as Error).message || translate('trials.failedToLoad')))
       .finally(() => setLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const extraFilter = useMemo(
@@ -72,20 +76,20 @@ export default function AllTrials() {
   return (
     <PageShell>
       <PageHeader
-        title="Active trials"
-        subtitle={`${items.length} total · Monitor nanny ↔ family trials`}
+        title={translate('trials.allTrialsTitle')}
+        subtitle={translate('trials.allTrialsSubtitle', { count: items.length })}
         actions={
           <button type="button" className="qa-btn qa-g" onClick={onExport}>
-            Export CSV
+            {translate('common.exportCsv')}
           </button>
         }
       />
       <PageContent>
         <div className="flex gap-1.5 mb-2.5">
-          <ColStat num={String(stats.active)} label="Active" change="● live" numColor="#9B6EDB" />
-          <ColStat num={String(stats.pending)} label="Pending" change="⚠ awaiting" numColor="#FFB347" />
-          <ColStat num={String(stats.completed)} label="Completed" change="↑ done" />
-          <ColStat num={String(stats.cancelled)} label="Cancelled" change="dropped" numColor="#FF5C8A" />
+          <ColStat num={String(stats.active)} label={translate('trials.active')} change={translate('trials.liveDot')} numColor="#9B6EDB" />
+          <ColStat num={String(stats.pending)} label={translate('trials.pending')} change={translate('trials.awaiting')} numColor="#FFB347" />
+          <ColStat num={String(stats.completed)} label={translate('trials.completed')} change={translate('trials.doneChange')} />
+          <ColStat num={String(stats.cancelled)} label={translate('trials.cancelled')} change={translate('trials.dropped')} numColor="#FF5C8A" />
         </div>
 
         <FilterBar
@@ -99,51 +103,54 @@ export default function AllTrials() {
             lc.clear();
             setStatus('all');
           }}
-          searchPlaceholder="Search by nanny, family, location…"
-          dateLabel="Start date"
+          searchPlaceholder={translate('trials.searchPlaceholder')}
+          dateLabel={translate('trials.startDate')}
         >
           <FilterSelect
-            label="Status"
+            label={translate('common.status')}
             value={status}
             onChange={setStatus}
-            options={[{ value: 'all', label: 'All statuses' }, ...STATUSES.map((s) => ({ value: s, label: s }))]}
+            options={[
+              { value: 'all', label: translate('trials.allStatuses') },
+              ...STATUSES.map((s) => ({ value: s, label: trialStatusLabel(s) })),
+            ]}
           />
         </FilterBar>
 
-        <TableCard title="Trials">
-          {loading && <div className="px-3 py-4 text-[10px] text-[#8090B0]">Loading…</div>}
+        <TableCard title={translate('nannies.trials')}>
+          {loading && <PageLoader compact />}
           {!loading && error && (
             <div className="px-3 py-4 text-[10px] font-bold text-rose-dark">{error}</div>
           )}
           {!loading && !error && lc.total === 0 && (
-            <div className="px-3 py-4 text-[10px] text-[#8090B0]">No trials match your filters.</div>
+            <div className="px-3 py-4 text-[10px] text-[#8090B0]">{translate('trials.noMatchFilters')}</div>
           )}
-          {lc.pageItems.map((t) => {
-            const dayNum = trialDayNumber(t);
-            const ended = t.status === 'completed' || t.status === 'cancelled';
+          {lc.pageItems.map((row) => {
+            const dayNum = trialDayNumber(row);
+            const ended = row.status === 'completed' || row.status === 'cancelled';
             return (
-              <Row key={t.id}>
-                <Avatar letter={initials(t.nannyName ?? 'N')} gradient={gradientFor(t.id)} />
+              <Row key={row.id}>
+                <Avatar letter={initials(row.nannyName ?? 'N')} gradient={gradientFor(row.id)} />
                 <div className="flex-1 min-w-0">
                   <div className="text-[10.5px] font-extrabold text-navy truncate">
-                    {t.nannyName ?? t.nannyId} ↔ {t.familyName ?? t.familyId}
+                    {row.nannyName ?? row.nannyId} ↔ {row.familyName ?? row.familyId}
                   </div>
                   <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">
-                    {t.durationDays}-day trial · Day {dayNum}/{t.durationDays}
-                    {t.location ? ` · ${t.location}` : ''}
+                    {translate('trials.dayTrial', { days: row.durationDays, day: dayNum, total: row.durationDays })}
+                    {row.location ? ` · ${row.location}` : ''}
                   </div>
                 </div>
                 <div className="flex flex-col items-end">
-                  <StatusBadge variant={trialStatusVariant(String(t.status))}>{String(t.status)}</StatusBadge>
+                  <StatusBadge variant={trialStatusVariant(String(row.status))}>{trialStatusLabel(row.status)}</StatusBadge>
                   <span className={`text-[8px] font-bold mt-0.5 ${ended ? 'text-[#A0ADC8]' : 'text-green-dark'}`}>
-                    {ended ? fmtDate(t.endDate) : trialShortLeft(t)}
+                    {ended ? fmtDate(row.endDate) : trialShortLeft(row)}
                   </span>
                 </div>
                 <Link
-                  to={`/trials/${t.id}`}
+                  to={`/trials/${row.id}`}
                   className="text-[9px] font-bold text-purple font-fredoka no-underline ml-1"
                 >
-                  View →
+                  {translate('common.view')}
                 </Link>
               </Row>
             );

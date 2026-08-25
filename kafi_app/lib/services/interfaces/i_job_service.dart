@@ -15,6 +15,19 @@ abstract class IJobService {
   Future<void> saveJobPost(JobPostModel post);
   Future<List<JobPostModel>> getJobsByFamily(String familyId);
   Future<List<JobPostModel>> browseJobs({JobFilter? filter});
+
+  /// Live active job feed for the nanny Jobs tab / dashboard (Tech Arch §IJobService).
+  Stream<List<JobPostModel>> watchActiveJobs({JobFilter? filter});
+
+  /// Live family browse feed of approved+verified nannies (Screen 14).
+  /// Same filter / matchJob semantics as [browseNannies].
+  Stream<List<NannyCardModel>> watchBrowseNannies({
+    String? filter,
+    JobFilter? jobFilter,
+    JobPostModel? matchJob,
+    FamilyModel? family,
+  });
+
   Future<JobPostModel?> getJob(String id);
   Future<void> updateJobStatus(String jobId, JobPostStatus status);
 

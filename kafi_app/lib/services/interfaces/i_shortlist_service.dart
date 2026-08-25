@@ -6,6 +6,8 @@ abstract class IShortlistService {
     required String familyId,
     required String nannyId,
     String? notes,
+    String? nannyName,
+    String? nannyPhoto,
   });
   Future<void> remove({required String familyId, required String nannyId});
   Future<void> updateNotes({

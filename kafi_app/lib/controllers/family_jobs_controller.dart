@@ -1,8 +1,10 @@
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/hire_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
+import 'package:kafi_app/services/interfaces/i_application_service.dart';
 import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
@@ -39,6 +41,23 @@ class FamilyJobsController extends GetxController {
       final loaded = List<JobPostModel>.from(await _jobs.getJobsByFamily(fid))
         ..sort((a, b) => (b.createdAt ?? DateTime(1970))
             .compareTo(a.createdAt ?? DateTime(1970)));
+      // Overlay live applicant counts from the applications collection so My
+      // Jobs pills stay accurate even when jobs.applicationsCount is stale.
+      if (Get.isRegistered<IApplicationService>()) {
+        final apps =
+            await Get.find<IApplicationService>().getApplicationsForFamily(fid);
+        final counts = <String, int>{};
+        for (final a in apps) {
+          if (a.status == ApplicationStatus.withdrawn) continue;
+          counts[a.jobPostId] = (counts[a.jobPostId] ?? 0) + 1;
+        }
+        for (var i = 0; i < loaded.length; i++) {
+          final c = counts[loaded[i].id];
+          if (c != null) {
+            loaded[i] = loaded[i].copyWith(applicationsCount: c);
+          }
+        }
+      }
       final hires = await _hires.getHiresForFamily(fid);
       jobs.assignAll(loaded);
       _activeHires.assignAll(hires.where((h) => h.isActive));

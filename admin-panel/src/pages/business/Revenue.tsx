@@ -3,6 +3,7 @@ import {
   BarRow,
   PageContent,
   PageHeader,
+  PageLoader,
   PageShell,
   Row,
   StatusBadge,
@@ -12,11 +13,19 @@ import {
 import { FilterBar, FilterSelect } from '../../components/ui/ListControls';
 import { RevenueService, RevenueTransaction, SettingsService, DEFAULT_VAT_RATE } from '../../services/firestore';
 import { exportCsv } from '../../utils/csv';
+import { useLocale } from '../../context/LocaleContext';
+import { getLocale, TranslationKey } from '../../locales/t';
 
 const txVariant: Record<RevenueTransaction['status'], string> = {
   paid: 'verified',
   refunded: 'pending',
   failed: 'rejected',
+};
+
+const txStatusLabelKeys: Record<RevenueTransaction['status'], TranslationKey> = {
+  paid: 'revenue.status.paid',
+  refunded: 'revenue.status.refunded',
+  failed: 'revenue.status.failed',
 };
 
 const planColor: Record<string, string> = {
@@ -75,8 +84,9 @@ function buildRangeTrend(
     cursor.setDate(1);
     const endMonth = new Date(to);
     endMonth.setDate(1);
+    const monthLocale = getLocale() === 'ar' ? 'ar-AE' : 'en';
     while (cursor <= endMonth) {
-      const label = cursor.toLocaleString('en', { month: 'short' }) + ' ' + cursor.getFullYear();
+      const label = cursor.toLocaleString(monthLocale, { month: 'short' }) + ' ' + cursor.getFullYear();
       buckets.set(label, 0);
       cursor.setMonth(cursor.getMonth() + 1);
     }
@@ -84,7 +94,7 @@ function buildRangeTrend(
       const ts = t.createdAt.getTime();
       if (ts < fromMs || ts > toMs) return;
       const d = t.createdAt;
-      const label = d.toLocaleString('en', { month: 'short' }) + ' ' + d.getFullYear();
+      const label = d.toLocaleString(monthLocale, { month: 'short' }) + ' ' + d.getFullYear();
       buckets.set(label, (buckets.get(label) ?? 0) + t.amount);
     });
   }
@@ -100,6 +110,7 @@ function buildRangeTrend(
 }
 
 export default function Revenue() {
+  const { t, locale } = useLocale();
   const defaultRange = presetRange('monthly');
   const [txns, setTxns] = useState<RevenueTransaction[]>([]);
   const [loading, setLoading] = useState(true);
@@ -115,7 +126,7 @@ export default function Revenue() {
   useEffect(() => {
     RevenueService.allTransactions()
       .then(setTxns)
-      .catch((e: unknown) => setError((e as Error).message || 'Failed to load revenue'))
+      .catch((e: unknown) => setError((e as Error).message || t('revenue.failedToLoad')))
       .finally(() => setLoading(false));
     SettingsService.get()
       .then((s) => setVatRate(s.vatRate))
@@ -156,7 +167,7 @@ export default function Revenue() {
     const hasTrendData = trend.some((b) => b.amount > 0);
 
     return { paid, total, vat, byPlan, trend, hasTrendData };
-  }, [inRange, from, to, vatRate]);
+  }, [inRange, from, to, vatRate, locale]);
 
   /** Recent transactions filtered by txnQuery (familyName or plan). */
   const visibleTxns = useMemo(() => {
@@ -180,7 +191,10 @@ export default function Revenue() {
   if (loading) {
     return (
       <PageShell>
-        <PageHeader title="Revenue" subtitle="Loading…" />
+        <PageHeader title={t('revenue.title')} subtitle={t('revenue.subtitle')} />
+        <PageContent>
+          <PageLoader />
+        </PageContent>
       </PageShell>
     );
   }
@@ -194,17 +208,15 @@ export default function Revenue() {
   if (!error && txns.length === 0) {
     return (
       <PageShell>
-        <PageHeader title="Revenue" subtitle="Financial overview & VAT" />
+        <PageHeader title={t('revenue.title')} subtitle={t('revenue.subtitle')} />
         <PageContent>
-          <TableCard title="Revenue reporting">
+          <TableCard title={t('revenue.title')}>
             <div className="px-3 py-6 text-center">
               <div className="text-[11px] font-extrabold text-navy">
-                Billing is not integrated yet
+                {t('revenue.notIntegratedTitle')}
               </div>
               <div className="mt-1.5 mx-auto max-w-md text-[10px] font-semibold text-[#8090B0] leading-relaxed">
-                Revenue, VAT and transaction data are populated by the RevenueCat
-                webhook. This report will appear here automatically once payments
-                are live. See <span className="font-bold">docs/PAYMENTS.md</span>.
+                {t('revenue.notIntegratedDesc', { doc: 'docs/PAYMENTS.md' })}
               </div>
             </div>
           </TableCard>
@@ -216,11 +228,11 @@ export default function Revenue() {
   return (
     <PageShell>
       <PageHeader
-        title="Revenue"
-        subtitle="Financial overview & VAT"
+        title={t('revenue.title')}
+        subtitle={t('revenue.subtitle')}
         actions={
           <button type="button" className="qa-btn qa-g" onClick={onExport}>
-            Export CSV
+            {t('common.exportCsv')}
           </button>
         }
       />
@@ -251,11 +263,11 @@ export default function Revenue() {
             setFrom(r.from);
             setTo(r.to);
           }}
-          searchPlaceholder="Search transactions…"
-          dateLabel="Date"
+          searchPlaceholder={t('revenue.searchPlaceholder')}
+          dateLabel={t('revenue.date')}
         >
           <FilterSelect
-            label="Period"
+            label={t('revenue.period')}
             value={preset}
             onChange={(v) => {
               const p = v as Preset;
@@ -267,10 +279,10 @@ export default function Revenue() {
               }
             }}
             options={[
-              { value: 'weekly', label: 'Weekly (7 days)' },
-              { value: 'monthly', label: 'Monthly (30 days)' },
-              { value: 'yearly', label: 'Yearly (12 months)' },
-              { value: 'custom', label: 'Custom range' },
+              { value: 'weekly', label: t('revenue.periodWeekly') },
+              { value: 'monthly', label: t('revenue.periodMonthly') },
+              { value: 'yearly', label: t('revenue.periodYearly') },
+              { value: 'custom', label: t('revenue.periodCustom') },
             ]}
           />
         </FilterBar>
@@ -278,33 +290,33 @@ export default function Revenue() {
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 mb-3">
           <TopStat
             num={`AED ${derived.total.toLocaleString()}`}
-            label="Revenue in range"
-            change="↑ Live"
+            label={t('revenue.revenueInRange')}
+            change={t('revenue.liveChange')}
             numClass="!text-[13px]"
           />
           <TopStat
             num={String(derived.paid.length)}
-            label="Paid transactions"
-            change="↑ Paid"
+            label={t('revenue.paidTransactions')}
+            change={t('revenue.paidChange')}
           />
           <TopStat
             num={`AED ${derived.vat.toLocaleString()}`}
-            label={`VAT ${Math.round(vatRate * 100)}%`}
-            change="→ FTA"
+            label={t('revenue.vatPercent', { pct: Math.round(vatRate * 100) })}
+            change={t('revenue.ftaChange')}
             numClass="!text-[13px]"
           />
           <TopStat
             num={`AED ${derived.paid.length ? Math.round(derived.total / derived.paid.length).toLocaleString() : '0'}`}
-            label="Avg / transaction"
-            change="↑ Avg"
+            label={t('revenue.avgPerTransaction')}
+            change={t('revenue.avgChange')}
             numClass="!text-[13px]"
           />
         </div>
 
-        <TableCard title="Revenue trend">
+        <TableCard title={t('revenue.revenueTrend')}>
           <div className="px-[11px] py-4">
             {!derived.hasTrendData ? (
-              <div className="text-[10px] text-[#8090B0]">No data for selected period.</div>
+              <div className="text-[10px] text-[#8090B0]">{t('revenue.noDataForPeriod')}</div>
             ) : (
               <div className="h-40 flex items-end gap-2 overflow-x-auto">
                 {derived.trend.map((m) => (
@@ -321,9 +333,9 @@ export default function Revenue() {
           </div>
         </TableCard>
 
-        <TableCard title="Plan revenue split">
+        <TableCard title={t('revenue.planRevenueSplit')}>
           {derived.byPlan.length === 0 && (
-            <div className="px-3 py-4 text-[10px] text-[#8090B0]">No paid transactions in selected period.</div>
+            <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('revenue.noPaidTransactionsInPeriod')}</div>
           )}
           {derived.byPlan.map((p) => (
             <Row key={p.plan}>
@@ -337,26 +349,26 @@ export default function Revenue() {
           ))}
         </TableCard>
 
-        <TableCard title="Recent transactions">
+        <TableCard title={t('revenue.recentTransactions')}>
           {inRange.length === 0 && (
-            <div className="px-3 py-4 text-[10px] text-[#8090B0]">No transactions in selected period.</div>
+            <div className="px-3 py-4 text-[10px] text-[#8090B0]">{t('revenue.noTransactionsInPeriod')}</div>
           )}
-          {visibleTxns.map((t) => (
-            <Row key={t.id}>
+          {visibleTxns.map((tx) => (
+            <Row key={tx.id}>
               <div className="flex-1 min-w-0">
-                <div className="text-[10.5px] font-extrabold text-navy truncate">{t.familyName}</div>
+                <div className="text-[10.5px] font-extrabold text-navy truncate">{tx.familyName}</div>
                 <div className="text-[8.5px] font-semibold text-[#8090B0]">
-                  {t.plan} · {t.createdAt.toLocaleDateString()}
+                  {tx.plan} · {tx.createdAt.toLocaleDateString()}
                 </div>
               </div>
-              <div className="text-[10.5px] font-extrabold text-navy">AED {t.amount.toLocaleString()}</div>
-              <StatusBadge variant={txVariant[t.status]}>{t.status}</StatusBadge>
+              <div className="text-[10.5px] font-extrabold text-navy">AED {tx.amount.toLocaleString()}</div>
+              <StatusBadge variant={txVariant[tx.status]}>{t(txStatusLabelKeys[tx.status])}</StatusBadge>
             </Row>
           ))}
           {inRange.length > 50 && (
             <Row>
               <div className="flex-1 text-[9px] font-semibold text-[#8090B0]">
-                Showing latest 50 of {inRange.length} transactions
+                {t('revenue.showingLatest', { count: inRange.length })}
               </div>
             </Row>
           )}

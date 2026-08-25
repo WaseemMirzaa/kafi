@@ -72,7 +72,7 @@ class ProfileRelockedScreen extends StatelessWidget {
                 ),
                 const SizedBox(height: 2),
                 Text(
-                  'Contacts and chat are locked. Renew to continue.',
+                  AppStrings.relockedSubtext.tr,
                   style: KafiTheme.nunito(10, color: const Color(0xFFB91C1C)),
                 ),
               ],
@@ -122,9 +122,9 @@ class ProfileRelockedScreen extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          _blurredItem(Icons.phone, 'Phone number', '+971 50 ••• ••••'),
-          _blurredItem(Icons.description, 'Full CV', '${card.name}_CV.pdf'),
-          _blurredItem(Icons.play_arrow, 'Intro video', '▶ Watch'),
+          _blurredItem(Icons.phone, AppStrings.lockedPhoneNumber.tr, '+971 50 ••• ••••'),
+          _blurredItem(Icons.description, AppStrings.lockedFullCv.tr, '${card.name}_CV.pdf'),
+          _blurredItem(Icons.play_arrow, AppStrings.lockedIntroVideo.tr, AppStrings.watchLabel.tr),
           const SizedBox(height: 12),
           KafiPrimaryButton(
             label: AppStrings.renewNow.tr,

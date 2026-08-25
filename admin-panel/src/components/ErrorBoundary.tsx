@@ -1,4 +1,5 @@
 import { Component, ErrorInfo, ReactNode } from 'react';
+import { t } from '../locales/t';
 
 interface Props {
   children: ReactNode;
@@ -28,15 +29,15 @@ export class ErrorBoundary extends Component<Props, State> {
     if (this.state.error) {
       return (
         <div style={{ padding: 24, fontFamily: 'system-ui, sans-serif', color: '#1A2B4A' }}>
-          <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>Something went wrong</h2>
+          <h2 style={{ fontSize: 16, fontWeight: 800, margin: 0 }}>{t('errorBoundary.title')}</h2>
           <p style={{ fontSize: 12, color: '#8090B0', marginTop: 6 }}>
-            {this.state.error.message || 'An unexpected error occurred while rendering this page.'}
+            {this.state.error.message || t('errorBoundary.defaultMessage')}
           </p>
           <div style={{ marginTop: 12, display: 'flex', gap: 12, fontSize: 12 }}>
             <button type="button" onClick={() => this.setState({ error: null })}>
-              Try again
+              {t('errorBoundary.tryAgain')}
             </button>
-            <a href="/">Go to dashboard</a>
+            <a href="/">{t('errorBoundary.goToDashboard')}</a>
           </div>
         </div>
       );

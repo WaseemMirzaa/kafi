@@ -9,18 +9,22 @@ import {
   PageShell,
   QaLink,
   StatusBadge,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import { Section } from '../../components/nanny/NannyProfileView';
 import { MessageThread, ThreadMessage } from '../../components/chat/MessageThread';
 import { TicketService, TicketRow, TicketMessageRow } from '../../services/firestore';
+import { useLocale } from '../../context/LocaleContext';
+import { t as translate, TranslationKey } from '../../locales/t';
+import { ticketStatusLabel, personTypeLabel } from '../../utils/nannyLabels';
 
-const categoryLabel: Record<TicketRow['category'], string> = {
-  account: 'Account',
-  payment: 'Payment',
-  trial: 'Trial',
-  hiring: 'Hiring',
-  technical: 'Technical',
-  other: 'Other',
+const categoryLabelKeys: Record<TicketRow['category'], TranslationKey> = {
+  account: 'support.category.account',
+  payment: 'support.category.payment',
+  trial: 'support.category.trial',
+  hiring: 'support.category.hiring',
+  technical: 'support.category.technical',
+  other: 'support.category.other',
 };
 
 const statusVariant: Record<TicketRow['status'], string> = {
@@ -36,13 +40,14 @@ function toThreadMessages(msgs: TicketMessageRow[]): ThreadMessage[] {
   return msgs.map((m) => ({
     id: m.id,
     align: m.senderType === 'admin' ? 'right' : 'left',
-    author: m.senderName ?? (m.senderType === 'admin' ? 'Support' : 'User'),
+    author: m.senderName ?? (m.senderType === 'admin' ? translate('chat.supportSender') : translate('chat.userSender')),
     content: m.content,
     timestamp: m.createdAt,
   }));
 }
 
 export default function SupportTicketDetail() {
+  const { t } = useLocale();
   const { id } = useParams();
   const [ticket, setTicket] = useState<TicketRow | null>(null);
   const [messages, setMessages] = useState<TicketMessageRow[]>([]);
@@ -52,33 +57,54 @@ export default function SupportTicketDetail() {
   const [error, setError] = useState<string | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
-  const load = async () => {
+  // Live ticket doc + messages so nanny/family replies and status changes
+  // appear without a manual refresh.
+  useEffect(() => {
     if (!id) return;
     setLoading(true);
     setError(null);
-    try {
-      const [t, m] = await Promise.all([TicketService.get(id), TicketService.listMessages(id)]);
-      setTicket(t);
-      setMessages(m);
-    } catch (e) {
-      // A read failure previously fell through to the "Not found." branch,
-      // misleading the admin; surface it as an error instead.
-      setError((e as Error).message || 'Failed to load ticket');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id]);
+    let gotDoc = false;
+    let gotMsgs = false;
+    const markReady = () => {
+      if (gotDoc && gotMsgs) setLoading(false);
+    };
+    const unsubDoc = TicketService.watch(
+      id,
+      (tk) => {
+        setTicket(tk);
+        gotDoc = true;
+        markReady();
+      },
+      (e) => {
+        setError(e.message || t('support.failedToLoadTicket'));
+        gotDoc = true;
+        markReady();
+      },
+    );
+    const unsubMsgs = TicketService.watchMessages(
+      id,
+      (m) => {
+        setMessages(m);
+        gotMsgs = true;
+        markReady();
+      },
+      (e) => {
+        setError(e.message || t('support.failedToLoadTicket'));
+        gotMsgs = true;
+        markReady();
+      },
+    );
+    return () => {
+      unsubDoc();
+      unsubMsgs();
+    };
+  }, [id, t]);
 
   if (loading) {
     return (
       <PageShell>
         <PageContent>
-          <div className="text-[10px] text-[#8090B0]">Loading…</div>
+          <PageLoader />
         </PageContent>
       </PageShell>
     );
@@ -96,7 +122,7 @@ export default function SupportTicketDetail() {
     return (
       <PageShell>
         <PageContent>
-          <div className="text-[10px] text-[#8090B0]">Not found.</div>
+          <div className="text-[10px] text-[#8090B0]">{t('common.notFound')}</div>
         </PageContent>
       </PageShell>
     );
@@ -107,16 +133,8 @@ export default function SupportTicketDetail() {
     setActionError(null);
     try {
       await TicketService.sendMessage(ticket.id, text);
-      const [t, m] = await Promise.all([
-        TicketService.get(ticket.id),
-        TicketService.listMessages(ticket.id),
-      ]);
-      setTicket(t);
-      setMessages(m);
     } catch (e) {
-      // Keep the composer usable instead of leaving it spinning with the reply
-      // silently lost.
-      setActionError((e as Error).message || 'Failed to send reply — try again.');
+      setActionError((e as Error).message || t('support.failedToSendReply'));
     } finally {
       setSending(false);
     }
@@ -127,9 +145,8 @@ export default function SupportTicketDetail() {
     setActionError(null);
     try {
       await TicketService.updateStatus(ticket.id, status);
-      await load();
     } catch (e) {
-      setActionError((e as Error).message || 'Failed to update status — try again.');
+      setActionError((e as Error).message || t('support.failedToUpdateStatus'));
     } finally {
       setBusy(false);
     }
@@ -140,28 +157,28 @@ export default function SupportTicketDetail() {
   return (
     <PageShell>
       <PageHeader
-        title={ticket.subject || 'Support ticket'}
-        subtitle={`Ticket #${ticket.id}`}
+        title={ticket.subject || t('support.ticketFallback')}
+        subtitle={t('support.hash', { id: ticket.id })}
         actions={
           <QaLink to="/support" variant="n">
-            ← All tickets
+            {t('support.allTicketsLink')}
           </QaLink>
         }
       />
       <PageContent>
         <DetailCard>
           <div className="flex items-center gap-2">
-            <div className="text-[12px] font-black text-navy">{categoryLabel[ticket.category]}</div>
-            <StatusBadge variant={statusVariant[ticket.status]}>{ticket.status}</StatusBadge>
+            <div className="text-[12px] font-black text-navy">{t(categoryLabelKeys[ticket.category])}</div>
+            <StatusBadge variant={statusVariant[ticket.status]}>{ticketStatusLabel(ticket.status)}</StatusBadge>
             <div className="flex-1 min-w-0 text-[8.5px] font-semibold text-[#8090B0] truncate">
-              {ticket.openerName ?? ticket.openerId} ({ticket.openerType}) · {ticket.createdAt.toLocaleDateString()}
+              {ticket.openerName ?? ticket.openerId} ({personTypeLabel(ticket.openerType)}) · {ticket.createdAt.toLocaleDateString()}
             </div>
           </div>
           <FieldGrid>
-            <Field label="Opened by" value={`${ticket.openerName ?? ticket.openerId} (${ticket.openerType})`} />
-            <Field label="Category" value={categoryLabel[ticket.category]} />
-            <Field label="Related trial" value={ticket.relatedTrialId ?? '—'} />
-            <Field label="Opened on" value={ticket.createdAt.toLocaleDateString()} />
+            <Field label={t('support.openedBy')} value={`${ticket.openerName ?? ticket.openerId} (${personTypeLabel(ticket.openerType)})`} />
+            <Field label={t('support.category')} value={t(categoryLabelKeys[ticket.category])} />
+            <Field label={t('support.relatedTrial')} value={ticket.relatedTrialId ?? t('common.dash')} />
+            <Field label={t('support.openedOn')} value={ticket.createdAt.toLocaleDateString()} />
           </FieldGrid>
         </DetailCard>
 
@@ -169,25 +186,25 @@ export default function SupportTicketDetail() {
           <div className="text-[10px] font-bold text-rose-dark">{actionError}</div>
         )}
 
-        <Section title="Conversation">
+        <Section title={t('support.conversation')}>
           <p className="text-[9px] font-semibold text-[#8090B0] mb-1">
-            Conversation between support (you) and {ticket.openerName ?? 'the user'}.
+            {t('support.conversationWith', { name: ticket.openerName ?? t('support.theUser') })}
           </p>
           <MessageThread
             messages={toThreadMessages(messages)}
-            emptyText="No messages yet — send the first reply."
+            emptyText={t('common.noMessagesYet')}
             onSend={closed ? undefined : send}
             sending={sending}
-            placeholder="Reply to the user…"
+            placeholder={t('common.replyToUser')}
           />
           {closed && (
             <div className="text-[9px] font-semibold text-[#8090B0] mt-2">
-              This ticket is {ticket.status}. Re-open it below to continue.
+              {t('support.ticketStatusClosed', { status: ticketStatusLabel(ticket.status) })}
             </div>
           )}
         </Section>
 
-        <Section title="Status">
+        <Section title={t('support.statusSection')}>
           <div className="flex flex-wrap gap-1.5 mt-2">
             {STATUSES.map((s) => (
               <button
@@ -197,7 +214,7 @@ export default function SupportTicketDetail() {
                 disabled={busy}
                 onClick={() => setStatus(s)}
               >
-                {s}
+                {ticketStatusLabel(s)}
               </button>
             ))}
           </div>

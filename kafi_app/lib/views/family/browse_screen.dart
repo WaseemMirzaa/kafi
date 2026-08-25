@@ -362,7 +362,9 @@ class BrowseScreen extends GetView<BrowseController> {
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text('Matches for: ${_jobName(job)}',
+                      Text(
+                          AppStrings.browseMatchesFor
+                              .trParams({'job': _jobName(job)}),
                           style: KafiTheme.nunito(9.5, color: KafiColors.pur, w: FontWeight.w800)),
                       const SizedBox(width: 5),
                       const Icon(Icons.close, size: 12, color: KafiColors.pur),
@@ -374,7 +376,7 @@ class BrowseScreen extends GetView<BrowseController> {
           }),
           const SizedBox(height: 9),
           GestureDetector(
-            onTap: () => Get.toNamed(Routes.familyForm),
+            onTap: _onPostNewJob,
             child: Container(
               width: double.infinity,
               alignment: Alignment.center,
@@ -416,12 +418,29 @@ class BrowseScreen extends GetView<BrowseController> {
     );
   }
 
-  String _jobName(JobPostModel j) =>
-      j.jobTitle.isNotEmpty ? j.jobTitle : '${j.jobType == JobType.liveOut ? 'Live-out' : 'Live-in'} · ${j.city}';
+  /// Display label for a filter pill. The pill VALUES (`BrowseController
+  /// .filters`) stay untranslated — they double as literal match keys the
+  /// backend filters on (see firestore_job_service.browseNannies).
+  String _filterLabel(String f) => switch (f) {
+        'All' => AppStrings.filterAll.tr,
+        'Live-in' => AppStrings.jobLiveIn.tr,
+        'Live-out' => AppStrings.jobLiveOut.tr,
+        'Arabic' => AppStrings.filterArabic.tr,
+        'Filipino' => AppStrings.filterFilipino.tr,
+        'Indian' => AppStrings.filterIndian.tr,
+        _ => f,
+      };
+
+  String _jobName(JobPostModel j) => j.jobTitle.isNotEmpty
+      ? j.jobTitle
+      : '${j.jobType == JobType.liveOut ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr} · ${j.city}';
 
   // Bottom sheet to filter Top Matches by one of the family's posted jobs.
-  void _showJobFilter() {
-    final jobs = controller.myJobs;
+  Future<void> _showJobFilter() async {
+    // Always re-fetch — permanent BrowseController may still have empty myJobs
+    // from before the family posted their first (or second) job.
+    await controller.refreshMyJobs();
+    final jobs = controller.myJobs.toList();
     Get.bottomSheet(
       Container(
         width: double.infinity,
@@ -442,11 +461,11 @@ class BrowseScreen extends GetView<BrowseController> {
               ),
             ),
             const SizedBox(height: 12),
-            Text('Filter by job',
+            Text(AppStrings.browseFilterByJob.tr,
                 textAlign: TextAlign.center,
                 style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w900)),
             const SizedBox(height: 2),
-            Text('Show nannies matching one of your posted jobs',
+            Text(AppStrings.browseFilterByJobSub.tr,
                 textAlign: TextAlign.center,
                 style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600)),
             const SizedBox(height: 12),
@@ -455,13 +474,13 @@ class BrowseScreen extends GetView<BrowseController> {
                 padding: const EdgeInsets.symmetric(vertical: 10),
                 child: Column(
                   children: [
-                    Text("You haven't posted any jobs yet.",
+                    Text(AppStrings.browseNoJobsYet.tr,
                         style: KafiTheme.nunito(11, color: KafiColors.tm, w: FontWeight.w600)),
                     const SizedBox(height: 10),
                     GestureDetector(
                       onTap: () {
                         Get.back();
-                        Get.toNamed(Routes.familyForm);
+                        _onPostNewJob();
                       },
                       child: Container(
                         padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 9),
@@ -481,7 +500,7 @@ class BrowseScreen extends GetView<BrowseController> {
                 final sel = controller.selectedJob.value;
                 return Column(
                   children: [
-                    _jobFilterRow(null, 'All matches', sel == null),
+                    _jobFilterRow(null, AppStrings.browseAllMatches.tr, sel == null),
                     for (final j in jobs) _jobFilterRow(j, _jobName(j), sel?.id == j.id),
                   ],
                 );
@@ -492,6 +511,9 @@ class BrowseScreen extends GetView<BrowseController> {
       isScrollControlled: true,
     );
   }
+
+  /// Opens Screen 13 for the free FT/PT slot, or My Jobs when both are filled.
+  Future<void> _onPostNewJob() => controller.openPostNewJob();
 
   Widget _jobFilterRow(JobPostModel? job, String label, bool selected) {
     return GestureDetector(
@@ -546,7 +568,7 @@ class BrowseScreen extends GetView<BrowseController> {
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Text(
-                  f,
+                  _filterLabel(f),
                   style: KafiTheme.fredoka(10,
                       color: isActive ? Colors.white : KafiColors.pur, w: FontWeight.w700),
                 ),

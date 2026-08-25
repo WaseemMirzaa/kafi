@@ -10,6 +10,7 @@ import {
   PageShell,
   QaLink,
   StatusBadge,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import { Section } from '../../components/nanny/NannyProfileView';
 import { MessageThread, ThreadMessage } from '../../components/chat/MessageThread';
@@ -29,6 +30,7 @@ import {
 import { gradientFor, initials } from '../../utils/avatar';
 import {
   trialStatusVariant,
+  trialStatusLabel,
   fmtDate,
   jobTypeFullLabel,
   visaSponsorshipLabel,
@@ -36,28 +38,31 @@ import {
   listOr,
 } from '../../utils/nannyLabels';
 import { trialDayNumber, trialCountdown, trialTotalAmount } from '../../utils/trials';
+import { useLocale } from '../../context/LocaleContext';
+import { t as translate, TranslationKey } from '../../locales/t';
 
-const EVAL_ITEMS: { key: keyof NonNullable<TrialAdminRow['evaluation']>; label: string }[] = [
-  { key: 'childInteractionAndPatience', label: 'Child interaction & patience' },
-  { key: 'punctualityAndReliability', label: 'Punctuality & reliability' },
-  { key: 'followingInstructions', label: 'Following instructions' },
-  { key: 'communicationAndLanguage', label: 'Communication & language' },
-  { key: 'cookingFamilyFood', label: 'Cooking family food' },
-  { key: 'honestyAndTrustworthiness', label: 'Honesty & trustworthiness' },
+const EVAL_ITEMS: { key: keyof NonNullable<TrialAdminRow['evaluation']>; labelKey: TranslationKey }[] = [
+  { key: 'childInteractionAndPatience', labelKey: 'trials.eval.childInteraction' },
+  { key: 'punctualityAndReliability', labelKey: 'trials.eval.punctuality' },
+  { key: 'followingInstructions', labelKey: 'trials.eval.followingInstructions' },
+  { key: 'communicationAndLanguage', labelKey: 'trials.eval.communication' },
+  { key: 'cookingFamilyFood', labelKey: 'trials.eval.cooking' },
+  { key: 'honestyAndTrustworthiness', labelKey: 'trials.eval.honesty' },
 ];
 
-const typeNote: Record<string, string> = {
-  trialOffer: 'sent a trial offer',
-  trialAccepted: 'accepted the trial offer',
-  trialDeclined: 'declined the trial offer',
-  trialCountered: 'sent a counter-offer',
+const typeNoteKey: Partial<Record<string, TranslationKey>> = {
+  trialOffer: 'trials.chat.trialOffer',
+  trialAccepted: 'trials.chat.trialAccepted',
+  trialDeclined: 'trials.chat.trialDeclined',
+  trialCountered: 'trials.chat.trialCountered',
 };
 
 function toThreadMessages(msgs: ChatMessageRow[], thread: ChatThreadRow): ThreadMessage[] {
   return msgs.map((m) => {
     const isNanny = m.senderType === 'nanny';
-    const author = isNanny ? thread.nannyName ?? 'Nanny' : thread.familyName ?? 'Family';
-    const note = m.type && m.type !== 'text' && m.type !== 'image' ? typeNote[m.type] : undefined;
+    const author = isNanny ? thread.nannyName ?? translate('trials.nanny') : thread.familyName ?? translate('trials.family');
+    const noteKey = m.type && m.type !== 'text' && m.type !== 'image' ? typeNoteKey[m.type] : undefined;
+    const note = noteKey ? translate(noteKey) : undefined;
     if (m.type === 'system') {
       return { id: m.id, align: 'left', content: m.content, timestamp: m.createdAt, subtle: true };
     }
@@ -87,6 +92,7 @@ function PartyCard({
   to: string;
   gradientKey: string;
 }) {
+  const { t } = useLocale();
   return (
     <div className="admin-card p-3 flex-1">
       <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">{title}</div>
@@ -101,7 +107,7 @@ function PartyCard({
           <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">{subtitle}</div>
         </div>
         <Link to={to} className="text-[9px] font-bold text-purple font-fredoka no-underline">
-          Open →
+          {t('trials.openLink')}
         </Link>
       </div>
     </div>
@@ -109,6 +115,7 @@ function PartyCard({
 }
 
 export default function TrialDetail() {
+  const { t } = useLocale();
   const { id } = useParams();
   const [trial, setTrial] = useState<TrialAdminRow | null>(null);
   const [nanny, setNanny] = useState<NannyRow | null>(null);
@@ -124,34 +131,35 @@ export default function TrialDetail() {
     (async () => {
       setError(null);
       try {
-        const t = await TrialService.get(id);
-        setTrial(t);
-        if (t) {
+        const tr = await TrialService.get(id);
+        setTrial(tr);
+        if (tr) {
           const [n, f, th] = await Promise.all([
-            NannyService.get(t.nannyId),
-            FamilyService.get(t.familyId),
-            ChatService.findThreadByTrial(t.id),
+            NannyService.get(tr.nannyId),
+            FamilyService.get(tr.familyId),
+            ChatService.findThreadByTrial(tr.id),
           ]);
           setNanny(n);
           setFamily(f);
           setThread(th);
-          if (t.jobPostId) setJob(await JobPostService.get(t.jobPostId));
+          if (tr.jobPostId) setJob(await JobPostService.get(tr.jobPostId));
           if (th) setMessages(await ChatService.listMessages(th.id));
         }
       } catch (e) {
         // Without this the page hangs on "Loading…" forever on any read failure.
-        setError((e as Error).message || 'Failed to load trial');
+        setError((e as Error).message || t('trials.failedToLoadTrial'));
       } finally {
         setLoading(false);
       }
     })();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loading) {
     return (
       <PageShell>
         <PageContent>
-          <div className="text-[10px] text-[#8090B0]">Loading…</div>
+          <PageLoader />
         </PageContent>
       </PageShell>
     );
@@ -169,7 +177,7 @@ export default function TrialDetail() {
     return (
       <PageShell>
         <PageContent>
-          <div className="text-[10px] text-[#8090B0]">Trial not found.</div>
+          <div className="text-[10px] text-[#8090B0]">{t('trials.trialNotFound')}</div>
         </PageContent>
       </PageShell>
     );
@@ -183,10 +191,10 @@ export default function TrialDetail() {
     <PageShell>
       <PageHeader
         title={`${trial.nannyName ?? trial.nannyId} ↔ ${trial.familyName ?? trial.familyId}`}
-        subtitle={`Trial #${trial.id}`}
+        subtitle={t('trials.hash', { id: trial.id })}
         actions={
           <QaLink to="/trials" variant="n">
-            ← All trials
+            {t('trials.allTrialsLink')}
           </QaLink>
         }
       />
@@ -195,17 +203,17 @@ export default function TrialDetail() {
         <DetailCard>
           <div className="flex items-center justify-between gap-2">
             <div className="text-[12px] font-black text-navy">
-              {trial.durationDays}-day {trial.trialType ?? ''} trial
+              {t('trials.dayTrialType', { days: trial.durationDays, type: trial.trialType ?? '' })}
             </div>
-            <StatusBadge variant={trialStatusVariant(String(trial.status))}>{String(trial.status)}</StatusBadge>
+            <StatusBadge variant={trialStatusVariant(String(trial.status))}>{trialStatusLabel(trial.status)}</StatusBadge>
           </div>
           <div className="mt-3">
             <div className="flex items-center justify-between text-[9px] font-bold text-[#8090B0] mb-1">
               <span>
-                Day {dayNum} of {trial.durationDays}
+                {t('trials.dayOf', { day: dayNum, total: trial.durationDays })}
               </span>
               <span className={ended ? 'text-[#A0ADC8]' : 'text-green-dark'}>
-                {ended ? `Ended ${fmtDate(trial.endDate)}` : `${trialCountdown(trial)} left`}
+                {ended ? t('trials.ended', { date: fmtDate(trial.endDate) }) : t('trials.leftSuffix', { time: trialCountdown(trial) })}
               </span>
             </div>
             <div className="h-2 bg-[#F0F1FA] rounded-full overflow-hidden">
@@ -224,36 +232,36 @@ export default function TrialDetail() {
             </div>
           </div>
           <FieldGrid>
-            <Field label="Daily rate" value={`AED ${trial.dailyRate.toLocaleString()}`} />
-            <Field label="Total value" value={`AED ${trialTotalAmount(trial).toLocaleString()}`} />
-            <Field label="Start date" value={fmtDate(trial.startDate)} />
-            <Field label="End date" value={fmtDate(trial.endDate)} />
-            <Field label="Location" value={trial.location || '—'} />
-            <Field label="Type" value={trial.trialType || '—'} />
-            <Field label="Outcome" value={trial.outcome || '—'} />
+            <Field label={t('trials.dailyRate')} value={`AED ${trial.dailyRate.toLocaleString()}`} />
+            <Field label={t('trials.totalValue')} value={`AED ${trialTotalAmount(trial).toLocaleString()}`} />
+            <Field label={t('trials.startDate')} value={fmtDate(trial.startDate)} />
+            <Field label={t('common.endDate')} value={fmtDate(trial.endDate)} />
+            <Field label={t('trials.location')} value={trial.location || t('common.dash')} />
+            <Field label={t('trials.type')} value={trial.trialType || t('common.dash')} />
+            <Field label={t('trials.outcome')} value={trial.outcome || t('common.dash')} />
             <Field
-              label="Payment"
+              label={t('trials.payment')}
               value={
                 trial.paymentIssueReported
-                  ? '⚠ Issue reported'
+                  ? t('trials.paymentIssue')
                   : trial.nannyConfirmedPayment
-                    ? '✓ Confirmed by nanny'
-                    : 'Awaiting confirmation'
+                    ? t('trials.paymentConfirmed')
+                    : t('trials.paymentAwaiting')
               }
             />
           </FieldGrid>
-          {trial.notes && <div className="text-[9px] text-navy/70 mt-3">Notes: {trial.notes}</div>}
+          {trial.notes && <div className="text-[9px] text-navy/70 mt-3">{t('trials.notes', { text: trial.notes })}</div>}
         </DetailCard>
 
         {/* Parties */}
         <div className="flex flex-col sm:flex-row gap-3 mt-3">
           <PartyCard
-            title="Nanny"
+            title={t('trials.nanny')}
             name={nanny?.fullName ?? trial.nannyName ?? trial.nannyId}
             photo={nanny?.photoUrls?.[0]}
             subtitle={
               nanny
-                ? [nanny.nationality, nanny.city, nanny.experienceYears ? `${nanny.experienceYears} yrs` : null]
+                ? [nanny.nationality, nanny.city, nanny.experienceYears ? t('common.yearsShort', { count: nanny.experienceYears }) : null]
                     .filter(Boolean)
                     .join(' · ')
                 : trial.nannyId
@@ -262,12 +270,12 @@ export default function TrialDetail() {
             gradientKey={trial.nannyId}
           />
           <PartyCard
-            title="Family"
+            title={t('trials.family')}
             name={family?.fullName ?? trial.familyName ?? trial.familyId}
             photo={family?.profilePhoto}
             subtitle={
               family
-                ? [family.nationality, family.city, family.childrenCount != null ? `${family.childrenCount} children` : null]
+                ? [family.nationality, family.city, family.childrenCount != null ? t('common.childrenCount', { count: family.childrenCount }) : null]
                     .filter(Boolean)
                     .join(' · ')
                 : trial.familyId
@@ -279,61 +287,61 @@ export default function TrialDetail() {
 
         {/* Job tied to the trial */}
         {job && (
-          <Section title="Job for this trial">
+          <Section title={t('trials.jobForTrial')}>
             <div className="flex items-center justify-between gap-2 mt-1">
-              <div className="text-[10.5px] font-extrabold text-navy">{job.jobTitle || 'Job post'}</div>
+              <div className="text-[10.5px] font-extrabold text-navy">{job.jobTitle || t('families.jobPostFallback')}</div>
               <Link to={`/families/${job.familyId}`} className="text-[9px] font-bold text-purple font-fredoka no-underline">
-                View family jobs →
+                {t('trials.viewFamilyJobs')}
               </Link>
             </div>
             <FieldGrid>
-              <Field label="Roles" value={listOr(job.rolesNeeded)} />
-              <Field label="Job type" value={job.jobType ? jobTypeFullLabel[job.jobType] : '—'} />
-              <Field label="Days off" value={job.daysOff || '—'} />
-              <Field label="Salary" value={salaryRange(job.salaryMin, job.salaryMax)} />
-              <Field label="Visa sponsorship" value={job.visaSponsorship ? visaSponsorshipLabel[job.visaSponsorship] : '—'} />
-              <Field label="Duties" value={listOr(job.duties)} />
+              <Field label={t('trials.roles')} value={listOr(job.rolesNeeded)} />
+              <Field label={t('trials.jobType')} value={job.jobType ? jobTypeFullLabel(job.jobType) : t('common.dash')} />
+              <Field label={t('trials.daysOff')} value={job.daysOff || t('common.dash')} />
+              <Field label={t('trials.salary')} value={salaryRange(job.salaryMin, job.salaryMax)} />
+              <Field label={t('trials.visaSponsorship')} value={job.visaSponsorship ? visaSponsorshipLabel(job.visaSponsorship) : t('common.dash')} />
+              <Field label={t('trials.duties')} value={listOr(job.duties)} />
               <Field
-                label="Trial terms"
-                value={job.trialDurationDays ? `${job.trialDurationDays} days @ AED ${job.trialDailyRate}/day` : '—'}
+                label={t('trials.trialTerms')}
+                value={job.trialDurationDays ? t('families.trialTerms', { days: job.trialDurationDays, rate: job.trialDailyRate ?? 0 }) : t('common.dash')}
               />
-              <Field label="Benefits" value={listOr(job.benefits)} />
+              <Field label={t('trials.benefits')} value={listOr(job.benefits)} />
             </FieldGrid>
           </Section>
         )}
 
         {/* Evaluation */}
         {trial.evaluation && (
-          <Section title="Family evaluation">
+          <Section title={t('trials.familyEvaluation')}>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-1.5 mt-2">
               {EVAL_ITEMS.map((it) => {
                 const ok = !!trial.evaluation?.[it.key];
                 return (
                   <div key={it.key} className="flex items-center gap-1.5 text-[10px] font-semibold text-navy">
                     <span className={ok ? 'text-green-dark' : 'text-[#C0C8DC]'}>{ok ? '✓' : '○'}</span>
-                    {it.label}
+                    {t(it.labelKey)}
                   </div>
                 );
               })}
             </div>
             {trial.evaluation.additionalNotes && (
-              <div className="text-[9px] text-navy/70 mt-2">Notes: {trial.evaluation.additionalNotes}</div>
+              <div className="text-[9px] text-navy/70 mt-2">{t('trials.evaluationNotes', { text: trial.evaluation.additionalNotes })}</div>
             )}
             {trial.rating != null && (
-              <div className="text-[10px] font-bold text-[#FFB347] mt-2">Rating: {'★'.repeat(trial.rating)}</div>
+              <div className="text-[10px] font-bold text-[#FFB347] mt-2">{t('trials.rating', { stars: '★'.repeat(trial.rating) })}</div>
             )}
           </Section>
         )}
 
         {/* Chat between nanny and family */}
-        <Section title="Trial conversation">
+        <Section title={t('trials.trialConversation')}>
           <p className="text-[9px] font-semibold text-[#8090B0] mb-1">
-            Messages between {trial.nannyName ?? 'the nanny'} and {trial.familyName ?? 'the family'} (read-only).
+            {t('trials.conversationBetween', { nanny: trial.nannyName ?? t('trials.theNanny'), family: trial.familyName ?? t('trials.theFamily') })}
           </p>
           {thread ? (
             <MessageThread messages={toThreadMessages(messages, thread)} />
           ) : (
-            <div className="text-[10px] text-[#8090B0]">No conversation linked to this trial.</div>
+            <div className="text-[10px] text-[#8090B0]">{t('trials.noConversationLinked')}</div>
           )}
         </Section>
       </PageContent>

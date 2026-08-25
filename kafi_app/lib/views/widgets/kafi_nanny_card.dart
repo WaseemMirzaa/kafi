@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/utils/job_type_label.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 class KafiNannyCard extends StatelessWidget {
@@ -99,7 +100,7 @@ class KafiNannyCard extends StatelessWidget {
                   ),
                   const SizedBox(height: 1),
                   Text(
-                    '${card.nationality} · ${card.yearsExp} yrs · ${card.jobType} · ${card.city}${card.availableNow ? ' · ${AppStrings.availableNow.tr}' : ''}',
+                    '${card.nationality} · ${AppStrings.yearsAbbrevN.trParams({'n': '${card.yearsExp}'})} · ${localizeJobTypeLabel(card.jobType)} · ${card.city}${card.availableNow ? ' · ${AppStrings.availableNow.tr}' : ''}',
                     style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,

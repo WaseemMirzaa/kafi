@@ -78,6 +78,12 @@ class AuthController extends GetxController with WidgetsBindingObserver {
   void didChangeAppLifecycleState(AppLifecycleState state) {
     if (state == AppLifecycleState.resumed) {
       unawaited(enforceFamilyFirstJobGate());
+      // Keep lastActiveAt fresh while the nanny uses the app so the admin
+      // "hide inactive nannies" listing filter stays accurate.
+      final user = currentUser.value;
+      if (user != null && user.isNanny && Get.isRegistered<IUserService>()) {
+        unawaited(Get.find<IUserService>().touchNannyActive(user.id));
+      }
     }
   }
 
@@ -378,8 +384,12 @@ class AuthController extends GetxController with WidgetsBindingObserver {
       final hasPostedJob =
           (await Get.find<IJobService>().getJobsByFamily(user.id)).isNotEmpty;
       familyMustPostFirstJob.value = !hasPostedJob;
-      if (!hasPostedJob && Get.currentRoute != Routes.familyForm) {
-        Get.offAllNamed(Routes.familyForm);
+      if (!hasPostedJob) {
+        final onForm = Get.currentRoute == Routes.familyForm ||
+            Get.currentRoute.startsWith('${Routes.familyForm}?');
+        if (!onForm) {
+          Get.offAllNamed(Routes.familyForm);
+        }
       }
     } catch (e) {
       Get.log('enforceFamilyFirstJobGate failed: $e', isError: true);

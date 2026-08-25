@@ -1,4 +1,5 @@
 import * as admin from 'firebase-admin';
+import { Locale, tn } from '../i18n/notifications';
 
 const DEFAULT_EMAIL = 'admin@kafi.ae';
 const DEFAULT_DISPLAY = 'Kafi Admin';
@@ -19,18 +20,15 @@ const ADMIN_PERMISSIONS = [
 /// anyone who reaches it while `admins` is empty create a superAdmin with a
 /// publicly-known password. If the env var is missing/weak the bootstrap fails
 /// loudly (surfaced as a 500 to the caller) rather than minting a weak admin.
-function resolvePassword(): string {
+function resolvePassword(locale: Locale): string {
   const fromEnv = process.env.KAFI_ADMIN_BOOTSTRAP_PASSWORD?.trim();
   if (!fromEnv || fromEnv.length < 8) {
-    throw new Error(
-      'KAFI_ADMIN_BOOTSTRAP_PASSWORD must be set to a strong value ' +
-        '(at least 8 characters) before the first admin can be bootstrapped.',
-    );
+    throw new Error(tn('error.bootstrapPasswordMissing', locale));
   }
   return fromEnv;
 }
 
-export async function ensureFirstAdmin(): Promise<{
+export async function ensureFirstAdmin(locale: Locale = 'en'): Promise<{
   created: boolean;
   email: string;
   password?: string;
@@ -50,7 +48,7 @@ export async function ensureFirstAdmin(): Promise<{
   }
 
   const email = process.env.KAFI_ADMIN_BOOTSTRAP_EMAIL?.trim() || DEFAULT_EMAIL;
-  const password = resolvePassword();
+  const password = resolvePassword(locale);
   const displayName =
     process.env.KAFI_ADMIN_BOOTSTRAP_NAME?.trim() || DEFAULT_DISPLAY;
 

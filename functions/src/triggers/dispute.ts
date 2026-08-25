@@ -1,6 +1,7 @@
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getUser } from '../utils/notifications';
+import { tn } from '../i18n/notifications';
 
 /// When admin replies in a dispute's support chat, notify the reporter (inbox +
 /// push). User→admin messages surface in the admin panel; admins have no FCM
@@ -22,8 +23,9 @@ export const onNewDisputeMessage = onDocumentCreated(
     const reporterId = dispute.reporterId as string | undefined;
     if (!reporterId) return;
     const reporter = await getUser(reporterId);
+    const locale = reporter.locale ?? 'en';
 
-    const title = '🎧 Support replied to your report';
+    const title = tn('dispute.reply.title', locale);
     const body = (message.content || '').toString().substring(0, 90);
     const data = { type: 'dispute_reply', disputeId: event.params.disputeId };
 
@@ -50,13 +52,13 @@ export const onDisputeResolved = onDocumentUpdated(
     const reporterId = after.reporterId as string | undefined;
     if (!reporterId) return;
     const reporter = await getUser(reporterId);
+    const locale = reporter.locale ?? 'en';
 
     const resolved = after.status === 'resolved';
-    const title = resolved ? '✅ Report resolved' : '📋 Report closed';
-    const body = (after.resolution as string) ||
-      (resolved
-        ? 'Our team has resolved your report.'
-        : 'Our team has reviewed and closed your report.');
+    const title = tn(resolved ? 'dispute.resolved.title' : 'dispute.dismissed.title', locale);
+    const body =
+      (after.resolution as string) ||
+      tn(resolved ? 'dispute.resolved.defaultBody' : 'dispute.dismissed.defaultBody', locale);
     const data = { type: `dispute_${after.status}`, disputeId: event.params.disputeId };
 
     await writeInbox(reporterId, 'systemAnnouncement', title, body, data);

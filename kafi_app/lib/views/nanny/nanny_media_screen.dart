@@ -211,6 +211,9 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
   Widget _photoRow() {
     final photos = controller.photoUrls;
     final maxPhotos = NannyConstants.maxPhotos;
+    // Profiles (or a race during multi-pick) can briefly exceed maxPhotos —
+    // never pass a negative length to List.generate.
+    final emptySlots = (maxPhotos - photos.length).clamp(0, maxPhotos);
     return Padding(
       padding: const EdgeInsets.only(bottom: 4),
       child: Row(
@@ -242,7 +245,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
               ),
             );
           }),
-          ...List.generate(maxPhotos - photos.length, (i) {
+          ...List.generate(emptySlots, (i) {
             return Padding(
               padding: const EdgeInsets.only(right: 6),
               child: GestureDetector(
@@ -319,11 +322,11 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
           const SizedBox(height: 8),
 
           // Rules
-          _vidRule(ok: true, text: 'Maximum 60 seconds — strict limit'),
+          _vidRule(ok: true, text: AppStrings.mediaRuleMaxDuration.tr),
           const SizedBox(height: 4),
-          _vidRule(ok: true, text: 'Speak clearly, smile, good lighting'),
+          _vidRule(ok: true, text: AppStrings.mediaRuleLighting.tr),
           const SizedBox(height: 4),
-          _vidRule(ok: false, text: 'Do NOT share phone number in video'),
+          _vidRule(ok: false, text: AppStrings.mediaRuleNoPhone.tr),
           const SizedBox(height: 8),
 
           // What to say box
@@ -336,12 +339,12 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('What to say:',
+                Text(AppStrings.mediaWhatToSay.tr,
                     style: KafiTheme.nunito(9, color: const Color(0xFF5A2090), w: FontWeight.w800)),
                 const SizedBox(height: 3),
-                _sayItem('Your name, nationality, years experience'),
-                _sayItem("Children ages you've cared for"),
-                _sayItem('One thing families love about you'),
+                _sayItem(AppStrings.mediaSayName.tr),
+                _sayItem(AppStrings.mediaSayChildren.tr),
+                _sayItem(AppStrings.mediaSayLove.tr),
               ],
             ),
           ),
@@ -387,7 +390,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
                 children: [
                   const Icon(Icons.videocam_outlined, size: 11, color: Colors.white),
                   const SizedBox(width: 5),
-                  Text('Record or upload video',
+                  Text(AppStrings.mediaUploadVideo.tr,
                       style: KafiTheme.fredoka(11.5, color: Colors.white, w: FontWeight.w700)),
                 ],
               ),

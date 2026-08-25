@@ -11,6 +11,7 @@ import {
   PageShell,
   QaLink,
   StatusBadge,
+  PageLoader,
 } from '../../components/ui/AdminUI';
 import {
   FamilyService,
@@ -38,60 +39,66 @@ import {
   applicationStatusLabel,
   applicationStatusVariant,
   trialStatusVariant,
-  label,
+  trialStatusLabel,
+  subscriptionStatusLabel,
+  subscriptionPlanLabel,
   yesNo,
   listOr,
   salaryRange,
   fmtDate,
 } from '../../utils/nannyLabels';
+import { useLocale } from '../../context/LocaleContext';
 
 function JobPostCard({ job }: { job: JobPostRow }) {
+  const { t } = useLocale();
+  const dash = t('common.dash');
   return (
     <div className="rounded-lg border border-[#EBEEF8] p-3">
       <div className="flex items-center justify-between gap-2">
-        <div className="text-[10.5px] font-extrabold text-navy">{job.jobTitle || 'Job post'}</div>
-        <StatusBadge variant={jobStatusVariant(job.status)}>{jobPostStatusLabel[job.status]}</StatusBadge>
+        <div className="text-[10.5px] font-extrabold text-navy">{job.jobTitle || t('families.jobPostFallback')}</div>
+        <StatusBadge variant={jobStatusVariant(job.status)}>{jobPostStatusLabel(job.status)}</StatusBadge>
       </div>
       <div className="text-[8.5px] font-semibold text-[#8090B0] mt-0.5">
-        {job.city} · Posted {fmtDate(job.createdAt)}
-        {job.applicationsCount != null ? ` · ${job.applicationsCount} applications` : ''}
-        {job.viewsCount != null ? ` · ${job.viewsCount} views` : ''}
+        {job.city} · {t('families.postedOn', { date: fmtDate(job.createdAt) })}
+        {job.applicationsCount != null ? ` · ${t('families.applicationsCount', { count: job.applicationsCount })}` : ''}
+        {job.viewsCount != null ? ` · ${t('families.viewsCount', { count: job.viewsCount })}` : ''}
       </div>
       <FieldGrid>
-        <Field label="Roles needed" value={listOr(job.rolesNeeded)} />
-        <Field label="Job type" value={job.jobType ? jobTypeFullLabel[job.jobType] : '—'} />
-        <Field label="Days off" value={job.daysOff || '—'} />
+        <Field label={t('families.rolesNeeded')} value={listOr(job.rolesNeeded)} />
+        <Field label={t('families.jobType')} value={job.jobType ? jobTypeFullLabel(job.jobType) : dash} />
+        <Field label={t('families.daysOff')} value={job.daysOff || dash} />
         <Field
-          label="Start"
-          value={job.startImmediate ? 'Immediately' : fmtDate(job.startDate)}
+          label={t('families.start')}
+          value={job.startImmediate ? t('families.immediately') : fmtDate(job.startDate)}
         />
         <Field
-          label="Duration"
-          value={job.duration ? `${jobDurationLabel[job.duration]}${job.contractMonths ? ` · ${job.contractMonths} mo` : ''}` : '—'}
+          label={t('families.duration')}
+          value={job.duration ? `${jobDurationLabel(job.duration)}${job.contractMonths ? ` · ${t('common.monthsShort', { count: job.contractMonths })}` : ''}` : dash}
         />
-        <Field label="Min. experience" value={job.experienceYears ? `${job.experienceYears} yrs` : '—'} />
-        <Field label="Salary" value={salaryRange(job.salaryMin, job.salaryMax)} />
-        <Field label="Visa sponsorship" value={job.visaSponsorship ? visaSponsorshipLabel[job.visaSponsorship] : '—'} />
-        <Field label="Languages required" value={listOr(job.languagesRequired)} />
-        <Field label="Languages preferred" value={listOr(job.languagesPreferred)} />
-        <Field label="Nationality preference" value={listOr(job.nationalityPreference)} />
-        <Field label="Religion preference" value={job.religionPreference ? religionPreferenceLabel[job.religionPreference] : '—'} />
-        <Field label="Duties" value={listOr(job.duties)} />
-        <Field label="Skills required" value={listOr(job.skillsRequired)} />
-        <Field label="Benefits" value={listOr(job.benefits)} />
+        <Field label={t('families.minExperience')} value={job.experienceYears ? t('common.yearsShort', { count: job.experienceYears }) : dash} />
+        <Field label={t('families.salary')} value={salaryRange(job.salaryMin, job.salaryMax)} />
+        <Field label={t('families.visaSponsorship')} value={job.visaSponsorship ? visaSponsorshipLabel(job.visaSponsorship) : dash} />
+        <Field label={t('families.languagesRequired')} value={listOr(job.languagesRequired)} />
+        <Field label={t('families.languagesPreferred')} value={listOr(job.languagesPreferred)} />
+        <Field label={t('families.nationalityPreference')} value={listOr(job.nationalityPreference)} />
+        <Field label={t('families.religionPreference')} value={job.religionPreference ? religionPreferenceLabel(job.religionPreference) : dash} />
+        <Field label={t('trials.duties')} value={listOr(job.duties)} />
+        <Field label={t('families.skillsRequired')} value={listOr(job.skillsRequired)} />
+        <Field label={t('families.benefits')} value={listOr(job.benefits)} />
         <Field
-          label="Trial"
-          value={job.trialDurationDays ? `${job.trialDurationDays} days @ AED ${job.trialDailyRate}/day` : '—'}
+          label={t('families.trial')}
+          value={job.trialDurationDays ? t('families.trialTerms', { days: job.trialDurationDays, rate: job.trialDailyRate ?? 0 }) : dash}
         />
       </FieldGrid>
       {job.additionalNotes && (
-        <div className="text-[9px] text-navy/70 mt-2">Notes: {job.additionalNotes}</div>
+        <div className="text-[9px] text-navy/70 mt-2">{t('families.notes', { text: job.additionalNotes })}</div>
       )}
     </div>
   );
 }
 
 export default function FamilyDetail() {
+  const { t } = useLocale();
   const { id } = useParams();
   const [family, setFamily] = useState<FamilyRow | null>(null);
   const [jobs, setJobs] = useState<JobPostRow[]>([]);
@@ -132,7 +139,7 @@ export default function FamilyDetail() {
       setFreeLimit(s.freeContactLimit ?? 5);
     } catch (e) {
       // Without this the page hangs on "Loading…" forever on any read failure.
-      setError((e as Error).message || 'Failed to load family');
+      setError((e as Error).message || t('families.failedToLoadFamily'));
     } finally {
       setLoading(false);
     }
@@ -140,13 +147,14 @@ export default function FamilyDetail() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   if (loading) {
     return (
       <PageShell>
         <PageContent>
-          <div className="text-[10px] text-[#8090B0]">Loading…</div>
+          <PageLoader />
         </PageContent>
       </PageShell>
     );
@@ -157,7 +165,7 @@ export default function FamilyDetail() {
         <PageContent>
           <div className="text-[10px] text-rose-dark">{error}</div>
           <button type="button" className="qa-btn qa-n mt-2" onClick={load}>
-            Retry
+            {t('common.retry')}
           </button>
         </PageContent>
       </PageShell>
@@ -167,7 +175,7 @@ export default function FamilyDetail() {
     return (
       <PageShell>
         <PageContent>
-          <div className="text-[10px] text-[#8090B0]">Not found.</div>
+          <div className="text-[10px] text-[#8090B0]">{t('common.notFound')}</div>
         </PageContent>
       </PageShell>
     );
@@ -180,7 +188,7 @@ export default function FamilyDetail() {
       else await FamilyService.block(family.id);
       load();
     } catch (e) {
-      alert((e as Error).message || 'Block toggle failed');
+      alert((e as Error).message || t('families.blockToggleFailed'));
     } finally {
       setBusy(false);
     }
@@ -199,10 +207,10 @@ export default function FamilyDetail() {
         endDate: ovEnd ? new Date(ovEnd) : undefined,
       });
       setShowOverride(false);
-      setActionMsg('Subscription updated.');
+      setActionMsg(t('families.subscriptionUpdated'));
       await load();
     } catch (e) {
-      setActionErr((e as Error).message || 'Failed to update subscription');
+      setActionErr((e as Error).message || t('families.failedToUpdateSubscription'));
     } finally {
       setSubBusy(false);
     }
@@ -215,10 +223,10 @@ export default function FamilyDetail() {
     setActionErr(null);
     try {
       await FamilyService.resetFreeContacts(family.id);
-      setActionMsg('Free contacts reset to 0.');
+      setActionMsg(t('families.freeContactsReset'));
       await load();
     } catch (e) {
-      setActionErr((e as Error).message || 'Failed to reset free contacts');
+      setActionErr((e as Error).message || t('families.failedToResetContacts'));
     } finally {
       setSubBusy(false);
     }
@@ -233,11 +241,11 @@ export default function FamilyDetail() {
     <PageShell>
       <PageHeader
         title={family.fullName}
-        subtitle={`Profile #${family.id}`}
+        subtitle={t('families.profileHash', { id: family.id })}
         actions={
           <>
             <QaLink to="/families" variant="p">
-              ← All families
+              {t('families.allFamiliesLink')}
             </QaLink>
             <button
               type="button"
@@ -245,7 +253,7 @@ export default function FamilyDetail() {
               onClick={toggleBlock}
               disabled={busy}
             >
-              {family.blocked ? 'Unblock' : 'Block'}
+              {family.blocked ? t('common.unblock') : t('common.block')}
             </button>
           </>
         }
@@ -269,10 +277,10 @@ export default function FamilyDetail() {
               </div>
               <div className="mt-2 flex gap-1.5 flex-wrap">
                 <StatusBadge variant={sub.status === 'active' ? 'sub' : sub.status === 'free' ? 'unsub' : 'expired'}>
-                  {sub.status}
+                  {subscriptionStatusLabel(sub.status)}
                 </StatusBadge>
-                {(family.activeTrialNannyIds?.length ?? 0) > 0 && <StatusBadge variant="new">Trial active</StatusBadge>}
-                {family.blocked && <StatusBadge variant="expired">Blocked</StatusBadge>}
+                {(family.activeTrialNannyIds?.length ?? 0) > 0 && <StatusBadge variant="new">{t('families.trialActive')}</StatusBadge>}
+                {family.blocked && <StatusBadge variant="expired">{t('nannies.blockedBadge')}</StatusBadge>}
               </div>
             </div>
           </div>
@@ -280,47 +288,47 @@ export default function FamilyDetail() {
 
         {/* Quick stats */}
         <div className="flex flex-wrap gap-1.5 mt-3">
-          <ColStat num={String(jobs.length)} label="Job posts" change={`${jobs.filter((j) => j.status === 'active').length} active`} />
-          <ColStat num={String(apps.length)} label="Offers" change={`${acceptedOffers} accepted`} numColor="#9B6EDB" />
-          <ColStat num={String(trials.length)} label="Trials" change={`${completedTrials} completed`} />
-          <ColStat num={String(cancelledTrials)} label="Cancelled" change="trials" numColor="#FF5C8A" />
-          <ColStat num={String(family.stats?.hiresCount ?? 0)} label="Hires" change="↑ total" />
+          <ColStat num={String(jobs.length)} label={t('families.jobPosts')} change={t('families.activeCount', { count: jobs.filter((j) => j.status === 'active').length })} />
+          <ColStat num={String(apps.length)} label={t('families.offers')} change={t('families.acceptedCount', { count: acceptedOffers })} numColor="#9B6EDB" />
+          <ColStat num={String(trials.length)} label={t('families.trials')} change={t('families.completedCount', { count: completedTrials })} />
+          <ColStat num={String(cancelledTrials)} label={t('families.cancelled')} change={t('families.trialsLower')} numColor="#FF5C8A" />
+          <ColStat num={String(family.stats?.hiresCount ?? 0)} label={t('families.hires')} change={t('families.totalHiresChange')} />
         </div>
 
         {/* Family profile */}
-        <Section title="Family profile">
+        <Section title={t('families.familyProfile')}>
           <FieldGrid>
-            <Field label="Nationality" value={family.nationality || '—'} />
-            <Field label="City" value={family.city || '—'} />
-            <Field label="Number of children" value={family.childrenCount != null ? String(family.childrenCount) : '—'} />
-            <Field label="Children's ages" value={listOr(family.childrenAges)} />
-            <Field label="Special needs child" value={yesNo(family.hasSpecialNeedsChild)} />
-            <Field label="Special needs details" value={family.specialNeedsDetails || '—'} />
-            <Field label="Languages at home" value={listOr(family.languagesAtHome)} />
-            <Field label="Home has cameras" value={yesNo(family.hasCameras)} />
-            <Field label="Has pets" value={yesNo(family.hasPets)} />
-            <Field label="Pet types" value={listOr(family.petTypes)} />
-            <Field label="Religion" value={family.religion || '—'} />
+            <Field label={t('families.nationality')} value={family.nationality || t('common.dash')} />
+            <Field label={t('families.city')} value={family.city || t('common.dash')} />
+            <Field label={t('families.numberOfChildren')} value={family.childrenCount != null ? String(family.childrenCount) : t('common.dash')} />
+            <Field label={t('families.childrensAges')} value={listOr(family.childrenAges)} />
+            <Field label={t('families.specialNeedsChild')} value={yesNo(family.hasSpecialNeedsChild)} />
+            <Field label={t('families.specialNeedsDetails')} value={family.specialNeedsDetails || t('common.dash')} />
+            <Field label={t('families.languagesAtHome')} value={listOr(family.languagesAtHome)} />
+            <Field label={t('families.homeHasCameras')} value={yesNo(family.hasCameras)} />
+            <Field label={t('families.hasPets')} value={yesNo(family.hasPets)} />
+            <Field label={t('families.petTypes')} value={listOr(family.petTypes)} />
+            <Field label={t('families.religion')} value={family.religion || t('common.dash')} />
             <Field
-              label="Nanny religion preference"
-              value={family.nannyReligionPreference ? label(religionPreferenceLabel, family.nannyReligionPreference) : '—'}
+              label={t('families.nannyReligionPreference')}
+              value={family.nannyReligionPreference ? religionPreferenceLabel(family.nannyReligionPreference) : t('common.dash')}
             />
           </FieldGrid>
-          {family.houseRules && <div className="text-[9px] text-navy/70 mt-3">House rules: {family.houseRules}</div>}
-          {family.aboutFamily && <div className="text-[9px] text-navy/70 mt-1">About: {family.aboutFamily}</div>}
+          {family.houseRules && <div className="text-[9px] text-navy/70 mt-3">{t('families.houseRules', { text: family.houseRules })}</div>}
+          {family.aboutFamily && <div className="text-[9px] text-navy/70 mt-1">{t('families.about', { text: family.aboutFamily })}</div>}
         </Section>
 
         {/* Subscription — view + admin override */}
-        <Section title="Subscription">
+        <Section title={t('families.subscription')}>
           <FieldGrid>
-            <Field label="Status" value={sub.status} />
-            <Field label="Plan" value={sub.plan ?? 'Free tier'} />
-            <Field label="Started" value={fmtDate(sub.startDate)} />
-            <Field label="Ends" value={fmtDate(sub.endDate)} />
-            <Field label="Auto-renew" value={yesNo(sub.autoRenew)} />
-            <Field label="Has ever subscribed" value={yesNo(sub.hasEverSubscribed)} />
-            <Field label="Free contacts used" value={`${family.freeContactsUsed ?? 0} / ${freeLimit}`} />
-            <Field label="Active trials" value={String(family.activeTrialNannyIds?.length ?? 0)} />
+            <Field label={t('common.status')} value={subscriptionStatusLabel(sub.status)} />
+            <Field label={t('families.plan')} value={sub.plan ? subscriptionPlanLabel(sub.plan) : t('families.freeTier')} />
+            <Field label={t('families.started')} value={fmtDate(sub.startDate)} />
+            <Field label={t('families.ends')} value={fmtDate(sub.endDate)} />
+            <Field label={t('families.autoRenew')} value={yesNo(sub.autoRenew)} />
+            <Field label={t('families.hasEverSubscribed')} value={yesNo(sub.hasEverSubscribed)} />
+            <Field label={t('families.freeContactsUsed')} value={`${family.freeContactsUsed ?? 0} / ${freeLimit}`} />
+            <Field label={t('families.activeTrialsField')} value={String(family.activeTrialNannyIds?.length ?? 0)} />
           </FieldGrid>
 
           <div className="mt-4 flex flex-wrap items-center gap-2">
@@ -334,10 +342,10 @@ export default function FamilyDetail() {
               }}
               disabled={subBusy}
             >
-              {showOverride ? 'Close override' : 'Override subscription'}
+              {showOverride ? t('families.closeOverride') : t('families.overrideSubscription')}
             </button>
             <button type="button" className="qa-btn qa-n" onClick={resetContacts} disabled={subBusy}>
-              Reset free contacts
+              {t('families.resetFreeContacts')}
             </button>
             {actionMsg && <span className="text-[10px] font-bold text-[#2A8A50]">{actionMsg}</span>}
             {actionErr && <span className="text-[10px] font-bold text-rose-dark">{actionErr}</span>}
@@ -347,33 +355,33 @@ export default function FamilyDetail() {
             <div className="mt-3 rounded-lg border border-[#EBEEF8] p-3">
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
-                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">Status</div>
+                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">{t('common.status')}</div>
                   <select
                     value={ovStatus}
                     onChange={(e) => setOvStatus(e.target.value as FamilyRow['subscription']['status'])}
                     className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30"
                   >
-                    <option value="active">active</option>
-                    <option value="free">free</option>
-                    <option value="expired">expired</option>
-                    <option value="cancelled">cancelled</option>
+                    <option value="active">{subscriptionStatusLabel('active')}</option>
+                    <option value="free">{subscriptionStatusLabel('free')}</option>
+                    <option value="expired">{subscriptionStatusLabel('expired')}</option>
+                    <option value="cancelled">{subscriptionStatusLabel('cancelled')}</option>
                   </select>
                 </div>
                 <div>
-                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">Plan</div>
+                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">{t('common.plan')}</div>
                   <select
                     value={ovPlan}
                     onChange={(e) => setOvPlan(e.target.value)}
                     className="w-full admin-card text-[10px] font-semibold text-navy px-3 py-2 border-[#EBEEF8] focus:outline-none focus:ring-1 focus:ring-rose-dark/30"
                   >
-                    <option value="">Leave unchanged</option>
-                    <option value="weekly">weekly</option>
-                    <option value="monthly">monthly</option>
-                    <option value="twoMonths">twoMonths</option>
+                    <option value="">{t('common.leaveUnchanged')}</option>
+                    <option value="weekly">{subscriptionPlanLabel('weekly')}</option>
+                    <option value="monthly">{subscriptionPlanLabel('monthly')}</option>
+                    <option value="twoMonths">{subscriptionPlanLabel('twoMonths')}</option>
                   </select>
                 </div>
                 <div>
-                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">End date</div>
+                  <div className="text-[8px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">{t('common.endDate')}</div>
                   <input
                     type="date"
                     value={ovEnd}
@@ -383,19 +391,19 @@ export default function FamilyDetail() {
                 </div>
               </div>
               <div className="text-[8px] text-[#8090B0] mt-2 leading-relaxed">
-                Applies immediately. Blank plan / end date leave those fields as they are.
+                {t('families.overrideApplies')}
               </div>
               <button type="button" className="qa-btn qa-r mt-3" onClick={applyOverride} disabled={subBusy}>
-                {subBusy ? 'Applying…' : 'Apply override'}
+                {subBusy ? t('common.applying') : t('families.applyOverride')}
               </button>
             </div>
           )}
         </Section>
 
         {/* Job posts */}
-        <Section title={`Job posts (${jobs.length})`}>
+        <Section title={t('families.jobPostsCount', { count: jobs.length })}>
           {jobs.length === 0 ? (
-            <div className="text-[10px] text-[#8090B0] mt-2">No job posts.</div>
+            <div className="text-[10px] text-[#8090B0] mt-2">{t('families.noJobPosts')}</div>
           ) : (
             <div className="flex flex-col gap-3 mt-2">
               {jobs.map((j) => (
@@ -406,9 +414,9 @@ export default function FamilyDetail() {
         </Section>
 
         {/* Offers / applications */}
-        <Section title={`Offers & applications (${apps.length})`}>
+        <Section title={t('families.offersApplicationsCount', { count: apps.length })}>
           {apps.length === 0 ? (
-            <div className="text-[10px] text-[#8090B0] mt-2">No applications.</div>
+            <div className="text-[10px] text-[#8090B0] mt-2">{t('families.noApplications')}</div>
           ) : (
             <div className="flex flex-col gap-1.5 mt-2">
               {apps.map((a) => (
@@ -416,13 +424,13 @@ export default function FamilyDetail() {
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] font-extrabold text-navy truncate">
                       {a.nannyName ?? a.nannyId}
-                      {a.matchScore != null && <span className="text-[#8090B0] font-semibold"> · {a.matchScore}% match</span>}
+                      {a.matchScore != null && <span className="text-[#8090B0] font-semibold"> · {t('families.matchPercent', { pct: a.matchScore })}</span>}
                     </div>
                     <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">
                       {a.jobTitle ?? a.jobPostId} · {fmtDate(a.createdAt)}
                     </div>
                   </div>
-                  <StatusBadge variant={applicationStatusVariant(a.status)}>{applicationStatusLabel[a.status]}</StatusBadge>
+                  <StatusBadge variant={applicationStatusVariant(a.status)}>{applicationStatusLabel(a.status)}</StatusBadge>
                 </div>
               ))}
             </div>
@@ -430,24 +438,24 @@ export default function FamilyDetail() {
         </Section>
 
         {/* Trials */}
-        <Section title={`Trials (${trials.length})`}>
+        <Section title={t('families.trialsCount', { count: trials.length })}>
           {trials.length === 0 ? (
-            <div className="text-[10px] text-[#8090B0] mt-2">No trials.</div>
+            <div className="text-[10px] text-[#8090B0] mt-2">{t('families.noTrials')}</div>
           ) : (
             <div className="flex flex-col gap-1.5 mt-2">
-              {trials.map((t) => (
-                <div key={t.id} className="flex items-center gap-2 rounded-lg border border-[#EBEEF8] px-2.5 py-2">
+              {trials.map((trial) => (
+                <div key={trial.id} className="flex items-center gap-2 rounded-lg border border-[#EBEEF8] px-2.5 py-2">
                   <div className="flex-1 min-w-0">
                     <div className="text-[10px] font-extrabold text-navy truncate">
-                      {t.nannyName ?? t.nannyId}
-                      {t.rating != null && <span className="text-[#FFB347] font-bold"> · {t.rating}★</span>}
+                      {trial.nannyName ?? trial.nannyId}
+                      {trial.rating != null && <span className="text-[#FFB347] font-bold"> · {trial.rating}★</span>}
                     </div>
                     <div className="text-[8.5px] font-semibold text-[#8090B0] truncate">
-                      {t.trialType ?? ''} · {t.durationDays} days @ AED {t.dailyRate}/day · {fmtDate(t.startDate)}
-                      {t.outcome ? ` · ${t.outcome}` : ''}
+                      {trial.trialType ?? ''} · {t('families.trialTerms', { days: trial.durationDays, rate: trial.dailyRate })} · {fmtDate(trial.startDate)}
+                      {trial.outcome ? ` · ${trial.outcome}` : ''}
                     </div>
                   </div>
-                  <StatusBadge variant={trialStatusVariant(String(t.status))}>{String(t.status)}</StatusBadge>
+                  <StatusBadge variant={trialStatusVariant(String(trial.status))}>{trialStatusLabel(trial.status)}</StatusBadge>
                 </div>
               ))}
             </div>
@@ -455,7 +463,7 @@ export default function FamilyDetail() {
         </Section>
 
         {/* Conversations */}
-        <Section title={`Conversations with nannies (${threads.length})`}>
+        <Section title={t('families.conversationsWithNannies', { count: threads.length })}>
           <ConversationsPanel threads={threads} counterpart="nanny" />
         </Section>
       </PageContent>

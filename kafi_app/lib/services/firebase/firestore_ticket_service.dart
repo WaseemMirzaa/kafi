@@ -53,6 +53,13 @@ class FirestoreTicketService implements ITicketService {
     return TicketModel.fromMap(doc.id, doc.data()!);
   }
 
+  @override
+  Stream<TicketModel?> watchTicket(String ticketId) =>
+      _tickets.doc(ticketId).snapshots().map((doc) {
+        if (!doc.exists || doc.data() == null) return null;
+        return TicketModel.fromMap(doc.id, doc.data()!);
+      });
+
   Query<Map<String, dynamic>> _msgQuery(String ticketId) => _tickets
       .doc(ticketId)
       .collection('messages')

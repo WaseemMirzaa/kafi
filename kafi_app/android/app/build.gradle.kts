@@ -13,6 +13,15 @@ if (file("google-services.json").exists()) {
     apply(plugin = "com.google.gms.google-services")
 }
 
+fun mapsApiKeyFromLocalProperties(): String {
+    val localFile = rootProject.file("local.properties")
+    if (!localFile.exists()) return "YOUR_GOOGLE_MAPS_API_KEY"
+    val props = java.util.Properties()
+    localFile.inputStream().use { props.load(it) }
+    return props.getProperty("MAPS_API_KEY")?.takeIf { it.isNotBlank() }
+        ?: "YOUR_GOOGLE_MAPS_API_KEY"
+}
+
 android {
     namespace = "com.kafi.kafi_app"
     compileSdk = flutter.compileSdkVersion
@@ -39,11 +48,11 @@ android {
         versionName = flutter.versionName
 
         // Google Maps native SDK reads its key from the manifest, not from
-        // --dart-define. Supply it at build time with `-PMAPS_API_KEY=AIza...`
-        // (or a git-ignored gradle.properties); falls back to the placeholder so
-        // a mock/offline build needs no key. See ../../docs/GOOGLE_MAPS_SETUP.md.
+        // --dart-define. Prefer -PMAPS_API_KEY=…, else android/local.properties
+        // MAPS_API_KEY=… (git-ignored). See ../../docs/GOOGLE_MAPS_SETUP.md.
         manifestPlaceholders["MAPS_API_KEY"] =
-            (project.findProperty("MAPS_API_KEY") as String? ?: "YOUR_GOOGLE_MAPS_API_KEY")
+            (project.findProperty("MAPS_API_KEY") as String?)
+                ?: mapsApiKeyFromLocalProperties()
     }
 
     buildTypes {

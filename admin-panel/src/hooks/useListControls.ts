@@ -10,31 +10,55 @@ export interface ListControlsOptions<T> {
   pageSize?: number;
 }
 
+/** Parse `<input type="date">` YYYY-MM-DD as local midnight (not UTC). */
+function localDayStartMs(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return NaN;
+  return new Date(y, m - 1, d, 0, 0, 0, 0).getTime();
+}
+
+function localDayEndMs(iso: string): number {
+  const [y, m, d] = iso.split('-').map(Number);
+  if (!y || !m || !d) return NaN;
+  return new Date(y, m - 1, d, 23, 59, 59, 999).getTime();
+}
+
 /** Shared search + date-range + pagination logic for listing pages. */
 export function useListControls<T>(items: T[], opts: ListControlsOptions<T>) {
   const { search, getDate, extraFilter, pageSize = 8 } = opts;
-  const [query, setQuery] = useState('');
-  const [from, setFrom] = useState('');
-  const [to, setTo] = useState('');
+  const [query, setQueryState] = useState('');
+  const [from, setFromState] = useState('');
+  const [to, setToState] = useState('');
   const [page, setPage] = useState(1);
+
+  const setQuery = (v: string) => {
+    setQueryState(v);
+    setPage(1);
+  };
+  const setFrom = (v: string) => {
+    setFromState(v);
+    setPage(1);
+  };
+  const setTo = (v: string) => {
+    setToState(v);
+    setPage(1);
+  };
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase();
-    const fromT = from ? new Date(from).getTime() : null;
-    // include the whole "to" day
-    const toT = to ? new Date(to).getTime() + 86400000 - 1 : null;
+    const fromT = from ? localDayStartMs(from) : null;
+    const toT = to ? localDayEndMs(to) : null;
     return items.filter((it) => {
       if (q && !search(it, q)) return false;
       if (extraFilter && !extraFilter(it)) return false;
       if (getDate && (fromT != null || toT != null)) {
         const d = getDate(it);
         const t = d ? d.getTime() : null;
-        if (fromT != null && (t == null || t < fromT)) return false;
-        if (toT != null && (t == null || t > toT)) return false;
+        if (fromT != null && !Number.isNaN(fromT) && (t == null || t < fromT)) return false;
+        if (toT != null && !Number.isNaN(toT) && (t == null || t > toT)) return false;
       }
       return true;
     });
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [items, query, from, to, extraFilter, search, getDate]);
 
   const pageCount = Math.max(1, Math.ceil(filtered.length / pageSize));
@@ -48,9 +72,9 @@ export function useListControls<T>(items: T[], opts: ListControlsOptions<T>) {
   const pageItems = filtered.slice(start, start + pageSize);
 
   const clear = () => {
-    setQuery('');
-    setFrom('');
-    setTo('');
+    setQueryState('');
+    setFromState('');
+    setToState('');
     setPage(1);
   };
 

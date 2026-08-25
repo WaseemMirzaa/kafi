@@ -71,4 +71,11 @@ abstract class ITrialService {
 
   /// All uploaded day proofs for a trial, ascending by day.
   Future<List<DayProof>> listDayProofs(String trialId);
+
+  /// Persist the family's in-progress evaluation checklist (during the trial,
+  /// not only at hire/pass). Both parties read it from the trial doc.
+  Future<void> saveEvaluation(String trialId, TrialEvaluation evaluation);
+
+  /// Live updates for a single trial (evaluation ticks, status, payment flags).
+  Stream<TrialModel?> watchTrial(String trialId);
 }

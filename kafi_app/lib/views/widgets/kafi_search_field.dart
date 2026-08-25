@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:kafi_app/utils/kafi_text_context_menu.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 /// A simple pill search box used on listing screens (applicants, shortlist,
@@ -31,6 +32,7 @@ class KafiSearchField extends StatelessWidget {
           Expanded(
             child: TextField(
               onChanged: onChanged,
+              contextMenuBuilder: kafiEditableTextContextMenu,
               style: KafiTheme.nunito(11, color: KafiColors.td),
               decoration: InputDecoration(
                 isCollapsed: true,

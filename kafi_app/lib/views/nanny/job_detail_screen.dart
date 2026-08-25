@@ -7,7 +7,6 @@ import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
-import 'package:kafi_app/utils/string_format.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/support/report_user_sheet.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
@@ -78,7 +77,7 @@ class JobDetailScreen extends StatelessWidget {
             ),
           ),
           Expanded(child: Text(AppStrings.jobDetailsTitle.tr, style: KafiTheme.pacifico(17))),
-          // Report this family — files a support ticket to the admin team.
+          // Report this family — files a report under Settings → My reports.
           GestureDetector(
             onTap: () => showReportUserSheet(
                 reportedUserId: job.familyId, reportedUserName: job.familyName),
@@ -125,7 +124,7 @@ class JobDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('${job.familyName} Family',
+                Text('${job.familyName} ${AppStrings.jobDetailFamilySuffix.tr}',
                     style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w900)),
                 if (job.city.isNotEmpty)
                   Text(job.city,
@@ -140,43 +139,54 @@ class JobDetailScreen extends StatelessWidget {
 
   Widget _jobDetailsSection(JobPostModel job) {
     return _sectionCard(
-      'Job Details',
+      AppStrings.jobDetailSectionTitle.tr,
       [
-        _detailRow('Job Type', job.jobType.name.titleCase),
-        _detailRow('Days off',
-            job.daysOff.isNotEmpty ? job.daysOff : 'Not specified'),
         _detailRow(
-            'Start Date',
+            AppStrings.jobDetailFieldJobType.tr,
+            job.jobType == JobType.liveOut
+                ? AppStrings.jobLiveOut.tr
+                : AppStrings.jobLiveIn.tr),
+        _detailRow(AppStrings.fldDaysOff.tr,
+            job.daysOff.isNotEmpty ? job.daysOff : AppStrings.jobDetailNotSpecified.tr),
+        _detailRow(
+            AppStrings.jobDetailFieldStartDate.tr,
             job.startImmediate
-                ? 'Immediate'
+                ? AppStrings.jobDetailImmediate.tr
                 : (job.startDate != null
                     ? '${job.startDate!.day}/${job.startDate!.month}/${job.startDate!.year}'
-                    : 'Flexible')),
+                    : AppStrings.jobDetailFlexible.tr)),
         _detailRow(
-            'Duration',
+            AppStrings.jobDetailFieldDuration.tr,
             job.duration == JobDuration.permanent
-                ? 'Permanent'
+                ? AppStrings.jobDetailPermanent.tr
                 : (job.contractMonths != null
-                    ? 'Contract · ${job.contractMonths} months'
-                    : 'Contract')),
-        _detailRow('Salary', 'AED ${job.salaryMin} - ${job.salaryMax}/month'),
+                    ? AppStrings.jobDetailContractMonths
+                        .trParams({'months': '${job.contractMonths}'})
+                    : AppStrings.jobDetailContract.tr)),
+        _detailRow(
+            AppStrings.jobDetailFieldSalary.tr,
+            AppStrings.jobDetailSalaryRange.trParams({
+              'min': '${job.salaryMin}',
+              'max': '${job.salaryMax}',
+            })),
       ],
     );
   }
 
   Widget _requirementsSection(JobPostModel job) {
     return _sectionCard(
-      'Duties & Requirements',
+      AppStrings.jobDetailRequirementsTitle.tr,
       [
         ...job.duties.map((d) => _detailRow('', d, icon: Icons.check)),
-        if (job.languagesRequired.isNotEmpty) _detailRow('Languages', job.languagesRequired.join(', ')),
+        if (job.languagesRequired.isNotEmpty)
+          _detailRow(AppStrings.jobDetailFieldLanguages.tr, job.languagesRequired.join(', ')),
       ],
     );
   }
 
   Widget _benefitsSection(JobPostModel job) {
     return _sectionCard(
-      'Benefits Offered',
+      AppStrings.jobDetailBenefitsTitle.tr,
       job.benefits.map((b) => _detailRow('', b, icon: Icons.card_giftcard)).toList(),
     );
   }
@@ -204,14 +214,17 @@ class JobDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(isSponsored ? 'Visa Sponsorship Available' : 'Own Visa Required',
+                Text(
+                    isSponsored
+                        ? AppStrings.jobDetailVisaSponsoredTitle.tr
+                        : AppStrings.jobDetailVisaOwnTitle.tr,
                     style: KafiTheme.nunito(11,
                         color: isSponsored ? KafiColors.grnD : KafiColors.ambD,
                         w: FontWeight.w800)),
                 Text(
                     isSponsored
-                        ? 'Family will sponsor your visa'
-                        : 'You must have your own residence visa',
+                        ? AppStrings.jobDetailVisaSponsoredSub.tr
+                        : AppStrings.jobDetailVisaOwnSub.tr,
                     style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
               ],
             ),

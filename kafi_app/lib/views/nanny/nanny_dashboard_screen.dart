@@ -9,7 +9,6 @@ import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
-import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/models/trial_outcome_reasons.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
@@ -83,8 +82,11 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
             final name =
                 n?.fullName.isNotEmpty == true ? n!.fullName : AppStrings.dashboardGreeting.tr;
             final area = n?.currentArea.isNotEmpty == true ? n!.currentArea : '';
+            final jobTypeLabel = n?.jobTypePreference.name == 'liveOut'
+                ? AppStrings.jobLiveOut.tr
+                : AppStrings.jobLiveIn.tr;
             final role =
-                '${n?.jobTypePreference.name == 'liveOut' ? 'Live-out' : 'Live-in'} Nanny${area.isEmpty ? '' : ' · $area'}';
+                '$jobTypeLabel ${AppStrings.nannySuffix.tr}${area.isEmpty ? '' : ' · $area'}';
             return Row(
               children: [
                 // Avatar square with verified badge
@@ -146,7 +148,7 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                       color: KafiColors.grnL,
                       borderRadius: BorderRadius.circular(14),
                     ),
-                    child: Text('Kafi Verified ✓',
+                    child: Text(AppStrings.dashKafiVerified.tr,
                         style:
                             KafiTheme.fredoka(9, color: KafiColors.grnD, w: FontWeight.w700)),
                   ),
@@ -163,8 +165,8 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
             // "Your rating" cell removed — peer ratings retired for app-store ratings.
             return Row(
               children: [
-                _statCell('${stats?.shortlists ?? 0}', 'Shortlists'),
-                _statCell('${stats?.profileViews ?? 0}', 'Profile views'),
+                _statCell('${stats?.shortlists ?? 0}', AppStrings.dashShortlists.tr),
+                _statCell('${stats?.profileViews ?? 0}', AppStrings.dashViews.tr),
               ],
             );
           }),
@@ -405,18 +407,24 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
           BoxShadow(color: Color(0x14FF5F96), blurRadius: 9, offset: Offset(0, 2)),
         ],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // Title + score
-          Obx(() {
-            // Real server-maintained score; 0 (the model default) until loaded —
-            // never a fabricated placeholder.
-            final score = controller.nanny.value?.profileScore ?? 0;
-            return Row(
+      child: Obx(() {
+        // Touch reactive sources so the card rebuilds when drafts change.
+        controller.nanny.value;
+        controller.photoUrls.length;
+        controller.introVideoUrl.value;
+        controller.experiences.length;
+        controller.references.length;
+        controller.documents.length;
+        final quality = controller.profileQuality;
+        final score = quality.totalScore;
+        final remaining = quality.remaining;
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
               children: [
                 Expanded(
-                  child: Text('Profile quality score',
+                  child: Text(AppStrings.dashProfileQualityScore.tr,
                       style: KafiTheme.nunito(11.5, color: KafiColors.td,
                           w: FontWeight.w800)),
                 ),
@@ -424,19 +432,15 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                     style: KafiTheme.nunito(18, color: KafiColors.roseD,
                         w: FontWeight.w900)),
               ],
-            );
-          }),
-          const SizedBox(height: 8),
-          // Progress bar (rose gradient fill, like the web .qc-fill)
-          Obx(() {
-            final score = ((controller.nanny.value?.profileScore ?? 0) / 100).clamp(0.0, 1.0);
-            return ClipRRect(
+            ),
+            const SizedBox(height: 8),
+            ClipRRect(
               borderRadius: BorderRadius.circular(3),
               child: Stack(
                 children: [
                   Container(height: 6, color: const Color(0xFFFFF0F5)),
                   FractionallySizedBox(
-                    widthFactor: score,
+                    widthFactor: (score / 100).clamp(0.0, 1.0),
                     child: Container(
                       height: 6,
                       decoration: const BoxDecoration(
@@ -446,40 +450,37 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                   ),
                 ],
               ),
-            );
-          }),
-          const SizedBox(height: 8),
-          // Quality items
-          Obx(() {
-            final n = controller.nanny.value;
-            final hasPhoto = controller.photoUrls.isNotEmpty;
-            final hasVideo = controller.introVideoUrl.value != null;
-            final isVerified = n?.isVerified ?? false;
-            final hasPolice = controller.documents[DocumentType.policeClearance]?.status !=
-                DocumentStatus.missing;
-            final hasCert = controller.documents[DocumentType.trainingCert]?.status !=
-                DocumentStatus.missing;
-            return Column(
-              children: [
-                _qcItem(done: hasPhoto, label: 'Profile photo added'),
-                _qcItem(done: isVerified, label: 'Kafi Verified badge'),
-                _qcItem(done: hasVideo, label: 'Video introduction uploaded'),
-                _qcItem(
-                    done: controller.photoUrls.length > 1,
-                    label: 'Multiple photos added'),
-                _qcItem(
-                    done: hasPolice,
-                    label: 'Add police clearance',
-                    bonus: hasPolice ? null : '→ +10pts'),
-                _qcItem(
-                    done: hasCert,
-                    label: 'Add training certificate',
-                    bonus: hasCert ? null : '→ +7pts'),
-              ],
-            );
-          }),
-        ],
-      ),
+            ),
+            const SizedBox(height: 8),
+            for (final f in quality.factors)
+              _qcItem(
+                done: f.done,
+                label: f.labelKey.tr,
+                bonus: f.done
+                    ? null
+                    : AppStrings.qcPtsBonus.trParams({'pts': '${f.points}'}),
+              ),
+            if (remaining.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(AppStrings.qcStillNeeded.tr,
+                  style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w800)),
+              const SizedBox(height: 4),
+              for (final f in remaining)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    '• ${f.labelKey.tr} (+${f.points})',
+                    style: KafiTheme.nunito(9.5, color: KafiColors.roseD, w: FontWeight.w700),
+                  ),
+                ),
+            ] else ...[
+              const SizedBox(height: 6),
+              Text(AppStrings.qcAllComplete.tr,
+                  style: KafiTheme.nunito(9.5, color: KafiColors.grnD, w: FontWeight.w700)),
+            ],
+          ],
+        );
+      }),
     );
   }
 
@@ -537,7 +538,7 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
               ),
               GestureDetector(
                 onTap: _openJobsTab,
-                child: Text('See all',
+                child: Text(AppStrings.dashSeeAll.tr,
                     style: KafiTheme.nunito(10, color: KafiColors.roseD,
                         w: FontWeight.w600)),
               ),
@@ -588,7 +589,8 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
 
   Widget _jobCard(JobPostModel job, int? matchScore) {
     final isHot = (matchScore ?? 0) >= 90;
-    final typeLabel = job.jobType == JobType.liveOut ? 'Live-out' : 'Live-in';
+    final typeLabel =
+        job.jobType == JobType.liveOut ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr;
     final initial = job.familyName.isNotEmpty ? job.familyName[0].toUpperCase() : 'F';
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.nannyJobDetail, arguments: job),
@@ -635,11 +637,14 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('$typeLabel Nanny · ${job.city}',
+                      Text('$typeLabel ${AppStrings.nannySuffix.tr} · ${job.city}',
                           style: KafiTheme.nunito(11, color: KafiColors.td,
                               w: FontWeight.w800)),
                       Text(
-                          'AED ${job.salaryMin}–${job.salaryMax}/mo · ${job.familyName}',
+                          '${AppStrings.jobSalaryRange.trParams({
+                                'min': '${job.salaryMin}',
+                                'max': '${job.salaryMax}',
+                              })} · ${job.familyName}',
                           style: KafiTheme.nunito(9, color: KafiColors.ts,
                               w: FontWeight.w600)),
                       // Nanny-side numeric "% match" suppressed (M8) — see the

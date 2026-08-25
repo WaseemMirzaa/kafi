@@ -116,6 +116,7 @@ class FirebaseAuthService implements IAuthService {
     await _users.doc(user.uid).set({
       'phone': phone,
       'type': role.name,
+      'userType': role.name,
     }, SetOptions(merge: true));
 
     await _ensureProfileSkeleton(user.uid, role);
@@ -138,6 +139,8 @@ class FirebaseAuthService implements IAuthService {
         'id': uid,
         'freeContactsUsed': 0,
         'viewedProfiles': <String>[],
+        // mockDev is stamped by syncMockSubscription when useMockSubscription
+        // is on; leave a free baseline so real RevenueCat paths still work.
         'subscription': {'status': 'free'},
       });
     } else {
@@ -162,7 +165,7 @@ class FirebaseAuthService implements IAuthService {
     if (u == null) return null;
     final doc = await _users.doc(u.uid).get();
     final data = doc.data();
-    final typeRaw = data?['type'] as String?;
+    final typeRaw = (data?['type'] ?? data?['userType']) as String?;
     final type = typeRaw == UserType.family.name ? UserType.family : UserType.nanny;
     _pendingRole = type;
     return UserModel(
@@ -182,7 +185,10 @@ class FirebaseAuthService implements IAuthService {
     await prefs.setString(_keyPendingRole, type.name);
     final uid = _auth.currentUser?.uid;
     if (uid != null) {
-      await _users.doc(uid).set({'type': type.name}, SetOptions(merge: true));
+      await _users.doc(uid).set({
+        'type': type.name,
+        'userType': type.name,
+      }, SetOptions(merge: true));
     }
   }
 

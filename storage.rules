@@ -51,6 +51,16 @@ service firebase.storage {
       allow read: if isSignedIn();
       allow write: if (isUser(uid) || isAdmin()) && isImage() && under(8);
     }
+    // Report / dispute evidence (images + PDF, max 10 MB). Path:
+    // disputes/{disputeId}/attachments/{file}. Signed-in users may read so
+    // getDownloadURL works at upload time; write is gated to image/PDF ≤10MB.
+    // Admin panel and the reporter also read via download URL / SDK.
+    match /disputes/{disputeId}/attachments/{file=**} {
+      allow read: if isSignedIn() || isAdmin();
+      allow write: if isSignedIn()
+        && (isImage() || isPdf())
+        && under(10);
+    }
     // Public marketing/assets — admin only
     match /public/{file=**} {
       allow read: if true;

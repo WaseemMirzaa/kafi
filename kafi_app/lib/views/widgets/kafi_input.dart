@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:kafi_app/utils/kafi_text_context_menu.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 enum KafiInputVariant { rose, purple }
@@ -55,6 +56,7 @@ class KafiInput extends StatelessWidget {
           keyboardType: keyboardType,
           obscureText: obscureText,
           onChanged: onChanged,
+          contextMenuBuilder: kafiEditableTextContextMenu,
           style: GoogleFonts.nunito(
             fontSize: 11,
             fontWeight: FontWeight.w600,

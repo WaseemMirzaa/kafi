@@ -1,6 +1,7 @@
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getUser, getNanny, getFamily } from '../utils/notifications';
+import { tn } from '../i18n/notifications';
 
 /// Recomputes `families/{familyId}.activeTrialNannyIds` from the family's trials
 /// currently in an entitling state (accepted/active/awaitingOutcome). This
@@ -31,27 +32,89 @@ export async function recomputeActiveTrialNannyIds(familyId: string): Promise<vo
   await db.collection('families').doc(familyId).update({ activeTrialNannyIds: activeIds });
 }
 
+/// Mirrors terminal trial status onto the linked chat thread so both family and
+/// nanny clients drop the "active trial" badge / lockdown bypass (hasActiveTrial
+/// only treats accepted|active as live).
+async function syncChatThreadTrialStatus(
+  familyId: string,
+  nannyId: string | undefined,
+  trialId: string,
+  status: string,
+): Promise<void> {
+  if (!familyId || !nannyId || !trialId) return;
+  const snap = await admin
+    .firestore()
+    .collection('chatThreads')
+    .where('familyId', '==', familyId)
+    .where('nannyId', '==', nannyId)
+    .limit(5)
+    .get();
+  const writes = snap.docs
+    .filter((d) => {
+      const linked = d.data().trialId as string | undefined;
+      return !linked || linked === trialId;
+    })
+    .map((d) => d.ref.update({ trialStatus: status }));
+  await Promise.all(writes);
+}
+
 export const onNewApplication = onDocumentCreated(
   'applications/{appId}',
   async (event) => {
     const app = event.data?.data();
-    if (!app) return;
+    if (!app || !event.data) return;
 
-    const family = await getFamily(app.familyId);
+    const db = admin.firestore();
+    const jobPostId = String(app.jobPostId ?? '').trim();
+    let familyId = String(app.familyId ?? '').trim();
+
+    // Denormalize familyId from the job + bump the job's applicant count so
+    // My Jobs pills and the family Applicants inbox (familyId query) stay in sync
+    // across every job post the family owns.
+    if (jobPostId) {
+      const jobRef = db.collection('jobs').doc(jobPostId);
+      const jobSnap = await jobRef.get();
+      const jobFamilyId = String(jobSnap.data()?.familyId ?? '').trim();
+      await jobRef.set(
+        {
+          applicationsCount: admin.firestore.FieldValue.increment(1),
+          updatedAt: admin.firestore.FieldValue.serverTimestamp(),
+        },
+        { merge: true },
+      );
+      if (jobFamilyId && jobFamilyId !== familyId) {
+        familyId = jobFamilyId;
+        await event.data.ref.update({ familyId: jobFamilyId });
+      }
+    }
+
+    if (!familyId) return;
+
+    const family = await getFamily(familyId);
     const nanny = await getNanny(app.nannyId);
+    const locale = family.locale ?? 'en';
 
-    const title = '📝 New application';
-    const body = `${nanny.fullName || 'A nanny'} applied - ${app.matchScore || 0}% match`;
-    const data = { type: 'new_application', applicationId: event.params.appId };
+    const title = tn('application.new.title', locale);
+    const body = tn('application.new.body', locale, {
+      nannyName: (nanny.fullName as string) || tn('application.new.defaultNannyName', locale),
+      matchScore: (app.matchScore as number) || 0,
+    });
+    const data = {
+      type: 'new_application',
+      applicationId: event.params.appId,
+      nannyId: String(app.nannyId ?? ''),
+      familyId,
+      jobPostId,
+      route: '/family-applicants',
+    };
 
     // Durable inbox record first (survives a missing FCM token), then the push.
-    await writeInbox(app.familyId as string, 'newApplication', title, body, data);
+    await writeInbox(familyId, 'newApplication', title, body, data);
     await sendNotification((family.fcmTokens as string[]) ?? [], { title, body, data });
 
     // Server-owned nanny aggregate (rules deny cross-client nanny-doc writes).
     if (app.nannyId) {
-      await admin
-        .firestore()
+      await db
         .collection('nannies')
         .doc(app.nannyId as string)
         .set(
@@ -78,17 +141,23 @@ export const onApplicationUpdated = onDocumentUpdated(
       getNanny(after.nannyId),
       getFamily(after.familyId),
     ]);
-    const famName = family.fullName || 'A family';
-    const jobTitle = after.jobTitle || 'your application';
+    const locale = nanny.locale ?? 'en';
+    const famName = (family.fullName as string) || tn('application.defaultFamilyName', locale);
+    const jobTitle = (after.jobTitle as string) || tn('application.defaultJobTitle', locale);
     const viewed = after.status === 'viewed';
 
-    const title = viewed ? '👀 Application viewed' : 'Application update';
-    const body = viewed
-      ? `${famName} viewed your application for ${jobTitle}`
-      : `${famName} passed on your application for ${jobTitle}`;
+    const title = tn(viewed ? 'application.viewed.title' : 'application.declined.title', locale);
+    const body = tn(viewed ? 'application.viewed.body' : 'application.declined.body', locale, {
+      famName,
+      jobTitle,
+    });
     const data = {
       type: viewed ? 'application_viewed' : 'application_declined',
       applicationId: event.params.appId,
+      nannyId: String(after.nannyId ?? ''),
+      familyId: String(after.familyId ?? ''),
+      jobPostId: String(after.jobPostId ?? ''),
+      route: '/nanny-applications',
     };
 
     // Durable inbox first (survives a missing FCM token), then the push.
@@ -109,10 +178,21 @@ export const onTrialOffered = onDocumentCreated('trials/{trialId}', async (event
 
   const nanny = await getUser(trial.nannyId);
   const family = await getFamily(trial.familyId);
+  const locale = nanny.locale ?? 'en';
 
-  const title = '🎉 Trial offer received!';
-  const body = `${family.fullName || 'A family'} sent ${trial.durationDays}-day trial @ AED ${trial.dailyRate}/day`;
-  const data = { type: 'trial_offer_received', trialId: event.params.trialId };
+  const title = tn('trial.offerReceived.title', locale);
+  const body = tn('trial.offerReceived.body', locale, {
+    famName: (family.fullName as string) || tn('application.defaultFamilyName', locale),
+    days: trial.durationDays as number,
+    rate: trial.dailyRate as number,
+  });
+  const data = {
+    type: 'trial_offer_received',
+    trialId: event.params.trialId,
+    nannyId: String(trial.nannyId ?? ''),
+    familyId: String(trial.familyId ?? ''),
+    route: '/trial',
+  };
 
   await writeInbox(trial.nannyId as string, 'trialOfferReceived', title, body, data);
   await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
@@ -137,13 +217,20 @@ export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (even
       getFamily(after.familyId),
       getUser(after.nannyId),
     ]);
+    const locale = nanny.locale ?? 'en';
     const accepted = after.status === 'accepted';
-    const famName = family.fullName || 'The family';
-    const title = accepted ? '✅ Counter accepted' : 'Counter declined';
-    const body = accepted
-      ? `${famName} accepted your counter offer!`
-      : `${famName} declined your counter offer`;
-    const data = { type: `trial_counter_${after.status}`, trialId };
+    const famName = (family.fullName as string) || tn('trial.defaultFamilyName', locale);
+    const title = tn(accepted ? 'trial.counterAccepted.title' : 'trial.counterDeclined.title', locale);
+    const body = tn(accepted ? 'trial.counterAccepted.body' : 'trial.counterDeclined.body', locale, {
+      famName,
+    });
+    const data = {
+      type: `trial_counter_${after.status}`,
+      trialId,
+      nannyId: String(after.nannyId ?? ''),
+      familyId: String(after.familyId ?? ''),
+      route: '/trial',
+    };
     await writeInbox(
       after.nannyId as string,
       accepted ? 'trialAccepted' : 'trialDeclined',
@@ -158,21 +245,23 @@ export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (even
 
   const family = await getFamily(after.familyId);
   const nanny = await getUser(after.nannyId);
+  const locale = family.locale ?? 'en';
+  const nannyName = (nanny.fullName as string) || tn('trial.defaultNannyName', locale);
 
   const byStatus = {
     accepted: {
-      title: '✅ Trial accepted',
-      body: `${nanny.fullName || 'Nanny'} accepted your offer!`,
+      title: tn('trial.accepted.title', locale),
+      body: tn('trial.accepted.body', locale, { nannyName }),
       type: 'trialAccepted',
     },
     declined: {
-      title: 'Trial declined',
-      body: `${nanny.fullName || 'Nanny'} declined your offer`,
+      title: tn('trial.declined.title', locale),
+      body: tn('trial.declined.body', locale, { nannyName }),
       type: 'trialDeclined',
     },
     countered: {
-      title: '🔄 Counter offer',
-      body: `${nanny.fullName || 'Nanny'} sent a counter offer`,
+      title: tn('trial.countered.title', locale),
+      body: tn('trial.countered.body', locale, { nannyName }),
       type: 'trialCountered',
     },
   } as const;
@@ -180,7 +269,13 @@ export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (even
   const entry = byStatus[after.status as keyof typeof byStatus];
   if (!entry) return;
 
-  const data = { type: `trial_${after.status}`, trialId: event.params.trialId };
+  const data = {
+    type: `trial_${after.status}`,
+    trialId: event.params.trialId,
+    nannyId: String(after.nannyId ?? ''),
+    familyId: String(after.familyId ?? ''),
+    route: '/trial',
+  };
   await writeInbox(after.familyId as string, entry.type, entry.title, entry.body, data);
   await sendNotification((family.fcmTokens as string[]) ?? [], {
     title: entry.title,
@@ -345,27 +440,15 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
     'subscription.lastTrialEndedAt': admin.firestore.FieldValue.serverTimestamp(),
   });
 
-  // Retire the family's cached chat-thread trial badge. The linked thread caches
-  // `trialStatus` to drive the green "on trial" pill + "View Trial" banner
-  // (ChatThread.hasActiveTrial is true only for 'active'/'accepted'); writing the
-  // terminal status here retires it — the server-side replacement for the removed
-  // client `_flipThreadTrialStatus`. Best-effort: a trial with no linked thread
-  // must never fail this trigger, matching the application-lookup swallow in
-  // onTrialOutcomeResolved above.
-  try {
-    const threadSnap = await admin
-      .firestore()
-      .collection('chatThreads')
-      .where('trialId', '==', event.params.trialId)
-      .limit(1)
-      .get();
-    const thread = threadSnap.docs[0];
-    if (thread) {
-      await thread.ref.update({ trialStatus: after.status });
-    }
-  } catch (error) {
-    console.error('onTrialEnded: chat-thread badge retirement failed', error);
-  }
+  // Keep chatThreads.trialStatus in sync so list/conversation UI stops treating
+  // the thread as an active trial for both parties (client cancel path also
+  // writes this; the trigger covers admin/other writers and missed client writes).
+  await syncChatThreadTrialStatus(
+    familyId,
+    after.nannyId as string | undefined,
+    event.params.trialId,
+    after.status as string,
+  );
 
   // Both terminal outcomes must reach BOTH parties. Previously only 'completed'
   // fired, only to the family, with stale "evaluate the nanny" copy — and
@@ -377,7 +460,16 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
       getFamily(familyId),
       nannyId ? getUser(nannyId) : Promise.resolve({} as Record<string, unknown>),
     ]);
-    const data = { type: `trial_${after.status}`, trialId: event.params.trialId };
+    const data = {
+      type: `trial_${after.status}`,
+      trialId: event.params.trialId,
+      nannyId: String(nannyId ?? after.nannyId ?? ''),
+      familyId: String(familyId),
+      route: '/trial',
+    };
+
+    const familyLocale = family.locale ?? 'en';
+    const nannyLocale = (nanny as { locale?: 'en' | 'ar' }).locale ?? 'en';
 
     if (after.status === 'completed') {
       // Outcome-aware, de-duplicated copy — replaces the old always-generic
@@ -407,12 +499,11 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
         // Defensive fallback for a trial completed via a path this phase
         // doesn't control (e.g. a future admin action) — keep today's copy
         // verbatim so that path never regresses.
-        famTitle = '✅ Trial completed';
-        famBody = 'The trial is complete — decide whether to hire.';
-        nanTitle = '✅ Trial completed';
-        nanBody = 'Your trial is complete. The family will confirm next steps.';
+        famTitle = tn('trial.completedFamily.title', familyLocale);
+        famBody = tn('trial.completedFamily.body', familyLocale);
+        nanTitle = tn('trial.completedNanny.title', nannyLocale);
+        nanBody = tn('trial.completedNanny.body', nannyLocale);
       }
-
       await writeInbox(familyId, 'trialCompleted', famTitle, famBody, data);
       await sendNotification((family.fcmTokens as string[]) ?? [], {
         title: famTitle,
@@ -428,13 +519,23 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
         });
       }
     } else {
-      const title = 'Trial cancelled';
-      const body = 'The trial has been cancelled.';
-      await writeInbox(familyId, 'systemAnnouncement', title, body, data);
-      await sendNotification((family.fcmTokens as string[]) ?? [], { title, body, data });
+      const famTitle = tn('trial.cancelled.title', familyLocale);
+      const famBody = tn('trial.cancelled.body', familyLocale);
+      await writeInbox(familyId, 'systemAnnouncement', famTitle, famBody, data);
+      await sendNotification((family.fcmTokens as string[]) ?? [], {
+        title: famTitle,
+        body: famBody,
+        data,
+      });
       if (nannyId) {
-        await writeInbox(nannyId, 'systemAnnouncement', title, body, data);
-        await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
+        const nanTitle = tn('trial.cancelled.title', nannyLocale);
+        const nanBody = tn('trial.cancelled.body', nannyLocale);
+        await writeInbox(nannyId, 'systemAnnouncement', nanTitle, nanBody, data);
+        await sendNotification((nanny.fcmTokens as string[]) ?? [], {
+          title: nanTitle,
+          body: nanBody,
+          data,
+        });
       }
     }
   }

@@ -4,13 +4,13 @@ class AppConstants {
   static const supportedLocales = ['en_US', 'ar_AE'];
 
   /// Google Cloud API key for Maps SDK (iOS/Android), Places API and Geocoding
-  /// API. Supplied at build time via
-  /// `--dart-define=GOOGLE_MAPS_API_KEY=…` (kept out of git); falls back to the
-  /// placeholder, in which case the location picker uses the curated UAE-areas
-  /// list instead of the live map. See docs/GOOGLE_MAPS_SETUP.md.
+  /// API. Prefer `--dart-define=GOOGLE_MAPS_API_KEY=…` (see launch.json /
+  /// docs/GOOGLE_MAPS_SETUP.md). The default matches the iOS
+  /// `GMSServices.provideAPIKey` value so local runs open the live map without
+  /// an extra flag. Restrict this key in Google Cloud (bundle id / SHA-1).
   static const googleMapsApiKey = String.fromEnvironment(
     'GOOGLE_MAPS_API_KEY',
-    defaultValue: 'YOUR_GOOGLE_MAPS_API_KEY',
+    defaultValue: 'AIzaSyDqQUR6ygHdXRDDUmJ7Xr02A2HCMH92Lvk',
   );
 
   /// UAE bounding box used to bias Places Autocomplete results.

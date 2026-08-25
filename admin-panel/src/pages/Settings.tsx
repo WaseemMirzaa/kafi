@@ -1,6 +1,14 @@
 import { useEffect, useState } from 'react';
-import { DetailCard, PageContent, PageHeader, PageShell } from '../components/ui/AdminUI';
+import {
+  DetailCard,
+  PageContent,
+  PageHeader,
+  PageShell,
+  PageLoader,
+} from '../components/ui/AdminUI';
 import { SettingsService } from '../services/firestore';
+import { useLocale } from '../context/LocaleContext';
+import { Locale } from '../locales/t';
 
 /**
  * App-wide settings. Reads and writes the `settings/global` doc that both the
@@ -47,6 +55,7 @@ function NumField({
 }
 
 export default function Settings() {
+  const { t, locale, setLocale } = useLocale();
   const [freeContactLimit, setFreeContactLimit] = useState('');
   const [jobPostVisibilityDays, setJobPostVisibilityDays] = useState('');
   const [weekly, setWeekly] = useState('');
@@ -74,7 +83,7 @@ export default function Settings() {
         setHideInactive(s.hideInactiveNannies === true);
       })
       .catch((e) => {
-        if (!cancelled) setError((e as Error).message || 'Failed to load settings');
+        if (!cancelled) setError((e as Error).message || t('settings.failedToLoad'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -99,15 +108,15 @@ export default function Settings() {
     const vp = parseFloat(vatPct);
 
     if ([fcl, jpv, wk, mo, tm].some((n) => !Number.isFinite(n)) || !Number.isFinite(vp)) {
-      setError('Enter valid numbers in every field.');
+      setError(t('settings.enterValidNumbers'));
       return;
     }
     if (fcl < 0 || jpv < 1 || wk <= 0 || mo <= 0 || tm <= 0) {
-      setError('Prices and days must be positive; free contacts cannot be negative.');
+      setError(t('settings.positiveValuesRequired'));
       return;
     }
     if (vp < 0 || vp > 100) {
-      setError('VAT rate must be between 0 and 100%.');
+      setError(t('settings.vatRange'));
       return;
     }
 
@@ -120,9 +129,9 @@ export default function Settings() {
         vatRate: +(vp / 100).toFixed(4),
         hideInactiveNannies: hideInactive,
       });
-      setOk('Saved');
+      setOk(t('common.saved'));
     } catch (e) {
-      setError((e as Error).message || 'Failed to save');
+      setError((e as Error).message || t('settings.failedToSave'));
     } finally {
       setBusy(false);
     }
@@ -131,52 +140,52 @@ export default function Settings() {
   return (
     <PageShell>
       <PageHeader
-        title="Settings"
-        subtitle="App-wide configuration"
+        title={t('settings.title')}
+        subtitle={t('settings.subtitle')}
         actions={
           <button type="button" className="qa-btn qa-r" onClick={save} disabled={loading || busy}>
-            {busy ? 'Saving…' : 'Save changes'}
+            {busy ? t('common.saving') : t('settings.saveChanges')}
           </button>
         }
       />
       <PageContent>
         {loading ? (
-          <div className="text-[10px] font-bold text-[#8090B0]">Loading…</div>
+          <PageLoader />
         ) : (
           <div className="flex flex-col gap-3">
             {/* Plans & billing — the single source for prices/VAT used by the
                 Dashboard, Revenue and Subscriptions pages. */}
             <DetailCard>
-              <div className="text-[11px] font-extrabold text-navy">Plans &amp; billing</div>
+              <div className="text-[11px] font-extrabold text-navy">{t('settings.plansAndBilling')}</div>
               <div className="text-[9px] font-semibold text-[#8090B0] mt-1 mb-3 leading-relaxed">
-                Plan prices and VAT rate. These drive revenue figures and the plan labels across the panel.
+                {t('settings.plansAndBillingDesc')}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <NumField label="Weekly plan" value={weekly} onChange={setWeekly} suffix="AED" />
-                <NumField label="Monthly plan" value={monthly} onChange={setMonthly} suffix="AED" />
-                <NumField label="2-month plan" value={twoMonths} onChange={setTwoMonths} suffix="AED" />
-                <NumField label="VAT rate" value={vatPct} onChange={setVatPct} suffix="%" hint="UAE standard is 5%." />
+                <NumField label={t('settings.weeklyPlan')} value={weekly} onChange={setWeekly} suffix="AED" />
+                <NumField label={t('settings.monthlyPlan')} value={monthly} onChange={setMonthly} suffix="AED" />
+                <NumField label={t('settings.twoMonthPlan')} value={twoMonths} onChange={setTwoMonths} suffix="AED" />
+                <NumField label={t('settings.vatRate')} value={vatPct} onChange={setVatPct} suffix="%" hint={t('settings.vatHint')} />
               </div>
             </DetailCard>
 
             {/* Limits */}
             <DetailCard>
-              <div className="text-[11px] font-extrabold text-navy">Limits</div>
+              <div className="text-[11px] font-extrabold text-navy">{t('settings.limits')}</div>
               <div className="text-[9px] font-semibold text-[#8090B0] mt-1 mb-3 leading-relaxed">
-                Free contact reveals per family before a subscription is required, and how long a job post stays visible.
+                {t('settings.limitsDesc')}
               </div>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                 <NumField
-                  label="Free contacts / family"
+                  label={t('settings.freeContactsPerFamily')}
                   value={freeContactLimit}
                   onChange={setFreeContactLimit}
-                  hint="Contact reveals allowed before subscribing."
+                  hint={t('settings.freeContactsHint')}
                 />
                 <NumField
-                  label="Job post visibility"
+                  label={t('settings.jobPostVisibility')}
                   value={jobPostVisibilityDays}
                   onChange={setJobPostVisibilityDays}
-                  suffix="days"
+                  suffix={t('settings.jobPostVisibilityDays')}
                 />
               </div>
             </DetailCard>
@@ -185,10 +194,9 @@ export default function Settings() {
             <DetailCard>
               <div className="flex items-start justify-between gap-4">
                 <div className="flex-1 min-w-0">
-                  <div className="text-[11px] font-extrabold text-navy">Hide inactive nannies</div>
+                  <div className="text-[11px] font-extrabold text-navy">{t('settings.hideInactiveNannies')}</div>
                   <div className="text-[9px] font-semibold text-[#8090B0] mt-1 leading-relaxed">
-                    When enabled, nannies who have not opened the app in the last 2 weeks are hidden
-                    from family listings. When disabled, all approved nannies are shown normally.
+                    {t('settings.hideInactiveNanniesDesc')}
                   </div>
                 </div>
                 <button
@@ -207,6 +215,27 @@ export default function Settings() {
                     }`}
                   />
                 </button>
+              </div>
+            </DetailCard>
+
+            {/* Language — EN|AR admin panel locale toggle. */}
+            <DetailCard>
+              <div className="flex items-start justify-between gap-4">
+                <div className="flex-1 min-w-0">
+                  <div className="text-[11px] font-extrabold text-navy">{t('header.locale')}</div>
+                </div>
+                <div className="flex gap-1.5 flex-shrink-0">
+                  {(['en', 'ar'] as Locale[]).map((l) => (
+                    <button
+                      key={l}
+                      type="button"
+                      onClick={() => setLocale(l)}
+                      className={`qa-btn ${locale === l ? 'qa-r' : 'qa-n'}`}
+                    >
+                      {l === 'en' ? t('header.localeEnglish') : t('header.localeArabic')}
+                    </button>
+                  ))}
+                </div>
               </div>
             </DetailCard>
 

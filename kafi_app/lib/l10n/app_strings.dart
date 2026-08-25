@@ -261,7 +261,20 @@ abstract class AppStrings {
   static const dashViews = 'dash_views';
   static const dashRating = 'dash_rating';
   static const dashProfileQuality = 'dash_profile_quality';
+  static const dashProfileQualityScore = 'dash_profile_quality_score';
   static const dashJobsForYou = 'dash_jobs_for_you';
+  static const qcProfileComplete = 'qc_profile_complete';
+  static const qcVerifiedBadge = 'qc_verified_badge';
+  static const qcVideoUploaded = 'qc_video_uploaded';
+  static const qcMultiplePhotos = 'qc_multiple_photos';
+  static const qcPoliceClearance = 'qc_police_clearance';
+  static const qcTrainingCert = 'qc_training_cert';
+  static const qcRecentlyActive = 'qc_recently_active';
+  static const qcReferences = 'qc_references';
+  static const qcWorkExperience = 'qc_work_experience';
+  static const qcPtsBonus = 'qc_pts_bonus';
+  static const qcStillNeeded = 'qc_still_needed';
+  static const qcAllComplete = 'qc_all_complete';
   static const dashSeeAll = 'dash_see_all';
   static const dashKafiVerified = 'dash_kafi_verified';
   static const navHome = 'nav_home';
@@ -398,11 +411,14 @@ abstract class AppStrings {
   static const trialAlreadyActive = 'trial_already_active';
   static const trialActiveNoApply = 'trial_active_no_apply';
   static const applyAlreadyApplied = 'apply_already_applied';
+  static const applyJobUnavailable = 'apply_job_unavailable';
 
   // Family "Applicants" view (Spec §6.x — family receives applications)
   static const familyApplicants = 'family_applicants';
   static const familyApplicantsSub = 'family_applicants_sub';
   static const familyApplicantsEmpty = 'family_applicants_empty';
+  static const applicantsAllJobs = 'applicants_all_jobs';
+  static const applicantsUntitledJob = 'applicants_untitled_job';
   static const applicantsNoMatch = 'applicants_no_match';
   static const familyApplicantsEmptySub = 'family_applicants_empty_sub';
   static const applicantShortlist = 'applicant_shortlist';
@@ -445,11 +461,31 @@ abstract class AppStrings {
   static const contactsHiddenBanner = 'contacts_hidden_banner';
   static const trialOfferSubRequired = 'trial_offer_sub_required';
   static const trialOfferAckRequired = 'trial_offer_ack_required';
+  static const trialOfferRateRequired = 'trial_offer_rate_required';
+  static const trialOfferRateTooLow = 'trial_offer_rate_too_low';
+  static const trialOfferRateTooHigh = 'trial_offer_rate_too_high';
+  static const trialOfferDurationRequired = 'trial_offer_duration_required';
+  static const trialOfferStartRequired = 'trial_offer_start_required';
+  static const trialOfferStartPast = 'trial_offer_start_past';
+  static const trialOfferLocationRequired = 'trial_offer_location_required';
+  static const trialOfferTypeRequired = 'trial_offer_type_required';
+  static const trialOfferNotesTooLong = 'trial_offer_notes_too_long';
+  static const trialOfferNannyUnverified = 'trial_offer_nanny_unverified';
+  static const trialOfferNannyOnTrial = 'trial_offer_nanny_on_trial';
+  static const trialOfferFamilyActive = 'trial_offer_family_active';
   static const trialOfferBubbleSent = 'trial_offer_bubble_sent';
   static const trialOfferSentSuccess = 'trial_offer_sent_success';
   static const trialOfferBubbleReceived = 'trial_offer_bubble_received';
   static const trialOfferBubbleDuration = 'trial_offer_bubble_duration';
   static const trialOfferBubbleRate = 'trial_offer_bubble_rate';
+  static const trialOfferBubbleTotal = 'trial_offer_bubble_total';
+  static const trialOfferBubbleTypeLiveIn = 'trial_offer_bubble_type_live_in';
+  static const trialOfferBubbleTypeLiveOut = 'trial_offer_bubble_type_live_out';
+  static const trialOfferBubbleStartFrom = 'trial_offer_bubble_start_from';
+  static const trialOfferBubbleLocationOnly = 'trial_offer_bubble_location_only';
+  static const trialOfferBubbleNotes = 'trial_offer_bubble_notes';
+  static const trialOfferBubbleLocation = 'trial_offer_bubble_location';
+  static const trialOfferBubbleLocationStartOnly = 'trial_offer_bubble_location_start_only';
   static const trialOfferAccept = 'trial_offer_accept';
   static const trialOfferCounter = 'trial_offer_counter';
   static const trialOfferDecline = 'trial_offer_decline';
@@ -519,6 +555,22 @@ abstract class AppStrings {
   static const familyHouseRulesLabel = 'family_house_rules_label';
   static const familyHouseRulesHint = 'family_house_rules_hint';
   static const familyScheduleHint = 'family_schedule_hint';
+  static const familySchedulePickDays = 'family_schedule_pick_days';
+  static const familyScheduleSheetTitle = 'family_schedule_sheet_title';
+  static const familyScheduleSheetSub = 'family_schedule_sheet_sub';
+  static const familyScheduleDone = 'family_schedule_done';
+  static const familyBothJobSlotsFilled = 'family_both_job_slots_filled';
+  static const familyEmploymentLockedHint = 'family_employment_locked_hint';
+  static const browseFilterByJob = 'browse_filter_by_job';
+  static const browseFilterByJobSub = 'browse_filter_by_job_sub';
+  static const browseNoJobsYet = 'browse_no_jobs_yet';
+  static const browseAllMatches = 'browse_all_matches';
+  static const shortlistAdded = 'shortlist_added';
+  static const shortlistRemoved = 'shortlist_removed';
+  static const shortlistAlreadyAdded = 'shortlist_already_added';
+  static const shortlistNeedFamily = 'shortlist_need_family';
+  static const shortlistSaveFailed = 'shortlist_save_failed';
+  static const fldLocation = 'fld_location';
   static const familyTrialDaysN = 'family_trial_days_n';
 
   // Browse
@@ -552,6 +604,10 @@ abstract class AppStrings {
   static const callHer = 'call_her';
   static const inAppChat = 'in_app_chat';
   static const watchIntroVideo = 'watch_intro_video';
+  static const videoIntroTitle = 'video_intro_title';
+  static const videoLoading = 'video_loading';
+  static const videoUnavailable = 'video_unavailable';
+  static const videoLoadFailed = 'video_load_failed';
   static const fullCv = 'full_cv';
   static const downloadCv = 'download_cv';
   static const shortlist = 'shortlist';
@@ -856,6 +912,19 @@ abstract class AppStrings {
   static const reportProblemSend = 'report_problem_send';
   static const reportSentToast = 'report_sent_toast';
   static const reportEmptyDesc = 'report_empty_desc';
+  static const reportUnavailable = 'report_unavailable';
+  static const reportAttachLabel = 'report_attach_label';
+  static const reportAttachHint = 'report_attach_hint';
+  static const reportAttachGallery = 'report_attach_gallery';
+  static const reportAttachCamera = 'report_attach_camera';
+  static const reportAttachFile = 'report_attach_file';
+  static const reportAttachMax = 'report_attach_max';
+  static const reportAttachTooLarge = 'report_attach_too_large';
+  static const reportAttachType = 'report_attach_type';
+  static const reportAttachPickFailed = 'report_attach_pick_failed';
+  static const reportAttachCount = 'report_attach_count';
+  static const reportAttachmentsTitle = 'report_attachments_title';
+  static const reportOpenPdf = 'report_open_pdf';
 
   // Password Reset
   static const pwResetTitle = 'pw_reset_title';
@@ -1089,4 +1158,289 @@ abstract class AppStrings {
   static const refsCallable = 'refs_callable';
   static const refsShareNote = 'refs_share_note';
   static const refsNeedOne = 'refs_need_one';
+
+  // Nanny info screen — l10n sweep
+  static const dateFormatHint = 'date_format_hint';
+  static const nannyFullNameHint = 'nanny_full_name_hint';
+  static const nannyVisaInfoBanner = 'nanny_visa_info_banner';
+  static const visaVisitSub = 'visa_visit_sub';
+  static const visaSponsoredSub = 'visa_sponsored_sub';
+  static const visaOwnSub = 'visa_own_sub';
+  static const visaCancelledSub = 'visa_cancelled_sub';
+  static const visaOutsideSub = 'visa_outside_sub';
+  static const nannyEidCardTitle = 'nanny_eid_card_title';
+  static const nannyEidCardDesc = 'nanny_eid_card_desc';
+  static const nannyEidYes = 'nanny_eid_yes';
+  static const nannyEidNo = 'nanny_eid_no';
+  static const nannyTransferYes = 'nanny_transfer_yes';
+  static const nannyTransferNo = 'nanny_transfer_no';
+  static const nannyTransferDepends = 'nanny_transfer_depends';
+  static const nannyWorkLocBanner = 'nanny_work_loc_banner';
+  static const emirateDubaiSub = 'emirate_dubai_sub';
+  static const emirateAbuDhabiSub = 'emirate_abu_dhabi_sub';
+  static const emirateSharjahSub = 'emirate_sharjah_sub';
+  static const emirateAjmanSub = 'emirate_ajman_sub';
+  static const emirateRakSub = 'emirate_rak_sub';
+  static const emirateFujairahSub = 'emirate_fujairah_sub';
+  static const emirateUaqSub = 'emirate_uaq_sub';
+  static const emirateAlAinSub = 'emirate_al_ain_sub';
+  static const nannyRelocateYes = 'nanny_relocate_yes';
+  static const nannyRelocateNo = 'nanny_relocate_no';
+  static const maritalMarried = 'marital_married';
+  static const maritalSingle = 'marital_single';
+  static const maritalDivorced = 'marital_divorced';
+  static const maritalWidowed = 'marital_widowed';
+  static const nannyHasChildrenYes = 'nanny_has_children_yes';
+  static const nannyHasChildrenNo = 'nanny_has_children_no';
+  static const nannyHealthBanner = 'nanny_health_banner';
+  static const healthYesDescribe = 'health_yes_describe';
+  static const fldHealthNo = 'fld_health_no';
+  static const fldMedsNo = 'fld_meds_no';
+  static const fldAllergiesNo = 'fld_allergies_no';
+  static const healthDescribeLabel = 'health_describe_label';
+  static const healthDescribeHint = 'health_describe_hint';
+  static const nannyComfortBanner = 'nanny_comfort_banner';
+  static const comfortCamerasYes = 'comfort_cameras_yes';
+  static const comfortCamerasNo = 'comfort_cameras_no';
+  static const comfortPetsYes = 'comfort_pets_yes';
+  static const comfortPetsNo = 'comfort_pets_no';
+  static const comfortCooksYes = 'comfort_cooks_yes';
+  static const comfortCooksNo = 'comfort_cooks_no';
+  static const comfortNightYes = 'comfort_night_yes';
+  static const comfortNightNo = 'comfort_night_no';
+  static const religionMuslim = 'religion_muslim';
+  static const religionChristian = 'religion_christian';
+  static const religionHindu = 'religion_hindu';
+  static const religionBuddhist = 'religion_buddhist';
+  static const religionJewish = 'religion_jewish';
+  static const religionOther = 'religion_other';
+  static const nannyFaithYes = 'nanny_faith_yes';
+  static const nannyFaithNo = 'nanny_faith_no';
+  static const nannyReligiousPracticesHint = 'nanny_religious_practices_hint';
+  static const emergencyRelSpouse = 'emergency_rel_spouse';
+  static const emergencyRelParent = 'emergency_rel_parent';
+  static const emergencyRelSibling = 'emergency_rel_sibling';
+  static const emergencyRelChild = 'emergency_rel_child';
+  static const emergencyRelFriend = 'emergency_rel_friend';
+  static const emergencyRelOther = 'emergency_rel_other';
+  static const fldBioHint = 'fld_bio_hint';
+
+  // Nanny media screen — l10n sweep
+  static const mediaRuleMaxDuration = 'media_rule_max_duration';
+  static const mediaRuleLighting = 'media_rule_lighting';
+  static const mediaRuleNoPhone = 'media_rule_no_phone';
+  static const mediaWhatToSay = 'media_what_to_say';
+  static const mediaSayName = 'media_say_name';
+  static const mediaSayChildren = 'media_say_children';
+  static const mediaSayLove = 'media_say_love';
+
+  // Nanny experience screen — l10n sweep
+  static const expEmployerHint = 'exp_employer_hint';
+  static const expChildrenHint = 'exp_children_hint';
+  static const expDutiesHint = 'exp_duties_hint';
+  static const monthJan = 'month_jan';
+  static const monthFeb = 'month_feb';
+  static const monthMar = 'month_mar';
+  static const monthApr = 'month_apr';
+  static const monthMay = 'month_may';
+  static const monthJun = 'month_jun';
+  static const monthJul = 'month_jul';
+  static const monthAug = 'month_aug';
+  static const monthSep = 'month_sep';
+  static const monthOct = 'month_oct';
+  static const monthNov = 'month_nov';
+  static const monthDec = 'month_dec';
+
+  // Nanny references screen — l10n sweep
+  static const refsStep1 = 'refs_step1';
+  static const refsStep2 = 'refs_step2';
+  static const refsStep3 = 'refs_step3';
+  static const refsStep4 = 'refs_step4';
+  static const refsYearsHint = 'refs_years_hint';
+  static const refsCanConfirmHint = 'refs_can_confirm_hint';
+
+  // Nanny docs screen — l10n sweep
+  static const docConditional = 'doc_conditional';
+
+  // Nanny edit profile screen — language chip labels
+  static const languageEnglish = 'language_english';
+  static const languageArabic = 'language_arabic';
+  static const languageFrench = 'language_french';
+  static const languageHindi = 'language_hindi';
+  static const languageTagalog = 'language_tagalog';
+  static const languageAmharic = 'language_amharic';
+
+  // --- i18n sweep jobs/apps ---
+  // Shared
+  static const nannySuffix = 'nanny_suffix';
+  static const jobSalaryRange = 'job_salary_range';
+  static const timeDaysAgo = 'time_days_ago';
+  static const timeHoursAgo = 'time_hours_ago';
+  static const timeMinutesAgo = 'time_minutes_ago';
+
+  // Jobs home — filters
+  static const jobsFilterAll = 'jobs_filter_all';
+  static const jobsFilterNewborn = 'jobs_filter_newborn';
+
+  // Job detail screen
+  static const jobDetailFamilySuffix = 'job_detail_family_suffix';
+  static const jobDetailSectionTitle = 'job_detail_section_title';
+  static const jobDetailFieldJobType = 'job_detail_field_job_type';
+  static const jobDetailFieldSchedule = 'job_detail_field_schedule';
+  static const jobDetailNotSpecified = 'job_detail_not_specified';
+  static const jobDetailFieldStartDate = 'job_detail_field_start_date';
+  static const jobDetailImmediate = 'job_detail_immediate';
+  static const jobDetailFlexible = 'job_detail_flexible';
+  static const jobDetailFieldDuration = 'job_detail_field_duration';
+  static const jobDetailPermanent = 'job_detail_permanent';
+  static const jobDetailContractMonths = 'job_detail_contract_months';
+  static const jobDetailContract = 'job_detail_contract';
+  static const jobDetailFieldSalary = 'job_detail_field_salary';
+  static const jobDetailSalaryRange = 'job_detail_salary_range';
+  static const jobDetailRequirementsTitle = 'job_detail_requirements_title';
+  static const jobDetailFieldLanguages = 'job_detail_field_languages';
+  static const jobDetailBenefitsTitle = 'job_detail_benefits_title';
+  static const jobDetailVisaSponsoredTitle = 'job_detail_visa_sponsored_title';
+  static const jobDetailVisaOwnTitle = 'job_detail_visa_own_title';
+  static const jobDetailVisaSponsoredSub = 'job_detail_visa_sponsored_sub';
+  static const jobDetailVisaOwnSub = 'job_detail_visa_own_sub';
+
+  // Nanny-side application status labels (badges + timeline + date rows).
+  // Distinct from the family-facing appStatus* keys ("New"/"Trial offered")
+  // which use applicant-list framing, not the nanny's own-application framing.
+  static const nannyAppStatusPending = 'nanny_app_status_pending';
+  static const nannyAppStatusViewed = 'nanny_app_status_viewed';
+  static const nannyAppStatusShortlisted = 'nanny_app_status_shortlisted';
+  static const nannyAppStatusTrialOffered = 'nanny_app_status_trial_offered';
+  static const nannyAppStatusDeclined = 'nanny_app_status_declined';
+  static const nannyAppStatusWithdrawn = 'nanny_app_status_withdrawn';
+  static const nannyAppStatusHired = 'nanny_app_status_hired';
+
+  // Application detail screen (extra, beyond existing appDetail* keys)
+  static const appDetailPendingTitle = 'app_detail_pending_title';
+  static const appDetailViewedTitle = 'app_detail_viewed_title';
+  static const appDetailWithdrawTitle = 'app_detail_withdraw_title';
+  static const appDetailTimelineTitle = 'app_detail_timeline_title';
+  static const appDetailStepResponded = 'app_detail_step_responded';
+  static const appDetailStepHired = 'app_detail_step_hired';
+  static const appDetailLabelHired = 'app_detail_label_hired';
+  static const appDetailNoTrialTitle = 'app_detail_no_trial_title';
+  static const appDetailNoTrialBody = 'app_detail_no_trial_body';
+  static const appDetailViewInMessages = 'app_detail_view_in_messages';
+  static const appDetailTrialOfferDetails = 'app_detail_trial_offer_details';
+  static const appDetailAcceptOfferLabel = 'app_detail_accept_offer_label';
+  static const appDetailDeclineOfferLabel = 'app_detail_decline_offer_label';
+  static const appDetailOriginalOffer = 'app_detail_original_offer';
+
+  // --- i18n sweep family/shared ---
+  static const browseMatchesFor = 'browse_matches_for';
+  static const callHerBtn = 'call_her_btn';
+  static const chatActionLabel = 'chat_action_label';
+  static const chatImagePreview = 'chat_image_preview';
+  static const compareCity = 'compare_city';
+  static const compareExp = 'compare_exp';
+  static const compareMatch = 'compare_match';
+  static const compareType = 'compare_type';
+  static const compareVs = 'compare_vs';
+  static const contactCallOrWhatsapp = 'contact_call_or_whatsapp';
+  static const contactDirectNumber = 'contact_direct_number';
+  static const contactFullyUnlocked = 'contact_fully_unlocked';
+  static const contactWhatsappLabel = 'contact_whatsapp_label';
+  static const dashPlaceholder = 'dash_placeholder';
+  static const deleteReasonAppIssues = 'delete_reason_app_issues';
+  static const deleteReasonFoundNannyJob = 'delete_reason_found_nanny_job';
+  static const deleteReasonNotSatisfied = 'delete_reason_not_satisfied';
+  static const deleteReasonOther = 'delete_reason_other';
+  static const deleteReasonPrivacy = 'delete_reason_privacy';
+  static const deleteReasonTooExpensive = 'delete_reason_too_expensive';
+  static const detailsLabel = 'details_label';
+  static const docUploadBtn = 'doc_upload_btn';
+  static const filterAll = 'filter_all';
+  static const filterArabic = 'filter_arabic';
+  static const filterFilipino = 'filter_filipino';
+  static const filterIndian = 'filter_indian';
+  static const legalPrivacy1 = 'legal_privacy_1';
+  static const legalPrivacy2 = 'legal_privacy_2';
+  static const legalPrivacy3 = 'legal_privacy_3';
+  static const legalPrivacy4 = 'legal_privacy_4';
+  static const legalPrivacy5 = 'legal_privacy_5';
+  static const legalPrivacy6 = 'legal_privacy_6';
+  static const legalPrivacy7 = 'legal_privacy_7';
+  static const legalPrivacy8 = 'legal_privacy_8';
+  static const legalTerms1 = 'legal_terms_1';
+  static const legalTerms2 = 'legal_terms_2';
+  static const legalTerms3 = 'legal_terms_3';
+  static const legalTerms4 = 'legal_terms_4';
+  static const legalTerms5 = 'legal_terms_5';
+  static const legalTerms6 = 'legal_terms_6';
+  static const legalTerms7 = 'legal_terms_7';
+  static const legalTerms8 = 'legal_terms_8';
+  static const lockedFullCv = 'locked_full_cv';
+  static const lockedIntroVideo = 'locked_intro_video';
+  static const lockedPhoneNumber = 'locked_phone_number';
+  static const matchWithJobN = 'match_with_job_n';
+  static const profileLockedSubtitle = 'profile_locked_subtitle';
+  static const qualityExcellent = 'quality_excellent';
+  static const qualityFair = 'quality_fair';
+  static const qualityGood = 'quality_good';
+  static const qualityNeedsWork = 'quality_needs_work';
+  static const qualityProfileStrength = 'quality_profile_strength';
+  static const qualityTipPhoto = 'quality_tip_photo';
+  static const qualityTipReferences = 'quality_tip_references';
+  static const qualityTipVideo = 'quality_tip_video';
+  static const relockedSubtext = 'relocked_subtext';
+  static const roleFallbackFamily = 'role_fallback_family';
+  static const roleFallbackNanny = 'role_fallback_nanny';
+  static const roleFallbackUser = 'role_fallback_user';
+  static const shortlistSavedN = 'shortlist_saved_n';
+  static const timeAm = 'time_am';
+  static const timePm = 'time_pm';
+  static const timeYesterday = 'time_yesterday';
+  static const trialActiveDaysN = 'trial_active_days_n';
+  static const trialActiveFullAccess = 'trial_active_full_access';
+  static const trialActiveFullAccessSub = 'trial_active_full_access_sub';
+  static const trialCancelledToast = 'trial_cancelled_toast';
+  static const trialCountdown = 'trial_countdown';
+  static const trialIssueReportedToast = 'trial_issue_reported_toast';
+  static const trialOfferRateUnit = 'trial_offer_rate_unit';
+  static const trialOfferSentPreview = 'trial_offer_sent_preview';
+  static const trialPaymentConfirmedToast = 'trial_payment_confirmed_toast';
+  static const unlockProfileSubtitle = 'unlock_profile_subtitle';
+  static const unlockProfileTitle = 'unlock_profile_title';
+  static const verifiedIdBadge = 'verified_id_badge';
+  static const watchLabel = 'watch_label';
+  static const whatsappHerBtn = 'whatsapp_her_btn';
+  static const yearsAbbrevN = 'years_abbrev_n';
+  static const countryUae = 'country_uae';
+  static const petDog = 'pet_dog';
+  static const petCat = 'pet_cat';
+  static const aedAmount = 'aed_amount';
+  static const aedPerDay = 'aed_per_day';
+  static const currencyAedPrefix = 'currency_aed_prefix';
+  static const perDaySuffix = 'per_day_suffix';
+  static const deleteConfirmWord = 'delete_confirm_word';
+
+  // --- i18n error messages ---
+  static const errAuthOtpIncorrectAttempts = 'err_auth_otp_incorrect_attempts';
+  static const errAuthAccountSuspended = 'err_auth_account_suspended';
+  static const errAuthSessionExpiredMessage = 'err_auth_session_expired_message';
+  static const errAuthWeakPasswordMessage = 'err_auth_weak_password_message';
+  static const errPermissionDenied = 'err_permission_denied';
+  static const errUploadFileTooLarge = 'err_upload_file_too_large';
+  static const errUploadInvalidFormat = 'err_upload_invalid_format';
+  static const errUploadNetworkFailure = 'err_upload_network_failure';
+  static const errUploadQuotaExceeded = 'err_upload_quota_exceeded';
+  static const errTrialOfferExpiredMessage = 'err_trial_offer_expired_message';
+  static const errSubPaymentDeclined = 'err_sub_payment_declined';
+  static const errSubRestoreFailed = 'err_sub_restore_failed';
+  static const errNetNoConnectionMessage = 'err_net_no_connection_message';
+  static const errNetTimeoutMessage = 'err_net_timeout_message';
+  static const errNetServerDownMessage = 'err_net_server_down_message';
+  static const errValRequiredField = 'err_val_required_field';
+  static const errValLengthField = 'err_val_length_field';
+  static const errRateLimitMessage = 'err_rate_limit_message';
+  static const errUnknownSomethingWrong = 'err_unknown_something_wrong';
+  static const errUnknownAuthError = 'err_unknown_auth_error';
+  static const errUnknownServiceError = 'err_unknown_service_error';
+  static const trialCounterOfferLabel = 'trial_counter_offer_label';
 }

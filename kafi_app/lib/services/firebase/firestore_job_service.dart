@@ -8,6 +8,8 @@ import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/localized_text.dart';
+import 'package:kafi_app/utils/nanny_listing_activity.dart';
+import 'package:kafi_app/utils/constants/nanny_constants.dart';
 
 class FirestoreJobService implements IJobService {
   final _jobs = FirebaseFirestore.instance.collection('jobs');
@@ -21,7 +23,39 @@ class FirestoreJobService implements IJobService {
     JobPostModel? matchJob,
     FamilyModel? family,
   }) async {
-    // Must mirror firestore.rules: families may read only approved + verified nannies.
+    final hideInactive = await _hideInactiveEnabled();
+    final snap = await _browseNanniesQuery(filter).get();
+    return _cardsFromSnap(
+      snap,
+      filter: filter,
+      matchJob: matchJob,
+      family: family,
+      hideInactive: hideInactive,
+    );
+  }
+
+  @override
+  Stream<List<NannyCardModel>> watchBrowseNannies({
+    String? filter,
+    JobFilter? jobFilter,
+    JobPostModel? matchJob,
+    FamilyModel? family,
+  }) async* {
+    // Resolve admin toggle once; settings changes are rare vs browse traffic.
+    final hideInactive = await _hideInactiveEnabled();
+    yield* _browseNanniesQuery(filter).snapshots().map(
+          (snap) => _cardsFromSnap(
+            snap,
+            filter: filter,
+            matchJob: matchJob,
+            family: family,
+            hideInactive: hideInactive,
+          ),
+        );
+  }
+
+  /// Must mirror firestore.rules: families may read only approved + verified nannies.
+  Query<Map<String, dynamic>> _browseNanniesQuery(String? filter) {
     Query<Map<String, dynamic>> query = _nannies
         .where('status', isEqualTo: 'approved')
         .where('isVerified', isEqualTo: true);
@@ -29,23 +63,30 @@ class FirestoreJobService implements IJobService {
     if (filter != null && filter != 'All') {
       if (filter == 'Live-in') {
         query = query.where('jobTypePreference', whereIn: ['liveIn', 'both']);
+      } else if (filter == 'Live-out') {
+        query = query.where('jobTypePreference', whereIn: ['liveOut', 'both']);
       } else if (filter == 'Filipino' || filter == 'Indian') {
         query = query.where('nationality', isEqualTo: filter);
       }
+      // Arabic (and any language pill) is applied client-side below — a nanny
+      // may list that language without matching a Firestore equality field.
     }
+    return query;
+  }
 
-    final snap = await query.limit(50).get();
-    // Admin toggle: when on, drop nannies inactive for 2+ weeks. A nanny with no
-    // recorded lastActiveAt is still shown (unknown ≠ inactive), so enabling the
-    // toggle never mass-hides nannies who simply predate the presence heartbeat.
-    final hideInactive = await _hideInactiveEnabled();
-    final cutoff = DateTime.now().subtract(const Duration(days: 14));
+  List<NannyCardModel> _cardsFromSnap(
+    QuerySnapshot<Map<String, dynamic>> snap, {
+    required String? filter,
+    required JobPostModel? matchJob,
+    required FamilyModel? family,
+    required bool hideInactive,
+  }) {
     final nannies = <NannyModel>[];
     for (final d in snap.docs) {
       final m = d.data();
       if (m['blocked'] == true) continue;
       final n = nannyModelFromMap(d.id, m);
-      if (hideInactive && n.lastActiveAt != null && n.lastActiveAt!.isBefore(cutoff)) {
+      if (NannyListingActivity.shouldHideFromListing(n, hideInactiveEnabled: hideInactive)) {
         continue;
       }
       nannies.add(n);
@@ -72,7 +113,9 @@ class FirestoreJobService implements IJobService {
   }
 
   /// Reads the admin `settings/global.hideInactiveNannies` toggle. Defaults to
-  /// false (show everyone) on a missing doc or read error.
+  /// false (show everyone) on a missing doc or read error. When true, only
+  /// nannies with `lastActiveAt` within
+  /// [NannyConstants.hideInactiveListingDays] appear in family Browse/search.
   Future<bool> _hideInactiveEnabled() async {
     try {
       final doc = await _settings.doc('global').get();
@@ -107,14 +150,25 @@ class FirestoreJobService implements IJobService {
 
   @override
   Future<List<JobPostModel>> browseJobs({JobFilter? filter}) async {
-    Query<Map<String, dynamic>> query = _jobs.where('status', isEqualTo: 'active');
+    final snap = await _activeJobsQuery(filter).get();
+    return snap.docs.map((d) => _jobFromMap(d.id, d.data())).toList();
+  }
 
+  @override
+  Stream<List<JobPostModel>> watchActiveJobs({JobFilter? filter}) {
+    return _activeJobsQuery(filter).snapshots().map(
+          (snap) => snap.docs.map((d) => _jobFromMap(d.id, d.data())).toList(),
+        );
+  }
+
+  /// Active jobs visible to nannies. No hard `.limit(...)` — a previous limit of
+  /// 50 without `orderBy` could drop newly posted jobs at random.
+  Query<Map<String, dynamic>> _activeJobsQuery(JobFilter? filter) {
+    Query<Map<String, dynamic>> query = _jobs.where('status', isEqualTo: 'active');
     if (filter?.emirate != null) {
       query = query.where('city', isEqualTo: filter!.emirate);
     }
-
-    final snap = await query.limit(50).get();
-    return snap.docs.map((d) => _jobFromMap(d.id, d.data())).toList();
+    return query;
   }
 
   @override

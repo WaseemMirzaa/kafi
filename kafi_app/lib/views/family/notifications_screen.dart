@@ -5,6 +5,7 @@ import 'package:kafi_app/controllers/notification_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/notification_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 class NotificationsScreen extends GetView<NotificationController> {
@@ -254,10 +255,5 @@ class NotificationsScreen extends GetView<NotificationController> {
     }
   }
 
-  String _formatDate(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    return '${diff.inMinutes}m ago';
-  }
+  String _formatDate(DateTime dt) => RelativeTime.ago(dt);
 }

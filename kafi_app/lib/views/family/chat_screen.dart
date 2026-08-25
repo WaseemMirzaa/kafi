@@ -11,6 +11,7 @@ import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/support/report_problem_sheet.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_trial_offer_bubble.dart';
@@ -30,6 +31,7 @@ class _ChatScreenState extends State<ChatScreen> {
   late final SubscriptionController subs;
   final _searchCtrl = TextEditingController();
   final _query = ''.obs;
+  Worker? _pendingOpenWorker;
 
   bool get embedInShell => widget.embedInShell;
 
@@ -60,9 +62,19 @@ class _ChatScreenState extends State<ChatScreen> {
     super.initState();
     controller = Get.find<ChatController>();
     subs = Get.find<SubscriptionController>();
+    // Profile / notification deep-links may fire while this screen is already
+    // mounted — react to pendingOpenTick instead of relying on initState alone.
+    _pendingOpenWorker = ever<int>(controller.pendingOpenTick, (_) {
+      if (!mounted) return;
+      controller.consumePendingOpen();
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      // Opening the chat list clears the bottom-nav Messages badge.
+      controller.onMessagesTabOpened();
       await controller.refreshThreads();
+      // Re-baseline after threads load so existing unread don't re-badge the nav.
+      if (mounted) controller.onMessagesTabOpened();
       final args = Get.arguments;
       if (args is Map) {
         if (args['threadId'] is String && (args['threadId'] as String).isNotEmpty) {
@@ -83,6 +95,7 @@ class _ChatScreenState extends State<ChatScreen> {
 
   @override
   void dispose() {
+    _pendingOpenWorker?.dispose();
     _searchCtrl.dispose();
     super.dispose();
   }
@@ -138,6 +151,10 @@ class _ChatScreenState extends State<ChatScreen> {
           ),
         Expanded(
           child: Obx(() {
+            // Touch trial list so ON TRIAL badges clear when cancel/complete/payment updates.
+            final _ = Get.isRegistered<TrialController>()
+                ? Get.find<TrialController>().all.length
+                : 0;
             final q = _query.value.trim().toLowerCase();
             final threads = q.isEmpty
                 ? controller.visibleThreads
@@ -257,7 +274,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final name = _displayName(t);
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final unread = _unreadForCurrentRole(t);
-    final onTrial = t.hasActiveTrial;
+    final onTrial = controller.showsActiveTrialUi(t);
     // A hire only exists once the trial has completed (which clears the trial
     // flags), so the two states never overlap — guard anyway for safety.
     final hired = !onTrial && controller.activeHireFor(t) != null;
@@ -342,7 +359,7 @@ class _ChatScreenState extends State<ChatScreen> {
                   const SizedBox(height: 3),
                   Row(
                     children: [
-                      Text(_formatTime(t.lastMessageAt),
+                      Text(RelativeTime.threadTimestamp(t.lastMessageAt),
                           style: KafiTheme.nunito(8, color: KafiColors.ts, w: FontWeight.w600)),
                       if (onTrial) ...[
                         const SizedBox(width: 5),
@@ -533,7 +550,7 @@ class _ChatScreenState extends State<ChatScreen> {
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: KafiTheme.nunito(11.5, color: KafiColors.td, w: FontWeight.w800)),
-                  Text('${card.nationality} · ${card.yearsExp} yrs · ${card.city}',
+                  Text('${card.nationality} · ${AppStrings.yearsAbbrevN.trParams({'n': '${card.yearsExp}'})} · ${card.city}',
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
@@ -595,55 +612,72 @@ class _ChatScreenState extends State<ChatScreen> {
 
   // ══════════════════════════ CONVERSATION (thread) ════════════════════════
   Widget _conversation() {
-    final thread = controller.activeThread;
-    final name = thread == null ? AppStrings.chatTitle.tr : _displayName(thread);
+    return Obx(() {
+      final thread = controller.activeThread;
+      final name = thread == null ? AppStrings.chatTitle.tr : _displayName(thread);
+      // Depend on trial list so the top "Trial in progress" bar hides after
+      // cancel / complete / payment confirm without leaving the screen.
+      final _ = Get.isRegistered<TrialController>()
+          ? Get.find<TrialController>().all.length
+          : 0;
+      final showTrialBar =
+          thread != null && controller.showsActiveTrialUi(thread);
 
-    return Column(
-      children: [
-        _chatTopbar(name),
-        _contactStrip(),
-        if (thread?.hasActiveTrial ?? false)
-          _trialBanner(thread!)
-        else if (thread != null && controller.activeHireFor(thread) != null)
-          _hireBanner(thread),
-        Expanded(
-          child: Container(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [const Color(0xFFFFF7FA), _accent.last.withValues(alpha: 0.05)],
+      return Column(
+        children: [
+          _chatTopbar(name),
+          _contactStrip(),
+          if (showTrialBar)
+            _trialBanner(thread)
+          else if (thread != null && controller.activeHireFor(thread) != null)
+            _hireBanner(thread),
+          Expanded(
+            child: Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [const Color(0xFFFFF7FA), _accent.last.withValues(alpha: 0.05)],
+                ),
               ),
-            ),
-            child: Obx(
-              () => ListView.builder(
-                padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
-                itemCount: controller.messages.length,
-                itemBuilder: (_, i) {
-                  final msg = controller.messages[i];
-                  if (msg.type == MessageType.system) return _systemBubble(msg);
-                  if (_isTrialBubble(msg)) return _trialBubble(msg);
-                  final isNannyView = controller.isNanny;
-                  final mine = isNannyView
-                      ? (msg.senderType == 'nanny' || msg.senderId.startsWith('mock_nanny'))
-                      : (msg.senderType == 'family' || msg.senderId.startsWith('mock_family'));
-                  if (msg.type == MessageType.image) return _imageBubble(msg, mine);
-                  return _bubble(msg, mine, name);
-                },
-              ),
+              child: controller.isLoadingMessages.value
+                  ? Center(
+                      child: CircularProgressIndicator(
+                        color: controller.isNanny ? KafiColors.pur : KafiColors.roseD,
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: const EdgeInsets.fromLTRB(11, 10, 11, 10),
+                      itemCount: controller.messages.length,
+                      itemBuilder: (_, i) {
+                        final msg = controller.messages[i];
+                        if (msg.type == MessageType.system) return _systemBubble(msg);
+                        if (_isTrialBubble(msg)) return _trialBubble(msg);
+                        final isNannyView = controller.isNanny;
+                        final mine = isNannyView
+                            ? (msg.senderType == 'nanny' ||
+                                msg.senderId.startsWith('mock_nanny'))
+                            : (msg.senderType == 'family' ||
+                                msg.senderId.startsWith('mock_family'));
+                        if (msg.type == MessageType.image) {
+                          return _imageBubble(msg, mine);
+                        }
+                        return _bubble(msg, mine, name);
+                      },
+                    ),
             ),
           ),
-        ),
-        _composer(),
-      ],
-    );
+          _composer(),
+        ],
+      );
+    });
   }
 
   Widget _chatTopbar(String name) {
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final thread = controller.activeThread;
     final hired = thread != null &&
-        !thread.hasActiveTrial &&
+        !controller.showsActiveTrialUi(thread) &&
         controller.activeHireFor(thread) != null;
     return Container(
       padding: const EdgeInsets.fromLTRB(10, 9, 12, 9),
@@ -725,12 +759,32 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   /// Opens the shared "Report a problem" sheet for the active thread's
-  /// counterparty (families report the nanny, nannies report the family).
+  /// counterparty. Prefer thread membership over [ChatController.isNanny] so a
+  /// nanny always reports the family (and vice versa), even if users.type is stale.
   void _reportCounterparty() {
     final thread = controller.activeThread;
-    if (thread == null) return;
-    final reportedId = controller.isNanny ? thread.familyId : thread.nannyId;
-    showReportProblemSheet(reportedUserId: reportedId);
+    final me = Get.find<AuthController>().currentUser.value?.id;
+    if (thread == null || me == null || me.isEmpty) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.reportUnavailable.tr);
+      return;
+    }
+    final String reportedId;
+    if (thread.nannyId == me) {
+      reportedId = thread.familyId;
+    } else if (thread.familyId == me) {
+      reportedId = thread.nannyId;
+    } else {
+      reportedId = '';
+    }
+    if (reportedId.isEmpty || reportedId == me) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.reportUnavailable.tr);
+      return;
+    }
+    showReportProblemSheet(
+      context: context,
+      reportedUserId: reportedId,
+      relatedTrialId: thread.trialId,
+    );
   }
 
   /// Reveal the nanny's real phone (server-side entitlement check) and open the
@@ -888,7 +942,7 @@ class _ChatScreenState extends State<ChatScreen> {
             _ccsButton('📞 ${AppStrings.callHer.tr.split(' ').first}', KafiColors.grnD,
                 () => _launchNannyContact(whatsapp: false)),
             const SizedBox(width: 5),
-            _ccsButton('WhatsApp', const Color(0xFF25D366),
+            _ccsButton(AppStrings.contactWhatsappLabel.tr, const Color(0xFF25D366),
                 () => _launchNannyContact(whatsapp: true)),
           ],
         ],
@@ -919,7 +973,9 @@ class _ChatScreenState extends State<ChatScreen> {
         child: Obx(() {
           final isNanny = Get.find<AuthController>().currentUser.value?.isNanny == true;
           final t = controller.activeThread;
-          final locked = !isNanny && subs.isExpired && !(t?.hasActiveTrial ?? false);
+          final locked = !isNanny &&
+              subs.isExpired &&
+              !(t != null && controller.showsActiveTrialUi(t));
           return Row(
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
@@ -1015,7 +1071,7 @@ class _ChatScreenState extends State<ChatScreen> {
     final avatar = _msgAvatar(mine, otherName);
     final time = Padding(
       padding: const EdgeInsets.only(top: 2),
-      child: Text(_formatClock(m.createdAt),
+      child: Text(RelativeTime.clock(m.createdAt),
           style: KafiTheme.nunito(8, color: KafiColors.ts, w: FontWeight.w600)),
     );
 
@@ -1077,8 +1133,18 @@ class _ChatScreenState extends State<ChatScreen> {
                   height: 120,
                   color: KafiColors.roseP,
                   child: const Icon(Icons.image, color: KafiColors.tm, size: 32))
-              : Image.network(url,
+              : Image.network(
+                  url,
                   fit: BoxFit.cover,
+                  loadingBuilder: (context, child, progress) {
+                    if (progress == null) return child;
+                    // Soft placeholder only — no spinner (list has one page loader).
+                    return Container(
+                      width: 180,
+                      height: 120,
+                      color: KafiColors.roseP,
+                    );
+                  },
                   errorBuilder: (_, __, ___) => Container(
                         width: 180,
                         height: 120,
@@ -1114,8 +1180,20 @@ class _ChatScreenState extends State<ChatScreen> {
         m.type == MessageType.trialCountered;
   }
 
+  /// Prefer thread membership over [AuthController.isNanny] so Accept/Decline
+  /// still show if role flags are stale (same pattern as report counterparty).
+  bool _viewerIsNannyOnActiveThread() {
+    final me = Get.find<AuthController>().currentUser.value?.id;
+    final thread = controller.activeThread;
+    if (me != null && thread != null) {
+      if (thread.nannyId == me) return true;
+      if (thread.familyId == me) return false;
+    }
+    return controller.isNanny;
+  }
+
   Widget _trialBubble(ChatMessage m) {
-    final isNanny = Get.find<AuthController>().currentUser.value?.isNanny == true;
+    final isNanny = _viewerIsNannyOnActiveThread();
     final threadId = controller.activeThreadId.value;
     final trialCtrl = Get.find<TrialController>();
     final hasId = m.trialOfferId != null;
@@ -1125,6 +1203,9 @@ class _ChatScreenState extends State<ChatScreen> {
       isNannyView: isNanny,
       onAccept: hasId && isNanny
           ? () => trialCtrl.acceptTrial(m.trialOfferId!, threadId: threadId)
+          : null,
+      onDecline: hasId && isNanny
+          ? () => trialCtrl.declineTrial(m.trialOfferId!, threadId: threadId)
           : null,
       onCounter: hasId && isNanny ? () => _showCounterDialog(m.trialOfferId!, threadId) : null,
       onAcceptCounter: hasId && !isNanny
@@ -1199,19 +1280,4 @@ class _ChatScreenState extends State<ChatScreen> {
   int _unreadForCurrentRole(ChatThread t) =>
       controller.isNanny ? t.unreadCount.nanny : t.unreadCount.family;
 
-  String _formatTime(DateTime dt) {
-    final now = DateTime.now();
-    final diff = now.difference(dt);
-    if (diff.inMinutes < 60) return '${diff.inMinutes}m ago';
-    if (diff.inHours < 24) return _formatClock(dt);
-    if (diff.inDays == 1) return 'Yesterday';
-    return '${dt.day}/${dt.month}';
-  }
-
-  String _formatClock(DateTime dt) {
-    final h = dt.hour % 12 == 0 ? 12 : dt.hour % 12;
-    final m = dt.minute.toString().padLeft(2, '0');
-    final ampm = dt.hour < 12 ? 'AM' : 'PM';
-    return '$h:$m $ampm';
-  }
 }

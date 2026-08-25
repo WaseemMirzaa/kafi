@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
+import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
@@ -16,16 +17,36 @@ import 'package:kafi_app/views/widgets/kafi_section.dart';
 class FamilyHouseholdFields extends StatelessWidget {
   const FamilyHouseholdFields({super.key});
 
+  // The first element of each tuple is the stored value (kept in English so
+  // it matches existing profile data); the display label is localized
+  // separately via [_religionLabel] — mirrors FamilyFormScreen._religions.
   static const List<(String, String)> _religions = [
     ('Muslim', '☪️'), ('Christian', '✝️'), ('Hindu', '🕉️'),
     ('Buddhist', '☸️'), ('Jewish', '✡️'), ('Other', '🌍'),
   ];
 
-  static const List<(NannyReligionPreference, String)> _religionPrefs = [
-    (NannyReligionPreference.noPreference, 'No — nanny can be of any religion'),
-    (NannyReligionPreference.preferMuslim, 'We prefer a Muslim nanny (halal diet, prayer respect)'),
-    (NannyReligionPreference.preferSame, 'We prefer a nanny of the same religion as ours'),
-    (NannyReligionPreference.openWithRespect, 'We are open — but nanny must respect our home rules'),
+  String _religionLabel(String stored) => switch (stored) {
+        'Muslim' => AppStrings.religionMuslim.tr,
+        'Christian' => AppStrings.religionChristian.tr,
+        'Hindu' => AppStrings.religionHindu.tr,
+        'Buddhist' => AppStrings.religionBuddhist.tr,
+        'Jewish' => AppStrings.religionJewish.tr,
+        'Other' => AppStrings.religionOther.tr,
+        _ => stored,
+      };
+
+  String _petLabel(String stored) => switch (stored) {
+        'Dog' => AppStrings.petDog.tr,
+        'Cat' => AppStrings.petCat.tr,
+        _ => stored,
+      };
+
+  // Labels are localized at read time, so this can't be `const`.
+  List<(NannyReligionPreference, String)> get _religionPrefs => [
+    (NannyReligionPreference.noPreference, AppStrings.familyReligionPrefNone.tr),
+    (NannyReligionPreference.preferMuslim, AppStrings.familyReligionPrefMuslim.tr),
+    (NannyReligionPreference.preferSame, AppStrings.familyReligionPrefSame.tr),
+    (NannyReligionPreference.openWithRespect, AppStrings.familyReligionPrefOpen.tr),
   ];
 
   FamilyProfileController get _c => Get.find<FamilyProfileController>();
@@ -35,29 +56,29 @@ class FamilyHouseholdFields extends StatelessWidget {
     return Column(
       children: [
         KafiSection(
-          title: 'Household',
+          title: AppStrings.familySectionYou.tr,
           icon: Icons.home_outlined,
           accent: KafiSectionAccent.purple,
           children: [
-            _label('Your nationality'),
+            _label(AppStrings.familyYourNationality.tr),
             const SizedBox(height: 4),
             Obx(() => KafiSearchablePicker(
                   value: _c.nationality.value,
                   options: NannyConstants.nationalities,
-                  title: 'Your nationality',
-                  hint: 'Your nationality',
+                  title: AppStrings.familyYourNationality.tr,
+                  hint: AppStrings.familyYourNationality.tr,
                   icon: Icons.flag_outlined,
                   purple: true,
                   onSelected: (v) => _c.nationality.value = v,
                 )),
             const SizedBox(height: 8),
-            _label('Home cameras?'),
+            _label(AppStrings.familyHomeCameras.tr),
             const SizedBox(height: 4),
             Obx(() => Row(
                   children: [
                     Expanded(
                       child: KafiToggleTile(
-                        label: 'Yes, we have cameras',
+                        label: AppStrings.familyHasCameras.tr,
                         icon: Icons.videocam_outlined,
                         purple: true,
                         selected: _c.hasCameras.value,
@@ -67,7 +88,7 @@ class FamilyHouseholdFields extends StatelessWidget {
                     const SizedBox(width: 6),
                     Expanded(
                       child: KafiToggleTile(
-                        label: 'No cameras',
+                        label: AppStrings.familyNoCameras.tr,
                         icon: Icons.videocam_off_outlined,
                         purple: true,
                         selected: !_c.hasCameras.value,
@@ -77,7 +98,7 @@ class FamilyHouseholdFields extends StatelessWidget {
                   ],
                 )),
             const SizedBox(height: 8),
-            _label('Pets?'),
+            _label(AppStrings.familyPets.tr),
             const SizedBox(height: 4),
             Obx(() => Row(
                   children: [
@@ -89,11 +110,11 @@ class FamilyHouseholdFields extends StatelessWidget {
           ],
         ),
         KafiSection(
-          title: 'Religion & Household Culture',
+          title: AppStrings.familySectionReligion.tr,
           icon: Icons.shield_outlined,
           accent: KafiSectionAccent.purple,
           children: [
-            _label("Your family's religion (optional)"),
+            _label(AppStrings.familyReligionLabel.tr),
             const SizedBox(height: 5),
             Obx(() => GridView.count(
                   shrinkWrap: true,
@@ -103,11 +124,11 @@ class FamilyHouseholdFields extends StatelessWidget {
                   crossAxisSpacing: 5,
                   childAspectRatio: 2.6,
                   children: _religions
-                      .map((r) => _religionTile(r.$2, r.$1, _c.religion.value == r.$1))
+                      .map((r) => _religionTile(r.$2, r.$1, _religionLabel(r.$1), _c.religion.value == r.$1))
                       .toList(),
                 )),
             const SizedBox(height: 8),
-            _label('Do you require the nanny to follow any religious practices?'),
+            _label(AppStrings.familyReligionPrefPrompt.tr),
             const SizedBox(height: 5),
             Obx(() => Column(
                   children: _religionPrefs
@@ -147,7 +168,7 @@ class FamilyHouseholdFields extends StatelessWidget {
           children: [
             Text(emoji, style: const TextStyle(fontSize: 15)),
             const SizedBox(width: 5),
-            Text(type,
+            Text(_petLabel(type),
                 style: KafiTheme.nunito(10.5, color: selected ? KafiColors.pur : KafiColors.tm, w: FontWeight.w700)),
           ],
         ),
@@ -155,9 +176,9 @@ class FamilyHouseholdFields extends StatelessWidget {
     );
   }
 
-  Widget _religionTile(String emoji, String label, bool selected) {
+  Widget _religionTile(String emoji, String storedValue, String label, bool selected) {
     return GestureDetector(
-      onTap: () => _c.religion.value = selected ? '' : label,
+      onTap: () => _c.religion.value = selected ? '' : storedValue,
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 8),
         decoration: BoxDecoration(

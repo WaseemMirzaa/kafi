@@ -9,10 +9,12 @@ import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/notification_controller.dart';
 import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
+import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/models/hire_model.dart';
+import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/services/interfaces/i_subscription_service.dart';
@@ -71,6 +73,9 @@ class ChatController extends GetxController {
   final RxString activeThreadId = ''.obs;
   final inputCtrl = TextEditingController();
   final RxBool isLoading = false.obs;
+  /// True while the open conversation's initial message fetch is in flight.
+  /// Drives a single list-level loader (not per-bubble spinners).
+  final RxBool isLoadingMessages = false.obs;
   final RxBool isLocked = false.obs;
   final RxnString threadsError = RxnString();
 
@@ -86,6 +91,38 @@ class ChatController extends GetxController {
   String? _pendingFamilyId;
   String? _pendingFamilyName;
 
+  /// Bumped whenever [setPendingOpen] queues a deep-link so an already-mounted
+  /// [ChatScreen] can react (tab switches alone do not re-run initState).
+  final RxInt pendingOpenTick = 0.obs;
+
+  /// Unread total last acknowledged when the Messages tab / chat list was opened.
+  /// Bottom-nav badge = current unread minus this baseline (new messages only).
+  final RxInt _navUnreadBaseline = 0.obs;
+
+  /// Role-aware unread across all threads (family sees `unreadCount.family`).
+  int get totalUnreadCount {
+    var n = 0;
+    for (final t in threads) {
+      n += isNanny ? t.unreadCount.nanny : t.unreadCount.family;
+    }
+    return n;
+  }
+
+  /// Count shown on the shell Messages tab. Clears when [onMessagesTabOpened]
+  /// runs; returns again only for unread that arrive after that visit.
+  int get navMessageBadgeCount {
+    // Read Rx so Obx rebuilds when baseline is cleared or threads update.
+    final baseline = _navUnreadBaseline.value;
+    final total = totalUnreadCount;
+    final badge = total - (baseline > total ? total : baseline);
+    return badge > 0 ? badge : 0;
+  }
+
+  /// Call when the Messages tab (or standalone chat list) becomes visible.
+  void onMessagesTabOpened() {
+    _navUnreadBaseline.value = totalUnreadCount;
+  }
+
   void setPendingOpen({
     String? threadId,
     String? nannyId,
@@ -98,6 +135,7 @@ class ChatController extends GetxController {
     _pendingNannyName = nannyName;
     if (familyId != null && familyId.isNotEmpty) _pendingFamilyId = familyId;
     _pendingFamilyName = familyName;
+    pendingOpenTick.value++;
   }
 
   Future<void> consumePendingOpen() async {
@@ -150,10 +188,13 @@ class ChatController extends GetxController {
     // Transfer notification deep-link queued before this controller existed.
     if (Get.isRegistered<NotificationController>()) {
       final n = Get.find<NotificationController>();
-      if (n.pendingChatThreadId != null || n.pendingChatNannyId != null) {
+      if (n.pendingChatThreadId != null ||
+          n.pendingChatNannyId != null ||
+          n.pendingChatFamilyId != null) {
         setPendingOpen(
           threadId: n.pendingChatThreadId,
           nannyId: n.pendingChatNannyId,
+          familyId: n.pendingChatFamilyId,
         );
         n.clearPendingChatOpen();
       }
@@ -216,11 +257,51 @@ class ChatController extends GetxController {
     }
 
     _threadsSub = _chat.watchThreads(id).listen((list) {
-      threads.value = list;
+      threads.value = _reconcileTerminalTrialBadges(list);
       threadsError.value = null;
       done();
     }, onError: (e) => done(e));
     await first.future;
+  }
+
+  /// If a thread still has accepted/active [ChatThread.trialStatus] but the
+  /// linked trial is already cancelled/completed/declined (or payment confirmed),
+  /// clear the badge locally and heal the thread doc.
+  List<ChatThread> _reconcileTerminalTrialBadges(List<ChatThread> list) {
+    if (!Get.isRegistered<TrialController>()) return list;
+    final byId = {
+      for (final t in Get.find<TrialController>().all) t.id: t,
+    };
+    if (byId.isEmpty) return list;
+    return list.map((th) {
+      final tid = th.trialId;
+      if (tid == null || tid.isEmpty || !th.hasActiveTrial) return th;
+      final trial = byId[tid];
+      if (trial == null) return th;
+      final ended = !trial.isLiveTrial;
+      if (!ended) return th;
+      final status = trial.nannyConfirmedPayment || trial.paymentIssueReported
+          ? TrialStatus.completed.name
+          : trial.status.name;
+      _chat.linkTrialToThread(th.id, tid, trialStatus: status).ignore();
+      return th.copyWith(trialStatus: status);
+    }).toList();
+  }
+
+  /// Whether chat list / conversation should show the active-trial bar & badges.
+  /// Uses live [TrialController] when available so cancel / complete / payment
+  /// confirmed hide the UI even if [ChatThread.trialStatus] is briefly stale.
+  bool showsActiveTrialUi(ChatThread t) {
+    final tid = t.trialId;
+    if (tid == null || tid.isEmpty) return false;
+    if (Get.isRegistered<TrialController>()) {
+      final trial =
+          Get.find<TrialController>().all.firstWhereOrNull((x) => x.id == tid);
+      if (trial != null) {
+        return trial.isLiveTrial;
+      }
+    }
+    return t.hasActiveTrial;
   }
 
   /// Loads the current user's active hires into [_activeHires], keyed by the
@@ -245,6 +326,7 @@ class ChatController extends GetxController {
     _messagesSub?.cancel();
     _messagesSub = null;
     activeThreadId.value = '';
+    isLoadingMessages.value = false;
     messages.clear();
     inputCtrl.clear();
   }
@@ -277,10 +359,23 @@ class ChatController extends GetxController {
     }
     activeThreadId.value = threadId;
     messages.clear();
+    isLoadingMessages.value = true;
     try {
       messages.value = await _chat.loadMessages(threadId);
+      // Prefetch trials so offer bubbles render full §3.7 details (duration,
+      // rate, type, location) — not title-only when the list query is stale.
+      if (Get.isRegistered<TrialController>()) {
+        final trialCtrl = Get.find<TrialController>();
+        await trialCtrl.refreshAll();
+        for (final m in messages) {
+          final tid = m.trialOfferId;
+          if (tid != null) await trialCtrl.ensureTrialInList(tid);
+        }
+      }
     } catch (_) {
       // The stream below remains the live source of truth.
+    } finally {
+      isLoadingMessages.value = false;
     }
     await _messagesSub?.cancel();
     _messagesSub = _chat.watchMessages(threadId).listen((serverMsgs) {
@@ -289,6 +384,16 @@ class ChatController extends GetxController {
       final serverIds = serverMsgs.map((m) => m.id).toSet();
       final pending = messages.where((m) => !serverIds.contains(m.id)).toList();
       messages.value = [...serverMsgs, ...pending];
+      // Live counter / accept / decline from the other party — refresh trials so
+      // family Accept/Decline buttons see TrialStatus.countered immediately.
+      final newest = serverMsgs.isEmpty ? null : serverMsgs.last;
+      if (newest != null &&
+          Get.isRegistered<TrialController>() &&
+          (newest.type == MessageType.trialCountered ||
+              newest.type == MessageType.trialAccepted ||
+              newest.type == MessageType.trialDeclined)) {
+        Get.find<TrialController>().refreshAll();
+      }
     }, onError: (_) {});
     try {
       await markAsRead(threadId);
@@ -377,17 +482,21 @@ class ChatController extends GetxController {
   Future<void> sendCurrent() async {
     if (inputCtrl.text.trim().isEmpty || activeThreadId.value.isEmpty) return;
 
+    final senderId = _auth.currentUser.value?.id;
+    if (senderId == null || senderId.isEmpty) return;
+
+    final thread = threads.firstWhereOrNull((t) => t.id == activeThreadId.value);
+    final senderType = thread?.senderTypeFor(senderId) ?? (isNanny ? 'nanny' : 'family');
+    final sendingAsFamily = senderType == 'family';
+
     // Check family subscription status before sending
-    if (!_skipSubscriptionGates && !isNanny) {
-      final thread = threads.firstWhereOrNull((t) => t.id == activeThreadId.value);
+    if (!_skipSubscriptionGates && sendingAsFamily) {
       if (_subs.isExpired && !(thread?.hasActiveTrial ?? false)) {
         Get.snackbar(AppStrings.subscriptionRequired.tr, AppStrings.renewToSendMessages.tr);
         return;
       }
     }
 
-    final senderId = _auth.currentUser.value?.id ?? 'family';
-    final senderType = isNanny ? 'nanny' : 'family';
     final msg = ChatMessage(
       id: _uuid.v4(),
       threadId: activeThreadId.value,
@@ -399,7 +508,7 @@ class ChatController extends GetxController {
     messages.add(msg);
     inputCtrl.clear();
     try {
-      await _syncFirestoreEntitlementsIfNeeded();
+      if (sendingAsFamily) await _syncFirestoreEntitlementsIfNeeded();
       await _chat.sendMessage(activeThreadId.value, msg);
     } catch (e) {
       messages.removeWhere((m) => m.id == msg.id);
@@ -414,8 +523,14 @@ class ChatController extends GetxController {
   Future<void> sendImage() async {
     if (activeThreadId.value.isEmpty || _pickingImage) return;
 
-    if (!_skipSubscriptionGates && !isNanny) {
-      final thread = threads.firstWhereOrNull((t) => t.id == activeThreadId.value);
+    final senderId = _auth.currentUser.value?.id;
+    if (senderId == null || senderId.isEmpty) return;
+
+    final thread = threads.firstWhereOrNull((t) => t.id == activeThreadId.value);
+    final senderType = thread?.senderTypeFor(senderId) ?? (isNanny ? 'nanny' : 'family');
+    final sendingAsFamily = senderType == 'family';
+
+    if (!_skipSubscriptionGates && sendingAsFamily) {
       if (_subs.isExpired && !(thread?.hasActiveTrial ?? false)) {
         Get.snackbar(AppStrings.subscriptionRequired.tr, AppStrings.renewToSendImages.tr);
         return;
@@ -437,22 +552,19 @@ class ChatController extends GetxController {
       if (picked == null) return;
 
       final bytes = await picked.readAsBytes();
-      final userId = _auth.currentUser.value?.id ?? 'user';
       final storage = Get.find<IStorageService>();
       final url = await storage.uploadBytes(
-        path: 'chats/${activeThreadId.value}/$userId/${_uuid.v4()}.jpg',
+        path: 'chats/${activeThreadId.value}/$senderId/${_uuid.v4()}.jpg',
         bytes: bytes,
         contentType: 'image/jpeg',
       );
 
-      final senderId = _auth.currentUser.value?.id ?? userId;
-      final senderType = isNanny ? 'nanny' : 'family';
       final msg = ChatMessage(
         id: _uuid.v4(),
         threadId: activeThreadId.value,
         senderId: senderId,
         senderType: senderType,
-        content: '[image]',
+        content: AppStrings.chatImagePreview.tr,
         createdAt: DateTime.now(),
         type: MessageType.image,
         attachments: [
@@ -461,7 +573,7 @@ class ChatController extends GetxController {
       );
       messages.add(msg);
       try {
-        await _syncFirestoreEntitlementsIfNeeded();
+        if (sendingAsFamily) await _syncFirestoreEntitlementsIfNeeded();
         await _chat.sendMessage(activeThreadId.value, msg);
       } catch (e) {
         messages.removeWhere((m) => m.id == msg.id);
@@ -480,7 +592,9 @@ class ChatController extends GetxController {
     if (idx >= 0) {
       threads[idx] = threads[idx].copyWith(unreadCount: const UnreadCount());
     }
-    final role = isNanny ? 'nanny' : 'family';
+    final uid = _auth.currentUser.value?.id;
+    final thread = idx >= 0 ? threads[idx] : threads.firstWhereOrNull((t) => t.id == threadId);
+    final role = (uid != null ? thread?.senderTypeFor(uid) : null) ?? (isNanny ? 'nanny' : 'family');
     await _chat.markThreadRead(threadId, role);
   }
 

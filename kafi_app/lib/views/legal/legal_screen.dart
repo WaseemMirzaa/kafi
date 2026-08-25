@@ -95,25 +95,25 @@ class LegalScreen extends StatelessWidget {
     );
   }
 
-  static const List<String> _termsPoints = [
-    'Kafi is a marketplace only — we do not employ, sponsor, or act as a recruitment agency.',
-    'You must be 18+ and provide accurate information. You must comply with UAE laws.',
-    'Profile accuracy and document verification are your responsibility.',
-    'Communication may be monitored for safety. We never ask for your OTP.',
-    'Subscription fees are billed in AED. 5% VAT applies.',
-    'We are not liable for the relationship between family and nanny.',
-    'We may terminate accounts that breach these terms.',
-    'These terms are governed by UAE law.',
-  ];
+  static List<String> get _termsPoints => [
+        AppStrings.legalTerms1.tr,
+        AppStrings.legalTerms2.tr,
+        AppStrings.legalTerms3.tr,
+        AppStrings.legalTerms4.tr,
+        AppStrings.legalTerms5.tr,
+        AppStrings.legalTerms6.tr,
+        AppStrings.legalTerms7.tr,
+        AppStrings.legalTerms8.tr,
+      ];
 
-  static const List<String> _privacyPoints = [
-    'Data collected: personal info, documents, profile media, technical telemetry.',
-    'We use your data to match nannies with families and to improve safety.',
-    'You consent to data processing when you create an account.',
-    'Phone numbers: nanny numbers are visible to subscribed families; family numbers stay private.',
-    'We share limited data with payment, SMS, and storage providers only.',
-    'Your data is encrypted in transit and at rest.',
-    'You can request export or deletion at any time from Settings.',
-    'You must be 18+ to use Kafi.',
-  ];
+  static List<String> get _privacyPoints => [
+        AppStrings.legalPrivacy1.tr,
+        AppStrings.legalPrivacy2.tr,
+        AppStrings.legalPrivacy3.tr,
+        AppStrings.legalPrivacy4.tr,
+        AppStrings.legalPrivacy5.tr,
+        AppStrings.legalPrivacy6.tr,
+        AppStrings.legalPrivacy7.tr,
+        AppStrings.legalPrivacy8.tr,
+      ];
 }

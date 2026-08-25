@@ -126,6 +126,16 @@ class ChatThread {
 
   bool get hasPendingTrial => trialId != null && trialStatus == 'pending';
 
+  /// Role [userId] plays on this thread. Prefer this over [UserModel.type] when
+  /// writing messages — Firestore rules require senderType to match familyId /
+  /// nannyId, and a stale users/{uid}.type would deny the write.
+  String? senderTypeFor(String userId) {
+    if (userId.isEmpty) return null;
+    if (nannyId == userId) return 'nanny';
+    if (familyId == userId) return 'family';
+    return null;
+  }
+
   ChatThread copyWith({
     String? familyName,
     String? nannyName,

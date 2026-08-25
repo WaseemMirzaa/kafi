@@ -44,7 +44,7 @@ class ProfileSections {
   static Widget skills(NannyCardModel card) {
     final chips = <Widget>[];
     if (card.verified) {
-      chips.add(_skill('✓ Verified ID', green: true));
+      chips.add(_skill(AppStrings.verifiedIdBadge.tr, green: true));
     }
     for (final t in card.tags) {
       final isGreen = t.trimLeft().startsWith('✓');
@@ -82,9 +82,9 @@ class ProfileSections {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Trial active — full access',
+                Text(AppStrings.trialActiveFullAccess.tr,
                     style: KafiTheme.nunito(11, color: KafiColors.grnD, w: FontWeight.w900)),
-                Text('Contacts unlocked for the duration of your trial.',
+                Text(AppStrings.trialActiveFullAccessSub.tr,
                     style: KafiTheme.nunito(9.5, color: KafiColors.grnD, w: FontWeight.w600)),
               ],
             ),

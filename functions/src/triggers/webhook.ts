@@ -1,6 +1,7 @@
 import { onRequest } from 'firebase-functions/v2/https';
 import * as admin from 'firebase-admin';
-import { sendNotification, writeInbox, InboxType } from '../utils/notifications';
+import { sendNotification, writeInbox, InboxType, getUser } from '../utils/notifications';
+import { NotificationKey, tn } from '../i18n/notifications';
 
 export const revenueCatWebhook = onRequest(async (req, res) => {
   if (req.method !== 'POST') {
@@ -48,7 +49,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
 
   const eventType = event.type;
   let update: Record<string, unknown> = {};
-  let notification: { title: string; body: string; type: InboxType } | null = null;
+  let notification: { keyPrefix: string; type: InboxType } | null = null;
 
   switch (eventType) {
     case 'INITIAL_PURCHASE':
@@ -63,11 +64,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
         'subscription.chatLocked': false,
         'subscription.hasEverSubscribed': true,
       };
-      notification = {
-        title: '✅ Subscription active',
-        body: 'Full access unlocked - browse, chat, and contact nannies!',
-        type: 'subscriptionRenewed',
-      };
+      notification = { keyPrefix: 'subscription.active', type: 'subscriptionRenewed' };
       break;
 
     case 'CANCELLATION':
@@ -75,11 +72,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
         'subscription.status': 'cancelled',
         'subscription.autoRenew': false,
       };
-      notification = {
-        title: 'Subscription cancelled',
-        body: 'Your access continues until the end of the current period',
-        type: 'systemAnnouncement',
-      };
+      notification = { keyPrefix: 'subscription.cancelled', type: 'systemAnnouncement' };
       break;
 
     case 'EXPIRATION':
@@ -89,11 +82,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
         'subscription.contactsHidden': true,
         'subscription.chatLocked': true,
       };
-      notification = {
-        title: '⚠️ Subscription expired',
-        body: 'Renew to access chats and contacts',
-        type: 'subscriptionExpired',
-      };
+      notification = { keyPrefix: 'subscription.expiredWebhook', type: 'subscriptionExpired' };
       break;
 
     case 'BILLING_ISSUE':
@@ -102,11 +91,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
         'subscription.contactsHidden': true,
         'subscription.chatLocked': true,
       };
-      notification = {
-        title: '❌ Payment failed',
-        body: 'Update your payment method to continue access',
-        type: 'systemAnnouncement',
-      };
+      notification = { keyPrefix: 'subscription.paymentFailed', type: 'systemAnnouncement' };
       break;
 
     case 'UNCANCELLATION':
@@ -114,11 +99,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
         'subscription.status': 'active',
         'subscription.autoRenew': true,
       };
-      notification = {
-        title: '🎉 Subscription resumed',
-        body: 'Your plan will renew automatically',
-        type: 'subscriptionRenewed',
-      };
+      notification = { keyPrefix: 'subscription.resumed', type: 'subscriptionRenewed' };
       break;
 
     case 'PRODUCT_CHANGE':
@@ -129,11 +110,7 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
         ),
         'subscription.lastRenewalAt': admin.firestore.Timestamp.now(),
       };
-      notification = {
-        title: 'Plan updated',
-        body: 'Your subscription plan has changed.',
-        type: 'systemAnnouncement',
-      };
+      notification = { keyPrefix: 'subscription.planUpdated', type: 'systemAnnouncement' };
       break;
 
     default:
@@ -145,15 +122,17 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
 
   if (notification) {
     const data = { type: `subscription_${eventType.toLowerCase()}` };
+    // The family doc never carries fcmTokens (only `users/{uid}` does — see
+    // fcm_notification_service.dart), and locale lives on the user doc too,
+    // so resolve both from there rather than the family snapshot.
+    const user = await getUser(familyId);
+    const locale = user.locale ?? 'en';
+    const title = tn(`${notification.keyPrefix}.title` as NotificationKey, locale);
+    const body = tn(`${notification.keyPrefix}.body` as NotificationKey, locale);
     // Durable inbox record (survives a missing FCM token), then the live push.
-    await writeInbox(familyId, notification.type, notification.title, notification.body, data);
-    const familyData = familySnap.data();
-    if (familyData?.fcmTokens?.length) {
-      await sendNotification(familyData.fcmTokens, {
-        title: notification.title,
-        body: notification.body,
-        data,
-      });
+    await writeInbox(familyId, notification.type, title, body, data);
+    if (user.fcmTokens?.length) {
+      await sendNotification(user.fcmTokens, { title, body, data });
     }
   }
 

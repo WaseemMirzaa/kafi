@@ -2,6 +2,7 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getFamily, getUser } from '../utils/notifications';
 import { recomputeActiveTrialNannyIds } from './trial';
+import { tn } from '../i18n/notifications';
 
 export const trialStartingReminder = onSchedule('every 1 hours', async () => {
   const now = new Date();
@@ -26,17 +27,28 @@ export const trialStartingReminder = onSchedule('every 1 hours', async () => {
         getUser(trial.nannyId as string),
       ]);
 
-      const tokens = [
-        ...((family.fcmTokens as string[]) ?? []),
-        ...((nannyUser.fcmTokens as string[]) ?? []),
-      ];
+      const data = {
+        type: 'trial_starting_soon',
+        trialId: doc.id,
+        nannyId: String(trial.nannyId ?? ''),
+        familyId: String(trial.familyId ?? ''),
+        route: '/trial',
+      };
 
-      const title = '⏰ Trial starts tomorrow!';
-      const body = `Trial starts at ${trial.startTime || 'scheduled time'}`;
-      const data = { type: 'trial_starting_soon', trialId: doc.id };
-      await writeInbox(trial.familyId as string, 'trialStartingSoon', title, body, data);
-      await writeInbox(trial.nannyId as string, 'trialStartingSoon', title, body, data);
-      await sendNotification(tokens, { title, body, data });
+      // Each side may have a different locale preference, so the reminder is
+      // built and sent per-recipient rather than as one shared push.
+      for (const [recipientId, bearer] of [
+        [trial.familyId as string, family],
+        [trial.nannyId as string, nannyUser],
+      ] as const) {
+        const locale = bearer.locale ?? 'en';
+        const title = tn('trial.startingSoon.title', locale);
+        const body = tn('trial.startingSoon.body', locale, {
+          time: (trial.startTime as string) || tn('trial.startingSoon.defaultTime', locale),
+        });
+        await writeInbox(recipientId, 'trialStartingSoon', title, body, data);
+        await sendNotification((bearer.fcmTokens as string[]) ?? [], { title, body, data });
+      }
       await doc.ref.update({ reminderSent: true });
     }),
   );
@@ -141,9 +153,10 @@ export const subscriptionExpiringReminder = onSchedule('every day 09:00', async 
     families.docs.map(async (doc) => {
       const family = await getFamily(doc.id);
       const tokens = (family.fcmTokens as string[]) ?? [];
+      const locale = family.locale ?? 'en';
 
-      const title = '💳 Expiring soon';
-      const body = 'Your subscription renews in 3 days';
+      const title = tn('subscription.expiringSoon.title', locale);
+      const body = tn('subscription.expiringSoon.body', locale);
       const data = { type: 'subscription_expiring' };
       await writeInbox(doc.id, 'subscriptionExpiring', title, body, data);
       await sendNotification(tokens, { title, body, data });
@@ -179,9 +192,10 @@ export const subscriptionExpiredEnforcer = onSchedule('every 1 hours', async () 
     families.docs.map(async (doc) => {
       const family = await getFamily(doc.id);
       const tokens = (family.fcmTokens as string[]) ?? [];
+      const locale = family.locale ?? 'en';
 
-      const title = '⚠️ Subscription expired';
-      const body = 'Renew to access your chats and contacts';
+      const title = tn('subscription.expiredEnforced.title', locale);
+      const body = tn('subscription.expiredEnforced.body', locale);
       const data = { type: 'subscription_expired' };
       await writeInbox(doc.id, 'subscriptionExpired', title, body, data);
       await sendNotification(tokens, { title, body, data });

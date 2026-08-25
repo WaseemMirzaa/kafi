@@ -5,6 +5,7 @@ import {
 } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getUser } from '../utils/notifications';
+import { tn } from '../i18n/notifications';
 
 /// Clamps a counter to `>= 0` after applying a delta, tolerating a missing or
 /// non-numeric current value. Pure so the floor behaviour can be unit-tested.
@@ -98,11 +99,18 @@ export const onHireCreated = onDocumentCreated('hires/{hireId}', async (event) =
 
   // Tell the nanny. The ongoing relationship lives in Messages (matching the
   // app's own convention), so route the tap there.
-  const familyName = (hire?.familyName as string | undefined) || 'A family';
   const nanny = await getUser(nannyId);
-  const title = '🎉 You’ve been hired!';
-  const body = `${familyName} hired you. Continue in Messages.`;
-  const data = { type: 'hired', hireId: event.params.hireId, route: '/chat' };
+  const locale = nanny.locale ?? 'en';
+  const familyName = (hire?.familyName as string | undefined) || tn('hire.defaultFamilyName', locale);
+  const title = tn('hire.hired.title', locale);
+  const body = tn('hire.hired.body', locale, { familyName });
+  const data = {
+    type: 'hired',
+    hireId: event.params.hireId,
+    nannyId: String(nannyId),
+    familyId: String(hire?.familyId ?? ''),
+    route: '/chat',
+  };
 
   // Durable inbox record first (survives a missing FCM token), then the push.
   await writeInbox(nannyId, 'hired', title, body, data);
@@ -120,29 +128,36 @@ export const onHireEnded = onDocumentUpdated('hires/{hireId}', async (event) => 
   if (before.status === 'ended' || after.status !== 'ended') return;
 
   const reason = after.endReason as string | undefined;
-  const data = { type: 'hire_ended', hireId: event.params.hireId, route: '/chat' };
+  const data = {
+    type: 'hire_ended',
+    hireId: event.params.hireId,
+    nannyId: String(after.nannyId ?? ''),
+    familyId: String(after.familyId ?? ''),
+    route: '/chat',
+  };
 
   if (reason === 'resigned') {
     // The nanny resigned → notify the family.
     const familyId = after.familyId as string | undefined;
     if (!familyId) return;
-    const nannyName = (after.nannyName as string | undefined) || 'Your nanny';
     const family = await getUser(familyId);
-    const title = 'Nanny resigned';
-    const body = `${nannyName} has ended the hire.`;
+    const locale = family.locale ?? 'en';
+    const nannyName = (after.nannyName as string | undefined) || tn('hire.defaultNannyName', locale);
+    const title = tn('hire.nannyResigned.title', locale);
+    const body = tn('hire.nannyResigned.body', locale, { nannyName });
     await writeInbox(familyId, 'systemAnnouncement', title, body, data);
     await sendNotification((family.fcmTokens as string[]) ?? [], { title, body, data });
   } else {
     // The family terminated, or the hire completed → notify the nanny.
     const nannyId = after.nannyId as string | undefined;
     if (!nannyId) return;
-    const familyName = (after.familyName as string | undefined) || 'The family';
     const nanny = await getUser(nannyId);
-    const title = reason === 'completed' ? 'Hire completed' : 'Hire ended';
-    const body =
-      reason === 'completed'
-        ? `Your hire with ${familyName} has been completed.`
-        : `${familyName} has ended the hire.`;
+    const locale = nanny.locale ?? 'en';
+    const familyName = (after.familyName as string | undefined) || tn('hire.defaultFamilyName', locale);
+    const title = tn(reason === 'completed' ? 'hire.completed.title' : 'hire.ended.title', locale);
+    const body = tn(reason === 'completed' ? 'hire.completed.body' : 'hire.ended.body', locale, {
+      familyName,
+    });
     await writeInbox(nannyId, 'systemAnnouncement', title, body, data);
     await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
   }

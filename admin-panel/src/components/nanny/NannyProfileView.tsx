@@ -6,13 +6,16 @@ import {
   availabilityLabel,
   jobTypeLabel,
   maritalStatusLabel,
-  label,
   yesNo,
   salaryRange,
   emiratesList,
   listOr,
   formatDate,
+  fmtDate,
+  docStatusLabel,
 } from '../../utils/nannyLabels';
+import { useLocale } from '../../context/LocaleContext';
+import { t as translate, TranslationKey } from '../../locales/t';
 
 /** A titled card section grouping related profile fields. */
 export function Section({
@@ -32,13 +35,14 @@ export function Section({
   );
 }
 
-const docLabel: Record<string, string> = {
-  passport: 'Passport',
-  visa: 'Visa',
-  emiratesId: 'Emirates ID',
-  trainingCert: 'Training certificate',
-  policeClearance: 'Police clearance',
+const docLabelKeys: Record<string, TranslationKey> = {
+  passport: 'nannyLabels.docType.passport',
+  visa: 'nannyLabels.docType.visa',
+  emiratesId: 'nannyLabels.docType.emiratesId',
+  trainingCert: 'nannyLabels.docType.trainingCert',
+  policeClearance: 'nannyLabels.docType.policeClearance',
 };
+const docLabel = (type: string): string => (docLabelKeys[type] ? translate(docLabelKeys[type]) : type);
 
 function docVariant(status: string): string {
   if (status === 'approved') return 'verified';
@@ -49,20 +53,21 @@ function docVariant(status: string): string {
 
 /** Read-only document grid — renders images, videos, PDFs and other formats. */
 export function DocumentsGrid({ nanny }: { nanny: NannyRow }) {
+  const { t } = useLocale();
   const docs = nanny.documents ?? [];
   if (docs.length === 0) {
-    return <div className="text-[10px] text-[#8090B0] mt-2">No documents uploaded.</div>;
+    return <div className="text-[10px] text-[#8090B0] mt-2">{t('nannies.noDocumentsUploadedShort')}</div>;
   }
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mt-3">
       {docs.map((doc, i) => (
         <div key={doc.type + i} className="rounded-lg border border-[#EBEEF8] overflow-hidden">
           <div className="p-2">
-            <DocViewer url={doc.url} label={docLabel[doc.type] ?? doc.type} />
+            <DocViewer url={doc.url} label={docLabel(doc.type)} />
           </div>
           <div className="flex items-center justify-between gap-1 px-2 py-1.5 border-t border-[#EBEEF8]">
-            <div className="text-[9px] font-extrabold text-navy truncate">{docLabel[doc.type] ?? doc.type}</div>
-            <StatusBadge variant={docVariant(doc.status)}>{doc.status}</StatusBadge>
+            <div className="text-[9px] font-extrabold text-navy truncate">{docLabel(doc.type)}</div>
+            <StatusBadge variant={docVariant(doc.status)}>{docStatusLabel(doc.status)}</StatusBadge>
           </div>
           {doc.rejectionReason && (
             <div className="px-2 pb-1.5 text-[8px] font-semibold text-rose-dark">{doc.rejectionReason}</div>
@@ -89,16 +94,18 @@ export function NannyProfileView({
   onReviewVideo?: (status: 'approved' | 'rejected') => void;
   videoBusy?: boolean;
 }) {
+  const { t } = useLocale();
+  const dash = t('common.dash');
   return (
     <>
       {nanny.bio && (
-        <Section title="About">
+        <Section title={t('nannies.about')}>
           <p className="text-[10.5px] font-semibold text-navy/80 leading-relaxed mt-2">{nanny.bio}</p>
         </Section>
       )}
 
       {(nanny.photoUrls?.length || 0) > 0 && (
-        <Section title={`Photos (${nanny.photoUrls!.length})`}>
+        <Section title={t('nannies.photosCount', { count: nanny.photoUrls!.length })}>
           <div className="flex flex-wrap gap-2 mt-2">
             {nanny.photoUrls!.map((url, i) => (
               <a key={url + i} href={url} target="_blank" rel="noreferrer">
@@ -114,93 +121,97 @@ export function NannyProfileView({
         </Section>
       )}
 
-      <Section title="Personal & demographics">
+      <Section title={t('nannies.personalDemographics')}>
         <FieldGrid>
-          <Field label="Full name" value={nanny.fullName || '—'} />
-          <Field label="Nationality" value={nanny.nationality || '—'} />
-          <Field label="Date of birth" value={formatDate(nanny.dateOfBirth)} />
-          <Field label="Age" value={nanny.age ? `${nanny.age}` : '—'} />
-          <Field label="City" value={nanny.city || '—'} />
-          <Field label="Current area" value={nanny.currentArea || '—'} />
-          <Field label="Marital status" value={label(maritalStatusLabel, nanny.maritalStatus)} />
-          <Field label="Has children" value={yesNo(nanny.hasChildren)} />
-          <Field label="Number of children" value={nanny.childrenCount != null ? String(nanny.childrenCount) : '—'} />
-          <Field label="Children's ages" value={nanny.childrenAges || '—'} />
+          <Field label={t('nannies.fullName')} value={nanny.fullName || dash} />
+          <Field label={t('nannies.nationality')} value={nanny.nationality || dash} />
+          <Field label={t('nannies.dateOfBirth')} value={formatDate(nanny.dateOfBirth)} />
+          <Field label={t('nannies.age')} value={nanny.age ? `${nanny.age}` : dash} />
+          <Field label={t('nannies.city')} value={nanny.city || dash} />
+          <Field label={t('nannies.currentArea')} value={nanny.currentArea || dash} />
+          <Field label={t('nannies.maritalStatus')} value={maritalStatusLabel(nanny.maritalStatus)} />
+          <Field label={t('nannies.hasChildren')} value={yesNo(nanny.hasChildren)} />
+          <Field label={t('nannies.numberOfChildren')} value={nanny.childrenCount != null ? String(nanny.childrenCount) : dash} />
+          <Field label={t('nannies.childrensAges')} value={nanny.childrenAges || dash} />
+          <Field
+            label={t('nannies.lastActive')}
+            value={fmtDate(nanny.lastActiveAt)}
+          />
         </FieldGrid>
       </Section>
 
-      <Section title="Languages & communication">
+      <Section title={t('nannies.languagesCommunication')}>
         <FieldGrid>
-          <Field label="Languages" value={listOr(nanny.languages)} />
+          <Field label={t('nannies.languages')} value={listOr(nanny.languages)} />
         </FieldGrid>
       </Section>
 
-      <Section title="Visa & Emirates ID">
+      <Section title={t('nannies.visaAndEid')}>
         <FieldGrid>
-          <Field label="Visa status" value={label(visaStatusLabel, nanny.visaStatus)} />
-          <Field label="Has Emirates ID" value={yesNo(nanny.hasEmiratesId)} />
-          <Field label="Emirates ID number" value={nanny.eidNumber || '—'} />
-          <Field label="Willing to transfer visa" value={yesNo(nanny.willingToTransferVisa)} />
+          <Field label={t('nannies.visaStatus')} value={visaStatusLabel(nanny.visaStatus)} />
+          <Field label={t('nannies.hasEmiratesId')} value={yesNo(nanny.hasEmiratesId)} />
+          <Field label={t('nannies.eidNumber')} value={nanny.eidNumber || dash} />
+          <Field label={t('nannies.willingToTransferVisa')} value={yesNo(nanny.willingToTransferVisa)} />
         </FieldGrid>
       </Section>
 
-      <Section title="Work location & availability">
+      <Section title={t('nannies.workLocationAvailability')}>
         <FieldGrid>
-          <Field label="Work emirates" value={emiratesList(nanny.workEmirates)} />
-          <Field label="Willing to relocate" value={yesNo(nanny.willingToRelocate)} />
-          <Field label="Availability" value={label(availabilityLabel, nanny.availability)} />
-          <Field label="Available from" value={formatDate(nanny.availableFrom)} />
+          <Field label={t('nannies.workEmirates')} value={emiratesList(nanny.workEmirates)} />
+          <Field label={t('nannies.willingToRelocate')} value={yesNo(nanny.willingToRelocate)} />
+          <Field label={t('nannies.availability')} value={availabilityLabel(nanny.availability)} />
+          <Field label={t('nannies.availableFrom')} value={formatDate(nanny.availableFrom)} />
         </FieldGrid>
       </Section>
 
-      <Section title="Job preferences & compensation">
+      <Section title={t('nannies.jobPreferencesCompensation')}>
         <FieldGrid>
-          <Field label="Job type preference" value={label(jobTypeLabel, nanny.jobTypePreference)} />
-          <Field label="Expected salary" value={salaryRange(nanny.expectedSalaryMin, nanny.expectedSalaryMax)} />
-          <Field label="Can do night shifts" value={yesNo(nanny.canDoNightShifts)} />
+          <Field label={t('nannies.jobTypePreference')} value={jobTypeLabel(nanny.jobTypePreference)} />
+          <Field label={t('nannies.expectedSalary')} value={salaryRange(nanny.expectedSalaryMin, nanny.expectedSalaryMax)} />
+          <Field label={t('nannies.canDoNightShifts')} value={yesNo(nanny.canDoNightShifts)} />
         </FieldGrid>
       </Section>
 
-      <Section title="Skills & household preferences">
+      <Section title={t('nannies.skillsHouseholdPreferences')}>
         <FieldGrid>
-          <Field label="Can cook" value={yesNo(nanny.canCook)} />
-          <Field label="Cuisines" value={listOr(nanny.cuisines)} />
-          <Field label="Comfortable with pets" value={yesNo(nanny.comfortableWithPets)} />
-          <Field label="Pet types" value={listOr(nanny.petTypes)} />
-          <Field label="Comfortable with cameras" value={yesNo(nanny.comfortableWithCameras)} />
-          <Field label="Camera note" value={nanny.cameraNote || '—'} />
+          <Field label={t('nannies.canCook')} value={yesNo(nanny.canCook)} />
+          <Field label={t('nannies.cuisines')} value={listOr(nanny.cuisines)} />
+          <Field label={t('nannies.comfortableWithPets')} value={yesNo(nanny.comfortableWithPets)} />
+          <Field label={t('nannies.petTypes')} value={listOr(nanny.petTypes)} />
+          <Field label={t('nannies.comfortableWithCameras')} value={yesNo(nanny.comfortableWithCameras)} />
+          <Field label={t('nannies.cameraNote')} value={nanny.cameraNote || dash} />
         </FieldGrid>
       </Section>
 
-      <Section title="Health">
+      <Section title={t('nannies.health')}>
         <FieldGrid>
-          <Field label="Has health conditions" value={yesNo(nanny.hasHealthConditions)} />
-          <Field label="Health conditions" value={nanny.healthConditions || '—'} />
-          <Field label="Takes medication" value={yesNo(nanny.takesMedication)} />
-          <Field label="Medications" value={nanny.medications || '—'} />
-          <Field label="Has allergies" value={yesNo(nanny.hasAllergies)} />
-          <Field label="Allergies" value={nanny.allergies || '—'} />
+          <Field label={t('nannies.hasHealthConditions')} value={yesNo(nanny.hasHealthConditions)} />
+          <Field label={t('nannies.healthConditions')} value={nanny.healthConditions || dash} />
+          <Field label={t('nannies.takesMedication')} value={yesNo(nanny.takesMedication)} />
+          <Field label={t('nannies.medications')} value={nanny.medications || dash} />
+          <Field label={t('nannies.hasAllergies')} value={yesNo(nanny.hasAllergies)} />
+          <Field label={t('nannies.allergies')} value={nanny.allergies || dash} />
         </FieldGrid>
       </Section>
 
-      <Section title="Religion & cultural">
+      <Section title={t('nannies.religionCultural')}>
         <FieldGrid>
-          <Field label="Religion" value={nanny.religion || '—'} />
-          <Field label="Religious notes" value={nanny.religiousNotes || '—'} />
-          <Field label="Comfortable with different faith" value={yesNo(nanny.comfortableWithDifferentFaith)} />
+          <Field label={t('nannies.religion')} value={nanny.religion || dash} />
+          <Field label={t('nannies.religiousNotes')} value={nanny.religiousNotes || dash} />
+          <Field label={t('nannies.comfortableWithDifferentFaith')} value={yesNo(nanny.comfortableWithDifferentFaith)} />
         </FieldGrid>
       </Section>
 
-      <Section title="Emergency contact">
+      <Section title={t('nannies.emergencyContact')}>
         <FieldGrid>
-          <Field label="Name" value={nanny.emergencyName || '—'} />
-          <Field label="Relationship" value={nanny.emergencyRelationship || '—'} />
-          <Field label="Phone" value={nanny.emergencyPhone || '—'} />
+          <Field label={t('nannies.emergencyName')} value={nanny.emergencyName || dash} />
+          <Field label={t('nannies.emergencyRelationship')} value={nanny.emergencyRelationship || dash} />
+          <Field label={t('nannies.emergencyPhone')} value={nanny.emergencyPhone || dash} />
         </FieldGrid>
       </Section>
 
       {nanny.experiences && nanny.experiences.length > 0 && (
-        <Section title={`Work experience (${nanny.experiences.length})`}>
+        <Section title={t('nannies.workExperienceCount', { count: nanny.experiences.length })}>
           <div className="mt-2 flex flex-col gap-2">
             {nanny.experiences.map((exp, i) => (
               <div key={exp.id ?? i} className="rounded-lg border border-[#EBEEF8] p-2.5">
@@ -214,10 +225,10 @@ export function NannyProfileView({
                   {exp.employer}
                   {exp.cityCountry ? ` · ${exp.cityCountry}` : ''}
                 </div>
-                {exp.children && <div className="text-[9px] text-navy/70 mt-1">Children: {exp.children}</div>}
-                {exp.duties && <div className="text-[9px] text-navy/70 mt-0.5">Duties: {exp.duties}</div>}
+                {exp.children && <div className="text-[9px] text-navy/70 mt-1">{t('nannies.children')}: {exp.children}</div>}
+                {exp.duties && <div className="text-[9px] text-navy/70 mt-0.5">{t('nannies.duties')}: {exp.duties}</div>}
                 {exp.reasonLeaving && (
-                  <div className="text-[9px] text-navy/70 mt-0.5">Reason for leaving: {exp.reasonLeaving}</div>
+                  <div className="text-[9px] text-navy/70 mt-0.5">{t('nannies.reasonForLeaving')}: {exp.reasonLeaving}</div>
                 )}
               </div>
             ))}
@@ -225,9 +236,9 @@ export function NannyProfileView({
         </Section>
       )}
 
-      <Section title={`References${nanny.numberOfReferences != null ? ` (${nanny.numberOfReferences})` : ''}`}>
+      <Section title={nanny.numberOfReferences != null ? t('nannies.referencesCount', { count: nanny.numberOfReferences }) : t('nannies.referencesCountOnly')}>
         {nanny.hasReferences === false || !nanny.references || nanny.references.length === 0 ? (
-          <p className="text-[10px] font-semibold text-[#8090B0] mt-2">No references provided.</p>
+          <p className="text-[10px] font-semibold text-[#8090B0] mt-2">{t('nannies.noReferencesProvided')}</p>
         ) : (
           <div className="mt-2 flex flex-col gap-2">
             {nanny.references.map((ref, i) => (
@@ -236,10 +247,10 @@ export function NannyProfileView({
                   <div className="text-[10.5px] font-extrabold text-navy">{ref.relationship}</div>
                   <div className="text-[8.5px] font-semibold text-[#8090B0]">
                     {ref.city}
-                    {ref.yearsWorked ? ` · ${ref.yearsWorked} yrs` : ''}
+                    {ref.yearsWorked ? ` · ${t('common.yearsShort', { count: ref.yearsWorked })}` : ''}
                   </div>
                 </div>
-                {ref.canConfirm && <div className="text-[9px] text-navy/70 mt-1">Can confirm: {ref.canConfirm}</div>}
+                {ref.canConfirm && <div className="text-[9px] text-navy/70 mt-1">{t('nannies.canConfirm')}: {ref.canConfirm}</div>}
               </div>
             ))}
           </div>
@@ -247,7 +258,7 @@ export function NannyProfileView({
       </Section>
 
       {nanny.introVideoUrl && (
-        <Section title="Intro video">
+        <Section title={t('nannies.introVideo')}>
           <video
             src={nanny.introVideoUrl}
             controls
@@ -257,7 +268,7 @@ export function NannyProfileView({
           <div className="mt-1 flex items-center gap-2 flex-wrap">
             {nanny.introVideoStatus && (
               <StatusBadge variant={docVariant(nanny.introVideoStatus)}>
-                {nanny.introVideoStatus}
+                {docStatusLabel(nanny.introVideoStatus)}
               </StatusBadge>
             )}
             <a
@@ -266,7 +277,7 @@ export function NannyProfileView({
               rel="noreferrer"
               className="text-[9px] font-bold text-purple font-fredoka"
             >
-              Open video ↗
+              {t('common.openVideo')}
             </a>
             {onReviewVideo && (
               <div className="flex gap-1.5 ml-auto">
@@ -277,7 +288,7 @@ export function NannyProfileView({
                     onClick={() => onReviewVideo('approved')}
                     disabled={videoBusy}
                   >
-                    Approve video ✓
+                    {t('nannies.approveVideo')}
                   </button>
                 )}
                 {nanny.introVideoStatus !== 'rejected' && (
@@ -287,7 +298,7 @@ export function NannyProfileView({
                     onClick={() => onReviewVideo('rejected')}
                     disabled={videoBusy}
                   >
-                    Reject video ✗
+                    {t('nannies.rejectVideo')}
                   </button>
                 )}
               </div>
@@ -297,19 +308,19 @@ export function NannyProfileView({
       )}
 
       {nanny.stats && (
-        <Section title="Engagement stats">
+        <Section title={t('nannies.engagementStats')}>
           <FieldGrid>
-            <Field label="Profile views" value={String(nanny.stats.profileViews ?? 0)} />
-            <Field label="Shortlists" value={String(nanny.stats.shortlists ?? 0)} />
-            <Field label="Applications" value={String(nanny.stats.applicationsCount ?? 0)} />
-            <Field label="Trials" value={String(nanny.stats.trialsCount ?? 0)} />
-            <Field label="Hires" value={String(nanny.stats.hiresCount ?? 0)} />
+            <Field label={t('nannies.profileViews')} value={String(nanny.stats.profileViews ?? 0)} />
+            <Field label={t('nannies.shortlists')} value={String(nanny.stats.shortlists ?? 0)} />
+            <Field label={t('nannies.applications')} value={String(nanny.stats.applicationsCount ?? 0)} />
+            <Field label={t('nannies.trials')} value={String(nanny.stats.trialsCount ?? 0)} />
+            <Field label={t('nannies.hires')} value={String(nanny.stats.hiresCount ?? 0)} />
           </FieldGrid>
         </Section>
       )}
 
       {showDocuments && (
-        <Section title={`Documents (${nanny.documents?.length ?? 0})`}>
+        <Section title={t('nannies.documentsCountTitle', { count: nanny.documents?.length ?? 0 })}>
           <DocumentsGrid nanny={nanny} />
         </Section>
       )}

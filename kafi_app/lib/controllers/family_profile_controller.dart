@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
+import 'package:kafi_app/controllers/browse_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
@@ -49,6 +50,9 @@ class FamilyProfileController extends GetxController {
   final Rx<JobEmploymentType> employmentType = JobEmploymentType.fullTime.obs;
   final RxString daysOff = ''.obs;
   final rolesOtherCtrl = TextEditingController();
+
+  /// When true, FT/PT tiles cannot be changed (the other slot is already filled).
+  final RxBool employmentLocked = false.obs;
   final RxList<String> duties = <String>[].obs;
   final RxList<String> benefits = <String>[].obs;
 
@@ -74,6 +78,57 @@ class FamilyProfileController extends GetxController {
     _hydrateFromCurrentUser();
   }
 
+  /// Called each time Screen 13 opens for a new post (permanent controller).
+  Future<void> prepareNewPostFromRoute() async {
+    final user = _auth.currentUser.value;
+    if (user == null || !user.isFamily) return;
+    final posts = await _jobs.getJobsByFamily(user.id);
+    _prepareEmploymentSlot(posts);
+    _applyRouteArgs();
+  }
+
+  /// Reads Get.arguments from Browse "Post a new job" (employment slot + lock).
+  void _applyRouteArgs() {
+    final raw = Get.arguments;
+    if (raw is! Map) return;
+    final args = Map<String, dynamic>.from(raw);
+    final typeName = args['employmentType'] as String?;
+    if (typeName != null) {
+      employmentType.value = JobEmploymentType.values.firstWhere(
+        (e) => e.name == typeName,
+        orElse: () => employmentType.value,
+      );
+    }
+    if (args['lockEmployment'] == true) {
+      employmentLocked.value = true;
+    }
+    if (args['isNewPost'] == true) {
+      _resetJobSpecificFieldsKeepingFamily();
+      if (typeName != null) {
+        employmentType.value = JobEmploymentType.values.firstWhere(
+          (e) => e.name == typeName,
+          orElse: () => JobEmploymentType.fullTime,
+        );
+      }
+    }
+  }
+
+  /// Clears role/schedule/etc. so a second post doesn't clone the first job.
+  void _resetJobSpecificFieldsKeepingFamily() {
+    roles.value = <String>['Nanny'];
+    rolesOtherCtrl.clear();
+    jobType.value = JobType.liveIn;
+    daysOff.value = '';
+    duties.clear();
+    benefits.clear();
+    salaryMinCtrl.text = '2000';
+    salaryMaxCtrl.text = '3000';
+    trialRateCtrl.text = '150';
+    trialDays.value = 7;
+    visaSponsorship.value = VisaSponsorship.full;
+    commit.value = false;
+  }
+
   /// Loads the signed-in family's profile + latest job post (if any) and
   /// fills the form controllers so the Edit screen shows existing values.
   Future<void> _hydrateFromCurrentUser() async {
@@ -97,31 +152,52 @@ class FamilyProfileController extends GetxController {
         houseRulesCtrl.text = fam.houseRules ?? '';
         aboutFamilyCtrl.text = fam.aboutFamily ?? '';
       }
-      // Load the targeted post (see [_selectEditPost]) for role/duties/
-      // benefits/visa — not a bare posts.first, which ignores which job the
-      // family chose to edit.
       final posts = await _jobs.getJobsByFamily(user.id);
-      if (posts.isNotEmpty) {
+      final isEdit = _editJobId != null || Get.currentRoute == Routes.familyEdit;
+      if (isEdit && posts.isNotEmpty) {
         final p = _selectEditPost(posts);
         roles.value = List<String>.from(p.rolesNeeded);
         jobType.value = p.jobType;
         employmentType.value = p.employmentType;
         daysOff.value = FamilyConstants.daysOffOptions.contains(p.daysOff) ? p.daysOff : '';
         rolesOtherCtrl.text = p.rolesOther ?? '';
+        employmentLocked.value = false;
         duties.value = List<String>.from(p.duties);
         benefits.value = List<String>.from(p.benefits);
         salaryMinCtrl.text = '${p.salaryMin}';
         salaryMaxCtrl.text = '${p.salaryMax}';
-        // Guard against legacy/empty profiles whose value isn't a selectable option.
         trialDays.value = FamilyConstants.trialDurations.contains(p.trialDurationDays)
             ? p.trialDurationDays
             : trialDays.value;
         trialRateCtrl.text = '${p.trialDailyRate}';
         visaSponsorship.value = p.visaSponsorship;
         commit.value = p.commitmentAgreed;
+      } else if (!isEdit) {
+        _prepareEmploymentSlot(posts);
       }
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  void _prepareEmploymentSlot(List<JobPostModel> posts) {
+    final active = posts.where((j) => j.status == JobPostStatus.active).toList();
+    final hasFt =
+        active.any((j) => j.employmentType == JobEmploymentType.fullTime);
+    final hasPt =
+        active.any((j) => j.employmentType == JobEmploymentType.partTime);
+    if (hasFt && hasPt) {
+      employmentLocked.value = true;
+      return;
+    }
+    if (hasFt) {
+      employmentType.value = JobEmploymentType.partTime;
+      employmentLocked.value = true;
+    } else if (hasPt) {
+      employmentType.value = JobEmploymentType.fullTime;
+      employmentLocked.value = true;
+    } else {
+      employmentLocked.value = false;
     }
   }
 
@@ -167,6 +243,9 @@ class FamilyProfileController extends GetxController {
     final ok = await _persist();
     if (ok) {
       _auth.markFamilyFirstJobPosted();
+      if (Get.isRegistered<BrowseController>()) {
+        await Get.find<BrowseController>().refreshList();
+      }
       Get.offAllNamed(Routes.browse);
     }
   }
@@ -284,6 +363,11 @@ class FamilyProfileController extends GetxController {
         familyId: fid,
         familyName: fam.fullName.split(' ').first,
         city: cityLabel,
+        jobTitle: roles.isNotEmpty
+            ? roles.join(' · ')
+            : (employmentType.value == JobEmploymentType.partTime
+                ? AppStrings.employmentPartTime.tr
+                : AppStrings.employmentFullTime.tr),
         rolesNeeded: List.of(roles),
         rolesOther: roles.contains('Other') ? rolesOtherCtrl.text.trim() : null,
         jobType: jobType.value,

@@ -5,13 +5,31 @@ import 'package:kafi_app/controllers/dispute_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/dispute_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 /// The user's filed reports (disputes). Each opens the support conversation
 /// with the Kafi team. Disputes are filed contextually (e.g. a payment issue
 /// during a trial), so there is no "new report" flow here — only viewing.
-class DisputesScreen extends GetView<DisputeController> {
+class DisputesScreen extends StatefulWidget {
   const DisputesScreen({super.key});
+
+  @override
+  State<DisputesScreen> createState() => _DisputesScreenState();
+}
+
+class _DisputesScreenState extends State<DisputesScreen> {
+  DisputeController get controller => Get.find<DisputeController>();
+
+  @override
+  void initState() {
+    super.initState();
+    // Permanent DisputeController only loads once on first create — refresh
+    // whenever My reports is opened so admin resolve/dismiss isn't stale.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) controller.loadDisputes();
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -160,6 +178,13 @@ class DisputesScreen extends GetView<DisputeController> {
                   overflow: TextOverflow.ellipsis,
                   style: KafiTheme.nunito(10, color: KafiColors.tm)),
             ],
+            if (d.attachments.isNotEmpty) ...[
+              const SizedBox(height: 6),
+              Text(
+                AppStrings.reportAttachCount.trParams({'n': '${d.attachments.length}'}),
+                style: KafiTheme.nunito(9, color: KafiColors.pur, w: FontWeight.w700),
+              ),
+            ],
             const SizedBox(height: 7),
             Text(_time(d.createdAt),
                 style: KafiTheme.nunito(8.5, color: KafiColors.ts, w: FontWeight.w600)),
@@ -169,13 +194,7 @@ class DisputesScreen extends GetView<DisputeController> {
     );
   }
 
-  String _time(DateTime dt) {
-    final diff = DateTime.now().difference(dt);
-    if (diff.inDays > 0) return '${diff.inDays}d ago';
-    if (diff.inHours > 0) return '${diff.inHours}h ago';
-    if (diff.inMinutes > 0) return '${diff.inMinutes}m ago';
-    return AppStrings.supportJustNow.tr;
-  }
+  String _time(DateTime dt) => RelativeTime.ago(dt);
 }
 
 /// Shared label + status-chip helpers (also used by the dispute chat screen).
