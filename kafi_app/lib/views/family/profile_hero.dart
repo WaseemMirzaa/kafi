@@ -33,14 +33,20 @@ class ProfileHero extends StatelessWidget {
             padding: const EdgeInsets.fromLTRB(13, 11, 13, 8),
             child: Row(
               children: [
-                _circleBtn(Icons.arrow_back, Get.back),
-                const Expanded(child: Center(child: KafiLogo(size: 19))),
-                _circleBtn(
+                _squareBackBtn(),
+                const Expanded(child: Center(child: KafiLogo(size: 28))),
+                // Report stays reachable (safety feature, never removed) but
+                // rendered small/quiet next to the heart so it doesn't compete
+                // with the reference's clean back+heart-only header.
+                _iconOnlyBtn(
                   Icons.flag_outlined,
                   () => showReportUserSheet(reportedUserId: card.id, reportedUserName: card.name),
+                  color: KafiColors.ts,
+                  size: 15,
                 ),
-                const SizedBox(width: 6),
-                _circleBtn(Icons.favorite, () => AppNavigation.toggleShortlist(card), filled: true),
+                const SizedBox(width: 10),
+                _iconOnlyBtn(Icons.favorite, () => AppNavigation.toggleShortlist(card),
+                    color: KafiColors.roseD, size: 22),
               ],
             ),
           ),
@@ -132,18 +138,31 @@ class ProfileHero extends StatelessWidget {
     );
   }
 
+  // Compact icon+count overlay on the cover photo itself ("📷 5 🎬 1") — the
+  // full-word "(5 photos + 1 video)" phrasing lives in the section title
+  // below the gallery instead, matching the reference's two distinct formats.
   Widget _mediaCountBadge() {
-    final videos = (card.introVideoUrl ?? '').isEmpty ? 0 : 1;
+    final hasVideo = (card.introVideoUrl ?? '').isNotEmpty;
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.55),
         borderRadius: BorderRadius.circular(14),
       ),
-      child: Text(
-        AppStrings.profilePhotoCountBadge.trParams(
-            {'photos': '${card.photoUrls.length}', 'videos': '$videos'}),
-        style: KafiTheme.nunito(9.5, color: Colors.white, w: FontWeight.w700),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.photo_camera, color: Colors.white, size: 12),
+          const SizedBox(width: 3),
+          Text('${card.photoUrls.length}',
+              style: KafiTheme.nunito(10, color: Colors.white, w: FontWeight.w700)),
+          if (hasVideo) ...[
+            const SizedBox(width: 7),
+            const Icon(Icons.videocam, color: Colors.white, size: 12),
+            const SizedBox(width: 3),
+            Text('1', style: KafiTheme.nunito(10, color: Colors.white, w: FontWeight.w700)),
+          ],
+        ],
       ),
     );
   }
@@ -229,7 +248,7 @@ class ProfileHero extends StatelessWidget {
     return Row(
       children: [
         Icon(ok ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: ok ? KafiColors.grnD : KafiColors.ts, size: 15),
+            color: ok ? KafiColors.roseD : KafiColors.ts, size: 15),
         const SizedBox(width: 7),
         Expanded(
           child: Text(label,
@@ -239,18 +258,31 @@ class ProfileHero extends StatelessWidget {
     );
   }
 
-  Widget _circleBtn(IconData icon, VoidCallback onTap, {bool filled = false}) {
+  // Rounded-square back button, pale-rose fill — matches the reference
+  // exactly (the header's only "chrome" button besides the plain heart).
+  Widget _squareBackBtn() {
+    return GestureDetector(
+      onTap: Get.back,
+      child: Container(
+        width: 38,
+        height: 38,
+        decoration: BoxDecoration(
+          color: KafiColors.roseP,
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: const Icon(Icons.arrow_back, color: KafiColors.roseD, size: 18),
+      ),
+    );
+  }
+
+  // Bare icon, no background/shadow — matches the reference's plain heart
+  // (and keeps the report flag quiet/secondary next to it).
+  Widget _iconOnlyBtn(IconData icon, VoidCallback onTap, {required Color color, required double size}) {
     return GestureDetector(
       onTap: onTap,
-      child: Container(
-        width: 30,
-        height: 30,
-        decoration: BoxDecoration(
-          color: filled ? KafiColors.roseP : KafiColors.bgLight,
-          shape: BoxShape.circle,
-          boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 6, offset: Offset(0, 2))],
-        ),
-        child: Icon(icon, color: filled ? KafiColors.roseD : KafiColors.pur, size: 14),
+      child: Padding(
+        padding: const EdgeInsets.all(4),
+        child: Icon(icon, color: color, size: size),
       ),
     );
   }

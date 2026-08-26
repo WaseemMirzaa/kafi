@@ -106,21 +106,34 @@ class ProfileSections {
               ),
             );
           }
-          // Trailing video tile.
+          // Trailing video tile — a darkened frame (the nanny's own last
+          // photo, since there's no separate video-thumbnail asset) with a
+          // play button, reading as a real video preview rather than a flat
+          // color swatch, matching the reference.
           return GestureDetector(
             onTap: () => AppNavigation.openIntroVideo(
               introVideoUrl: card.introVideoUrl,
               nannyName: card.name,
             ),
-            child: Container(
-              width: 84,
-              height: 84,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                gradient: const LinearGradient(colors: [KafiColors.pur, Color(0xFF7B5BD5)]),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: SizedBox(
+                width: 84,
+                height: 84,
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    if (card.photoUrls.isNotEmpty)
+                      KafiMediaImage(url: card.photoUrls.last, fit: BoxFit.cover)
+                    else
+                      Container(color: KafiColors.navy),
+                    Container(color: Colors.black.withValues(alpha: 0.38)),
+                    const Center(
+                      child: Icon(Icons.play_circle_fill, color: Colors.white, size: 30),
+                    ),
+                  ],
+                ),
               ),
-              alignment: Alignment.center,
-              child: const Icon(Icons.play_circle_fill, color: Colors.white, size: 30),
             ),
           );
         },
@@ -142,7 +155,7 @@ class ProfileSections {
           card.comfortableWithCameras ? AppStrings.profileCamerasAccepts.tr : AppStrings.profileCamerasDeclines.tr),
       _gridTile(Icons.pets_outlined, AppStrings.profilePetsLabel.tr,
           card.comfortableWithPets ? AppStrings.profilePetsAccepts.tr : AppStrings.profilePetsDeclines.tr),
-      _gridTile(Icons.favorite_border, AppStrings.profileHealthIssuesLabel.tr,
+      _gridTile(Icons.monitor_heart_outlined, AppStrings.profileHealthIssuesLabel.tr,
           card.hasHealthConditions ? AppStrings.profileHealthIssuesPresent.tr : AppStrings.profileHealthIssuesNone.tr),
       if (card.workEmirateLabels.isNotEmpty)
         _gridTile(Icons.location_on_outlined, AppStrings.profileWillingToWorkIn.tr, card.workEmirateLabels.join(', ')),
