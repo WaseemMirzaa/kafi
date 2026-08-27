@@ -283,6 +283,8 @@ class AuthController extends GetxController with WidgetsBindingObserver {
           return AppStrings.noInternet.tr;
         case 'requires-recent-login':
           return AppStrings.authReauthRequired.tr;
+        case 'keychain-error':
+          return AppStrings.authKeychainError.tr;
         case 'operation-not-allowed':
           if ((e.message ?? '').toLowerCase().contains('region')) {
             return AppStrings.authSmsRegionDisabled.tr;
@@ -290,8 +292,12 @@ class AuthController extends GetxController with WidgetsBindingObserver {
           return AppStrings.authOtpSendFailed.tr;
         default:
           final msg = e.message ?? '';
-          if (msg.toLowerCase().contains('region enabled')) {
+          final lower = msg.toLowerCase();
+          if (lower.contains('region enabled')) {
             return AppStrings.authSmsRegionDisabled.tr;
+          }
+          if (lower.contains('keychain')) {
+            return AppStrings.authKeychainError.tr;
           }
           return msg.isNotEmpty ? msg : AppStrings.authOtpSendFailed.tr;
       }
@@ -307,6 +313,9 @@ class AuthController extends GetxController with WidgetsBindingObserver {
       return AppStrings.authOtpSendFailed.tr;
     }
     if (s.contains('password_too_weak')) return AppStrings.pwWeak.tr;
+    if (s.toLowerCase().contains('keychain')) {
+      return AppStrings.authKeychainError.tr;
+    }
     return AppStrings.authOtpSendFailed.tr;
   }
 

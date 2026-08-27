@@ -1011,6 +1011,7 @@ abstract class AppStrings {
   static const authQuotaExceeded = 'auth_quota_exceeded';
   static const authWrongPassword = 'auth_wrong_password';
   static const authReauthRequired = 'auth_reauth_required';
+  static const authKeychainError = 'auth_keychain_error';
   static const authCodeSent = 'auth_code_sent';
   static const authLearnMore = 'auth_learn_more';
   static const authUseOtpInstead = 'auth_use_otp_instead';
@@ -1442,6 +1443,9 @@ abstract class AppStrings {
   static const profileAvailableNowChip = 'profile_available_now_chip';
   static const profileUaeExperience = 'profile_uae_experience';
   static const profileYearsFull = 'profile_years_full';
+  static const profileYearsUaeExperience = 'profile_years_uae_experience';
+  static const profileRoleNannyBabysitter = 'profile_role_nanny_babysitter';
+  static const profileHireProceed = 'profile_hire_proceed';
   static const countryUae = 'country_uae';
   static const petDog = 'pet_dog';
   static const petCat = 'pet_cat';

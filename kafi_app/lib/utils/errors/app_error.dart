@@ -92,6 +92,11 @@ class AuthError extends AppError {
         code: 'auth/wrong-password',
         message: AppStrings.authWrongPassword.tr,
       );
+
+  factory AuthError.keychain() => AuthError(
+        code: 'auth/keychain-error',
+        message: AppStrings.authKeychainError.tr,
+      );
 }
 
 /// Permission errors per §13.1

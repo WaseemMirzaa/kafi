@@ -1,20 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/controllers/shortlist_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
-import 'package:kafi_app/utils/job_type_label.dart';
+import 'package:kafi_app/views/family/profile_ui_tokens.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
-import 'package:kafi_app/views/support/report_user_sheet.dart';
 import 'package:kafi_app/views/widgets/kafi_logo.dart';
 import 'package:kafi_app/views/widgets/kafi_media_image.dart';
 
-/// Nanny-profile header: back/logo/favourite top bar, large cover photo with
-/// a photo+video count badge, name/age/location, availability chips, and the
-/// Kafi Match % ring + ID/References/Interview verification checklist.
-///
-/// Shared by all three profile screens (locked/unlocked/relocked) so the
-/// identity block always looks identical regardless of subscription state.
+/// Nanny-profile header — reference layout: back · logo · heart, photo + identity,
+/// availability chips, Kafi Match card.
 class ProfileHero extends StatelessWidget {
   const ProfileHero({super.key, required this.card});
 
@@ -28,90 +24,27 @@ class ProfileHero extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // ── Top bar: back · Kafi logo · report · favourite ──
           Padding(
-            padding: const EdgeInsets.fromLTRB(13, 11, 13, 8),
+            padding: const EdgeInsets.fromLTRB(ProfileUi.hPad, 10, ProfileUi.hPad, 8),
             child: Row(
               children: [
-                _squareBackBtn(),
-                const Expanded(child: Center(child: KafiLogo(size: 28))),
-                // Report stays reachable (safety feature, never removed) but
-                // rendered small/quiet next to the heart so it doesn't compete
-                // with the reference's clean back+heart-only header.
-                _iconOnlyBtn(
-                  Icons.flag_outlined,
-                  () => showReportUserSheet(reportedUserId: card.id, reportedUserName: card.name),
-                  color: KafiColors.ts,
-                  size: 15,
-                ),
-                const SizedBox(width: 10),
-                _iconOnlyBtn(Icons.favorite, () => AppNavigation.toggleShortlist(card),
-                    color: KafiColors.roseD, size: 22),
+                _backBtn(),
+                const Expanded(child: Center(child: KafiLogo(size: 26))),
+                _heartBtn(),
               ],
             ),
           ),
-          // ── Cover photo + photo/video count badge ──
           Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 15),
-            child: GestureDetector(
-              onTap: card.photoUrls.isEmpty
-                  ? null
-                  : () => AppNavigation.openNannyPhotoViewer(
-                        photoUrls: card.photoUrls,
-                        nannyName: card.name,
-                      ),
-              child: ClipRRect(
-                borderRadius: BorderRadius.circular(18),
-                child: AspectRatio(
-                  aspectRatio: 0.82,
-                  child: Stack(
-                    fit: StackFit.expand,
-                    children: [
-                      card.photoUrls.isNotEmpty
-                          ? KafiMediaImage(
-                              url: card.photoUrls.first,
-                              fit: BoxFit.cover,
-                              errorBuilder: (_, __, ___) => _avatarFallback(),
-                            )
-                          : _avatarFallback(),
-                      if (card.photoUrls.isNotEmpty || (card.introVideoUrl ?? '').isNotEmpty)
-                        Positioned(
-                          left: 8,
-                          bottom: 8,
-                          child: _mediaCountBadge(),
-                        ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(17, 12, 17, 15),
+            padding: const EdgeInsets.fromLTRB(ProfileUi.hPad, 0, ProfileUi.hPad, 14),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                Text(card.name, style: KafiTheme.fredoka(19, color: KafiColors.navy, w: FontWeight.w800)),
-                const SizedBox(height: 2),
-                Text(localizeJobTypeLabel(card.jobType),
-                    style: KafiTheme.nunito(12.5, color: KafiColors.roseD, w: FontWeight.w800)),
-                const SizedBox(height: 3),
-                Text(
-                  [
-                    if (card.age != null)
-                      AppStrings.profileAgeYrs.trParams({'n': '${card.age}'}),
-                    card.nationality,
-                    card.city,
-                  ].where((s) => s.isNotEmpty).join(' · '),
-                  style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600),
-                ),
-                const SizedBox(height: 9),
-                Wrap(
-                  spacing: 6,
-                  runSpacing: 6,
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    if (card.availableNow) _pill('🟢 ${AppStrings.profileAvailableNowChip.tr}', KafiColors.grnL, KafiColors.grnD),
-                    _pill('📅 ${AppStrings.profilePaidTrialAvailable.tr}', KafiColors.purL, KafiColors.pur),
+                    _profilePhoto(),
+                    const SizedBox(width: 12),
+                    Expanded(child: _identityBlock()),
                   ],
                 ),
                 const SizedBox(height: 12),
@@ -121,6 +54,69 @@ class ProfileHero extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _profilePhoto() {
+    return GestureDetector(
+      onTap: card.photoUrls.isEmpty
+          ? null
+          : () => AppNavigation.openNannyPhotoViewer(
+                photoUrls: card.photoUrls,
+                nannyName: card.name,
+              ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(ProfileUi.cardRadius),
+        child: SizedBox(
+          width: 112,
+          height: 132,
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              card.photoUrls.isNotEmpty
+                  ? KafiMediaImage(
+                      url: card.photoUrls.first,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => _avatarFallback(),
+                    )
+                  : _avatarFallback(),
+              if (card.photoUrls.isNotEmpty || (card.introVideoUrl ?? '').isNotEmpty)
+                Positioned(left: 6, bottom: 6, child: _mediaCountBadge()),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _identityBlock() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(card.name, style: KafiTheme.fredoka(18, color: KafiColors.navy, w: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text(AppStrings.profileRoleNannyBabysitter.tr,
+            style: KafiTheme.nunito(11.5, color: KafiColors.roseD, w: FontWeight.w800)),
+        const SizedBox(height: 4),
+        Text(
+          [
+            if (card.age != null) AppStrings.profileAgeYrs.trParams({'n': '${card.age}'}),
+            card.nationality,
+            card.city,
+          ].where((s) => s.isNotEmpty).join(' · '),
+          style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 6,
+          runSpacing: 6,
+          children: [
+            if (card.availableNow)
+              _pill(AppStrings.profileAvailableNowChip.tr, KafiColors.grnL, KafiColors.grnD, dot: true),
+            _pill(AppStrings.profilePaidTrialAvailable.tr, KafiColors.purL, KafiColors.pur, icon: Icons.event),
+          ],
+        ),
+      ],
     );
   }
 
@@ -134,155 +130,156 @@ class ProfileHero extends StatelessWidget {
         ),
       ),
       alignment: Alignment.center,
-      child: Text(card.initials, style: KafiTheme.fredoka(48, color: Colors.white, w: FontWeight.w900)),
+      child: Text(card.initials, style: KafiTheme.fredoka(36, color: Colors.white, w: FontWeight.w900)),
     );
   }
 
-  // Compact icon+count overlay on the cover photo itself ("📷 5 🎬 1") — the
-  // full-word "(5 photos + 1 video)" phrasing lives in the section title
-  // below the gallery instead, matching the reference's two distinct formats.
   Widget _mediaCountBadge() {
     final hasVideo = (card.introVideoUrl ?? '').isNotEmpty;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.55),
+        color: Colors.black.withValues(alpha: 0.65),
         borderRadius: BorderRadius.circular(14),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.photo_camera, color: Colors.white, size: 12),
+          const Icon(Icons.photo_camera_outlined, color: Colors.white, size: 11),
           const SizedBox(width: 3),
           Text('${card.photoUrls.length}',
-              style: KafiTheme.nunito(10, color: Colors.white, w: FontWeight.w700)),
+              style: KafiTheme.nunito(9.5, color: Colors.white, w: FontWeight.w700)),
           if (hasVideo) ...[
-            const SizedBox(width: 7),
-            const Icon(Icons.videocam, color: Colors.white, size: 12),
-            const SizedBox(width: 3),
-            Text('1', style: KafiTheme.nunito(10, color: Colors.white, w: FontWeight.w700)),
+            const SizedBox(width: 6),
+            const Text('+', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
+            const SizedBox(width: 4),
+            const Icon(Icons.videocam_outlined, color: Colors.white, size: 11),
+            const SizedBox(width: 2),
+            Text('1', style: KafiTheme.nunito(9.5, color: Colors.white, w: FontWeight.w700)),
           ],
         ],
       ),
     );
   }
 
-  Widget _pill(String label, Color bg, Color fg) {
+  Widget _pill(String label, Color bg, Color fg, {bool dot = false, IconData? icon}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
-      child: Text(label, style: KafiTheme.fredoka(10.5, color: fg, w: FontWeight.w700)),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (dot)
+            Container(
+              width: 6,
+              height: 6,
+              margin: const EdgeInsets.only(right: 5),
+              decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
+            ),
+          if (icon != null) ...[
+            Icon(icon, color: fg, size: 11),
+            const SizedBox(width: 4),
+          ],
+          Flexible(
+            child: Text(label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: KafiTheme.fredoka(9, color: fg, w: FontWeight.w700)),
+          ),
+        ],
+      ),
     );
   }
 
-  // ── Kafi Match % ring + ID/References/Interview verification checklist ──
   Widget _matchAndVerification() {
-    final checklist = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        _checkRow(AppStrings.profileIdVerified.tr, card.verified),
-        const SizedBox(height: 6),
-        _checkRow(AppStrings.profileReferencesVerified.tr, card.hasReferences),
-        const SizedBox(height: 6),
-        // Kafi's onboarding review (which includes an interview pass) is the
-        // same admin-verification signal as `verified` — no separate
-        // "interviewed" field exists on the nanny model.
-        _checkRow(AppStrings.profileKafiInterviewed.tr, card.verified),
-      ],
-    );
-
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(13),
-      decoration: BoxDecoration(
-        color: KafiColors.purL,
-        borderRadius: BorderRadius.circular(14),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      decoration: ProfileUi.whiteCard(radius: ProfileUi.cardRadius),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           if (card.matchPercent > 0) ...[
-            _matchRing(),
+            Column(
+              children: [
+                ProfileMatchRing(percent: card.matchPercent),
+                const SizedBox(height: 4),
+                Text(AppStrings.profileKafiMatch.tr,
+                    style: KafiTheme.nunito(8.5, color: KafiColors.roseD, w: FontWeight.w700)),
+              ],
+            ),
             const SizedBox(width: 14),
           ],
-          Expanded(child: checklist),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                _checkRow(AppStrings.profileIdVerified.tr, card.verified),
+                const SizedBox(height: 8),
+                _checkRow(AppStrings.profileReferencesVerified.tr, card.hasReferences),
+                const SizedBox(height: 8),
+                _checkRow(AppStrings.profileKafiInterviewed.tr, card.verified),
+              ],
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _matchRing() {
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        SizedBox(
-          width: 56,
-          height: 56,
-          child: Stack(
-            alignment: Alignment.center,
-            children: [
-              SizedBox(
-                width: 56,
-                height: 56,
-                child: CircularProgressIndicator(
-                  value: card.matchPercent / 100,
-                  strokeWidth: 5,
-                  backgroundColor: KafiColors.purB.withValues(alpha: 0.4),
-                  valueColor: const AlwaysStoppedAnimation(KafiColors.pur),
-                ),
-              ),
-              Text('${card.matchPercent}%',
-                  style: KafiTheme.fredoka(13, color: KafiColors.pur, w: FontWeight.w800)),
-            ],
-          ),
-        ),
-        const SizedBox(height: 3),
-        Text(AppStrings.profileKafiMatch.tr,
-            style: KafiTheme.nunito(8.5, color: KafiColors.pur, w: FontWeight.w700)),
-      ],
     );
   }
 
   Widget _checkRow(String label, bool ok) {
     return Row(
       children: [
-        Icon(ok ? Icons.check_circle : Icons.radio_button_unchecked,
-            color: ok ? KafiColors.roseD : KafiColors.ts, size: 15),
-        const SizedBox(width: 7),
+        Icon(
+          ok ? Icons.verified : Icons.radio_button_unchecked,
+          color: ok ? KafiColors.roseD : KafiColors.ts,
+          size: 17,
+        ),
+        const SizedBox(width: 8),
         Expanded(
-          child: Text(label,
-              style: KafiTheme.nunito(10.5, color: KafiColors.td, w: FontWeight.w700)),
+          child: Text(label, style: KafiTheme.nunito(10.5, color: KafiColors.td, w: FontWeight.w700)),
         ),
       ],
     );
   }
 
-  // Rounded-square back button, pale-rose fill — matches the reference
-  // exactly (the header's only "chrome" button besides the plain heart).
-  Widget _squareBackBtn() {
+  Widget _backBtn() {
     return GestureDetector(
       onTap: Get.back,
       child: Container(
-        width: 38,
-        height: 38,
+        width: 36,
+        height: 36,
         decoration: BoxDecoration(
-          color: KafiColors.roseP,
-          borderRadius: BorderRadius.circular(12),
+          color: Colors.white,
+          shape: BoxShape.circle,
+          border: Border.all(color: ProfileUi.tileBorder),
+          boxShadow: const [
+            BoxShadow(color: Color(0x10000000), blurRadius: 6, offset: Offset(0, 2)),
+          ],
         ),
-        child: const Icon(Icons.arrow_back, color: KafiColors.roseD, size: 18),
+        child: const Icon(Icons.arrow_back_ios_new, color: KafiColors.roseD, size: 14),
       ),
     );
   }
 
-  // Bare icon, no background/shadow — matches the reference's plain heart
-  // (and keeps the report flag quiet/secondary next to it).
-  Widget _iconOnlyBtn(IconData icon, VoidCallback onTap, {required Color color, required double size}) {
+  Widget _heartBtn() {
+    if (!Get.isRegistered<ShortlistController>()) {
+      return _heartIcon(false);
+    }
+    final sl = Get.find<ShortlistController>();
+    return Obx(() => _heartIcon(sl.isShortlisted(card.id)));
+  }
+
+  Widget _heartIcon(bool saved) {
     return GestureDetector(
-      onTap: onTap,
+      onTap: () => AppNavigation.toggleShortlist(card),
       child: Padding(
         padding: const EdgeInsets.all(4),
-        child: Icon(icon, color: color, size: size),
+        child: Icon(
+          saved ? Icons.favorite : Icons.favorite_border,
+          color: KafiColors.roseD,
+          size: 24,
+        ),
       ),
     );
   }

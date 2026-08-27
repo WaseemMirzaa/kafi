@@ -990,6 +990,8 @@ const Map<String, String> enUs = {
   AppStrings.authQuotaExceeded: 'Service busy. Please try again shortly.',
   AppStrings.authWrongPassword: 'Incorrect password. Please try again.',
   AppStrings.authReauthRequired: 'For security, please verify again.',
+  AppStrings.authKeychainError:
+      "Couldn't save sign-in on this device. Close the app and try again.",
   AppStrings.authCodeSent: 'Verification code sent to @phone',
   AppStrings.authLearnMore: 'Learn more',
   AppStrings.authUseOtpInstead: 'Use OTP instead',
@@ -1427,6 +1429,9 @@ const Map<String, String> enUs = {
   AppStrings.profileAvailableNowChip: 'Available Now',
   AppStrings.profileUaeExperience: 'UAE experience',
   AppStrings.profileYearsFull: '@n years',
+  AppStrings.profileYearsUaeExperience: '@n years UAE experience',
+  AppStrings.profileRoleNannyBabysitter: 'Nanny & Babysitter',
+  AppStrings.profileHireProceed: 'Hire / Proceed',
 
   AppStrings.countryUae: 'United Arab Emirates',
   AppStrings.petDog: 'Dog',

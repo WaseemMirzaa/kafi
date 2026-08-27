@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     id("com.android.application")
     id("kotlin-android")
@@ -16,10 +18,10 @@ if (file("google-services.json").exists()) {
 fun mapsApiKeyFromLocalProperties(): String {
     val localFile = rootProject.file("local.properties")
     if (!localFile.exists()) return "YOUR_GOOGLE_MAPS_API_KEY"
-    val props = java.util.Properties()
-    localFile.inputStream().use { props.load(it) }
-    return props.getProperty("MAPS_API_KEY")?.takeIf { it.isNotBlank() }
-        ?: "YOUR_GOOGLE_MAPS_API_KEY"
+    val props = Properties()
+    localFile.inputStream().use { stream -> props.load(stream) }
+    val key = props.getProperty("MAPS_API_KEY")
+    return if (key != null && key.isNotBlank()) key else "YOUR_GOOGLE_MAPS_API_KEY"
 }
 
 android {

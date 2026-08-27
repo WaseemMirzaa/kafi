@@ -428,6 +428,8 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.authQuotaExceeded: 'الخدمة مشغولة. يرجى المحاولة بعد قليل.',
     AppStrings.authWrongPassword: 'كلمة المرور غير صحيحة. حاول مرة أخرى.',
     AppStrings.authReauthRequired: 'لأمان حسابك، يرجى التحقق مرة أخرى.',
+    AppStrings.authKeychainError:
+        'تعذّر حفظ تسجيل الدخول على هذا الجهاز. أغلق التطبيق وحاول مرة أخرى.',
     AppStrings.authCodeSent: 'تم إرسال رمز التحقق إلى @phone',
     AppStrings.authLearnMore: 'اعرف المزيد',
     AppStrings.authUseOtpInstead: 'استخدم رمز OTP بدلاً من ذلك',
@@ -746,4 +748,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.profileAvailableNowChip: 'متاحة الآن',
     AppStrings.profileUaeExperience: 'خبرة في الإمارات',
     AppStrings.profileYearsFull: '@n سنوات',
+    AppStrings.profileYearsUaeExperience: '@n سنوات خبرة في الإمارات',
+    AppStrings.profileRoleNannyBabysitter: 'مربية أطفال & جليسة',
+    AppStrings.profileHireProceed: 'توظيف / متابعة',
   });

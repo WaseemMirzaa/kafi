@@ -62,7 +62,12 @@ class ErrorHandler {
         return AuthError.wrongPassword();
       case 'weak-password':
         return AuthError.weakPassword();
+      case 'keychain-error':
+        return AuthError.keychain();
       default:
+        if ((e.message ?? '').toLowerCase().contains('keychain')) {
+          return AuthError.keychain();
+        }
         return UnknownError(code: e.code, message: AppStrings.errUnknownAuthError.tr);
     }
   }
