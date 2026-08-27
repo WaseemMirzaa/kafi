@@ -9,7 +9,7 @@ String localizeJobTypeLabel(String jobType) {
   final hasIn = lower.contains('live-in') || lower.contains('livein');
   final hasOut = lower.contains('live-out') || lower.contains('liveout') || lower.contains('out');
   if (hasIn && hasOut) {
-    return '${AppStrings.jobLiveIn.tr} · ${AppStrings.jobLiveOut.tr}';
+    return '${AppStrings.jobLiveIn.tr} / ${AppStrings.jobLiveOut.tr}';
   }
   if (hasOut && !hasIn) return AppStrings.jobLiveOut.tr;
   return AppStrings.jobLiveIn.tr;

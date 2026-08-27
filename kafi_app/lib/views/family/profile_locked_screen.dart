@@ -11,6 +11,7 @@ import 'package:kafi_app/utils/constants/subscription_constants.dart';
 import 'package:kafi_app/utils/nanny_card_resolver.dart';
 import 'package:kafi_app/views/family/profile_hero.dart';
 import 'package:kafi_app/views/family/profile_sections.dart';
+import 'package:kafi_app/views/family/profile_ui_tokens.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 class ProfileLockedScreen extends StatelessWidget {
@@ -39,7 +40,7 @@ class ProfileLockedScreen extends StatelessWidget {
             children: [
               ProfileHero(card: card),
               Padding(
-                padding: const EdgeInsets.fromLTRB(12, 11, 12, 22),
+                padding: const EdgeInsets.fromLTRB(ProfileUi.hPad, 10, ProfileUi.hPad, 22),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -48,12 +49,10 @@ class ProfileLockedScreen extends StatelessWidget {
                       const SizedBox(height: 10),
                     ],
                     ProfileSections.statsRow(card),
-                    const SizedBox(height: 10),
-                    Text(AppStrings.skillsSpecialties.tr,
-                        style: KafiTheme.nunito(10.5, color: KafiColors.td, w: FontWeight.w800)),
-                    const SizedBox(height: 7),
+                    const SizedBox(height: 12),
+                    ProfileSections.sectionTitle(AppStrings.skillsSpecialties.tr),
                     ProfileSections.skills(card),
-                    const SizedBox(height: 10),
+                    const SizedBox(height: 12),
                     _lockedBox(card, firstName),
                   ],
                 ),

@@ -370,10 +370,15 @@ class TrialController extends GetxController {
   /// Fetches the real nanny doc for each loaded trial and builds a card.
   Future<void> _loadNannyCards() async {
     final ids = all.map((t) => t.nannyId).toSet();
+    if (ids.isEmpty) return;
     final loaded = <String, NannyCardModel>{};
     await Future.wait(ids.map((id) async {
-      final n = await _users.getNanny(id);
-      if (n != null) loaded[id] = NannyCardModel.fromNanny(n);
+      try {
+        final n = await _users.getNanny(id);
+        if (n != null) loaded[id] = NannyCardModel.fromNanny(n);
+      } catch (e) {
+        Get.log('getNanny($id) failed: $e', isError: true);
+      }
     }));
     nannyCards.assignAll(loaded);
   }

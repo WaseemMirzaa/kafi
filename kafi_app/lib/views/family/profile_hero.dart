@@ -9,12 +9,18 @@ import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_logo.dart';
 import 'package:kafi_app/views/widgets/kafi_media_image.dart';
 
-/// Nanny-profile header — reference layout: back · logo · heart, photo + identity,
-/// availability chips, Kafi Match card.
+/// Nanny-profile header — Maria Santos reference layout.
 class ProfileHero extends StatelessWidget {
-  const ProfileHero({super.key, required this.card});
+  const ProfileHero({
+    super.key,
+    required this.card,
+    this.footer,
+    this.compactBottom = false,
+  });
 
   final NannyCardModel card;
+  final Widget? footer;
+  final bool compactBottom;
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +31,7 @@ class ProfileHero extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(ProfileUi.hPad, 10, ProfileUi.hPad, 8),
+            padding: const EdgeInsets.fromLTRB(ProfileUi.hPad, 8, ProfileUi.hPad, 6),
             child: Row(
               children: [
                 _backBtn(),
@@ -35,7 +41,12 @@ class ProfileHero extends StatelessWidget {
             ),
           ),
           Padding(
-            padding: const EdgeInsets.fromLTRB(ProfileUi.hPad, 0, ProfileUi.hPad, 14),
+            padding: EdgeInsets.fromLTRB(
+              ProfileUi.hPad,
+              0,
+              ProfileUi.hPad,
+              compactBottom ? 10 : 12,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
@@ -43,12 +54,23 @@ class ProfileHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _profilePhoto(),
-                    const SizedBox(width: 12),
-                    Expanded(child: _identityBlock()),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          _identityBlock(),
+                          const SizedBox(height: 8),
+                          _matchAndVerification(),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
-                const SizedBox(height: 12),
-                _matchAndVerification(),
+                if (footer != null) ...[
+                  const SizedBox(height: 10),
+                  footer!,
+                ],
               ],
             ),
           ),
@@ -66,10 +88,10 @@ class ProfileHero extends StatelessWidget {
                 nannyName: card.name,
               ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(ProfileUi.cardRadius),
+        borderRadius: BorderRadius.circular(16),
         child: SizedBox(
-          width: 112,
-          height: 132,
+          width: 118,
+          height: 128,
           child: Stack(
             fit: StackFit.expand,
             children: [
@@ -94,26 +116,31 @@ class ProfileHero extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(card.name, style: KafiTheme.fredoka(18, color: KafiColors.navy, w: FontWeight.w800)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 2),
         Text(AppStrings.profileRoleNannyBabysitter.tr,
             style: KafiTheme.nunito(11.5, color: KafiColors.roseD, w: FontWeight.w800)),
-        const SizedBox(height: 4),
+        const SizedBox(height: 3),
         Text(
           [
             if (card.age != null) AppStrings.profileAgeYrs.trParams({'n': '${card.age}'}),
             card.nationality,
             card.city,
-          ].where((s) => s.isNotEmpty).join(' · '),
-          style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600),
+          ].where((s) => s.isNotEmpty).join(' • '),
+          style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600),
         ),
-        const SizedBox(height: 10),
+        const SizedBox(height: 7),
         Wrap(
-          spacing: 6,
-          runSpacing: 6,
+          spacing: 5,
+          runSpacing: 5,
           children: [
             if (card.availableNow)
               _pill(AppStrings.profileAvailableNowChip.tr, KafiColors.grnL, KafiColors.grnD, dot: true),
-            _pill(AppStrings.profilePaidTrialAvailable.tr, KafiColors.purL, KafiColors.pur, icon: Icons.event),
+            _pill(
+              AppStrings.profilePaidTrialAvailable.tr,
+              KafiColors.roseP,
+              KafiColors.roseD,
+              icon: Icons.event,
+            ),
           ],
         ),
       ],
@@ -137,25 +164,25 @@ class ProfileHero extends StatelessWidget {
   Widget _mediaCountBadge() {
     final hasVideo = (card.introVideoUrl ?? '').isNotEmpty;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 4),
       decoration: BoxDecoration(
-        color: Colors.black.withValues(alpha: 0.65),
-        borderRadius: BorderRadius.circular(14),
+        color: Colors.black.withValues(alpha: 0.68),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.photo_camera_outlined, color: Colors.white, size: 11),
-          const SizedBox(width: 3),
+          const Icon(Icons.photo_camera_outlined, color: Colors.white, size: 10),
+          const SizedBox(width: 2),
           Text('${card.photoUrls.length}',
-              style: KafiTheme.nunito(9.5, color: Colors.white, w: FontWeight.w700)),
+              style: KafiTheme.nunito(9, color: Colors.white, w: FontWeight.w700)),
           if (hasVideo) ...[
-            const SizedBox(width: 6),
-            const Text('+', style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w700)),
-            const SizedBox(width: 4),
-            const Icon(Icons.videocam_outlined, color: Colors.white, size: 11),
+            const SizedBox(width: 5),
+            const Text('+', style: TextStyle(color: Colors.white, fontSize: 8, fontWeight: FontWeight.w700)),
+            const SizedBox(width: 3),
+            const Icon(Icons.videocam_outlined, color: Colors.white, size: 10),
             const SizedBox(width: 2),
-            Text('1', style: KafiTheme.nunito(9.5, color: Colors.white, w: FontWeight.w700)),
+            Text('1', style: KafiTheme.nunito(9, color: Colors.white, w: FontWeight.w700)),
           ],
         ],
       ),
@@ -164,27 +191,27 @@ class ProfileHero extends StatelessWidget {
 
   Widget _pill(String label, Color bg, Color fg, {bool dot = false, IconData? icon}) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(20)),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (dot)
             Container(
-              width: 6,
-              height: 6,
-              margin: const EdgeInsets.only(right: 5),
+              width: 5,
+              height: 5,
+              margin: const EdgeInsets.only(right: 4),
               decoration: BoxDecoration(color: fg, shape: BoxShape.circle),
             ),
           if (icon != null) ...[
-            Icon(icon, color: fg, size: 11),
-            const SizedBox(width: 4),
+            Icon(icon, color: fg, size: 10),
+            const SizedBox(width: 3),
           ],
           Flexible(
             child: Text(label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: KafiTheme.fredoka(9, color: fg, w: FontWeight.w700)),
+                style: KafiTheme.fredoka(8.5, color: fg, w: FontWeight.w700)),
           ),
         ],
       ),
@@ -194,34 +221,30 @@ class ProfileHero extends StatelessWidget {
   Widget _matchAndVerification() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-      decoration: ProfileUi.whiteCard(radius: ProfileUi.cardRadius),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 10),
+      decoration: ProfileUi.whiteCard(radius: 12),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          if (card.matchPercent > 0) ...[
-            Column(
-              children: [
-                ProfileMatchRing(percent: card.matchPercent),
-                const SizedBox(height: 4),
-                Text(AppStrings.profileKafiMatch.tr,
-                    style: KafiTheme.nunito(8.5, color: KafiColors.roseD, w: FontWeight.w700)),
-              ],
-            ),
-            const SizedBox(width: 14),
-          ],
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 _checkRow(AppStrings.profileIdVerified.tr, card.verified),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 _checkRow(AppStrings.profileReferencesVerified.tr, card.hasReferences),
-                const SizedBox(height: 8),
+                const SizedBox(height: 6),
                 _checkRow(AppStrings.profileKafiInterviewed.tr, card.verified),
               ],
             ),
           ),
+          if (card.matchPercent > 0) ...[
+            const SizedBox(width: 8),
+            ProfileMatchRing(
+              percent: card.matchPercent,
+              matchLabel: AppStrings.profileKafiMatch.tr,
+            ),
+          ],
         ],
       ),
     );
@@ -232,12 +255,12 @@ class ProfileHero extends StatelessWidget {
       children: [
         Icon(
           ok ? Icons.verified : Icons.radio_button_unchecked,
-          color: ok ? KafiColors.roseD : KafiColors.ts,
-          size: 17,
+          color: ok ? KafiColors.roseD : KafiColors.ts.withValues(alpha: 0.5),
+          size: 15,
         ),
-        const SizedBox(width: 8),
+        const SizedBox(width: 6),
         Expanded(
-          child: Text(label, style: KafiTheme.nunito(10.5, color: KafiColors.td, w: FontWeight.w700)),
+          child: Text(label, style: KafiTheme.nunito(9.5, color: KafiColors.td, w: FontWeight.w700)),
         ),
       ],
     );
@@ -247,8 +270,8 @@ class ProfileHero extends StatelessWidget {
     return GestureDetector(
       onTap: Get.back,
       child: Container(
-        width: 36,
-        height: 36,
+        width: 34,
+        height: 34,
         decoration: BoxDecoration(
           color: Colors.white,
           shape: BoxShape.circle,
@@ -257,7 +280,7 @@ class ProfileHero extends StatelessWidget {
             BoxShadow(color: Color(0x10000000), blurRadius: 6, offset: Offset(0, 2)),
           ],
         ),
-        child: const Icon(Icons.arrow_back_ios_new, color: KafiColors.roseD, size: 14),
+        child: const Icon(Icons.arrow_back_ios_new, color: KafiColors.roseD, size: 13),
       ),
     );
   }
@@ -278,7 +301,7 @@ class ProfileHero extends StatelessWidget {
         child: Icon(
           saved ? Icons.favorite : Icons.favorite_border,
           color: KafiColors.roseD,
-          size: 24,
+          size: 22,
         ),
       ),
     );

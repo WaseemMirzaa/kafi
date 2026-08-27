@@ -8,31 +8,46 @@ import 'package:kafi_app/views/family/profile_ui_tokens.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_media_image.dart';
 
-/// Shared profile sections — gallery, experience grid, salary, about, trial banner.
+/// Shared profile sections — gallery, experience list, salary, about, trial banner.
 class ProfileSections {
   const ProfileSections._();
 
   static Widget statsRow(NannyCardModel card) {
+    final rating = card.averageRating;
     return Row(
       children: [
         Expanded(child: _statBox('${card.yearsExp}', AppStrings.yearsExp.tr)),
+        const SizedBox(width: 6),
+        Expanded(
+          child: _statBox(
+            rating != null && rating > 0 ? '${rating.toStringAsFixed(1)}★' : '—',
+            AppStrings.dashRating.tr,
+          ),
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: _statBox('${card.reviewsCount}', AppStrings.profileReviews.tr),
+        ),
       ],
     );
   }
 
   static Widget _statBox(String value, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 7),
+      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
       decoration: BoxDecoration(
         color: KafiColors.purL,
         borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: KafiColors.purB.withValues(alpha: 0.45)),
       ),
       child: Column(
         children: [
-          Text(value, style: KafiTheme.nunito(14, color: KafiColors.pur, w: FontWeight.w900)),
-          const SizedBox(height: 1),
+          Text(value, style: KafiTheme.nunito(13, color: KafiColors.pur, w: FontWeight.w900)),
+          const SizedBox(height: 2),
           Text(label,
               textAlign: TextAlign.center,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
               style: KafiTheme.nunito(8, color: KafiColors.ts, w: FontWeight.w600)),
         ],
       ),
@@ -67,12 +82,13 @@ class ProfileSections {
     final hasVideo = (card.introVideoUrl ?? '').isNotEmpty;
     if (card.photoUrls.isEmpty && !hasVideo) return const SizedBox.shrink();
     return SizedBox(
-      height: 92,
+      height: ProfileUi.galleryThumbSize,
       child: ListView.separated(
         scrollDirection: Axis.horizontal,
         itemCount: card.photoUrls.length + (hasVideo ? 1 : 0),
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, __) => const SizedBox(width: 7),
         itemBuilder: (context, i) {
+          final size = ProfileUi.galleryThumbSize;
           if (i < card.photoUrls.length) {
             return GestureDetector(
               onTap: () => AppNavigation.openNannyPhotoViewer(
@@ -84,12 +100,12 @@ class ProfileSections {
                 borderRadius: BorderRadius.circular(ProfileUi.tileRadius),
                 child: KafiMediaImage(
                   url: card.photoUrls[i],
-                  width: 92,
-                  height: 92,
+                  width: size,
+                  height: size,
                   fit: BoxFit.cover,
                   errorBuilder: (_, __, ___) => Container(
-                    width: 92,
-                    height: 92,
+                    width: size,
+                    height: size,
                     color: KafiColors.purL,
                     child: const Icon(Icons.image_not_supported_outlined, color: KafiColors.pur),
                   ),
@@ -105,8 +121,8 @@ class ProfileSections {
             child: ClipRRect(
               borderRadius: BorderRadius.circular(ProfileUi.tileRadius),
               child: SizedBox(
-                width: 92,
-                height: 92,
+                width: size,
+                height: size,
                 child: Stack(
                   fit: StackFit.expand,
                   children: [
@@ -114,9 +130,9 @@ class ProfileSections {
                       KafiMediaImage(url: card.photoUrls.last, fit: BoxFit.cover)
                     else
                       Container(color: KafiColors.navy),
-                    Container(color: Colors.black.withValues(alpha: 0.42)),
+                    Container(color: Colors.black.withValues(alpha: 0.38)),
                     const Center(
-                      child: Icon(Icons.play_circle_fill, color: Colors.white, size: 34),
+                      child: Icon(Icons.play_circle_fill, color: Colors.white, size: 30),
                     ),
                   ],
                 ),
@@ -128,23 +144,35 @@ class ProfileSections {
     );
   }
 
-  static Widget experienceGrid(NannyCardModel card) {
+  static Widget experienceList(NannyCardModel card) {
     final langLine = card.tags.where((t) => !t.trimLeft().startsWith('✓')).take(4).join(', ');
     final handled = (card.handledChildrenNote ?? '').trim();
     final emirates = card.workEmirateLabels.isNotEmpty
         ? card.workEmirateLabels.join(', ')
         : (card.city.isNotEmpty ? card.city : '');
 
-    final tiles = <Widget>[
-      _infoTile(Icons.work_outline,
-          AppStrings.profileYearsUaeExperience.trParams({'n': '${card.yearsExp}'})),
-      if (handled.isNotEmpty)
-        _infoTile(Icons.child_care_outlined, handled)
-      else
-        _infoTile(Icons.child_care_outlined, AppStrings.profileHandledChildren.tr),
-      _infoTile(Icons.home_outlined, localizeJobTypeLabel(card.jobType)),
-      _infoTile(Icons.chat_bubble_outline, langLine.isNotEmpty ? langLine : '—'),
-      _statusTile(
+    final rows = <Widget>[
+      _experienceRow(
+        Icons.work_outline,
+        AppStrings.yearsExp.tr,
+        '${AppStrings.profileYearsFull.trParams({'n': '${card.yearsExp}'})} · ${AppStrings.profileUaeExperience.tr}',
+      ),
+      _experienceRow(
+        Icons.child_care_outlined,
+        AppStrings.profileHandledChildren.tr,
+        handled.isNotEmpty ? handled : '—',
+      ),
+      _experienceRow(
+        Icons.home_outlined,
+        AppStrings.fldJobType.tr,
+        localizeJobTypeLabel(card.jobType),
+      ),
+      _experienceRow(
+        Icons.chat_bubble_outline,
+        AppStrings.jobDetailFieldLanguages.tr,
+        langLine.isNotEmpty ? langLine : '—',
+      ),
+      _experienceRow(
         Icons.videocam_outlined,
         AppStrings.profileCamerasLabel.tr,
         card.comfortableWithCameras
@@ -152,13 +180,13 @@ class ProfileSections {
             : AppStrings.profileCamerasDeclines.tr,
         positive: card.comfortableWithCameras,
       ),
-      _statusTile(
+      _experienceRow(
         Icons.pets_outlined,
         AppStrings.profilePetsLabel.tr,
         card.comfortableWithPets ? AppStrings.profilePetsAccepts.tr : AppStrings.profilePetsDeclines.tr,
         positive: card.comfortableWithPets,
       ),
-      _statusTile(
+      _experienceRow(
         Icons.monitor_heart_outlined,
         AppStrings.profileHealthIssuesLabel.tr,
         card.hasHealthConditions
@@ -166,7 +194,7 @@ class ProfileSections {
             : AppStrings.profileHealthIssuesNone.tr,
         positive: !card.hasHealthConditions,
       ),
-      _statusTile(
+      _experienceRow(
         Icons.location_on_outlined,
         AppStrings.profileWillingToWorkIn.tr,
         emirates.isNotEmpty ? emirates : '—',
@@ -174,55 +202,46 @@ class ProfileSections {
       ),
     ];
 
-    return GridView.count(
-      crossAxisCount: 2,
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
-      mainAxisSpacing: 8,
-      crossAxisSpacing: 8,
-      childAspectRatio: 1.38,
-      children: tiles,
-    );
-  }
-
-  static Widget _infoTile(IconData icon, String text) {
     return Container(
-      padding: const EdgeInsets.all(11),
-      decoration: ProfileUi.whiteCard(),
+      decoration: ProfileUi.experienceCard(),
+      clipBehavior: Clip.antiAlias,
       child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ProfileUi.iconBadge(icon),
-          const SizedBox(height: 8),
-          Text(text,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: ProfileUi.tileBody),
+          for (var i = 0; i < rows.length; i++) ...[
+            if (i > 0) const Divider(height: 1, thickness: 1, color: ProfileUi.experienceBorder),
+            rows[i],
+          ],
         ],
       ),
     );
   }
 
-  static Widget _statusTile(IconData icon, String label, String value, {required bool positive}) {
-    return Container(
-      padding: const EdgeInsets.all(11),
-      decoration: ProfileUi.whiteCard(),
-      child: Column(
+  static Widget _experienceRow(
+    IconData icon,
+    String title,
+    String value, {
+    bool positive = true,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          ProfileUi.iconBadge(icon),
-          const SizedBox(height: 8),
-          Text(label,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: ProfileUi.tileBody.copyWith(color: KafiColors.tm, fontWeight: FontWeight.w600)),
-          const SizedBox(height: 2),
-          Text(value,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: positive ? ProfileUi.tileValue : ProfileUi.tileValueNegative),
+          ProfileUi.experienceIcon(icon),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: ProfileUi.listRowTitle),
+                const SizedBox(height: 3),
+                Text(
+                  value,
+                  style: positive ? ProfileUi.listRowValue : ProfileUi.listRowValueMuted,
+                ),
+              ],
+            ),
+          ),
         ],
       ),
     );
@@ -232,15 +251,11 @@ class ProfileSections {
     if (card.expectedSalaryMin <= 0 && card.expectedSalaryMax <= 0) return const SizedBox.shrink();
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.fromLTRB(14, 14, 12, 14),
+      padding: const EdgeInsets.fromLTRB(12, 12, 8, 12),
       decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: [Color(0xFFFFF0F5), Color(0xFFFFE8EF)],
-        ),
+        color: const Color(0xFFFFF5F8),
         borderRadius: BorderRadius.circular(ProfileUi.cardRadius),
-        border: Border.all(color: ProfileUi.tileBorder, width: 1.2),
+        border: Border.all(color: ProfileUi.roseBorder, width: 1.2),
       ),
       child: Stack(
         clipBehavior: Clip.none,
@@ -248,38 +263,47 @@ class ProfileSections {
           Row(
             children: [
               Container(
-                width: 38,
-                height: 38,
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [KafiColors.rose, KafiColors.roseD]),
-                  shape: BoxShape.circle,
+                width: 40,
+                height: 40,
+                decoration: BoxDecoration(
+                  gradient: const LinearGradient(colors: [KafiColors.rose, KafiColors.roseD]),
+                  borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
                 child: const Icon(Icons.account_balance_wallet_outlined, color: Colors.white, size: 18),
               ),
-              const SizedBox(width: 12),
+              const SizedBox(width: 10),
               Expanded(
-                child: Text(
-                  'AED ${card.expectedSalaryMin} – ${card.expectedSalaryMax} ${AppStrings.profilePerMonth.tr}',
-                  style: KafiTheme.fredoka(14, color: KafiColors.roseD, w: FontWeight.w800),
+                child: RichText(
+                  text: TextSpan(
+                    children: [
+                      TextSpan(
+                        text: 'AED ${card.expectedSalaryMin} – ${card.expectedSalaryMax}',
+                        style: KafiTheme.fredoka(16, color: KafiColors.roseD, w: FontWeight.w800),
+                      ),
+                      TextSpan(
+                        text: ' ${AppStrings.profilePerMonth.tr}',
+                        style: KafiTheme.nunito(11, color: KafiColors.rose, w: FontWeight.w600),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
           ),
           Positioned(
             right: 0,
-            top: -8,
-            bottom: -8,
+            top: -4,
+            bottom: -4,
             child: IgnorePointer(
               child: Opacity(
-                opacity: 0.35,
+                opacity: 0.22,
                 child: Row(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    Icon(Icons.payments_outlined, color: KafiColors.rose.withValues(alpha: 0.5), size: 32),
-                    Icon(Icons.monetization_on_outlined,
-                        color: KafiColors.rose.withValues(alpha: 0.4), size: 40),
+                    Icon(Icons.payments_outlined, color: KafiColors.rose, size: 26),
+                    Icon(Icons.monetization_on_outlined, color: KafiColors.rose, size: 34),
                   ],
                 ),
               ),
@@ -290,16 +314,31 @@ class ProfileSections {
     );
   }
 
+  static Widget aboutMeSection(NannyCardModel card) {
+    if (card.bio.trim().isEmpty) return const SizedBox.shrink();
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          card.bio,
+          style: KafiTheme.nunito(11, color: KafiColors.tm, w: FontWeight.w500).copyWith(height: 1.55),
+        ),
+        const SizedBox(height: 10),
+        paidTrialChip(),
+      ],
+    );
+  }
+
   static Widget aboutMe(NannyCardModel card) {
     if (card.bio.trim().isEmpty) return const SizedBox.shrink();
     return Text(
       card.bio,
-      style: KafiTheme.nunito(11.5, color: KafiColors.tm, w: FontWeight.w500).copyWith(height: 1.6),
+      style: KafiTheme.nunito(11, color: KafiColors.tm, w: FontWeight.w500).copyWith(height: 1.55),
     );
   }
 
   static Widget sectionTitle(String label) => Padding(
-        padding: const EdgeInsets.only(bottom: 8),
+        padding: const EdgeInsets.only(bottom: 7),
         child: Text(label, style: ProfileUi.sectionHeading),
       );
 
@@ -318,7 +357,7 @@ class ProfileSections {
                     'photos': '${card.photoUrls.length}',
                     'videos': '${hasVideo ? 1 : 0}',
                   })})',
-              style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600),
+              style: KafiTheme.nunito(10.5, color: KafiColors.ts, w: FontWeight.w600),
             ),
           ],
         ),
@@ -328,19 +367,23 @@ class ProfileSections {
 
   static Widget paidTrialChip() {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: KafiColors.grnL,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: KafiColors.grnD.withValues(alpha: 0.25)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          const Icon(Icons.check_circle, color: KafiColors.grnD, size: 14),
-          const SizedBox(width: 5),
+          Container(
+            width: 16,
+            height: 16,
+            decoration: const BoxDecoration(color: KafiColors.grnD, shape: BoxShape.circle),
+            child: const Icon(Icons.check, color: Colors.white, size: 10),
+          ),
+          const SizedBox(width: 6),
           Text(AppStrings.profilePaidTrialAvailable.tr,
-              style: KafiTheme.fredoka(10, color: KafiColors.grnD, w: FontWeight.w700)),
+              style: KafiTheme.fredoka(9.5, color: KafiColors.grnD, w: FontWeight.w700)),
         ],
       ),
     );
@@ -404,15 +447,20 @@ class ProfileQuickActions extends StatelessWidget {
         Row(
           children: [
             Expanded(child: _btn(Icons.phone_outlined, AppStrings.profileCallLabel.tr, onCall)),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Expanded(
               child: _btn(Icons.chat_rounded, AppStrings.contactWhatsappLabel.tr, onWhatsapp),
             ),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Expanded(child: _btn(Icons.chat_bubble_outline, AppStrings.chatActionLabel.tr, onChat)),
-            const SizedBox(width: 8),
+            const SizedBox(width: 6),
             Expanded(
-              child: _btn(Icons.calendar_today_outlined, AppStrings.profileBookTrial.tr, onBookTrial),
+              child: _btn(
+                Icons.calendar_today_outlined,
+                AppStrings.profileBookTrial.tr,
+                onBookTrial,
+                highlighted: true,
+              ),
             ),
           ],
         ),
@@ -451,28 +499,26 @@ class ProfileQuickActions extends StatelessWidget {
     );
   }
 
-  Widget _btn(IconData icon, String label, VoidCallback onTap) {
+  Widget _btn(IconData icon, String label, VoidCallback onTap, {bool highlighted = false}) {
     return GestureDetector(
       behavior: HitTestBehavior.opaque,
       onTap: onTap,
       child: Container(
-        height: 74,
-        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 10),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(ProfileUi.actionRadius),
-          border: Border.all(color: ProfileUi.actionBorder, width: 1.2),
-        ),
-        child: Column(
+        height: ProfileUi.actionHeight,
+        padding: const EdgeInsets.symmetric(horizontal: 6),
+        decoration: ProfileUi.actionButton(highlighted: highlighted),
+        child: Row(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(icon, color: KafiColors.roseD, size: 20),
-            const SizedBox(height: 6),
-            Text(label,
-                textAlign: TextAlign.center,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: ProfileUi.actionLabel),
+            Icon(icon, color: KafiColors.roseD, size: 14),
+            const SizedBox(width: 4),
+            Flexible(
+              child: Text(label,
+                  textAlign: TextAlign.center,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: ProfileUi.actionLabel),
+            ),
           ],
         ),
       ),

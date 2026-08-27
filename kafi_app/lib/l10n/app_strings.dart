@@ -1444,6 +1444,7 @@ abstract class AppStrings {
   static const profileUaeExperience = 'profile_uae_experience';
   static const profileYearsFull = 'profile_years_full';
   static const profileYearsUaeExperience = 'profile_years_uae_experience';
+  static const profileReviews = 'profile_reviews';
   static const profileRoleNannyBabysitter = 'profile_role_nanny_babysitter';
   static const profileHireProceed = 'profile_hire_proceed';
   static const countryUae = 'country_uae';

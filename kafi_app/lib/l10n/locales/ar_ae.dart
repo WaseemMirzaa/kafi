@@ -749,6 +749,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.profileUaeExperience: 'خبرة في الإمارات',
     AppStrings.profileYearsFull: '@n سنوات',
     AppStrings.profileYearsUaeExperience: '@n سنوات خبرة في الإمارات',
+    AppStrings.profileReviews: 'Reviews',
     AppStrings.profileRoleNannyBabysitter: 'مربية أطفال & جليسة',
     AppStrings.profileHireProceed: 'توظيف / متابعة',
   });

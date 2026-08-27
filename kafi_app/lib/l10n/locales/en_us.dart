@@ -1430,6 +1430,7 @@ const Map<String, String> enUs = {
   AppStrings.profileUaeExperience: 'UAE experience',
   AppStrings.profileYearsFull: '@n years',
   AppStrings.profileYearsUaeExperience: '@n years UAE experience',
+  AppStrings.profileReviews: 'Reviews',
   AppStrings.profileRoleNannyBabysitter: 'Nanny & Babysitter',
   AppStrings.profileHireProceed: 'Hire / Proceed',
 

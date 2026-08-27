@@ -87,89 +87,104 @@ class ProfileUnlockedScreen extends StatelessWidget {
       backgroundColor: KafiColors.bgLight,
       body: SafeArea(
         bottom: false,
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              ProfileHero(card: card),
-              Padding(
-                padding: const EdgeInsets.fromLTRB(
-                  ProfileUi.hPad,
-                  12,
-                  ProfileUi.hPad,
-                  28,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Obx(() => subs.isExpired ? _expiredBanner() : const SizedBox.shrink()),
-                    Obx(() {
-                      if (subs.contactsHidden) {
-                        return Column(
-                          children: [
-                            _contactsLockedBanner(),
-                            const SizedBox(height: ProfileUi.sectionGap),
-                          ],
-                        );
-                      }
-                      return _Reveal(
-                        nannyId: card.id,
-                        builder: (phone, loading, failed, retry) {
-                          final digits = (phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
-                          final canContact = !loading && digits.isNotEmpty;
-                          return Column(
-                            children: [
-                              ProfileQuickActions(
-                                loading: loading,
-                                failed: failed,
-                                onRetry: retry,
-                                onCall: () {
-                                  if (canContact) _launchContact(Uri.parse('tel:$phone'));
-                                },
-                                onWhatsapp: () {
-                                  if (canContact) _launchContact(Uri.parse('https://wa.me/$digits'));
-                                },
-                                onChat: () => AppNavigation.openChat(
-                                  nannyId: card.id,
-                                  nannyName: card.name,
-                                ),
-                                onBookTrial: () => AppNavigation.openTrialOffer(
-                                  nannyId: card.id,
-                                  nannyName: card.name,
-                                ),
-                              ),
-                              const SizedBox(height: ProfileUi.sectionGap),
-                            ],
-                          );
-                        },
-                      );
-                    }),
-                    _trialBadge(card.id),
-                    ProfileSections.mediaGalleryTitle(card),
-                    ProfileSections.mediaGallery(card),
-                    const SizedBox(height: ProfileUi.sectionGap),
-                    ProfileSections.sectionTitle(AppStrings.profileExperiencePreferences.tr),
-                    ProfileSections.experienceGrid(card),
-                    const SizedBox(height: ProfileUi.sectionGap),
-                    ProfileSections.sectionTitle(AppStrings.profileSalaryExpectation.tr),
-                    ProfileSections.salaryExpectation(card),
-                    const SizedBox(height: ProfileUi.sectionGap),
-                    ProfileSections.sectionTitle(AppStrings.profileAboutMe.tr),
-                    ProfileSections.aboutMe(card),
-                    const SizedBox(height: 12),
-                    Align(alignment: Alignment.centerLeft, child: ProfileSections.paidTrialChip()),
-                    const SizedBox(height: 16),
-                    ProfileHireCta(
-                      onTap: () => AppNavigation.openTrialOffer(
-                        nannyId: card.id,
-                        nannyName: card.name,
-                      ),
+        child: Stack(
+          children: [
+            SingleChildScrollView(
+              padding: EdgeInsets.only(
+                bottom: MediaQuery.paddingOf(context).bottom + 72,
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Obx(() {
+                    final contactsHidden = subs.contactsHidden;
+                    return ProfileHero(
+                      card: card,
+                      compactBottom: true,
+                      footer: contactsHidden
+                          ? null
+                          : _Reveal(
+                              nannyId: card.id,
+                              builder: (phone, loading, failed, retry) {
+                                final digits = (phone ?? '').replaceAll(RegExp(r'[^0-9]'), '');
+                                final canContact = !loading && digits.isNotEmpty;
+                                return ProfileQuickActions(
+                                  loading: loading,
+                                  failed: failed,
+                                  onRetry: retry,
+                                  onCall: () {
+                                    if (canContact) _launchContact(Uri.parse('tel:$phone'));
+                                  },
+                                  onWhatsapp: () {
+                                    if (canContact) {
+                                      _launchContact(Uri.parse('https://wa.me/$digits'));
+                                    }
+                                  },
+                                  onChat: () => AppNavigation.openChat(
+                                    nannyId: card.id,
+                                    nannyName: card.name,
+                                  ),
+                                  onBookTrial: () => AppNavigation.openTrialOffer(
+                                    nannyId: card.id,
+                                    nannyName: card.name,
+                                  ),
+                                );
+                              },
+                            ),
+                    );
+                  }),
+                  Padding(
+                    padding: const EdgeInsets.fromLTRB(
+                      ProfileUi.hPad,
+                      10,
+                      ProfileUi.hPad,
+                      16,
                     ),
-                  ],
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Obx(() => subs.isExpired ? _expiredBanner() : const SizedBox.shrink()),
+                        Obx(() {
+                          if (subs.contactsHidden) {
+                            return Column(
+                              children: [
+                                _contactsLockedBanner(),
+                                const SizedBox(height: ProfileUi.sectionGap),
+                              ],
+                            );
+                          }
+                          return const SizedBox.shrink();
+                        }),
+                        _trialBadge(card.id),
+                        ProfileSections.mediaGalleryTitle(card),
+                        ProfileSections.mediaGallery(card),
+                        const SizedBox(height: ProfileUi.sectionGap),
+                        ProfileSections.sectionTitle(AppStrings.profileExperiencePreferences.tr),
+                        ProfileSections.experienceList(card),
+                        const SizedBox(height: ProfileUi.sectionGap),
+                        ProfileSections.sectionTitle(AppStrings.profileSalaryExpectation.tr),
+                        ProfileSections.salaryExpectation(card),
+                        const SizedBox(height: ProfileUi.sectionGap),
+                        ProfileSections.sectionTitle(AppStrings.profileAboutMe.tr),
+                        ProfileSections.aboutMeSection(card),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Positioned(
+              left: ProfileUi.hPad,
+              right: ProfileUi.hPad,
+              bottom: MediaQuery.paddingOf(context).bottom + 12,
+              child: ProfileHireCta(
+                onTap: () => AppNavigation.openTrialOffer(
+                  nannyId: card.id,
+                  nannyName: card.name,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

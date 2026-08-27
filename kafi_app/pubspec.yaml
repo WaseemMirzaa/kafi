@@ -57,3 +57,4 @@ flutter:
   # Fonts API names — do not rename.
   assets:
     - google_fonts/
+    - assets/images/

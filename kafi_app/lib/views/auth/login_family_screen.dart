@@ -61,7 +61,7 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
                   ),
                 ),
                 const SizedBox(height: 10),
-                const KafiLogo(size: 24, purple: true),
+                const KafiLogo(size: 24),
                 const SizedBox(height: 14),
                 _banner(),
                 const SizedBox(height: 14),
