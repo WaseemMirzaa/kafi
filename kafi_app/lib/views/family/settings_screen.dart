@@ -4,12 +4,14 @@ import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/dispute_controller.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
+import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/controllers/settings_controller.dart' show SettingsController;
 import 'package:kafi_app/models/user_model.dart' show UserSettings;
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 
 class SettingsScreen extends GetView<SettingsController> {
   const SettingsScreen({super.key, this.embedInShell = false});
@@ -202,14 +204,27 @@ class SettingsScreen extends GetView<SettingsController> {
           const SizedBox(height: 12),
           Obx(() {
             final u = authCtrl.currentUser.value;
-            final name = (u?.fullName?.isNotEmpty == true)
-                ? u!.fullName!
-                : (u?.isFamily == true
-                    ? AppStrings.roleFallbackFamily.tr
-                    : AppStrings.roleFallbackUser.tr);
+            final isFamily = u?.isFamily == true;
+
+            // Prefer the role profile (Family/Nanny doc) over the auth user
+            // doc: `fullName`/photo are captured there during onboarding and
+            // aren't always synced back to `users/{uid}`, which used to leave
+            // this header stuck on "User" with no photo even after the
+            // family/nanny profile was completed.
+            final familyProfile = isFamily ? Get.find<FamilyProfileController>().family.value : null;
+            final nannyProfile = isFamily ? null : Get.find<NannyProfileController>().nanny.value;
+
+            final roleName = isFamily ? familyProfile?.fullName : nannyProfile?.fullName;
+            final name = (roleName?.isNotEmpty == true)
+                ? roleName!
+                : (u?.fullName?.isNotEmpty == true
+                    ? u!.fullName!
+                    : (isFamily ? AppStrings.roleFallbackFamily.tr : AppStrings.roleFallbackUser.tr));
+            final photoUrl = isFamily
+                ? familyProfile?.profilePhoto
+                : (nannyProfile?.photoUrls.isNotEmpty == true ? nannyProfile!.photoUrls.first : null);
             final sub = (u?.email?.isNotEmpty == true) ? u!.email! : (u?.phone ?? '');
             final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';
-            final isFamily = u?.isFamily == true;
             return Container(
               padding: const EdgeInsets.all(11),
               decoration: BoxDecoration(
@@ -219,21 +234,12 @@ class SettingsScreen extends GetView<SettingsController> {
               ),
               child: Row(
                 children: [
-                  Container(
-                    width: 48,
-                    height: 48,
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: _avatarColors,
-                      ),
-                      borderRadius: BorderRadius.circular(15),
-                    ),
-                    child: Center(
-                      child: Text(initial,
-                          style: KafiTheme.fredoka(20, color: Colors.white, w: FontWeight.w900)),
-                    ),
+                  KafiAvatar(
+                    photoUrl: photoUrl,
+                    fallbackText: initial,
+                    size: 48,
+                    gradient: _avatarColors,
+                    fontSize: 20,
                   ),
                   const SizedBox(width: 11),
                   Expanded(

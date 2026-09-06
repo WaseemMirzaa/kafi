@@ -1,4 +1,5 @@
 import { onSchedule } from 'firebase-functions/v2/scheduler';
+import * as logger from 'firebase-functions/logger';
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getFamily, getUser } from '../utils/notifications';
 import { recomputeActiveTrialNannyIds } from './trial';
@@ -75,18 +76,64 @@ export function isTrialDueForOutcome(
   return endMs <= nowMs;
 }
 
+/// Fires the mutual-outcome prompt for one trial doc: notifies both parties
+/// and flips status → `awaitingOutcome`. Shared by the primary (Timestamp
+/// `endDate`) path and the legacy-repair path below so a trial healed from a
+/// string `endDate` doesn't have to wait for a second hourly run.
+async function fireOutcomePrompt(doc: FirebaseFirestore.QueryDocumentSnapshot): Promise<void> {
+  const trial = doc.data();
+  const [family, nannyUser] = await Promise.all([
+    getFamily(trial.familyId as string),
+    getUser(trial.nannyId as string),
+  ]);
+
+  const famLocale = family.locale ?? 'en';
+  const nanLocale = nannyUser.locale ?? 'en';
+  const famTitle = tn('trial.outcomePendingFamily.title', famLocale);
+  const famBody = tn('trial.outcomePendingFamily.body', famLocale);
+  const nanTitle = tn('trial.outcomePendingNanny.title', nanLocale);
+  const nanBody = tn('trial.outcomePendingNanny.body', nanLocale);
+  const data = { type: 'trial_outcome_pending', trialId: doc.id };
+
+  await writeInbox(trial.familyId as string, 'trialOutcomePending', famTitle, famBody, data);
+  await sendNotification((family.fcmTokens as string[]) ?? [], {
+    title: famTitle,
+    body: famBody,
+    data,
+  });
+  await writeInbox(trial.nannyId as string, 'trialOutcomePending', nanTitle, nanBody, data);
+  await sendNotification((nannyUser.fcmTokens as string[]) ?? [], {
+    title: nanTitle,
+    body: nanBody,
+    data,
+  });
+
+  await doc.ref.update({
+    status: 'awaitingOutcome',
+    endReachedAt: admin.firestore.FieldValue.serverTimestamp(),
+    outcomePromptSent: true,
+  });
+  // The family's chat-unlock list must widen to include this nanny for the
+  // awaitingOutcome wait too — see recomputeActiveTrialNannyIds' doc
+  // comment (trial.ts) for why. Exactly as onTrialResponse does on accept.
+  await recomputeActiveTrialNannyIds(trial.familyId as string);
+}
+
 /// Detects trials whose execution window has closed (`endDate` reached while
 /// still `active`) and moves them into `awaitingOutcome`, prompting both
 /// parties to record what happened. This is the entry point into the
 /// mutual-confirm gate — `onTrialOutcomeResolved` (trial.ts) takes over once
-/// either/both sides respond. Modeled exactly on `trialStartingReminder`
-/// above: hourly schedule, Timestamp range query, bounded `.limit(200)`,
-/// per-doc idempotency flag.
+/// either/both sides respond. Modeled on `trialStartingReminder` above:
+/// hourly schedule, Timestamp range query, bounded `.limit(200)`, per-doc
+/// idempotency flag.
 ///
-/// Depends on `endDate` being stored as a Firestore Timestamp (not the ISO
-/// string `TrialModel.toMap()` used to produce) — trials created before that
-/// app-side fix keep a string `endDate` and are silently excluded from this
-/// query rather than erroring, an accepted additive gap.
+/// `endDate` must be a Firestore Timestamp for the range query to match it
+/// (`TrialModel.toMap()` writes it as an ISO string by default; the real
+/// write paths — `sendOffer`/`applyCounterAndAccept` — override that before
+/// persisting). A trial written some other way could still end up with a
+/// string `endDate`, which the query above would silently never match — the
+/// self-heal pass below (after the main query) finds and repairs exactly
+/// that case instead of leaving the trial stuck forever.
 export const trialOutcomeDetector = onSchedule('every 1 hours', async () => {
   const now = admin.firestore.Timestamp.now();
   const trials = await admin
@@ -97,46 +144,57 @@ export const trialOutcomeDetector = onSchedule('every 1 hours', async () => {
     .limit(200)
     .get();
 
+  // Diagnostic logging (no PII beyond doc ids) — the only way to see, from
+  // Cloud Functions logs alone, whether a given hourly run found zero
+  // qualifying trials (most common: no trial has reached its real end date
+  // yet) vs. found some but skipped them (e.g. a legacy string `endDate` that
+  // failed the query, or `outcomePromptSent` already true).
+  logger.info(`trialOutcomeDetector: query matched ${trials.size} trial(s) with status=active, endDate<=now`);
+
   await Promise.all(
     trials.docs.map(async (doc) => {
       const trial = doc.data();
-      if (!isTrialDueForOutcome(trial, now.toMillis())) return;
+      const due = isTrialDueForOutcome(trial, now.toMillis());
+      logger.info(
+        `trialOutcomeDetector: trial ${doc.id} status=${trial.status} outcomePromptSent=${trial.outcomePromptSent} due=${due}`,
+      );
+      if (!due) return;
+      await fireOutcomePrompt(doc);
+    }),
+  );
 
-      const [family, nannyUser] = await Promise.all([
-        getFamily(trial.familyId as string),
-        getUser(trial.nannyId as string),
-      ]);
+  // A trial whose `endDate` is a legacy ISO string (not a Firestore
+  // Timestamp) fails the `<=` comparison above silently — it just never
+  // matches, with no error anywhere (see this function's doc comment). Rather
+  // than leaving that trial stuck forever, self-heal it: rewrite `endDate` as
+  // a proper Timestamp so future runs pick it up normally, and — since this
+  // run already has the doc in hand — fire the prompt immediately if it's
+  // already due, instead of making the family/nanny wait for a 2nd hourly run.
+  const allActive = await admin.firestore().collection('trials').where('status', '==', 'active').limit(200).get();
+  logger.info(`trialOutcomeDetector: ${allActive.size} trial(s) total with status=active (before the endDate filter)`);
+  await Promise.all(
+    allActive.docs.map(async (doc) => {
+      const endDate = doc.data().endDate;
+      if (endDate instanceof admin.firestore.Timestamp) return;
 
-      const famLocale = family.locale ?? 'en';
-      const nanLocale = nannyUser.locale ?? 'en';
-      const famTitle = tn('trial.outcomePendingFamily.title', famLocale);
-      const famBody = tn('trial.outcomePendingFamily.body', famLocale);
-      const nanTitle = tn('trial.outcomePendingNanny.title', nanLocale);
-      const nanBody = tn('trial.outcomePendingNanny.body', nanLocale);
-      const data = { type: 'trial_outcome_pending', trialId: doc.id };
+      const parsed = new Date(endDate as string);
+      if (Number.isNaN(parsed.getTime())) {
+        logger.error(
+          `trialOutcomeDetector: trial ${doc.id} has status=active but endDate is unparseable (typeof=${typeof endDate}, value=${String(endDate)}) — cannot self-heal, needs manual data fix.`,
+        );
+        return;
+      }
 
-      await writeInbox(trial.familyId as string, 'trialOutcomePending', famTitle, famBody, data);
-      await sendNotification((family.fcmTokens as string[]) ?? [], {
-        title: famTitle,
-        body: famBody,
-        data,
-      });
-      await writeInbox(trial.nannyId as string, 'trialOutcomePending', nanTitle, nanBody, data);
-      await sendNotification((nannyUser.fcmTokens as string[]) ?? [], {
-        title: nanTitle,
-        body: nanBody,
-        data,
-      });
+      logger.warn(
+        `trialOutcomeDetector: trial ${doc.id} had a legacy string endDate (${String(endDate)}) — repairing to a Timestamp.`,
+      );
+      const endTimestamp = admin.firestore.Timestamp.fromDate(parsed);
+      await doc.ref.update({ endDate: endTimestamp });
 
-      await doc.ref.update({
-        status: 'awaitingOutcome',
-        endReachedAt: admin.firestore.FieldValue.serverTimestamp(),
-        outcomePromptSent: true,
-      });
-      // The family's chat-unlock list must widen to include this nanny for the
-      // awaitingOutcome wait too — see recomputeActiveTrialNannyIds' doc
-      // comment (trial.ts) for why. Exactly as onTrialResponse does on accept.
-      await recomputeActiveTrialNannyIds(trial.familyId as string);
+      const trial = { ...doc.data(), endDate: endTimestamp };
+      const due = isTrialDueForOutcome(trial, now.toMillis());
+      logger.info(`trialOutcomeDetector: repaired trial ${doc.id} due=${due} — firing prompt now if due.`);
+      if (due) await fireOutcomePrompt(doc);
     }),
   );
 });

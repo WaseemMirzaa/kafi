@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/subscription_plan.dart';
@@ -401,13 +400,6 @@ class PricingScreen extends GetView<SubscriptionController> {
     final ok = await controller.subscribe(p.id);
     if (!ok) return; // the controller already surfaced the error
     Get.snackbar(AppStrings.subscribeNow.tr, AppStrings.subscriptionActiveMsg.tr);
-    // Return to wherever the paywall was hit from — including the (now
-    // unlockable) locked profile — instead of always resetting to browse
-    // (DISC-15). Fall back to browse only when there's nothing to pop.
-    if (Get.previousRoute.isNotEmpty) {
-      Get.back();
-    } else {
-      Get.offAllNamed(Routes.browse);
-    }
+    AppNavigation.afterSubscribeSuccess();
   }
 }

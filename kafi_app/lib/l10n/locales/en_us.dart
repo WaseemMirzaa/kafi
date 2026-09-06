@@ -289,6 +289,10 @@ const Map<String, String> enUs = {
   AppStrings.familyFormTitle: 'Tell us about your family',
   AppStrings.familyFormSub: 'We use this to match the right nanny 🌸',
   AppStrings.familySectionYou: 'Your family',
+  AppStrings.familySectionPhoto: 'Your photo',
+  AppStrings.familyPhotoHint: 'Tap to upload your own photo or choose one of our family portraits.',
+  AppStrings.familyPhotoSheetTitle: 'Family photo',
+  AppStrings.familyPhotoPresetsTitle: 'Or choose a portrait',
   AppStrings.familySectionReligion: 'Religion & household culture',
   AppStrings.familySectionRole: 'Role & job type',
   AppStrings.familySectionDuties: 'Duties checklist',
@@ -560,7 +564,10 @@ const Map<String, String> enUs = {
 
   AppStrings.legalTermsTitle: 'Terms & Conditions',
   AppStrings.legalPrivacyTitle: 'Privacy Policy',
-  AppStrings.legalLastUpdated: 'Last updated: May 2026',
+  AppStrings.legalLastUpdated: 'Last updated: September 2026',
+  AppStrings.legalPrivacyFooter: 'For privacy requests, contact: hello@kafiapp.tech',
+  AppStrings.legalTermsFooter:
+      'By using Kafi, you confirm that you have read and accepted the complete Terms & Conditions.',
 
   'coming_soon': 'Next task in progress',
 
@@ -864,6 +871,7 @@ const Map<String, String> enUs = {
   AppStrings.supportMessageLabel: 'How can we help?',
   AppStrings.supportSubmit: 'Submit ticket',
   AppStrings.supportFillFields: 'Please add a subject and a message.',
+  AppStrings.supportSessionExpired: 'Your session has expired. Please sign in again to submit a ticket.',
   AppStrings.supportThreadEmpty: 'No messages yet.',
   AppStrings.supportAgentName: 'Kafi Support',
   AppStrings.supportMessageHint: 'Type a message…',
@@ -1345,23 +1353,44 @@ const Map<String, String> enUs = {
   AppStrings.filterArabic: 'Arabic',
   AppStrings.filterFilipino: 'Filipino',
   AppStrings.filterIndian: 'Indian',
-  AppStrings.legalPrivacy1: 'Data collected: personal info, documents, profile media, technical telemetry.',
-  AppStrings.legalPrivacy2: 'We use your data to match nannies with families and to improve safety.',
-  AppStrings.legalPrivacy3: 'You consent to data processing when you create an account.',
+  AppStrings.legalPrivacy1:
+      'Information We Collect: We may collect account details, contact information, profile content, photos, videos, documents, preferences, messages, payment references and technical usage information.',
+  AppStrings.legalPrivacy2:
+      'How We Use Information: We use information to operate the platform, create profiles, provide matching, process subscriptions, communicate with users, improve safety and prevent fraud.',
+  AppStrings.legalPrivacy3:
+      'Photos and Documents: Profile photos may be visible to other users. Identity and verification documents must remain private and accessible only to authorised personnel and service providers.',
   AppStrings.legalPrivacy4:
-      'Phone numbers: nanny numbers are visible to subscribed families; family numbers stay private.',
-  AppStrings.legalPrivacy5: 'We share limited data with payment, SMS, and storage providers only.',
-  AppStrings.legalPrivacy6: 'Your data is encrypted in transit and at rest.',
-  AppStrings.legalPrivacy7: 'You can request export or deletion at any time from Settings.',
-  AppStrings.legalPrivacy8: 'You must be 18+ to use Kafi.',
-  AppStrings.legalTerms1: 'Kafi is a marketplace only — we do not employ, sponsor, or act as a recruitment agency.',
-  AppStrings.legalTerms2: 'You must be 18+ and provide accurate information. You must comply with UAE laws.',
-  AppStrings.legalTerms3: 'Profile accuracy and document verification are your responsibility.',
-  AppStrings.legalTerms4: 'Communication may be monitored for safety. We never ask for your OTP.',
-  AppStrings.legalTerms5: 'Subscription fees are billed in AED. 5% VAT applies.',
-  AppStrings.legalTerms6: 'We are not liable for the relationship between family and nanny.',
-  AppStrings.legalTerms7: 'We may terminate accounts that breach these terms.',
-  AppStrings.legalTerms8: 'These terms are governed by UAE law.',
+      'Contact Details: Nanny contact details may be available to eligible subscribed families. Family contact details remain private unless the family chooses to share them.',
+  AppStrings.legalPrivacy5:
+      'Service Providers: Limited information may be processed by authorised providers supporting payments, SMS, hosting, analytics, verification and customer support.',
+  AppStrings.legalPrivacy6:
+      'Safety and Security: Kafi applies appropriate technical and organisational measures to protect personal information. However, no digital service can guarantee absolute security.',
+  AppStrings.legalPrivacy7:
+      'Your Rights: Subject to UAE law, users may request access, correction, export, restriction or deletion of their personal information.',
+  AppStrings.legalPrivacy8:
+      'Children’s Information: Users must not upload a child’s personal information or image unless they are the child’s parent or authorised legal guardian.',
+  AppStrings.legalPrivacy9:
+      'Data Retention: Information is retained only for as long as necessary to provide the service, meet legal obligations, resolve disputes and prevent fraud.',
+  AppStrings.legalPrivacy10:
+      'Consent and Updates: Where consent is required, it must be given through a clear affirmative action and may be withdrawn. Users will be notified of material policy changes.',
+  AppStrings.legalTerms1:
+      'Platform Role: Kafi Care Technology FZ-LLC provides a technology marketplace connecting families and domestic workers. Kafi does not employ, sponsor or guarantee any user.',
+  AppStrings.legalTerms2:
+      'User Eligibility: Users must be at least 18 years old, provide accurate information and comply with all applicable UAE laws.',
+  AppStrings.legalTerms3:
+      'Independent Verification: Users are responsible for checking identities, references, qualifications, documents, visa status and legal eligibility before making arrangements.',
+  AppStrings.legalTerms4:
+      'Legal Employment: Employment, sponsorship, contracts, salaries and worker benefits must be completed through the appropriate UAE government channels.',
+  AppStrings.legalTerms5:
+      'User Conduct: Fraud, harassment, discrimination, abuse, misleading information and illegal recruitment activities are prohibited.',
+  AppStrings.legalTerms6:
+      'Subscriptions: Prices, renewal conditions and cancellation terms are displayed before payment. VAT is charged only where legally applicable.',
+  AppStrings.legalTerms7:
+      'User Arrangements: Kafi is not a party to agreements, payments or disputes between families and workers and does not guarantee suitability, conduct or employment outcomes.',
+  AppStrings.legalTerms8:
+      'Account Action: Kafi may restrict or terminate accounts that breach these Terms, misuse the platform or violate UAE law.',
+  AppStrings.legalTerms9:
+      'Governing Law: These Terms are governed by UAE law and subject to the jurisdiction of the competent UAE courts.',
   AppStrings.lockedFullCv: 'Full CV',
   AppStrings.lockedIntroVideo: 'Intro video',
   AppStrings.lockedPhoneNumber: 'Phone number',

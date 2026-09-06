@@ -9,6 +9,7 @@ import 'package:kafi_app/controllers/shortlist_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
+import 'package:kafi_app/utils/nanny_card_resolver.dart';
 
 /// Shared navigation helpers for consistent flows across screens.
 class AppNavigation {
@@ -66,6 +67,49 @@ class AppNavigation {
       route = Routes.profileLocked;
     }
     Get.toNamed(route, arguments: card);
+  }
+
+  /// Opens pricing, optionally remembering which nanny profile to unlock
+  /// after a successful subscribe (Screen 38 / System Spec §6.8).
+  static void openPricing({NannyCardModel? unlockNanny, String? reason}) {
+    Get.toNamed(
+      Routes.pricing,
+      arguments: <String, dynamic>{
+        if (reason != null) 'reason': reason,
+        if (unlockNanny != null) 'unlockNanny': unlockNanny,
+      },
+    );
+  }
+
+  /// After subscribe succeeds: close the paywall, and if it was opened from a
+  /// locked/re-locked nanny profile, replace that route with the unlocked
+  /// profile so contacts and plan state update without returning to Browse.
+  static void afterSubscribeSuccess() {
+    final args = Get.arguments;
+    final previous = Get.previousRoute;
+    NannyCardModel? card;
+    if (args is Map && args['unlockNanny'] is NannyCardModel) {
+      card = args['unlockNanny'] as NannyCardModel;
+    }
+    if (previous.isNotEmpty) {
+      Get.back();
+    } else if (card != null && card.id.isNotEmpty) {
+      Get.offNamed(Routes.profileUnlocked, arguments: card);
+      return;
+    } else {
+      Get.offAllNamed(Routes.browse);
+      return;
+    }
+    if (card != null && card.id.isNotEmpty) {
+      Get.offNamed(Routes.profileUnlocked, arguments: card);
+      return;
+    }
+    final fromLocked = previous == Routes.profileLocked ||
+        previous == Routes.profileRelocked;
+    if (!fromLocked) return;
+    card = resolveNannyCard();
+    if (card.id.isEmpty) return;
+    Get.offNamed(Routes.profileUnlocked, arguments: card);
   }
 
   static void openChat({String? nannyId, String? nannyName}) {

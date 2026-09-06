@@ -590,6 +590,49 @@ class NannyProfileController extends GetxController {
     }
   }
 
+  /// Gallery multi-select: lets the user pick several photos in one sheet
+  /// instead of re-opening the picker per slot (KAFI-EDITS #9). Camera
+  /// capture stays single-shot via [pickAndUploadPhoto] — there's only ever
+  /// one photo per capture.
+  Future<void> pickAndUploadMultiplePhotos() async {
+    final remaining = NannyConstants.maxPhotos - photoUrls.length;
+    if (remaining <= 0) return;
+    final user = _auth.currentUser.value;
+    if (user == null) return;
+    final permissions = Get.find<PermissionController>();
+    if (!await permissions.ensureGallery()) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.permissionGalleryDenied.tr);
+      return;
+    }
+    final picked = await ImagePicker().pickMultiImage(imageQuality: 85, maxWidth: 1200);
+    if (picked.isEmpty) return;
+    // Cap to the remaining slots rather than rejecting the whole selection.
+    final toUpload = picked.take(NannyConstants.maxPhotos - photoUrls.length).toList();
+    isLoading.value = true;
+    try {
+      for (final file in toUpload) {
+        if (photoUrls.length >= NannyConstants.maxPhotos) break;
+        if (AppConfig.useMock) {
+          photoUrls.add(file.path);
+          continue;
+        }
+        final bytes = await file.readAsBytes();
+        if (photoUrls.length >= NannyConstants.maxPhotos) break;
+        final url = await _storageService.uploadBytes(
+          path: 'nannies/${user.id}/photos/${_uuid.v4()}.jpg',
+          bytes: bytes,
+          contentType: 'image/jpeg',
+        );
+        if (photoUrls.length >= NannyConstants.maxPhotos) break;
+        photoUrls.add(url);
+      }
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   void removePhoto(int index) {
     if (index < photoUrls.length) photoUrls.removeAt(index);
   }

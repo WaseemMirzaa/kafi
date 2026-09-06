@@ -9,6 +9,7 @@ import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/support/report_user_sheet.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
 class JobDetailScreen extends StatelessWidget {
@@ -103,21 +104,12 @@ class JobDetailScreen extends StatelessWidget {
       ),
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
-              ),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Center(
-              child: Text(initial,
-                  style: KafiTheme.fredoka(18, color: Colors.white, w: FontWeight.w900)),
-            ),
+          KafiAvatar(
+            photoUrl: job.familyPhotoUrl,
+            fallbackText: initial,
+            size: 44,
+            gradient: const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
+            fontSize: 18,
           ),
           const SizedBox(width: 10),
           Expanded(

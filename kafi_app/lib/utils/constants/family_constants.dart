@@ -30,4 +30,15 @@ class FamilyConstants {
   /// Soft-bound daily rates for trial offers (System Spec TX1 / TX2).
   static const minTrialDailyRateAed = 50;
   static const maxTrialDailyRateAed = 1000;
+
+  /// Bundled portraits a family can pick as their profile photo instead of
+  /// uploading their own (Edit family profile — KAFI-EDITS #1/#2).
+  static const defaultPhotoAssets = [
+    'assets/images/family_defaults/family_1.jpg',
+    'assets/images/family_defaults/family_2.jpg',
+    'assets/images/family_defaults/family_3.jpg',
+    'assets/images/family_defaults/family_4.jpg',
+    'assets/images/family_defaults/family_5.jpg',
+    'assets/images/family_defaults/family_6.jpg',
+  ];
 }

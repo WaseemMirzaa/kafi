@@ -12,6 +12,7 @@ import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 class JobsHomeScreen extends GetView<JobPostController> {
   const JobsHomeScreen({super.key, this.embedInShell = false});
 
@@ -373,23 +374,14 @@ class JobsHomeScreen extends GetView<JobPostController> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isHotMatch
-                          ? const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)]
-                          : const [Color(0xFFFFB347), Color(0xFFFF8042)],
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(initial,
-                        style: KafiTheme.fredoka(14, color: Colors.white, w: FontWeight.w900)),
-                  ),
+                KafiAvatar(
+                  photoUrl: job.familyPhotoUrl,
+                  fallbackText: initial,
+                  size: 36,
+                  gradient: isHotMatch
+                      ? const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)]
+                      : const [Color(0xFFFFB347), Color(0xFFFF8042)],
+                  fontSize: 14,
                 ),
                 const SizedBox(width: 8),
                 Expanded(

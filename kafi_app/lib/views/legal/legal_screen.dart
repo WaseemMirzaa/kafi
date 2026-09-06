@@ -59,6 +59,12 @@ class LegalScreen extends StatelessWidget {
                       ),
                     );
                   }),
+                  const SizedBox(height: 6),
+                  Text(
+                    _isTerms ? AppStrings.legalTermsFooter.tr : AppStrings.legalPrivacyFooter.tr,
+                    style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)
+                        .copyWith(height: 1.45),
+                  ),
                 ],
               ),
             ),
@@ -104,6 +110,7 @@ class LegalScreen extends StatelessWidget {
         AppStrings.legalTerms6.tr,
         AppStrings.legalTerms7.tr,
         AppStrings.legalTerms8.tr,
+        AppStrings.legalTerms9.tr,
       ];
 
   static List<String> get _privacyPoints => [
@@ -115,5 +122,7 @@ class LegalScreen extends StatelessWidget {
         AppStrings.legalPrivacy6.tr,
         AppStrings.legalPrivacy7.tr,
         AppStrings.legalPrivacy8.tr,
+        AppStrings.legalPrivacy9.tr,
+        AppStrings.legalPrivacy10.tr,
       ];
 }

@@ -4,6 +4,7 @@ import { AppConfig } from '../config/app';
 import { useAuthStore } from '../hooks/useAuth';
 import { bootstrapFirstAdminIfNeeded } from '../services/bootstrapAdmin';
 import { useLocale } from '../context/LocaleContext';
+import { KafiLogo } from '../components/ui/KafiLogo';
 
 export default function Login() {
   const [email, setEmail] = useState('');
@@ -103,13 +104,7 @@ function LoginForm({
   return (
     <>
       <div className="flex items-center justify-center gap-1.5 mb-5">
-        <svg width="22" height="22" viewBox="0 0 34 34" aria-hidden>
-          <ellipse cx="17" cy="9" rx="6" ry="10" fill="#FF8FAB" opacity="0.8" />
-          <ellipse cx="17" cy="9" rx="6" ry="10" fill="#FF8FAB" opacity="0.7" transform="rotate(60 17 17)" />
-          <ellipse cx="17" cy="9" rx="6" ry="10" fill="#FF8FAB" opacity="0.7" transform="rotate(120 17 17)" />
-          <circle cx="17" cy="17" r="4.5" fill="#FF8FAB" />
-        </svg>
-        <span className="font-pacifico text-[18px] text-rose-dark">Kafi</span>
+        <KafiLogo height={32} />
         <span className="text-[8px] bg-navy text-white px-1.5 py-0.5 rounded-full font-fredoka font-bold">{t('common.admin')}</span>
       </div>
       <h1 className="text-base font-black text-navy text-center mb-5">{t('login.title')}</h1>

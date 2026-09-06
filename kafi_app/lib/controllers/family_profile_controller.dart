@@ -1,13 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/browse_controller.dart';
+import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
+import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/utils/emirate_ui.dart';
@@ -27,6 +31,11 @@ class FamilyProfileController extends GetxController {
 
   final Rx<FamilyModel?> family = Rx<FamilyModel?>(null);
   final RxBool isLoading = false.obs;
+
+  /// Own upload (file path/URL) or one of [FamilyConstants.defaultPhotoAssets]
+  /// the family picked in the edit screen. Null = no photo yet — the UI falls
+  /// back to an initials avatar (KAFI-EDITS #1/#2).
+  final Rx<String?> profilePhoto = Rx<String?>(null);
 
   final fullNameCtrl = TextEditingController();
   final RxString nationality = 'Emirati'.obs;
@@ -140,6 +149,7 @@ class FamilyProfileController extends GetxController {
       if (fam != null) {
         family.value = fam;
         fullNameCtrl.text = fam.fullName;
+        profilePhoto.value = fam.profilePhoto;
         if (fam.nationality.isNotEmpty) nationality.value = fam.nationality;
         cityEmirate.value = emirateFromStored(fam.city);
         childrenCtrl.text = '${fam.childrenCount}';
@@ -259,6 +269,53 @@ class FamilyProfileController extends GetxController {
     }
   }
 
+  /// Sets the family's own photo from camera/gallery. Kept staged on
+  /// [profilePhoto] until `saveEdit()` persists it, same as every other field
+  /// on this screen (KAFI-EDITS #1/#2).
+  Future<void> pickOwnFamilyPhoto({ImageSource source = ImageSource.gallery}) async {
+    final user = _auth.currentUser.value;
+    if (user == null) return;
+    final permissions = Get.find<PermissionController>();
+    final allowed = source == ImageSource.camera
+        ? await permissions.requestCamera()
+        : await permissions.ensureGallery();
+    if (!allowed) {
+      Get.snackbar(
+        AppStrings.errorTitle.tr,
+        (source == ImageSource.camera
+                ? AppStrings.permissionCameraDenied
+                : AppStrings.permissionGalleryDenied)
+            .tr,
+      );
+      return;
+    }
+    final picked = await ImagePicker().pickImage(source: source, imageQuality: 85, maxWidth: 1200);
+    if (picked == null) return;
+    isLoading.value = true;
+    try {
+      if (AppConfig.useMock) {
+        profilePhoto.value = picked.path;
+        return;
+      }
+      final bytes = await picked.readAsBytes();
+      final url = await Get.find<IStorageService>().uploadBytes(
+        path: 'families/${user.id}/profile/${_uuid.v4()}.jpg',
+        bytes: bytes,
+        contentType: 'image/jpeg',
+      );
+      profilePhoto.value = url;
+    } catch (e) {
+      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
+  /// Picks one of the bundled default portraits instead of uploading a photo.
+  void selectDefaultFamilyPhoto(String assetPath) => profilePhoto.value = assetPath;
+
+  void clearFamilyPhoto() => profilePhoto.value = null;
+
   /// Shared persistence used by both the onboarding form and edit screen.
   /// When [reuseExistingPost] is true and a post already exists, that post is
   /// updated in place instead of inserting a new one (avoids duplicate jobs).
@@ -323,6 +380,7 @@ class FamilyProfileController extends GetxController {
         id: fid,
         userId: user?.id ?? fid,
         fullName: fullNameCtrl.text.trim(),
+        profilePhoto: profilePhoto.value,
         nationality: nationality.value,
         city: cityLabel,
         childrenCount: int.tryParse(childrenCtrl.text) ?? 0,
@@ -362,6 +420,7 @@ class FamilyProfileController extends GetxController {
         id: existingPostId ?? _uuid.v4(),
         familyId: fid,
         familyName: fam.fullName.split(' ').first,
+        familyPhotoUrl: fam.profilePhoto,
         city: cityLabel,
         jobTitle: roles.isNotEmpty
             ? roles.join(' · ')

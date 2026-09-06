@@ -93,6 +93,8 @@ class FirestoreChatService implements IChatService {
       nannyId: m['nannyId'] ?? '',
       familyName: m['familyName'] ?? '',
       nannyName: m['nannyName'] ?? '',
+      familyPhotoUrl: m['familyPhotoUrl'] as String?,
+      nannyPhotoUrl: m['nannyPhotoUrl'] as String?,
       createdAt: (m['createdAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       lastMessageAt: (m['lastMessageAt'] as Timestamp?)?.toDate() ?? DateTime.now(),
       lastMessage: m['lastMessage'] ?? '',
@@ -187,6 +189,8 @@ class FirestoreChatService implements IChatService {
     required String nannyId,
     String? nannyName,
     String? familyName,
+    String? nannyPhotoUrl,
+    String? familyPhotoUrl,
   }) async {
     final snap = await _threads
         .where('familyId', isEqualTo: familyId)
@@ -205,6 +209,8 @@ class FirestoreChatService implements IChatService {
       'nannyId': nannyId,
       'familyName': familyName ?? '',
       'nannyName': nannyName ?? 'Nanny',
+      'familyPhotoUrl': familyPhotoUrl,
+      'nannyPhotoUrl': nannyPhotoUrl,
       'createdAt': now,
       'lastMessageAt': now,
       'lastMessage': '',

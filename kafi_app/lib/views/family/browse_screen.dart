@@ -10,6 +10,7 @@ import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/views/widgets/kafi_logo.dart';
 import 'package:kafi_app/views/widgets/kafi_nanny_card.dart';
 
 class BrowseScreen extends GetView<BrowseController> {
@@ -204,7 +205,9 @@ class BrowseScreen extends GetView<BrowseController> {
           // Logo + notification bell
           Row(
             children: [
-              Text(AppStrings.appName.tr, style: KafiTheme.pacifico(18, color: const Color(0xFF5A2090))),
+              // Official Kafi logo asset instead of a plain Pacifico text
+              // lockup (KAFI-EDITS #4) — matches the reference screenshot.
+              const KafiLogo(size: 26),
               const Spacer(),
               GestureDetector(
                 onTap: () {

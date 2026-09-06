@@ -6,15 +6,23 @@ import 'package:kafi_app/models/family_model.dart';
 /// Mirrors local mock subscription / profile-view state into Firestore so
 /// security rules and Cloud Functions see the same entitlement as the app UI.
 class MockSubscriptionFirestoreSync {
+  /// Best-effort mirror — a failure (e.g. Firebase not configured in a
+  /// pure-mock local run, per AppConfig.useMock's "no Firebase config
+  /// required" contract) must never break the caller's primary flow
+  /// (profile-view gating, thread list refresh, etc).
   static Future<void> syncProfileView(String familyId, String nannyId) async {
-    await FirebaseFirestore.instance
-        .collection('profileViews')
-        .doc('${familyId}_$nannyId')
-        .set({
-      'familyId': familyId,
-      'nannyId': nannyId,
-      'viewedAt': FieldValue.serverTimestamp(),
-    }, SetOptions(merge: true));
+    try {
+      await FirebaseFirestore.instance
+          .collection('profileViews')
+          .doc('${familyId}_$nannyId')
+          .set({
+        'familyId': familyId,
+        'nannyId': nannyId,
+        'viewedAt': FieldValue.serverTimestamp(),
+      }, SetOptions(merge: true));
+    } catch (e, st) {
+      debugPrint('[MockSubscriptionFirestoreSync] profileView $nannyId: $e\n$st');
+    }
   }
 
   static Future<void> syncAllProfileViews(

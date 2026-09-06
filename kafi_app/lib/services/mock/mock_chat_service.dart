@@ -60,6 +60,8 @@ class MockChatService implements IChatService {
     required String nannyId,
     String? nannyName,
     String? familyName,
+    String? nannyPhotoUrl,
+    String? familyPhotoUrl,
   }) async {
     await Future<void>.delayed(AppConfig.mockDelay);
     try {
@@ -72,6 +74,8 @@ class MockChatService implements IChatService {
       nannyId: nannyId,
       nannyName: nannyName ?? 'Nanny',
       familyName: familyName ?? 'Family',
+      nannyPhotoUrl: nannyPhotoUrl,
+      familyPhotoUrl: familyPhotoUrl,
       createdAt: DateTime.now(),
       lastMessageAt: DateTime.now(),
       lastMessage: '',

@@ -22,6 +22,8 @@ abstract class IChatService {
     required String nannyId,
     String? nannyName,
     String? familyName,
+    String? nannyPhotoUrl,
+    String? familyPhotoUrl,
   });
 
   /// Links a pending/active trial to the chat thread (for lockdown exception).

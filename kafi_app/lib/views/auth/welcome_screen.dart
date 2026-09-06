@@ -37,7 +37,7 @@ class WelcomeScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 26),
               child: Column(
                 children: [
-                  const KafiLogo(size: 26),
+                  const KafiLogo(size: 40),
                   const SizedBox(height: 12),
                   Text(
                     '${AppStrings.welcomeTagline.tr} 🌸',
@@ -65,7 +65,7 @@ class WelcomeScreen extends StatelessWidget {
                       AppStrings.badgeGetFound.tr,
                     ],
                     gradient: const [KafiColors.rose, KafiColors.roseD],
-                    icon: Icons.person_outline,
+                    icon: Icons.emoji_people,
                     onTap: _openNanny,
                   ),
                   const SizedBox(height: 11),
@@ -78,7 +78,7 @@ class WelcomeScreen extends StatelessWidget {
                       AppStrings.badgeFromPrice.tr,
                     ],
                     gradient: const [KafiColors.pur, Color(0xFFC084FC)],
-                    icon: Icons.home_outlined,
+                    icon: Icons.family_restroom,
                     onTap: _openFamily,
                   ),
                   const SizedBox(height: 18),
@@ -193,7 +193,7 @@ class _RoleCard extends StatelessWidget {
                         children: [
                           Text(
                             title,
-                            style: KafiTheme.fredoka(15, color: Colors.white, w: FontWeight.w900),
+                            style: KafiTheme.nunito(15, color: Colors.white, w: FontWeight.w900),
                           ),
                           Text(
                             subtitle,
@@ -217,7 +217,7 @@ class _RoleCard extends StatelessWidget {
                             ),
                             child: Text(
                               b,
-                              style: KafiTheme.fredoka(9, color: Colors.white, w: FontWeight.w700),
+                              style: KafiTheme.nunito(9, color: Colors.white, w: FontWeight.w700),
                             ),
                           ))
                       .toList(),

@@ -12,6 +12,7 @@ import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/models/trial_outcome_reasons.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 
 class NannyDashboardScreen extends GetView<NannyProfileController> {
   const NannyDashboardScreen({
@@ -90,31 +91,14 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
             return Row(
               children: [
                 // Avatar square with verified badge
-                Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Container(
-                      width: 44,
-                      height: 44,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [KafiColors.rose, KafiColors.roseD],
-                        ),
-                        borderRadius: BorderRadius.circular(13),
-                      ),
-                      child: Center(
-                        child: Text(initial,
-                            style: KafiTheme.fredoka(17, color: Colors.white,
-                                w: FontWeight.w900)),
-                      ),
-                    ),
-                    if (n?.isVerified == true)
-                      Positioned(
-                        bottom: -3,
-                        right: -3,
-                        child: Container(
+                KafiAvatar(
+                  photoUrl: n?.photoUrls.isNotEmpty == true ? n!.photoUrls.first : null,
+                  fallbackText: initial,
+                  size: 44,
+                  gradient: const [KafiColors.rose, KafiColors.roseD],
+                  fontSize: 17,
+                  badge: n?.isVerified == true
+                      ? Container(
                           width: 15,
                           height: 15,
                           decoration: BoxDecoration(
@@ -123,9 +107,8 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                             border: Border.all(color: Colors.white, width: 2),
                           ),
                           child: const Icon(Icons.check, size: 7, color: Colors.white),
-                        ),
-                      ),
-                  ],
+                        )
+                      : null,
                 ),
                 const SizedBox(width: 10),
                 Expanded(
@@ -612,25 +595,14 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                // Avatar
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: isHot
-                          ? const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)]
-                          : const [Color(0xFFFFB347), Color(0xFFFF8042)],
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(initial,
-                        style: KafiTheme.fredoka(14, color: Colors.white,
-                            w: FontWeight.w900)),
-                  ),
+                KafiAvatar(
+                  photoUrl: job.familyPhotoUrl,
+                  fallbackText: initial,
+                  size: 36,
+                  gradient: isHot
+                      ? const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)]
+                      : const [Color(0xFFFFB347), Color(0xFFFF8042)],
+                  fontSize: 14,
                 ),
                 const SizedBox(width: 8),
                 Expanded(

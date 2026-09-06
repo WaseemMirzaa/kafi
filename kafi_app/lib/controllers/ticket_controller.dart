@@ -66,7 +66,13 @@ class TicketController extends GetxController {
     String? relatedTrialId,
   }) async {
     final uid = currentUserId(_auth);
-    if (uid == null) return null;
+    if (uid == null) {
+      // Previously returned null silently here — the sheet would close with
+      // no ticket created and no feedback, reading as "the app disconnected"
+      // (KAFI-EDITS #6). Surface it instead so the user knows to sign back in.
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.supportSessionExpired.tr);
+      return null;
+    }
     final openerType = (_auth.currentUser.value?.isNanny ?? false) ? 'nanny' : 'family';
     try {
       final id = await _tickets.openTicket(

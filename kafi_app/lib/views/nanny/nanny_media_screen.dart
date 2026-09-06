@@ -479,7 +479,9 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
       title: AppStrings.mediaChoosePhotoSource.tr,
       cameraLabel: AppStrings.mediaTakePhoto.tr,
       onCamera: () => controller.pickAndUploadPhoto(source: ImageSource.camera),
-      onGallery: () => controller.pickAndUploadPhoto(source: ImageSource.gallery),
+      // Gallery picks let the user multi-select up to the remaining slots in
+      // one go instead of re-opening the picker per photo (KAFI-EDITS #9).
+      onGallery: () => controller.pickAndUploadMultiplePhotos(),
     );
   }
 

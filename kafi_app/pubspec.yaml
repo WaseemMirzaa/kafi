@@ -58,3 +58,6 @@ flutter:
   assets:
     - google_fonts/
     - assets/images/
+    # pubspec asset directories are non-recursive — subfolders must be
+    # listed explicitly or their files silently fail to bundle.
+    - assets/images/family_defaults/

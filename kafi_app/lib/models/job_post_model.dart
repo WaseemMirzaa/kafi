@@ -16,6 +16,7 @@ class JobPostModel {
     required this.id,
     required this.familyId,
     this.familyName = '',
+    this.familyPhotoUrl,
     this.status = JobPostStatus.active,
     this.createdAt,
     this.updatedAt,
@@ -55,6 +56,11 @@ class JobPostModel {
   final String id;
   final String familyId;
   final String familyName;
+
+  /// Denormalized from the posting family's `profilePhoto` at post-save time
+  /// (mirrors [familyName]). Null when the family hadn't uploaded a photo —
+  /// job cards fall back to an initials avatar.
+  final String? familyPhotoUrl;
   final JobPostStatus status;
   final DateTime? createdAt;
   final DateTime? updatedAt;
@@ -105,6 +111,7 @@ class JobPostModel {
 
   JobPostModel copyWith({
     String? familyName,
+    String? familyPhotoUrl,
     JobPostStatus? status,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -144,6 +151,7 @@ class JobPostModel {
         id: id,
         familyId: familyId,
         familyName: familyName ?? this.familyName,
+        familyPhotoUrl: familyPhotoUrl ?? this.familyPhotoUrl,
         status: status ?? this.status,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
@@ -213,6 +221,7 @@ class JobPostModel {
       id: id,
       familyId: (m['familyId'] as String?) ?? '',
       familyName: (m['familyName'] as String?) ?? '',
+      familyPhotoUrl: m['familyPhotoUrl'] as String?,
       status: enumBy(JobPostStatus.values, m['status'], JobPostStatus.active),
       createdAt: date(m['createdAt']),
       updatedAt: date(m['updatedAt']),
@@ -256,6 +265,7 @@ class JobPostModel {
         'id': id,
         'familyId': familyId,
         'familyName': familyName,
+        'familyPhotoUrl': familyPhotoUrl,
         'status': status.name,
         'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt?.toIso8601String(),
