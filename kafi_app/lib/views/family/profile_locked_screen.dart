@@ -2,11 +2,11 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/models/trial_model.dart';
+import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/constants/subscription_constants.dart';
 import 'package:kafi_app/utils/nanny_card_resolver.dart';
 import 'package:kafi_app/views/family/profile_hero.dart';
@@ -104,19 +104,26 @@ class ProfileLockedScreen extends StatelessWidget {
           const SizedBox(height: 9),
           // Neutral masked glyphs behind the blur — no fabricated phone/CV/length
           // that could read as the nanny's real (leaked) data (P24).
-          _lockedRow(Icons.call, KafiColors.purL, KafiColors.pur, AppStrings.lockedPhoneNumber.tr, '••• ••• ••••'),
-          _lockedRow(Icons.description_outlined, KafiColors.purL, KafiColors.pur, AppStrings.lockedFullCv.tr, '••••••••'),
-          _lockedRow(Icons.videocam_outlined, KafiColors.purL, KafiColors.pur, AppStrings.lockedIntroVideo.tr, '••••••'),
+          _lockedRow(card, Icons.call, KafiColors.purL, KafiColors.pur, AppStrings.lockedPhoneNumber.tr, '••• ••• ••••'),
+          _lockedRow(card, Icons.description_outlined, KafiColors.purL, KafiColors.pur, AppStrings.lockedFullCv.tr, '••••••••'),
+          _lockedRow(card, Icons.videocam_outlined, KafiColors.purL, KafiColors.pur, AppStrings.lockedIntroVideo.tr, '••••••'),
           const SizedBox(height: 3),
-          _subBox(firstName),
+          _subBox(card, firstName),
         ],
       ),
     );
   }
 
-  Widget _lockedRow(IconData icon, Color icBg, Color icColor, String label, String value) {
+  Widget _lockedRow(
+    NannyCardModel card,
+    IconData icon,
+    Color icBg,
+    Color icColor,
+    String label,
+    String value,
+  ) {
     return GestureDetector(
-      onTap: () => Get.toNamed(Routes.pricing),
+      onTap: () => AppNavigation.openPricing(unlockNanny: card),
       child: Container(
         margin: const EdgeInsets.only(bottom: 5),
         clipBehavior: Clip.antiAlias,
@@ -183,9 +190,9 @@ class ProfileLockedScreen extends StatelessWidget {
     );
   }
 
-  Widget _subBox(String firstName) {
+  Widget _subBox(NannyCardModel card, String firstName) {
     return GestureDetector(
-      onTap: () => Get.toNamed(Routes.pricing),
+      onTap: () => AppNavigation.openPricing(unlockNanny: card),
       child: Container(
         padding: const EdgeInsets.all(11),
         decoration: BoxDecoration(
@@ -232,7 +239,7 @@ class ProfileLockedScreen extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 9),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(9)),
                 ),
-                onPressed: () => Get.toNamed(Routes.pricing),
+                onPressed: () => AppNavigation.openPricing(unlockNanny: card),
                 child: Text('${AppStrings.subscribeNow.tr} →',
                     style: KafiTheme.fredoka(11.5, color: const Color(0xFF7C3AED), w: FontWeight.w700)),
               ),

@@ -43,6 +43,10 @@ class KafiMediaImage extends StatelessWidget {
       }
     }
 
+    if (url.startsWith('assets/')) {
+      return Image.asset(url, fit: fit, width: width, height: height, errorBuilder: fallback);
+    }
+
     if (url.startsWith('http://') || url.startsWith('https://')) {
       return Image.network(
         url,

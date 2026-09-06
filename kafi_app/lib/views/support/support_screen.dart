@@ -295,8 +295,15 @@ class _NewTicketSheetState extends State<_NewTicketSheet> {
     );
     if (!mounted) return;
     setState(() => _busy = false);
-    Get.back(); // close the sheet
-    if (ticket != null) Get.toNamed(Routes.supportTicket, arguments: ticket);
+    if (ticket == null) {
+      // Previously closed the sheet unconditionally here, so a failed submit
+      // (e.g. a stale session) silently dropped the ticket with no way to
+      // retry (KAFI-EDITS #6) — keep the sheet open with the note intact.
+      // `createTicket` already surfaced the specific error via snackbar.
+      return;
+    }
+    Get.back(); // close the sheet only once the ticket actually saved
+    Get.toNamed(Routes.supportTicket, arguments: ticket);
   }
 
   @override

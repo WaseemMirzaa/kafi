@@ -2632,3 +2632,6 @@ First Launch
 | 2026-08-06 | Report attach storage auth | Done | Dispute create→upload→attachments patch; Storage signed-in read for evidence URLs |
 
 | 2026-08-06 | Admin reports + last active | Done | Admin Reports show IDs + attachment gallery; nanny lastActiveAt surfaced for hide-inactive toggle |
+
+| 2026-09-04 | Subscribe returns to unlocked nanny | Done | §6.8 / Screen 38: payment success unlocks the nanny profile already on the stack (no Browse remount) |
+

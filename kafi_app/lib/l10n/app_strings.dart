@@ -507,6 +507,10 @@ abstract class AppStrings {
   static const familyFormTitle = 'family_form_title';
   static const familyFormSub = 'family_form_sub';
   static const familySectionYou = 'family_section_you';
+  static const familySectionPhoto = 'family_section_photo';
+  static const familyPhotoHint = 'family_photo_hint';
+  static const familyPhotoSheetTitle = 'family_photo_sheet_title';
+  static const familyPhotoPresetsTitle = 'family_photo_presets_title';
   static const familySectionReligion = 'family_section_religion';
   static const familySectionRole = 'family_section_role';
   static const familySectionDuties = 'family_section_duties';
@@ -786,6 +790,8 @@ abstract class AppStrings {
   static const legalTermsTitle = 'legal_terms_title';
   static const legalPrivacyTitle = 'legal_privacy_title';
   static const legalLastUpdated = 'legal_last_updated';
+  static const legalPrivacyFooter = 'legal_privacy_footer';
+  static const legalTermsFooter = 'legal_terms_footer';
 
   // Delete Account
   static const deleteAccountTitle = 'delete_account_title';
@@ -874,6 +880,7 @@ abstract class AppStrings {
   static const supportMessageLabel = 'support_message_label';
   static const supportSubmit = 'support_submit';
   static const supportFillFields = 'support_fill_fields';
+  static const supportSessionExpired = 'support_session_expired';
   static const supportThreadEmpty = 'support_thread_empty';
   static const supportAgentName = 'support_agent_name';
   static const supportMessageHint = 'support_message_hint';
@@ -1368,6 +1375,8 @@ abstract class AppStrings {
   static const legalPrivacy6 = 'legal_privacy_6';
   static const legalPrivacy7 = 'legal_privacy_7';
   static const legalPrivacy8 = 'legal_privacy_8';
+  static const legalPrivacy9 = 'legal_privacy_9';
+  static const legalPrivacy10 = 'legal_privacy_10';
   static const legalTerms1 = 'legal_terms_1';
   static const legalTerms2 = 'legal_terms_2';
   static const legalTerms3 = 'legal_terms_3';
@@ -1376,6 +1385,7 @@ abstract class AppStrings {
   static const legalTerms6 = 'legal_terms_6';
   static const legalTerms7 = 'legal_terms_7';
   static const legalTerms8 = 'legal_terms_8';
+  static const legalTerms9 = 'legal_terms_9';
   static const lockedFullCv = 'locked_full_cv';
   static const lockedIntroVideo = 'locked_intro_video';
   static const lockedPhoneNumber = 'locked_phone_number';

@@ -2,10 +2,10 @@ import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
+import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/nanny_card_resolver.dart';
 import 'package:kafi_app/views/family/profile_hero.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
@@ -128,7 +128,10 @@ class ProfileRelockedScreen extends StatelessWidget {
           const SizedBox(height: 12),
           KafiPrimaryButton(
             label: AppStrings.renewNow.tr,
-            onPressed: () => Get.toNamed(Routes.pricing, arguments: {'reason': 'expired'}),
+            onPressed: () => AppNavigation.openPricing(
+              unlockNanny: card,
+              reason: 'expired',
+            ),
           ),
         ],
       ),

@@ -1633,7 +1633,7 @@ admin-panel/
 │   │   │   ├── Sidebar.tsx
 │   │   │   ├── Header.tsx
 │   │   │   └── Layout.tsx
-│   │   ├── ui/                       # Reusable components
+│   │   ├── ui/                       # Reusable components (incl. KafiLogo)
 │   │   └── charts/
 │   ├── pages/
 │   │   ├── Dashboard.tsx
@@ -3160,3 +3160,7 @@ Profile screens → phone blurred, Call/WA buttons removed
 | 2026-08-06 | Report attach storage auth | Done | Report filing: create dispute then upload; Storage read for signed-in on dispute attachments; reporter may patch `attachments` only |
 
 | 2026-08-06 | Admin reports + last active | Done | Admin Reports attachment DocViewer gallery; list shows reporter/reported IDs; `NannyRow.lastActiveAt` on All Nannies + profile |
+
+| 2026-09-04 | Admin panel Kafi logo | Done | `KafiLogo` from `src/assets/kafi-logo.png` (same file as mobile); wired on Login, Sidebar, favicon |
+
+| 2026-09-04 | Subscribe returns to unlocked nanny | Done | `AppNavigation.afterSubscribeSuccess` pops pricing then `Get.offNamed` unlocked when opened from locked/relocked |

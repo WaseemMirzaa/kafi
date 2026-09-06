@@ -95,6 +95,8 @@ class ChatThread {
     required this.nannyId,
     this.familyName = '',
     this.nannyName = '',
+    this.familyPhotoUrl,
+    this.nannyPhotoUrl,
     required this.createdAt,
     required this.lastMessageAt,
     this.lastMessage = '',
@@ -109,6 +111,13 @@ class ChatThread {
   final String nannyId;
   final String familyName;
   final String nannyName;
+
+  /// Denormalized at thread-creation time from the family's `profilePhoto` /
+  /// nanny's `photoUrls.first`, mirroring how [familyName]/[nannyName] are
+  /// cached here. Null when the counterparty hadn't uploaded a photo yet —
+  /// the UI falls back to an initials avatar in that case.
+  final String? familyPhotoUrl;
+  final String? nannyPhotoUrl;
   final DateTime createdAt;
   final DateTime lastMessageAt;
   final String lastMessage;
@@ -139,6 +148,8 @@ class ChatThread {
   ChatThread copyWith({
     String? familyName,
     String? nannyName,
+    String? familyPhotoUrl,
+    String? nannyPhotoUrl,
     DateTime? lastMessageAt,
     String? lastMessage,
     UnreadCount? unreadCount,
@@ -152,6 +163,8 @@ class ChatThread {
         nannyId: nannyId,
         familyName: familyName ?? this.familyName,
         nannyName: nannyName ?? this.nannyName,
+        familyPhotoUrl: familyPhotoUrl ?? this.familyPhotoUrl,
+        nannyPhotoUrl: nannyPhotoUrl ?? this.nannyPhotoUrl,
         createdAt: createdAt,
         lastMessageAt: lastMessageAt ?? this.lastMessageAt,
         lastMessage: lastMessage ?? this.lastMessage,
@@ -167,6 +180,8 @@ class ChatThread {
         'nannyId': nannyId,
         'familyName': familyName,
         'nannyName': nannyName,
+        'familyPhotoUrl': familyPhotoUrl,
+        'nannyPhotoUrl': nannyPhotoUrl,
         'createdAt': createdAt.toIso8601String(),
         'lastMessageAt': lastMessageAt.toIso8601String(),
         'lastMessage': lastMessage,

@@ -13,6 +13,7 @@ import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/support/report_problem_sheet.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_trial_offer_bubble.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -305,21 +306,12 @@ class _ChatScreenState extends State<ChatScreen> {
             Stack(
               clipBehavior: Clip.none,
               children: [
-                Container(
-                  width: 42,
-                  height: 42,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: gradient,
-                    ),
-                    borderRadius: BorderRadius.circular(13),
-                  ),
-                  child: Center(
-                    child: Text(initial,
-                        style: KafiTheme.fredoka(16, color: Colors.white, w: FontWeight.w900)),
-                  ),
+                KafiAvatar(
+                  photoUrl: controller.isNanny ? t.familyPhotoUrl : t.nannyPhotoUrl,
+                  fallbackText: initial,
+                  size: 42,
+                  gradient: gradient,
+                  fontSize: 16,
                 ),
                 Positioned(
                   bottom: -2,
@@ -515,7 +507,11 @@ class _ChatScreenState extends State<ChatScreen> {
     return GestureDetector(
       onTap: () {
         Get.back();
-        controller.openThreadForNanny(nannyId: card.id, nannyName: card.name);
+        controller.openThreadForNanny(
+          nannyId: card.id,
+          nannyName: card.name,
+          nannyPhotoUrl: card.photoUrls.isNotEmpty ? card.photoUrls.first : null,
+        );
       },
       child: Container(
         padding: const EdgeInsets.all(9),
@@ -525,21 +521,12 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         child: Row(
           children: [
-            Container(
-              width: 38,
-              height: 38,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: _avatarGradient(card.name),
-                ),
-                borderRadius: BorderRadius.circular(11),
-              ),
-              child: Center(
-                child: Text(card.initials,
-                    style: KafiTheme.fredoka(15, color: Colors.white, w: FontWeight.w900)),
-              ),
+            KafiAvatar(
+              photoUrl: card.photoUrls.isNotEmpty ? card.photoUrls.first : null,
+              fallbackText: card.initials.isNotEmpty ? card.initials : card.name,
+              size: 38,
+              gradient: _avatarGradient(card.name),
+              fontSize: 15,
             ),
             const SizedBox(width: 9),
             Expanded(

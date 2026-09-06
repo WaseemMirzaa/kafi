@@ -480,11 +480,17 @@ class _ApplyCoverSheetState extends State<_ApplyCoverSheet> {
         top: 16,
         bottom: MediaQuery.of(context).viewInsets.bottom + 16,
       ),
+      // Cap the sheet at 85% of the screen and let content scroll inside that
+      // — without this, the column simply grew with the keyboard and pushed
+      // the "Send application" button off the top of the screen, out of tap
+      // reach (KAFI-EDITS #13).
+      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
       decoration: const BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
-      child: Column(
+      child: SingleChildScrollView(
+        child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -530,6 +536,7 @@ class _ApplyCoverSheetState extends State<_ApplyCoverSheet> {
           ),
           const SizedBox(height: 6),
         ],
+        ),
       ),
     );
   }

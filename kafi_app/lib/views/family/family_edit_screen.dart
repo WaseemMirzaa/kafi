@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:kafi_app/controllers/family_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
@@ -9,7 +10,9 @@ import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/family/family_household_fields.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/family_job_selectors.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 import 'package:kafi_app/views/widgets/kafi_chip_wrap.dart';
+import 'package:kafi_app/views/widgets/kafi_media_image.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 import 'package:kafi_app/views/widgets/kafi_section.dart';
 import 'package:kafi_app/views/widgets/kafi_text_field.dart';
@@ -48,6 +51,8 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
                         style: KafiTheme.nunito(10, color: KafiColors.pur),
                       ),
                     ),
+                    const SizedBox(height: 10),
+                    _photoSection(),
                     const SizedBox(height: 10),
                     _youSection(),
                     // Nationality, cameras, pets, religion & religion-preference —
@@ -105,6 +110,144 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
           ),
         ],
       ),
+    );
+  }
+
+  /// Family profile photo: own upload or one of six bundled portraits, with
+  /// an initials-avatar fallback when nothing's been picked (KAFI-EDITS #1/#2).
+  Widget _photoSection() => KafiSection(
+        title: AppStrings.familySectionPhoto.tr,
+        icon: Icons.photo_camera_outlined,
+        accent: KafiSectionAccent.purple,
+        children: [
+          Center(
+            child: GestureDetector(
+              onTap: _openPhotoPicker,
+              child: Obx(() {
+                final name = controller.fullNameCtrl.text;
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
+                    KafiAvatar(
+                      photoUrl: controller.profilePhoto.value,
+                      fallbackText: name.isNotEmpty ? name : 'F',
+                      size: 84,
+                      gradient: const [KafiColors.pur, Color(0xFFC084FC)],
+                      fontSize: 30,
+                    ),
+                    Positioned(
+                      right: -2,
+                      bottom: -2,
+                      child: Container(
+                        width: 28,
+                        height: 28,
+                        decoration: BoxDecoration(
+                          color: KafiColors.pur,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.white, width: 2),
+                        ),
+                        child: const Icon(Icons.edit, size: 13, color: Colors.white),
+                      ),
+                    ),
+                  ],
+                );
+              }),
+            ),
+          ),
+          const SizedBox(height: 8),
+          Center(
+            child: Text(AppStrings.familyPhotoHint.tr,
+                textAlign: TextAlign.center,
+                style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600)),
+          ),
+        ],
+      );
+
+  void _openPhotoPicker() {
+    Get.bottomSheet(
+      Container(
+        // Without isScrollControlled the sheet caps at ~9/16 of the screen —
+        // "Take a photo"/"Choose from gallery" plus the 6-portrait grid
+        // overflowed that and got silently clipped, so the grid never
+        // appeared. Cap explicitly and let it scroll instead.
+        constraints: BoxConstraints(maxHeight: MediaQuery.of(Get.context!).size.height * 0.85),
+        padding: const EdgeInsets.fromLTRB(18, 16, 18, 24),
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: SingleChildScrollView(
+          child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: KafiColors.cardBorder,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 14),
+            Text(AppStrings.familyPhotoSheetTitle.tr,
+                style: KafiTheme.pacifico(16, color: KafiColors.pur)),
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Get.back();
+                      controller.pickOwnFamilyPhoto(source: ImageSource.camera);
+                    },
+                    icon: const Icon(Icons.camera_alt_outlined, size: 16),
+                    label: Text(AppStrings.mediaTakePhoto.tr, style: KafiTheme.nunito(11)),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      Get.back();
+                      controller.pickOwnFamilyPhoto(source: ImageSource.gallery);
+                    },
+                    icon: const Icon(Icons.photo_library_outlined, size: 16),
+                    label: Text(AppStrings.mediaChooseGallery.tr, style: KafiTheme.nunito(11)),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(AppStrings.familyPhotoPresetsTitle.tr,
+                style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
+            const SizedBox(height: 8),
+            GridView.count(
+              crossAxisCount: 3,
+              shrinkWrap: true,
+              physics: const NeverScrollableScrollPhysics(),
+              mainAxisSpacing: 8,
+              crossAxisSpacing: 8,
+              children: FamilyConstants.defaultPhotoAssets.map((asset) {
+                return GestureDetector(
+                  onTap: () {
+                    controller.selectDefaultFamilyPhoto(asset);
+                    Get.back();
+                  },
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: KafiMediaImage(url: asset, fit: BoxFit.cover),
+                  ),
+                );
+              }).toList(),
+            ),
+          ],
+          ),
+        ),
+      ),
+      isScrollControlled: true,
     );
   }
 

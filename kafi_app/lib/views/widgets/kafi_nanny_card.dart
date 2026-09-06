@@ -4,6 +4,7 @@ import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/utils/job_type_label.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 
 class KafiNannyCard extends StatelessWidget {
   const KafiNannyCard({super.key, required this.card, required this.onTap, this.jobLabel});
@@ -54,22 +55,12 @@ class KafiNannyCard extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Gradient rounded-square avatar.
-            Container(
-              width: 44,
-              height: 44,
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: gradient,
-                ),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: Center(
-                child: Text(card.initials,
-                    style: KafiTheme.fredoka(17, color: Colors.white, w: FontWeight.w900)),
-              ),
+            KafiAvatar(
+              photoUrl: card.photoUrls.isNotEmpty ? card.photoUrls.first : null,
+              fallbackText: card.initials.isNotEmpty ? card.initials : card.name,
+              size: 44,
+              gradient: gradient,
+              fontSize: 17,
             ),
             const SizedBox(width: 8),
             Expanded(

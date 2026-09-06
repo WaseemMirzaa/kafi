@@ -773,6 +773,8 @@ Kafi is a mobile-first marketplace connecting:
 ### Screen 23: Admin Dashboard (Web)
 **Purpose:** Owner-only management interface
 
+**Branding:** Login and sidebar use the same `kafi-logo.png` lockup as the mobile app (wordmark + mother/child mark), plus an Admin badge. Favicon is that asset.
+
 **Sidebar Navigation:**
 - Dashboard
 - All nannies (142)
@@ -2589,7 +2591,7 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 
 **Behavior:**
 - Tapping "Renew Subscription" → Plans screen → RevenueCat payment sheet
-- On success → Status updates to ACTIVE, paywall closes, original target screen unlocks
+- On success → Status updates to ACTIVE, paywall closes, original target screen unlocks (locked/re-locked nanny profile is replaced with the unlocked profile in-place; Browse remount is not required)
 - Closing without renewal → Returns to home / previous screen
 
 ---
@@ -3009,3 +3011,7 @@ Chat → Send Trial Offer → Evaluate Trial → Hire
 | 2026-08-06 | Report attach storage auth | Done | Fixed report submit unauthorized: create report doc before Storage upload; deploy Storage/Firestore rules for attachments |
 
 | 2026-08-06 | Admin reports + last active | Done | Reports detail: full attachment gallery + auto-expand with evidence; list shows user IDs; nanny list/detail show lastActiveAt |
+
+| 2026-09-04 | Admin panel Kafi logo | Done | Login, sidebar, and favicon use the same `kafi-logo.png` lockup as mobile (replaced drawn flower mark) |
+
+| 2026-09-04 | Subscribe returns to unlocked nanny | Done | After choosing a plan from a nanny profile, paywall closes onto Screen 16 unlocked (not leftover locked/re-locked) |

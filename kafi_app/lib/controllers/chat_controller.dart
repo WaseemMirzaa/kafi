@@ -223,7 +223,15 @@ class ChatController extends GetxController {
     if (familyId == null) return;
     final subs = Get.find<ISubscriptionService>();
     if (subs is MockSubscriptionService) {
-      await subs.syncEntitlementsToFirestore(familyId);
+      try {
+        await subs.syncEntitlementsToFirestore(familyId);
+      } catch (e, st) {
+        // Best-effort mirror into Firestore for rules/Cloud Functions — a
+        // failure here (e.g. Firebase not configured in a pure-mock local
+        // run) must never block the primary thread list load, which
+        // previously left the Messages screen spinning forever.
+        debugPrint('[ChatController] entitlement sync failed: $e\n$st');
+      }
     }
   }
 
@@ -405,7 +413,11 @@ class ChatController extends GetxController {
   /// Finds (or creates) and opens the family↔nanny thread by nanny id.
   /// Used by shortlist, browse, and notification deeplinks that pass
   /// `nannyId` instead of an explicit `threadId`.
-  Future<void> openThreadForNanny({required String nannyId, String? nannyName}) async {
+  Future<void> openThreadForNanny({
+    required String nannyId,
+    String? nannyName,
+    String? nannyPhotoUrl,
+  }) async {
     final familyId = currentUserId(_auth);
     if (familyId == null) return;
     final existing = threads.firstWhereOrNull((t) => t.nannyId == nannyId);
@@ -431,11 +443,14 @@ class ChatController extends GetxController {
     }
     try {
       await _syncFirestoreEntitlementsIfNeeded();
+      final family = await _user.getFamily(familyId);
       final thread = await _chat.findOrCreateThread(
         familyId: familyId,
         nannyId: nannyId,
         nannyName: nannyName,
         familyName: _auth.currentUser.value?.fullName,
+        nannyPhotoUrl: nannyPhotoUrl,
+        familyPhotoUrl: family?.profilePhoto,
       );
       await refreshThreads();
       await openThread(thread.id);
@@ -461,11 +476,13 @@ class ChatController extends GetxController {
       return;
     }
     try {
+      final nanny = await _user.getNanny(me.id);
       final thread = await _chat.findOrCreateThread(
         familyId: familyId,
         nannyId: me.id,
         nannyName: me.fullName,
         familyName: familyName,
+        nannyPhotoUrl: nanny?.photoUrls.isNotEmpty == true ? nanny!.photoUrls.first : null,
       );
       await refreshThreads();
       await openThread(thread.id);
