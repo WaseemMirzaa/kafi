@@ -1938,7 +1938,7 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 └─────────────────────────────────────────┘
 ```
 
-**Listing split (mobile):** Contact Support → `tickets` only. Profile / chat / trial “Report” flows write to `disputes` and appear under **My reports** (and admin **Reports**). They must not appear in the support-ticket inbox. Report sheets accept optional image/PDF attachments (max 5 files, 10 MB each); filing stores denormalized reporter/reported names, types, and a profile snapshot for admin review.
+**Listing split (mobile):** Contact Support → `tickets` only. Profile / chat / trial “Report” flows write to `disputes` and appear under **My reports** (and admin **Reports**). They must not appear in the support-ticket inbox. Report sheets accept optional image/PDF attachments (max 5 files, 10 MB each); filing stores denormalized reporter/reported names, types, and a profile snapshot for admin review. **New ticket** opens a full screen form (not a bottom sheet); Submit navigates into the ticket thread.
 
 **Legal Section:**
 ```
@@ -2134,6 +2134,8 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 ---
 
 #### 31A: Create Trial Offer Screen
+
+**Keyboard:** Tap outside any text field (or drag the form) dismisses the keyboard.
 
 **Header:**
 - "Send Trial Offer" title
@@ -3015,3 +3017,9 @@ Chat → Send Trial Offer → Evaluate Trial → Hire
 | 2026-09-04 | Admin panel Kafi logo | Done | Login, sidebar, and favicon use the same `kafi-logo.png` lockup as mobile (replaced drawn flower mark) |
 
 | 2026-09-04 | Subscribe returns to unlocked nanny | Done | After choosing a plan from a nanny profile, paywall closes onto Screen 16 unlocked (not leftover locked/re-locked) |
+
+| 2026-09-06 | Trial offer keyboard + family default photos | Done | Screen 31 dismisses keyboard on outside tap/drag; jobs/chats use bundled `family_defaults` when family has no photo |
+
+| 2026-09-06 | Chat list nanny avatars | Done | Backfill missing `nannyPhotoUrl` from nanny profile; avatar always shows initials under loading/failed photos |
+
+| 2026-09-06 | Support new ticket screen + submit | Done | New ticket is a full screen; submit returns a local ticket model and opens the thread (no sheet Get.back drop) |

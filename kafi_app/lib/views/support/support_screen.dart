@@ -7,8 +7,6 @@ import 'package:kafi_app/models/ticket_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
-import 'package:kafi_app/views/widgets/kafi_chip.dart';
-import 'package:kafi_app/views/widgets/kafi_text_field.dart';
 
 /// Support inbox — the user's tickets, with a "New ticket" flow. Shared by both
 /// families and nannies (drives [TicketController]).
@@ -222,11 +220,7 @@ class _SupportScreenState extends State<SupportScreen> {
   }
 
   void _openNewTicket() {
-    Get.bottomSheet(
-      const _NewTicketSheet(),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-    );
+    Get.toNamed(Routes.supportNewTicket);
   }
 
   String _time(DateTime dt) => RelativeTime.ago(dt);
@@ -256,131 +250,4 @@ Widget statusChip(TicketStatus s) {
     decoration: BoxDecoration(color: bg, borderRadius: BorderRadius.circular(6)),
     child: Text(label, style: KafiTheme.fredoka(9, w: FontWeight.w700, color: fg)),
   );
-}
-
-/// Bottom-sheet form to open a new ticket. Stateful so its controllers are
-/// disposed cleanly.
-class _NewTicketSheet extends StatefulWidget {
-  const _NewTicketSheet();
-
-  @override
-  State<_NewTicketSheet> createState() => _NewTicketSheetState();
-}
-
-class _NewTicketSheetState extends State<_NewTicketSheet> {
-  final _subject = TextEditingController();
-  final _message = TextEditingController();
-  TicketCategory _category = TicketCategory.other;
-  bool _busy = false;
-
-  @override
-  void dispose() {
-    _subject.dispose();
-    _message.dispose();
-    super.dispose();
-  }
-
-  Future<void> _submit() async {
-    final subject = _subject.text.trim();
-    final message = _message.text.trim();
-    if (subject.isEmpty || message.isEmpty) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.supportFillFields.tr);
-      return;
-    }
-    setState(() => _busy = true);
-    final ticket = await Get.find<TicketController>().createTicket(
-      subject: subject,
-      category: _category,
-      message: message,
-    );
-    if (!mounted) return;
-    setState(() => _busy = false);
-    if (ticket == null) {
-      // Previously closed the sheet unconditionally here, so a failed submit
-      // (e.g. a stale session) silently dropped the ticket with no way to
-      // retry (KAFI-EDITS #6) — keep the sheet open with the note intact.
-      // `createTicket` already surfaced the specific error via snackbar.
-      return;
-    }
-    Get.back(); // close the sheet only once the ticket actually saved
-    Get.toNamed(Routes.supportTicket, arguments: ticket);
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Center(
-              child: Container(
-                width: 40,
-                height: 4,
-                decoration: BoxDecoration(color: KafiColors.cardBorder, borderRadius: BorderRadius.circular(2)),
-              ),
-            ),
-            const SizedBox(height: 14),
-            Text(AppStrings.supportNewTicket.tr, style: KafiTheme.pacifico(16, color: KafiColors.pur)),
-            const SizedBox(height: 14),
-            KafiTextField(label: AppStrings.supportSubjectLabel.tr, controller: _subject, purple: true),
-            const SizedBox(height: 12),
-            Text(AppStrings.supportCategoryLabel.tr,
-                style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
-            const SizedBox(height: 6),
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: [
-                for (final c in TicketCategory.values)
-                  KafiChip(
-                    label: categoryLabel(c),
-                    selected: _category == c,
-                    variant: KafiChipVariant.purple,
-                    onTap: () => setState(() => _category = c),
-                  ),
-              ],
-            ),
-            const SizedBox(height: 12),
-            KafiTextField(
-              label: AppStrings.supportMessageLabel.tr,
-              controller: _message,
-              purple: true,
-              maxLines: 4,
-              maxLength: 800,
-            ),
-            const SizedBox(height: 14),
-            SizedBox(
-              width: double.infinity,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: KafiColors.pur,
-                  padding: const EdgeInsets.symmetric(vertical: 13),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                ),
-                onPressed: _busy ? null : _submit,
-                child: _busy
-                    ? const SizedBox(
-                        width: 16, height: 16, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white))
-                    : Text(AppStrings.supportSubmit.tr,
-                        style: KafiTheme.fredoka(13, color: Colors.white, w: FontWeight.w700)),
-              ),
-            ),
-            const SizedBox(height: 6),
-          ],
-        ),
-      ),
-    );
-  }
 }

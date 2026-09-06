@@ -238,7 +238,14 @@ class FamilyEditScreen extends GetView<FamilyProfileController> {
                   },
                   child: ClipRRect(
                     borderRadius: BorderRadius.circular(12),
-                    child: KafiMediaImage(url: asset, fit: BoxFit.cover),
+                    child: SizedBox.expand(
+                      child: KafiMediaImage(
+                        url: asset,
+                        fit: BoxFit.cover,
+                        width: double.infinity,
+                        height: double.infinity,
+                      ),
+                    ),
                   ),
                 );
               }).toList(),

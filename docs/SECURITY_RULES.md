@@ -64,7 +64,7 @@ from `firestore.indexes.json` under **Firestore Database → Indexes**.
 | `users/{uid}` | self / admin | self | self / admin | admin |
 | `nannies/{id}` | **self / admin / (approved+verified → public)** | self | self *(cannot self‑set `blocked`, `isVerified`, or an `approved`/`rejected` status — admin only)* | admin |
 | `nannies/{id}/documents/{docId}` | self / admin | self / admin | — | — |
-| `families/{id}` | self / admin | self | self *(cannot touch `subscription`, `freeContactsUsed`, `activeTrialNannyIds`, `viewedProfiles`, `blocked` — admin/server only)* | admin |
+| `families/{id}` | self / admin / **any signed-in nanny** | self | self *(cannot touch `subscription`, `freeContactsUsed`, `activeTrialNannyIds`, `viewedProfiles`, `blocked` — admin/server only)* | admin |
 | `jobs/{id}` | any signed‑in | owner family | owner family / admin | owner family / admin |
 | `applications/{id}` | the nanny or family on it / admin | the applying nanny | either party / admin | admin |
 | `shortlists/{id}` | owner family / admin | owner family | owner family | owner family / admin |

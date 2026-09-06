@@ -54,56 +54,62 @@ class _TrialOfferScreenState extends State<TrialOfferScreen> {
     final nannyName = Get.arguments?['nannyName'] ?? AppStrings.roleFallbackNanny.tr;
     final nannyId = Get.arguments?['nannyId'] ?? '';
 
-    return Scaffold(
-      backgroundColor: KafiColors.bgLight,
-      body: SafeArea(
-        top: true,
-        bottom: false,
-        child: Column(
-          children: [
-            _hero(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _nannyPreview(nannyName),
-                    const SizedBox(height: 12),
-                    _infoBanner(
-                      icon: '🤝',
-                      text: AppStrings.trialOfferInfoBanner.tr,
-                    ),
-                    const SizedBox(height: 12),
-                    _detailsSection(),
-                    _arrangementSection(),
-                    _locationNotesSection(),
-                    _disclaimer(),
-                    const SizedBox(height: 8),
-                    Obx(
-                      () => CheckboxListTile(
-                        dense: true,
-                        contentPadding: EdgeInsets.zero,
-                        activeColor: KafiColors.pur,
-                        value: controller.paymentAcknowledged.value,
-                        onChanged: (v) =>
-                            controller.paymentAcknowledged.value = v ?? false,
-                        title: Text(
-                          AppStrings.trialOfferAckLabel.tr,
-                          style: KafiTheme.nunito(10,
-                              color: KafiColors.tm, w: FontWeight.w600),
-                        ),
-                        controlAffinity: ListTileControlAffinity.leading,
+    return GestureDetector(
+      onTap: () => FocusManager.instance.primaryFocus?.unfocus(),
+      behavior: HitTestBehavior.opaque,
+      child: Scaffold(
+        backgroundColor: KafiColors.bgLight,
+        body: SafeArea(
+          top: true,
+          bottom: false,
+          child: Column(
+            children: [
+              _hero(),
+              Expanded(
+                child: SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: const EdgeInsets.fromLTRB(14, 14, 14, 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      _nannyPreview(nannyName),
+                      const SizedBox(height: 12),
+                      _infoBanner(
+                        icon: '🤝',
+                        text: AppStrings.trialOfferInfoBanner.tr,
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 12),
+                      _detailsSection(),
+                      _arrangementSection(),
+                      _locationNotesSection(),
+                      _disclaimer(),
+                      const SizedBox(height: 8),
+                      Obx(
+                        () => CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          activeColor: KafiColors.pur,
+                          value: controller.paymentAcknowledged.value,
+                          onChanged: (v) =>
+                              controller.paymentAcknowledged.value = v ?? false,
+                          title: Text(
+                            AppStrings.trialOfferAckLabel.tr,
+                            style: KafiTheme.nunito(10,
+                                color: KafiColors.tm, w: FontWeight.w600),
+                          ),
+                          controlAffinity: ListTileControlAffinity.leading,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
+        bottomNavigationBar: _sendButton(nannyId),
       ),
-      bottomNavigationBar: _sendButton(nannyId),
     );
   }
 

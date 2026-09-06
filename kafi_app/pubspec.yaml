@@ -38,6 +38,9 @@ dependencies:
 
   # Media — camera, gallery, files, video
   image_picker: ^1.1.2
+  # Direct deps so we can enable Android's system Photo Picker (multi-select).
+  image_picker_android: ^0.8.13
+  image_picker_platform_interface: ^2.10.0
   file_picker: ^8.1.6
   video_player: ^2.9.2
   path_provider: ^2.1.4 # temp/app dirs for the mock storage service

@@ -47,6 +47,7 @@ class KafiTextField extends StatelessWidget {
             keyboardType: keyboardType,
             onChanged: onChanged,
             readOnly: readOnly,
+            onTapOutside: (_) => FocusManager.instance.primaryFocus?.unfocus(),
             contextMenuBuilder: kafiEditableTextContextMenu,
             style: KafiTheme.nunito(11, color: KafiColors.td),
             decoration: InputDecoration(

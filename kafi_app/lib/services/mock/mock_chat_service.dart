@@ -65,7 +65,20 @@ class MockChatService implements IChatService {
   }) async {
     await Future<void>.delayed(AppConfig.mockDelay);
     try {
-      return _threads.firstWhere((t) => t.familyId == familyId && t.nannyId == nannyId);
+      final existing =
+          _threads.firstWhere((t) => t.familyId == familyId && t.nannyId == nannyId);
+      final patched = existing.copyWith(
+        nannyPhotoUrl: (existing.nannyPhotoUrl == null || existing.nannyPhotoUrl!.trim().isEmpty)
+            ? nannyPhotoUrl
+            : existing.nannyPhotoUrl,
+        familyPhotoUrl:
+            (existing.familyPhotoUrl == null || existing.familyPhotoUrl!.trim().isEmpty)
+                ? familyPhotoUrl
+                : existing.familyPhotoUrl,
+      );
+      final i = _threads.indexWhere((t) => t.id == existing.id);
+      if (i >= 0) _threads[i] = patched;
+      return patched;
     } catch (_) {}
 
     final thread = ChatThread(
@@ -102,5 +115,19 @@ class MockChatService implements IChatService {
     final i = _threads.indexWhere((t) => t.id == threadId);
     if (i < 0) return;
     _threads[i] = _threads[i].copyWith(unreadCount: const UnreadCount());
+  }
+
+  @override
+  Future<void> updateThreadPhotos(
+    String threadId, {
+    String? nannyPhotoUrl,
+    String? familyPhotoUrl,
+  }) async {
+    final i = _threads.indexWhere((t) => t.id == threadId);
+    if (i < 0) return;
+    _threads[i] = _threads[i].copyWith(
+      nannyPhotoUrl: nannyPhotoUrl,
+      familyPhotoUrl: familyPhotoUrl,
+    );
   }
 }

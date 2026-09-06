@@ -2635,3 +2635,5 @@ First Launch
 
 | 2026-09-04 | Subscribe returns to unlocked nanny | Done | §6.8 / Screen 38: payment success unlocks the nanny profile already on the stack (no Browse remount) |
 
+| 2026-09-06 | Family default photo placeholders | Done | Bundled `family_defaults` portraits show on nanny job lists/chats when family has no uploaded photo |
+

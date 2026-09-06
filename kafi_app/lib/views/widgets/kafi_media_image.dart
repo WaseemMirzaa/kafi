@@ -54,6 +54,12 @@ class KafiMediaImage extends StatelessWidget {
         width: width,
         height: height,
         errorBuilder: fallback,
+        // Keep the parent's initials (or empty box) visible while the network
+        // image is still downloading — avoids blank chat/job avatars.
+        loadingBuilder: (context, child, progress) {
+          if (progress == null) return child;
+          return fallback(context, Object(), null);
+        },
       );
     }
 

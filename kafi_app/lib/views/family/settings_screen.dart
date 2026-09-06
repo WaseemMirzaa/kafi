@@ -10,6 +10,7 @@ import 'package:kafi_app/models/user_model.dart' show UserSettings;
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 
@@ -221,7 +222,10 @@ class SettingsScreen extends GetView<SettingsController> {
                     ? u!.fullName!
                     : (isFamily ? AppStrings.roleFallbackFamily.tr : AppStrings.roleFallbackUser.tr));
             final photoUrl = isFamily
-                ? familyProfile?.profilePhoto
+                ? FamilyConstants.resolvedPhotoUrl(
+                    familyProfile?.profilePhoto,
+                    familyProfile?.userId ?? familyProfile?.id ?? name,
+                  )
                 : (nannyProfile?.photoUrls.isNotEmpty == true ? nannyProfile!.photoUrls.first : null);
             final sub = (u?.email?.isNotEmpty == true) ? u!.email! : (u?.phone ?? '');
             final initial = name.isNotEmpty ? name[0].toUpperCase() : 'U';

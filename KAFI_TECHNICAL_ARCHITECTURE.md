@@ -3164,3 +3164,11 @@ Profile screens → phone blurred, Call/WA buttons removed
 | 2026-09-04 | Admin panel Kafi logo | Done | `KafiLogo` from `src/assets/kafi-logo.png` (same file as mobile); wired on Login, Sidebar, favicon |
 
 | 2026-09-04 | Subscribe returns to unlocked nanny | Done | `AppNavigation.afterSubscribeSuccess` pops pricing then `Get.offNamed` unlocked when opened from locked/relocked |
+
+| 2026-09-06 | Trial offer keyboard + family default photos | Done | Trial offer unfocus + scroll dismiss; `FamilyConstants.resolvedPhotoUrl` for jobs/chats/settings avatars |
+
+| 2026-09-06 | Chat list nanny avatars | Done | Enrich threads missing `nannyPhotoUrl`; `KafiAvatar` paints initials under network load/fail |
+
+| 2026-09-06 | Support new ticket screen + submit | Done | `/support-new` full screen; `createTicket` returns local model + background reload; first message write no longer blocks ticket id |
+
+| 2026-09-06 | Chat Firestore permission-denied | Done | Nannies may read `families`; chat queries use Firebase Auth uid; rebind listeners after auth restore |

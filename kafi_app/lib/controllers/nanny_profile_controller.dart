@@ -544,18 +544,13 @@ class NannyProfileController extends GetxController {
     final user = _auth.currentUser.value;
     if (user == null) return;
     final permissions = Get.find<PermissionController>();
-    final allowed = source == ImageSource.camera
-        ? await permissions.requestCamera()
-        : await permissions.ensureGallery();
-    if (!allowed) {
-      Get.snackbar(
-        AppStrings.errorTitle.tr,
-        (source == ImageSource.camera
-                ? AppStrings.permissionCameraDenied
-                : AppStrings.permissionGalleryDenied)
-            .tr,
-      );
-      return;
+    // Camera needs an explicit permission. Gallery uses the system photo
+    // picker (enabled in main.dart) which does not need READ_MEDIA_*.
+    if (source == ImageSource.camera) {
+      if (!await permissions.requestCamera()) {
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.permissionCameraDenied.tr);
+        return;
+      }
     }
     final picked = await ImagePicker().pickImage(
       source: source,
@@ -599,12 +594,22 @@ class NannyProfileController extends GetxController {
     if (remaining <= 0) return;
     final user = _auth.currentUser.value;
     if (user == null) return;
-    final permissions = Get.find<PermissionController>();
-    if (!await permissions.ensureGallery()) {
-      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.permissionGalleryDenied.tr);
+
+    // Android's PickMultipleVisualMedia requires maxItems >= 2. With one slot
+    // left, fall back to the single-image picker.
+    if (remaining == 1) {
+      await pickAndUploadPhoto(source: ImageSource.gallery);
       return;
     }
-    final picked = await ImagePicker().pickMultiImage(imageQuality: 85, maxWidth: 1200);
+
+    // Do not pre-request gallery permission — that forces a legacy single-select
+    // gallery on many Android OEMs. The system Photo Picker (see main.dart)
+    // supports multi-select without READ_MEDIA_*.
+    final picked = await ImagePicker().pickMultiImage(
+      imageQuality: 85,
+      maxWidth: 1200,
+      limit: remaining,
+    );
     if (picked.isEmpty) return;
     // Cap to the remaining slots rather than rejecting the whole selection.
     final toUpload = picked.take(NannyConstants.maxPhotos - photoUrls.length).toList();

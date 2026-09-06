@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/foundation.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
@@ -8,8 +9,27 @@ import 'package:kafi_app/services/interfaces/i_chat_service.dart';
 class FirestoreChatService implements IChatService {
   final _threads = FirebaseFirestore.instance.collection('chatThreads');
 
+  /// Rules compare `familyId`/`nannyId` to `request.auth.uid`. Always query
+  /// with the live Firebase Auth uid — never a stale app-cache id — or every
+  /// listen fails with permission-denied (especially after network blips).
+  String? _authUid() => FirebaseAuth.instance.currentUser?.uid;
+
+  String _uidForQuery(String userId) {
+    final authUid = _authUid();
+    if (authUid == null || authUid.isEmpty) {
+      throw StateError('not_signed_in');
+    }
+    if (authUid != userId) {
+      debugPrint(
+        '[FirestoreChatService] app userId=$userId != auth.uid=$authUid — using auth.uid',
+      );
+    }
+    return authUid;
+  }
+
   @override
   Future<List<ChatThread>> listThreads(String userId) async {
+    final uid = _uidForQuery(userId);
     final byId = <String, ChatThread>{};
 
     Future<void> load(Query<Map<String, dynamic>> query) async {
@@ -19,8 +39,8 @@ class FirestoreChatService implements IChatService {
       }
     }
 
-    await load(_threads.where('familyId', isEqualTo: userId));
-    await load(_threads.where('nannyId', isEqualTo: userId));
+    await load(_threads.where('familyId', isEqualTo: uid));
+    await load(_threads.where('nannyId', isEqualTo: uid));
 
     final list = byId.values.toList()
       ..sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
@@ -33,6 +53,22 @@ class FirestoreChatService implements IChatService {
     // snapshot streams: each query keeps its own slice and we re-emit the sorted
     // union whenever either side changes.
     final controller = StreamController<List<ChatThread>>();
+
+    final authUid = _authUid();
+    if (authUid == null || authUid.isEmpty) {
+      // Don't open listeners without Auth — they only emit permission-denied.
+      scheduleMicrotask(() {
+        if (!controller.isClosed) controller.add(const []);
+      });
+      return controller.stream;
+    }
+    final uid = authUid != userId ? authUid : userId;
+    if (authUid != userId) {
+      debugPrint(
+        '[FirestoreChatService] watchThreads app userId=$userId != auth.uid=$authUid — using auth.uid',
+      );
+    }
+
     var asFamily = <ChatThread>[];
     var asNanny = <ChatThread>[];
 
@@ -59,11 +95,11 @@ class FirestoreChatService implements IChatService {
       emit();
     }
 
-    final subFamily = _threads.where('familyId', isEqualTo: userId).snapshots().listen((s) {
+    final subFamily = _threads.where('familyId', isEqualTo: uid).snapshots().listen((s) {
       asFamily = s.docs.map(_threadFromDoc).toList();
       emit();
     }, onError: (e, st) => onStreamError(e, st, 'family'));
-    final subNanny = _threads.where('nannyId', isEqualTo: userId).snapshots().listen((s) {
+    final subNanny = _threads.where('nannyId', isEqualTo: uid).snapshots().listen((s) {
       asNanny = s.docs.map(_threadFromDoc).toList();
       emit();
     }, onError: (e, st) => onStreamError(e, st, 'nanny'));
@@ -199,7 +235,26 @@ class FirestoreChatService implements IChatService {
         .get();
 
     if (snap.docs.isNotEmpty) {
-      return _threadFromDoc(snap.docs.first);
+      final existing = _threadFromDoc(snap.docs.first);
+      final updates = <String, dynamic>{};
+      if ((existing.nannyPhotoUrl == null || existing.nannyPhotoUrl!.trim().isEmpty) &&
+          nannyPhotoUrl != null &&
+          nannyPhotoUrl.trim().isNotEmpty) {
+        updates['nannyPhotoUrl'] = nannyPhotoUrl.trim();
+      }
+      if ((existing.familyPhotoUrl == null || existing.familyPhotoUrl!.trim().isEmpty) &&
+          familyPhotoUrl != null &&
+          familyPhotoUrl.trim().isNotEmpty) {
+        updates['familyPhotoUrl'] = familyPhotoUrl.trim();
+      }
+      if (updates.isNotEmpty) {
+        await snap.docs.first.reference.update(updates);
+        return existing.copyWith(
+          nannyPhotoUrl: updates['nannyPhotoUrl'] as String? ?? existing.nannyPhotoUrl,
+          familyPhotoUrl: updates['familyPhotoUrl'] as String? ?? existing.familyPhotoUrl,
+        );
+      }
+      return existing;
     }
 
     final doc = _threads.doc();
@@ -207,6 +262,8 @@ class FirestoreChatService implements IChatService {
     await doc.set({
       'familyId': familyId,
       'nannyId': nannyId,
+      // Helps future rules/queries; party checks still use familyId/nannyId.
+      'participantIds': [familyId, nannyId],
       'familyName': familyName ?? '',
       'nannyName': nannyName ?? 'Nanny',
       'familyPhotoUrl': familyPhotoUrl,
@@ -242,5 +299,22 @@ class FirestoreChatService implements IChatService {
     await _threads.doc(threadId).update({
       'unreadCount.$readerRole': 0,
     });
+  }
+
+  @override
+  Future<void> updateThreadPhotos(
+    String threadId, {
+    String? nannyPhotoUrl,
+    String? familyPhotoUrl,
+  }) async {
+    final updates = <String, dynamic>{};
+    if (nannyPhotoUrl != null && nannyPhotoUrl.trim().isNotEmpty) {
+      updates['nannyPhotoUrl'] = nannyPhotoUrl.trim();
+    }
+    if (familyPhotoUrl != null && familyPhotoUrl.trim().isNotEmpty) {
+      updates['familyPhotoUrl'] = familyPhotoUrl.trim();
+    }
+    if (updates.isEmpty) return;
+    await _threads.doc(threadId).update(updates);
   }
 }

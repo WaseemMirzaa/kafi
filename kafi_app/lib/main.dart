@@ -5,6 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:image_picker_android/image_picker_android.dart';
+import 'package:image_picker_platform_interface/image_picker_platform_interface.dart';
 import 'package:kafi_app/firebase_options.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/bindings/initial_binding.dart';
@@ -17,6 +19,13 @@ import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  // Android: enable the system Photo Picker so gallery multi-select works.
+  // Without this, image_picker falls back to ACTION_GET_CONTENT and many OEM
+  // galleries ignore EXTRA_ALLOW_MULTIPLE (one photo at a time).
+  final imagePicker = ImagePickerPlatform.instance;
+  if (imagePicker is ImagePickerAndroid) {
+    imagePicker.useAndroidPhotoPicker = true;
+  }
   // Prefer bundled `google_fonts/` assets (see pubspec). Runtime fetch is
   // disabled because Android's path_provider/jni path currently crashes when
   // google_fonts tries to cache downloaded TTFs.

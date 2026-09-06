@@ -38,22 +38,31 @@ class KafiAvatar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final hasPhoto = (photoUrl ?? '').isNotEmpty;
+    final hasPhoto = (photoUrl ?? '').trim().isNotEmpty;
     final borderRadius = BorderRadius.circular(radius ?? size * 0.28);
+    final fallback = _fallback();
     final avatar = ClipRRect(
       borderRadius: borderRadius,
       child: SizedBox(
         width: size,
         height: size,
+        // Always paint initials under the photo so a slow/broken URL never
+        // leaves a blank tile in lists (chat, jobs, browse).
         child: hasPhoto
-            ? KafiMediaImage(
-                url: photoUrl!,
-                fit: BoxFit.cover,
-                width: size,
-                height: size,
-                errorBuilder: (_, __, ___) => _fallback(),
+            ? Stack(
+                fit: StackFit.expand,
+                children: [
+                  fallback,
+                  KafiMediaImage(
+                    url: photoUrl!.trim(),
+                    fit: BoxFit.cover,
+                    width: size,
+                    height: size,
+                    errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+                  ),
+                ],
               )
-            : _fallback(),
+            : fallback,
       ),
     );
     if (badge == null) return avatar;

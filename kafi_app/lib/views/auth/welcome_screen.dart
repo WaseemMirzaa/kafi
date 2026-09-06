@@ -37,7 +37,7 @@ class WelcomeScreen extends StatelessWidget {
               padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 26),
               child: Column(
                 children: [
-                  const KafiLogo(size: 40),
+                  const KafiLogo(size: 120),
                   const SizedBox(height: 12),
                   Text(
                     '${AppStrings.welcomeTagline.tr} 🌸',

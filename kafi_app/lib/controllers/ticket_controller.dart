@@ -65,15 +65,15 @@ class TicketController extends GetxController {
     required String message,
     String? relatedTrialId,
   }) async {
-    final uid = currentUserId(_auth);
-    if (uid == null) {
-      // Previously returned null silently here — the sheet would close with
-      // no ticket created and no feedback, reading as "the app disconnected"
-      // (KAFI-EDITS #6). Surface it instead so the user knows to sign back in.
+    final user = _auth.currentUser.value;
+    final uid = user?.id;
+    if (uid == null || uid.isEmpty) {
+      // Previously returned null silently — the sheet would close with no
+      // ticket and no feedback, reading as "the app disconnected".
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.supportSessionExpired.tr);
       return null;
     }
-    final openerType = (_auth.currentUser.value?.isNanny ?? false) ? 'nanny' : 'family';
+    final openerType = user!.isNanny ? 'nanny' : 'family';
     try {
       final id = await _tickets.openTicket(
         openerId: uid,
@@ -83,8 +83,28 @@ class TicketController extends GetxController {
         firstMessage: message,
         relatedTrialId: relatedTrialId,
       );
-      await loadTickets();
-      return tickets.firstWhereOrNull((t) => t.id == id) ?? await _tickets.getTicket(id);
+      final now = DateTime.now();
+      // Return a local model immediately so navigation does not depend on
+      // reload/query timing (serverTimestamp + list query used to yield null).
+      final created = TicketModel(
+        id: id,
+        openerId: uid,
+        openerType: openerType,
+        subject: subject,
+        category: category,
+        lastMessage: message,
+        createdAt: now,
+        lastMessageAt: now,
+      );
+      final existing = tickets.indexWhere((t) => t.id == id);
+      if (existing >= 0) {
+        tickets[existing] = created;
+      } else {
+        tickets.insert(0, created);
+      }
+      // Refresh list in the background; failures must not block submit success.
+      unawaited(loadTickets());
+      return created;
     } catch (e) {
       Get.snackbar(AppStrings.errorTitle.tr, e.toString());
       return null;

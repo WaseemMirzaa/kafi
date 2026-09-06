@@ -41,4 +41,21 @@ class FamilyConstants {
     'assets/images/family_defaults/family_5.jpg',
     'assets/images/family_defaults/family_6.jpg',
   ];
+
+  /// Stable default portrait for a family id/name when no photo was uploaded.
+  /// Used on nanny job lists and chat so empty `familyPhotoUrl` still shows a
+  /// bundled portrait instead of a blank/initials-only tile.
+  static String defaultPhotoFor(String seed) {
+    if (defaultPhotoAssets.isEmpty) return '';
+    if (seed.isEmpty) return defaultPhotoAssets.first;
+    final hash = seed.codeUnits.fold<int>(0, (a, b) => (a * 31 + b) & 0x7fffffff);
+    return defaultPhotoAssets[hash % defaultPhotoAssets.length];
+  }
+
+  /// Prefer [photoUrl] when set; otherwise [defaultPhotoFor].
+  static String resolvedPhotoUrl(String? photoUrl, String seed) {
+    final trimmed = photoUrl?.trim() ?? '';
+    if (trimmed.isNotEmpty) return trimmed;
+    return defaultPhotoFor(seed);
+  }
 }

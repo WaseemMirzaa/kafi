@@ -366,12 +366,11 @@ class SmartMatchScreen extends GetView<ApplicationController> {
     }
     // Collect an optional cover message before submitting — it's stored on the
     // application and shown to the family (previously never captured).
-    final cover = await Get.bottomSheet<String>(
-      const _ApplyCoverSheet(),
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
+    final cover = await Get.dialog<String>(
+      const _ApplyCoverDialog(),
+      barrierDismissible: true,
     );
-    if (cover == null) return; // sheet dismissed → don't apply
+    if (cover == null) return; // popup dismissed → don't apply
     final trimmed = cover.trim();
     final ok = await controller.applyToJob(
       job.id,
@@ -452,17 +451,17 @@ class SmartMatchScreen extends GetView<ApplicationController> {
   }
 }
 
-/// Optional cover-message sheet shown when a nanny applies to a job. Returns the
+/// Optional cover-message popup shown when a nanny applies to a job. Returns the
 /// entered text via `Get.back(result:)` (empty string = send with no note); a
-/// dismiss returns null so the caller skips the application.
-class _ApplyCoverSheet extends StatefulWidget {
-  const _ApplyCoverSheet();
+/// barrier dismiss returns null so the caller skips the application.
+class _ApplyCoverDialog extends StatefulWidget {
+  const _ApplyCoverDialog();
 
   @override
-  State<_ApplyCoverSheet> createState() => _ApplyCoverSheetState();
+  State<_ApplyCoverDialog> createState() => _ApplyCoverDialogState();
 }
 
-class _ApplyCoverSheetState extends State<_ApplyCoverSheet> {
+class _ApplyCoverDialogState extends State<_ApplyCoverDialog> {
   final _ctrl = TextEditingController();
 
   @override
@@ -471,71 +470,72 @@ class _ApplyCoverSheetState extends State<_ApplyCoverSheet> {
     super.dispose();
   }
 
+  void _unfocus() => FocusManager.instance.primaryFocus?.unfocus();
+
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: EdgeInsets.only(
-        left: 16,
-        right: 16,
-        top: 16,
-        bottom: MediaQuery.of(context).viewInsets.bottom + 16,
-      ),
-      // Cap the sheet at 85% of the screen and let content scroll inside that
-      // — without this, the column simply grew with the keyboard and pushed
-      // the "Send application" button off the top of the screen, out of tap
-      // reach (KAFI-EDITS #13).
-      constraints: BoxConstraints(maxHeight: MediaQuery.of(context).size.height * 0.85),
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      child: SingleChildScrollView(
-        child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Center(
-            child: Container(
-              width: 40,
-              height: 4,
-              decoration: BoxDecoration(
-                color: KafiColors.cardBorder,
-                borderRadius: BorderRadius.circular(2),
+    return Dialog(
+      backgroundColor: Colors.white,
+      insetPadding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
+      child: GestureDetector(
+        onTap: _unfocus,
+        behavior: HitTestBehavior.opaque,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(18, 20, 18, 16),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                AppStrings.applyCoverTitle.tr,
+                style: KafiTheme.pacifico(16, color: KafiColors.roseD),
               ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(AppStrings.applyCoverTitle.tr, style: KafiTheme.pacifico(16, color: KafiColors.roseD)),
-          const SizedBox(height: 4),
-          Text(AppStrings.applyCoverSub.tr, style: KafiTheme.nunito(10.5, color: KafiColors.ts)),
-          const SizedBox(height: 12),
-          TextField(
-            controller: _ctrl,
-            minLines: 3,
-            maxLines: 5,
-            maxLength: 500,
-            style: KafiTheme.nunito(12, color: KafiColors.td),
-            decoration: InputDecoration(
-              hintText: AppStrings.applyCoverHint.tr,
-              hintStyle: KafiTheme.nunito(11, color: KafiColors.ts),
-              filled: true,
-              fillColor: const Color(0xFFFDF2F6),
-              contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(12),
-                borderSide: BorderSide.none,
+              const SizedBox(height: 4),
+              Text(
+                AppStrings.applyCoverSub.tr,
+                style: KafiTheme.nunito(10.5, color: KafiColors.ts),
               ),
-            ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: _ctrl,
+                minLines: 3,
+                maxLines: 5,
+                maxLength: 500,
+                style: KafiTheme.nunito(12, color: KafiColors.td),
+                onTapOutside: (_) => _unfocus(),
+                decoration: InputDecoration(
+                  hintText: AppStrings.applyCoverHint.tr,
+                  hintStyle: KafiTheme.nunito(11, color: KafiColors.ts),
+                  filled: true,
+                  fillColor: const Color(0xFFFDF2F6),
+                  contentPadding:
+                      const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFFFD8E8)),
+                  ),
+                  enabledBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: const BorderSide(color: Color(0xFFFFD8E8)),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide:
+                        const BorderSide(color: Color(0xFFFF8FAB), width: 1.5),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 4),
+              SizedBox(
+                width: double.infinity,
+                child: KafiPrimaryButton(
+                  label: AppStrings.applyCoverSend.tr,
+                  onPressed: () => Get.back<String>(result: _ctrl.text),
+                ),
+              ),
+            ],
           ),
-          SizedBox(
-            width: double.infinity,
-            child: KafiPrimaryButton(
-              label: AppStrings.applyCoverSend.tr,
-              onPressed: () => Get.back<String>(result: _ctrl.text),
-            ),
-          ),
-          const SizedBox(height: 6),
-        ],
         ),
       ),
     );

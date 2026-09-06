@@ -14,6 +14,8 @@ class FirestoreTicketService implements ITicketService {
     required String firstMessage,
     String? relatedTrialId,
   }) async {
+    // Create the ticket first, then seed the message. Doing both in one batch
+    // can fail message rules that `get()` the parent before it is visible.
     final ref = await _tickets.add({
       'openerId': openerId,
       'openerType': openerType,
@@ -25,14 +27,18 @@ class FirestoreTicketService implements ITicketService {
       'createdAt': FieldValue.serverTimestamp(),
       'lastMessageAt': FieldValue.serverTimestamp(),
     });
-    // Seed the conversation with the opener's first message.
-    await ref.collection('messages').add({
-      'ticketId': ref.id,
-      'senderId': openerId,
-      'senderType': 'user',
-      'content': firstMessage,
-      'createdAt': FieldValue.serverTimestamp(),
-    });
+    try {
+      await ref.collection('messages').add({
+        'ticketId': ref.id,
+        'senderId': openerId,
+        'senderType': 'user',
+        'content': firstMessage,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+    } catch (_) {
+      // Ticket already exists — still return its id so the UI can open the
+      // thread; the user can resend from the composer if needed.
+    }
     return ref.id;
   }
 

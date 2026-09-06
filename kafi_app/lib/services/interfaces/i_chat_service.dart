@@ -33,4 +33,12 @@ abstract class IChatService {
 
   /// Resets unread count for [threadId] from the perspective of [readerRole].
   Future<void> markThreadRead(String threadId, String readerRole);
+
+  /// Patches denormalized avatar URLs on an existing thread (e.g. older threads
+  /// created before photos were stored on `chatThreads`).
+  Future<void> updateThreadPhotos(
+    String threadId, {
+    String? nannyPhotoUrl,
+    String? familyPhotoUrl,
+  });
 }

@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:image_picker/image_picker.dart';
@@ -82,8 +83,16 @@ class ChatController extends GetxController {
   // Live Firestore subscriptions — threads list + the open thread's messages.
   StreamSubscription<List<ChatThread>>? _threadsSub;
   StreamSubscription<List<ChatMessage>>? _messagesSub;
+  StreamSubscription<User?>? _firebaseAuthSub;
   Worker? _authWorker;
   bool _pickingImage = false;
+  int _photoEnrichGen = 0;
+  final Map<String, String?> _nannyPhotoCache = {};
+  final Map<String, String?> _familyPhotoCache = {};
+
+  /// Bumped when counterparty photos are resolved so chat list / conversation
+  /// Obx rebuilds even before Firestore thread docs catch up.
+  final RxInt photoResolveTick = 0.obs;
 
   String? _pendingThreadId;
   String? _pendingNannyId;
@@ -185,6 +194,15 @@ class ChatController extends GetxController {
     super.onInit();
     _authWorker = ever<dynamic>(_auth.currentUser, (_) => refreshThreads());
     refreshThreads();
+    // After a network blip Auth can restore while GetX still holds the same
+    // user — rebind Firestore listeners that failed with permission-denied.
+    if (!AppConfig.useMock) {
+      _firebaseAuthSub = FirebaseAuth.instance.authStateChanges().listen((u) {
+        if (u != null && _auth.currentUser.value != null) {
+          unawaited(refreshThreads());
+        }
+      });
+    }
     // Transfer notification deep-link queued before this controller existed.
     if (Get.isRegistered<NotificationController>()) {
       final n = Get.find<NotificationController>();
@@ -211,6 +229,7 @@ class ChatController extends GetxController {
   @override
   void onClose() {
     _authWorker?.dispose();
+    _firebaseAuthSub?.cancel();
     _messagesSub?.cancel();
     _threadsSub?.cancel();
     inputCtrl.dispose();
@@ -243,7 +262,23 @@ class ChatController extends GetxController {
     if (id == null) {
       threads.clear();
       threadsError.value = null;
+      await _threadsSub?.cancel();
+      _threadsSub = null;
       return;
+    }
+    // Live Firestore rules require request.auth — wait briefly if Auth is still
+    // restoring after a cold start / network drop.
+    if (!AppConfig.useMock && FirebaseAuth.instance.currentUser == null) {
+      try {
+        await FirebaseAuth.instance
+            .authStateChanges()
+            .firstWhere((u) => u != null)
+            .timeout(const Duration(seconds: 5));
+      } catch (_) {
+        isLoading.value = false;
+        threadsError.value = AppStrings.sessionExpired.tr;
+        return;
+      }
     }
     isLoading.value = true;
     threadsError.value = null;
@@ -265,11 +300,113 @@ class ChatController extends GetxController {
     }
 
     _threadsSub = _chat.watchThreads(id).listen((list) {
-      threads.value = _reconcileTerminalTrialBadges(list);
+      final reconciled = _reconcileTerminalTrialBadges(list);
+      threads.value = reconciled;
       threadsError.value = null;
       done();
+      unawaited(_enrichMissingThreadPhotos(reconciled));
     }, onError: (e) => done(e));
     await first.future;
+  }
+
+  /// Older threads often lack denormalized avatar URLs. Fill from live nanny/
+  /// family profiles so the chat list shows photos (or initials underneath)
+  /// instead of empty tiles, and persist the URL back onto the thread.
+  Future<void> _enrichMissingThreadPhotos(List<ChatThread> list) async {
+    final gen = ++_photoEnrichGen;
+    final needs = list
+        .where(
+          (t) =>
+              (t.nannyPhotoUrl == null || t.nannyPhotoUrl!.trim().isEmpty) ||
+              (t.familyPhotoUrl == null || t.familyPhotoUrl!.trim().isEmpty),
+        )
+        .toList();
+    if (needs.isEmpty) return;
+
+    final patched = <String, ChatThread>{};
+    await Future.wait(needs.map((t) async {
+      String? nannyPhoto = t.nannyPhotoUrl?.trim();
+      String? familyPhoto = t.familyPhotoUrl?.trim();
+      if (nannyPhoto == null || nannyPhoto.isEmpty) {
+        nannyPhoto = await _cachedNannyPhoto(t.nannyId);
+      }
+      if (familyPhoto == null || familyPhoto.isEmpty) {
+        familyPhoto = await _cachedFamilyPhoto(t.familyId);
+      }
+      final nannyChanged =
+          nannyPhoto != null && nannyPhoto.isNotEmpty && nannyPhoto != t.nannyPhotoUrl;
+      final familyChanged = familyPhoto != null &&
+          familyPhoto.isNotEmpty &&
+          familyPhoto != t.familyPhotoUrl;
+      if (!nannyChanged && !familyChanged) return;
+      patched[t.id] = t.copyWith(
+        nannyPhotoUrl: nannyChanged ? nannyPhoto : t.nannyPhotoUrl,
+        familyPhotoUrl: familyChanged ? familyPhoto : t.familyPhotoUrl,
+      );
+      unawaited(
+        _chat.updateThreadPhotos(
+          t.id,
+          nannyPhotoUrl: nannyChanged ? nannyPhoto : null,
+          familyPhotoUrl: familyChanged ? familyPhoto : null,
+        ),
+      );
+    }));
+
+    if (gen != _photoEnrichGen || patched.isEmpty) return;
+    threads.value = [
+      for (final t in threads)
+        patched[t.id] ?? t,
+    ];
+  }
+
+  /// Ensures the open conversation has a counterparty photo (cache + thread doc).
+  Future<void> _ensureThreadPhotos(String threadId) async {
+    final t = threads.firstWhereOrNull((x) => x.id == threadId);
+    if (t == null) return;
+    await _enrichMissingThreadPhotos([t]);
+  }
+
+  Future<String?> _cachedNannyPhoto(String nannyId) async {
+    if (nannyId.isEmpty) return null;
+    if (_nannyPhotoCache.containsKey(nannyId)) {
+      final cached = _nannyPhotoCache[nannyId];
+      // Only trust a positive cache hit — null may be a prior failed fetch.
+      if (cached != null && cached.trim().isNotEmpty) return cached;
+    }
+    try {
+      final nanny = await _user.getNanny(nannyId);
+      final url =
+          nanny != null && nanny.photoUrls.isNotEmpty ? nanny.photoUrls.first.trim() : null;
+      final resolved = (url != null && url.isNotEmpty) ? url : null;
+      if (resolved != null) {
+        _nannyPhotoCache[nannyId] = resolved;
+        photoResolveTick.value++;
+      }
+      return resolved;
+    } catch (_) {
+      // Do not cache failures — retry next time.
+      return null;
+    }
+  }
+
+  Future<String?> _cachedFamilyPhoto(String familyId) async {
+    if (familyId.isEmpty) return null;
+    if (_familyPhotoCache.containsKey(familyId)) {
+      final cached = _familyPhotoCache[familyId];
+      if (cached != null && cached.trim().isNotEmpty) return cached;
+    }
+    try {
+      final family = await _user.getFamily(familyId);
+      final url = family?.profilePhoto?.trim();
+      final resolved = (url != null && url.isNotEmpty) ? url : null;
+      if (resolved != null) {
+        _familyPhotoCache[familyId] = resolved;
+        photoResolveTick.value++;
+      }
+      return resolved;
+    } catch (_) {
+      return null;
+    }
   }
 
   /// If a thread still has accepted/active [ChatThread.trialStatus] but the
@@ -344,6 +481,22 @@ class ChatController extends GetxController {
     return threads.firstWhereOrNull((t) => t.id == activeThreadId.value);
   }
 
+  /// Photo for the other party on [t]: denormalized thread URL, else in-memory
+  /// cache from a live profile fetch. Always prefer a real picture over initials.
+  String? counterpartyPhotoUrl(ChatThread? t) {
+    // Register Obx dependency on async photo resolution.
+    photoResolveTick.value;
+    if (t == null) return null;
+    if (isNanny) {
+      final u = t.familyPhotoUrl?.trim();
+      if (u != null && u.isNotEmpty) return u;
+      return _familyPhotoCache[t.familyId];
+    }
+    final u = t.nannyPhotoUrl?.trim();
+    if (u != null && u.isNotEmpty) return u;
+    return _nannyPhotoCache[t.nannyId];
+  }
+
   /// Reveal the chatting nanny's real phone so the family can call or WhatsApp
   /// directly from the conversation. Entitlement (active subscription / trial /
   /// spent free-contact) is enforced server-side by the onContactRevealRequested
@@ -368,6 +521,9 @@ class ChatController extends GetxController {
     activeThreadId.value = threadId;
     messages.clear();
     isLoadingMessages.value = true;
+    // Resolve nanny/family photos immediately so conversation header + bubbles
+    // show pictures even when the thread doc still lacks denormalized URLs.
+    unawaited(_ensureThreadPhotos(threadId));
     try {
       messages.value = await _chat.loadMessages(threadId);
       // Prefetch trials so offer bubbles render full §3.7 details (duration,
@@ -444,12 +600,16 @@ class ChatController extends GetxController {
     try {
       await _syncFirestoreEntitlementsIfNeeded();
       final family = await _user.getFamily(familyId);
+      var photo = nannyPhotoUrl;
+      if (photo == null || photo.trim().isEmpty) {
+        photo = await _cachedNannyPhoto(nannyId);
+      }
       final thread = await _chat.findOrCreateThread(
         familyId: familyId,
         nannyId: nannyId,
         nannyName: nannyName,
         familyName: _auth.currentUser.value?.fullName,
-        nannyPhotoUrl: nannyPhotoUrl,
+        nannyPhotoUrl: photo,
         familyPhotoUrl: family?.profilePhoto,
       );
       await refreshThreads();

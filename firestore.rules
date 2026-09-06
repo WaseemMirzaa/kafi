@@ -97,7 +97,12 @@ service cloud.firestore {
 
     // ---------- families ----------
     match /families/{familyId} {
-      allow read: if isUser(familyId) || isAdmin();
+      // Owner + admin always. Signed-in nannies may also read family profiles
+      // for jobs/chat (name, photo, household context). Subscription counters
+      // stay non-writable by clients; reading them as a nanny is OK.
+      allow read: if isUser(familyId)
+        || isAdmin()
+        || (isSignedIn() && isNanny(request.auth.uid));
       allow create: if isUser(familyId);
       // Family may edit profile fields but not subscription/freeContactsUsed/
       // activeTrialNannyIds or the admin block flag — admin/server only.

@@ -12,6 +12,7 @@ import 'package:kafi_app/views/family/compare_screen.dart';
 import 'package:kafi_app/views/family/family_applicants_screen.dart';
 import 'package:kafi_app/views/family/my_jobs_screen.dart';
 import 'package:kafi_app/views/support/support_screen.dart';
+import 'package:kafi_app/views/support/new_ticket_screen.dart';
 import 'package:kafi_app/views/support/support_ticket_screen.dart';
 import 'package:kafi_app/views/support/disputes_screen.dart';
 import 'package:kafi_app/views/support/dispute_chat_screen.dart';
@@ -70,6 +71,7 @@ abstract class Routes {
   static const familyApplicants = '/family-applicants';
   static const familyMyJobs = '/family-my-jobs';
   static const support = '/support';
+  static const supportNewTicket = '/support-new';
   static const supportTicket = '/support-ticket';
   static const disputes = '/disputes';
   static const disputeChat = '/dispute-chat';
@@ -121,6 +123,7 @@ class AppRoutes {
     // Support is role-agnostic; TicketController is registered in whichever
     // role binding is already active (family/nanny shell), like notifications.
     GetPage(name: Routes.support, page: () => const SupportScreen()),
+    GetPage(name: Routes.supportNewTicket, page: () => const NewTicketScreen()),
     GetPage(name: Routes.supportTicket, page: () => const SupportTicketScreen()),
     // Disputes (reports about another user) reuse the active role binding's
     // DisputeController, same as support tickets.

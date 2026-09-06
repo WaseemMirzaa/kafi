@@ -11,6 +11,7 @@ import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 class JobsHomeScreen extends GetView<JobPostController> {
@@ -375,7 +376,10 @@ class JobsHomeScreen extends GetView<JobPostController> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 KafiAvatar(
-                  photoUrl: job.familyPhotoUrl,
+                  photoUrl: FamilyConstants.resolvedPhotoUrl(
+                    job.familyPhotoUrl,
+                    job.familyId.isNotEmpty ? job.familyId : job.familyName,
+                  ),
                   fallbackText: initial,
                   size: 36,
                   gradient: isHotMatch

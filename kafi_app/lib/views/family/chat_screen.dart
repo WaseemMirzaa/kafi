@@ -11,6 +11,7 @@ import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/support/report_problem_sheet.dart';
 import 'package:kafi_app/views/widgets/kafi_avatar.dart';
@@ -307,7 +308,12 @@ class _ChatScreenState extends State<ChatScreen> {
               clipBehavior: Clip.none,
               children: [
                 KafiAvatar(
-                  photoUrl: controller.isNanny ? t.familyPhotoUrl : t.nannyPhotoUrl,
+                  photoUrl: controller.isNanny
+                      ? FamilyConstants.resolvedPhotoUrl(
+                          t.familyPhotoUrl,
+                          t.familyId.isNotEmpty ? t.familyId : name,
+                        )
+                      : t.nannyPhotoUrl,
                   fallbackText: initial,
                   size: 42,
                   gradient: gradient,
@@ -684,16 +690,27 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Icon(Icons.arrow_back, color: Colors.white, size: 20),
             ),
           ),
-          Container(
-            width: 36,
-            height: 36,
+          DecoratedBox(
             decoration: BoxDecoration(
-              color: Colors.white.withValues(alpha: 0.25),
               borderRadius: BorderRadius.circular(11),
               border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
             ),
-            child: Center(
-              child: Text(initial, style: KafiTheme.fredoka(15, color: Colors.white, w: FontWeight.w900)),
+            child: KafiAvatar(
+              photoUrl: controller.isNanny
+                  ? FamilyConstants.resolvedPhotoUrl(
+                      thread?.familyPhotoUrl,
+                      thread?.familyId.isNotEmpty == true
+                          ? thread!.familyId
+                          : name,
+                    )
+                  : thread?.nannyPhotoUrl,
+              fallbackText: initial,
+              size: 36,
+              gradient: controller.isNanny
+                  ? const [Color(0xFFFFB347), Color(0xFFFF8042)]
+                  : _avatarGradient(name),
+              fontSize: 15,
+              radius: 9,
             ),
           ),
           const SizedBox(width: 9),

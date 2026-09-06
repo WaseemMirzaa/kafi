@@ -7,6 +7,7 @@ import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/support/report_user_sheet.dart';
 import 'package:kafi_app/views/widgets/kafi_avatar.dart';
@@ -105,7 +106,10 @@ class JobDetailScreen extends StatelessWidget {
       child: Row(
         children: [
           KafiAvatar(
-            photoUrl: job.familyPhotoUrl,
+            photoUrl: FamilyConstants.resolvedPhotoUrl(
+              job.familyPhotoUrl,
+              job.familyId.isNotEmpty ? job.familyId : job.familyName,
+            ),
             fallbackText: initial,
             size: 44,
             gradient: const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
