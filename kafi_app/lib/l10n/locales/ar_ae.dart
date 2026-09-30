@@ -186,6 +186,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.pricingTitle: 'الأسعار',
     AppStrings.pricingChoose: 'اختر الخطة',
     AppStrings.pricingPopular: 'الأكثر شيوعاً',
+    AppStrings.pricingBestValue: 'أفضل قيمة',
     AppStrings.pricingVatNote: '+5% ضريبة القيمة المضافة · المربيات مجاناً دائماً · إلغاء في أي وقت',
     AppStrings.pricingUpgradeTitle: 'طوّر ',
     AppStrings.pricingUpgradePlan: 'خطتك',
@@ -223,6 +224,8 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.settingsPrivacy: 'الخصوصية',
     AppStrings.settingsTerms: 'الشروط والأحكام',
     AppStrings.settingsLogout: 'تسجيل الخروج',
+    AppStrings.settingsLogoutConfirm: 'تسجيل الخروج؟',
+    AppStrings.settingsLogoutConfirmSub: 'هل أنت متأكد أنك تريد تسجيل الخروج؟',
 
     // Notifications
     AppStrings.notificationsTitle: 'الإشعارات',
@@ -755,4 +758,7 @@ final Map<String, String> arAe = Map<String, String>.from(enUs)
     AppStrings.profileReviews: 'Reviews',
     AppStrings.profileRoleNannyBabysitter: 'مربية أطفال & جليسة',
     AppStrings.profileHireProceed: 'توظيف / متابعة',
+    AppStrings.errSubPurchaseFailed: 'تعذر إتمام الشراء. حاول مرة أخرى.',
+    AppStrings.errSubNotConfigured: 'الاشتراكات غير مُعدّة بعد. تواصل مع الدعم.',
+    AppStrings.errSubRestoreFailed: 'تعذر الاستعادة. حاول مرة أخرى.',
   });

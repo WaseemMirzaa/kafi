@@ -5,6 +5,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/subscription_plan.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_logo.dart';
 
 class PricingScreen extends GetView<SubscriptionController> {
   const PricingScreen({super.key});
@@ -84,7 +85,7 @@ class PricingScreen extends GetView<SubscriptionController> {
                 ),
               ),
               const Spacer(),
-              Text(AppStrings.appName.tr, style: KafiTheme.pacifico(18)),
+              const KafiLogo(size: 28),
               const Spacer(),
               const SizedBox(width: 27),
             ],
@@ -339,8 +340,22 @@ class PricingScreen extends GetView<SubscriptionController> {
       ),
     );
 
-    // Popular ribbon on top of the monthly card.
+    // "Most popular" ribbon on the monthly card, "Best value" on the
+    // bimonthly one — the two headline badges the pricing spec calls for.
+    final String? ribbonText;
+    final List<Color> ribbonColors;
     if (monthly) {
+      ribbonText = '🌸 ${AppStrings.pricingPopular.tr}';
+      ribbonColors = const [KafiColors.rose, KafiColors.roseD];
+    } else if (!weekly) {
+      ribbonText = '✨ ${AppStrings.pricingBestValue.tr}';
+      ribbonColors = const [Color(0xFF34B87A), Color(0xFF1A6A40)];
+    } else {
+      ribbonText = null;
+      ribbonColors = const [];
+    }
+
+    if (ribbonText != null) {
       return Padding(
         padding: const EdgeInsets.only(top: 8),
         child: Stack(
@@ -353,10 +368,10 @@ class PricingScreen extends GetView<SubscriptionController> {
               child: Container(
                 padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 2),
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(colors: [KafiColors.rose, KafiColors.roseD]),
+                  gradient: LinearGradient(colors: ribbonColors),
                   borderRadius: BorderRadius.circular(16),
                 ),
-                child: Text('🌸 ${p.savingsLabel ?? AppStrings.pricingPopular.tr}',
+                child: Text(ribbonText,
                     style: KafiTheme.fredoka(8, color: Colors.white, w: FontWeight.w700)),
               ),
             ),

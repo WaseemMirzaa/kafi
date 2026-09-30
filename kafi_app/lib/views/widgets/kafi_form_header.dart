@@ -16,6 +16,8 @@ class KafiFormHeader extends StatelessWidget {
     this.gradient = const [Color(0xFFFFE0EC), Color(0xFFFFCCE0)],
     this.accent = KafiColors.roseD,
     this.onBack,
+    this.showBack = true,
+    this.onSignOut,
   });
 
   final String title;
@@ -25,6 +27,12 @@ class KafiFormHeader extends StatelessWidget {
   final List<Color> gradient;
   final Color accent;
   final VoidCallback? onBack;
+
+  /// When false (e.g. first onboarding step), hide the back chevron.
+  final bool showBack;
+
+  /// Optional Log Out action shown on the right (nanny onboarding / pending).
+  final VoidCallback? onSignOut;
 
   @override
   Widget build(BuildContext context) {
@@ -44,19 +52,24 @@ class KafiFormHeader extends StatelessWidget {
         children: [
           Row(
             children: [
-              GestureDetector(
-                onTap: onBack ?? Get.back,
-                child: Container(
-                  width: 27,
-                  height: 27,
-                  decoration: BoxDecoration(
-                    color: Colors.white.withValues(alpha: 0.9),
-                    shape: BoxShape.circle,
-                    boxShadow: const [BoxShadow(color: Color(0x14000000), blurRadius: 6, offset: Offset(0, 2))],
+              if (showBack)
+                GestureDetector(
+                  onTap: onBack ?? Get.back,
+                  child: Container(
+                    width: 27,
+                    height: 27,
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.9),
+                      shape: BoxShape.circle,
+                      boxShadow: const [
+                        BoxShadow(color: Color(0x14000000), blurRadius: 6, offset: Offset(0, 2))
+                      ],
+                    ),
+                    child: Icon(Icons.arrow_back, size: 14, color: accent),
                   ),
-                  child: Icon(Icons.arrow_back, size: 14, color: accent),
-                ),
-              ),
+                )
+              else
+                const SizedBox(width: 27),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -68,6 +81,17 @@ class KafiFormHeader extends StatelessWidget {
                   ],
                 ),
               ),
+              if (onSignOut != null)
+                GestureDetector(
+                  onTap: onSignOut,
+                  child: Padding(
+                    padding: const EdgeInsets.only(left: 8),
+                    child: Text(
+                      AppStrings.settingsLogout.tr,
+                      style: KafiTheme.nunito(11, color: KafiColors.redD, w: FontWeight.w800),
+                    ),
+                  ),
+                ),
             ],
           ),
           const SizedBox(height: 8),

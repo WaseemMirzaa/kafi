@@ -579,12 +579,12 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.nannyJobDetail, arguments: job),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 7),
-        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
           color: Colors.white,
           border: Border.all(
-              color: isHot ? KafiColors.roseL : Colors.transparent, width: 1.5),
+              color: isHot ? KafiColors.roseL : const Color(0xFFFFE8EF), width: 1.5),
           borderRadius: BorderRadius.circular(13),
           boxShadow: const [
             BoxShadow(color: Color(0x12FF5F96), blurRadius: 8, offset: Offset(0, 2)),
@@ -602,26 +602,26 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                     job.familyId.isNotEmpty ? job.familyId : job.familyName,
                   ),
                   fallbackText: initial,
-                  size: 36,
+                  size: 47,
                   gradient: isHot
                       ? const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)]
                       : const [Color(0xFFFFB347), Color(0xFFFF8042)],
-                  fontSize: 14,
+                  fontSize: 18,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('$typeLabel ${AppStrings.nannySuffix.tr} · ${job.city}',
-                          style: KafiTheme.nunito(11, color: KafiColors.td,
+                          style: KafiTheme.nunito(14, color: KafiColors.td,
                               w: FontWeight.w800)),
                       Text(
                           '${AppStrings.jobSalaryRange.trParams({
                                 'min': '${job.salaryMin}',
                                 'max': '${job.salaryMax}',
                               })} · ${job.familyName}',
-                          style: KafiTheme.nunito(9, color: KafiColors.ts,
+                          style: KafiTheme.nunito(11, color: KafiColors.ts,
                               w: FontWeight.w600)),
                       // Nanny-side numeric "% match" suppressed (M8) — see the
                       // jobs feed for the rationale. Jobs stay ranked best-first
@@ -631,10 +631,10 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
                 ),
               ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
             Wrap(
-              spacing: 3,
-              runSpacing: 3,
+              spacing: 4,
+              runSpacing: 4,
               children: [
                 _chip(typeLabel),
                 if (job.city.isNotEmpty) _chip(job.city),
@@ -647,12 +647,12 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
   }
 
   Widget _chip(String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
         decoration: BoxDecoration(
           color: KafiColors.roseP,
           borderRadius: BorderRadius.circular(6),
         ),
         child: Text(label,
-            style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700)),
+            style: KafiTheme.nunito(10.5, color: KafiColors.roseD, w: FontWeight.w700)),
       );
 }

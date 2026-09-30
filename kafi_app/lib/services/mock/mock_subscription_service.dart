@@ -116,4 +116,21 @@ class MockSubscriptionService implements ISubscriptionService {
     final p = await _prefs;
     return p.getString('$_planPrefix$familyId');
   }
+
+  @override
+  Future<bool> restorePurchases(String familyId) async {
+    // Mock has nothing to restore from the store — treat as success when
+    // already active so Settings → Restore still confirms in demo mode.
+    final state = await getState(familyId);
+    return state == SubscriptionState.active ||
+        state == SubscriptionState.cancelledInPeriod ||
+        state == SubscriptionState.paymentGrace ||
+        state == SubscriptionState.trial;
+  }
+
+  @override
+  Future<void> onUserSignedIn(String familyId) async {}
+
+  @override
+  Future<void> onUserSignedOut() async {}
 }

@@ -20,8 +20,6 @@ import 'package:kafi_app/views/family/family_edit_screen.dart';
 import 'package:kafi_app/views/family/family_form_screen.dart';
 import 'package:kafi_app/views/family/notifications_screen.dart';
 import 'package:kafi_app/views/family/pricing_screen.dart';
-import 'package:kafi_app/views/family/profile_locked_screen.dart';
-import 'package:kafi_app/views/family/profile_relocked_screen.dart';
 import 'package:kafi_app/views/family/profile_unlocked_screen.dart';
 import 'package:kafi_app/views/family/shortlist_screen.dart';
 import 'package:kafi_app/views/family/smart_match_screen.dart';
@@ -76,8 +74,6 @@ abstract class Routes {
   static const disputes = '/disputes';
   static const disputeChat = '/dispute-chat';
   static const browse = '/browse';
-  static const profileLocked = '/profile-locked';
-  static const profileRelocked = '/profile-relocked';
   static const profileUnlocked = '/profile-unlocked';
   static const chat = '/chat';
   static const smartMatch = '/smart-match';
@@ -130,8 +126,6 @@ class AppRoutes {
     GetPage(name: Routes.disputes, page: () => const DisputesScreen()),
     GetPage(name: Routes.disputeChat, page: () => const DisputeChatScreen()),
     GetPage(name: Routes.browse, page: () => const FamilyShellScreen(), binding: FamilyBinding()),
-    GetPage(name: Routes.profileLocked, page: () => const ProfileLockedScreen(), binding: FamilyBinding()),
-    GetPage(name: Routes.profileRelocked, page: () => const ProfileRelockedScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.profileUnlocked, page: () => const ProfileUnlockedScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.chat, page: () => const FamilyShellScreen(), binding: FamilyBinding()),
     GetPage(name: Routes.smartMatch, page: () => const SmartMatchScreen(), binding: NannyBinding()),

@@ -3,6 +3,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/browse_controller.dart';
 import 'package:kafi_app/controllers/chat_controller.dart';
+import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
@@ -10,6 +11,7 @@ import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
+import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/utils/relative_time.dart';
@@ -690,59 +692,69 @@ class _ChatScreenState extends State<ChatScreen> {
               child: Icon(Icons.arrow_back, color: Colors.white, size: 20),
             ),
           ),
-          DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: BorderRadius.circular(11),
-              border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
-            ),
-            child: KafiAvatar(
-              photoUrl: controller.isNanny
-                  ? FamilyConstants.resolvedPhotoUrl(
-                      thread?.familyPhotoUrl,
-                      thread?.familyId.isNotEmpty == true
-                          ? thread!.familyId
-                          : name,
-                    )
-                  : thread?.nannyPhotoUrl,
-              fallbackText: initial,
-              size: 36,
-              gradient: controller.isNanny
-                  ? const [Color(0xFFFFB347), Color(0xFFFF8042)]
-                  : _avatarGradient(name),
-              fontSize: 15,
-              radius: 9,
-            ),
-          ),
-          const SizedBox(width: 9),
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    Flexible(
-                      child: Text(name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: KafiTheme.fredoka(12, color: Colors.white, w: FontWeight.w900)),
+            child: GestureDetector(
+              behavior: HitTestBehavior.opaque,
+              onTap: _openCounterpartyProfile,
+              child: Row(
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(11),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.35), width: 2),
                     ),
-                    if (hired) ...[
-                      const SizedBox(width: 6),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.28),
-                          borderRadius: BorderRadius.circular(8),
+                    child: KafiAvatar(
+                      photoUrl: controller.isNanny
+                          ? FamilyConstants.resolvedPhotoUrl(
+                              thread?.familyPhotoUrl,
+                              thread?.familyId.isNotEmpty == true
+                                  ? thread!.familyId
+                                  : name,
+                            )
+                          : thread?.nannyPhotoUrl,
+                      fallbackText: initial,
+                      size: 36,
+                      gradient: controller.isNanny
+                          ? const [Color(0xFFFFB347), Color(0xFFFF8042)]
+                          : _avatarGradient(name),
+                      fontSize: 15,
+                      radius: 9,
+                    ),
+                  ),
+                  const SizedBox(width: 9),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Flexible(
+                              child: Text(name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: KafiTheme.fredoka(12, color: Colors.white, w: FontWeight.w900)),
+                            ),
+                            if (hired) ...[
+                              const SizedBox(width: 6),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1),
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withValues(alpha: 0.28),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: Text(AppStrings.chatHiredPill.tr,
+                                    style: KafiTheme.fredoka(7.5, color: Colors.white, w: FontWeight.w800)),
+                              ),
+                            ],
+                          ],
                         ),
-                        child: Text(AppStrings.chatHiredPill.tr,
-                            style: KafiTheme.fredoka(7.5, color: Colors.white, w: FontWeight.w800)),
-                      ),
-                    ],
-                  ],
-                ),
-                Text(AppStrings.chatOnlineStatus.tr,
-                    style: KafiTheme.nunito(9, color: Colors.white.withValues(alpha: 0.85), w: FontWeight.w600)),
-              ],
+                        Text(AppStrings.chatOnlineStatus.tr,
+                            style: KafiTheme.nunito(9, color: Colors.white.withValues(alpha: 0.85), w: FontWeight.w600)),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
           // Report the other party (files a dispute) — both roles, always on.
@@ -760,6 +772,35 @@ class _ChatScreenState extends State<ChatScreen> {
         ],
       ),
     );
+  }
+
+  Future<void> _openCounterpartyProfile() async {
+    final thread = controller.activeThread;
+    if (thread == null) return;
+    if (controller.isNanny) {
+      // Prefer a job from this family so Job Detail shows the household section.
+      if (Get.isRegistered<JobPostController>()) {
+        final job = Get.find<JobPostController>()
+            .allJobs
+            .firstWhereOrNull((j) => j.familyId == thread.familyId);
+        if (job != null) {
+          Get.toNamed(Routes.nannyJobDetail, arguments: job);
+          return;
+        }
+      }
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.jobDetailNotSpecified.tr);
+      return;
+    }
+    try {
+      final nanny = await Get.find<IUserService>().getNanny(thread.nannyId);
+      if (nanny == null) {
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.reportUnavailable.tr);
+        return;
+      }
+      AppNavigation.openNannyProfile(NannyCardModel.fromNanny(nanny));
+    } catch (_) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.reportUnavailable.tr);
+    }
   }
 
   /// Opens the shared "Report a problem" sheet for the active thread's
@@ -1100,21 +1141,44 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   Widget _msgAvatar(bool mine, String otherName) {
-    final gradient = mine ? _accent : _avatarGradient(otherName);
-    final you = AppStrings.chatYou.tr;
-    final initial = mine
-        ? (you.isNotEmpty ? you[0].toUpperCase() : 'Y')
-        : (otherName.isNotEmpty ? otherName[0].toUpperCase() : '?');
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: gradient),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Center(
-        child: Text(initial, style: KafiTheme.fredoka(10, color: Colors.white, w: FontWeight.w800)),
-      ),
+    final thread = controller.activeThread;
+    final String? photoUrl;
+    final String fallback;
+    final List<Color> gradient;
+    if (mine) {
+      // Current user's photo: nanny uses nannyPhotoUrl; family uses family photo.
+      if (controller.isNanny) {
+        photoUrl = thread?.nannyPhotoUrl;
+        fallback = AppStrings.chatYou.tr;
+        gradient = _accent;
+      } else {
+        photoUrl = FamilyConstants.resolvedPhotoUrl(
+          thread?.familyPhotoUrl,
+          thread?.familyId ?? '',
+        );
+        fallback = AppStrings.chatYou.tr;
+        gradient = _accent;
+      }
+    } else {
+      photoUrl = controller.counterpartyPhotoUrl(thread) ??
+          (controller.isNanny
+              ? FamilyConstants.resolvedPhotoUrl(
+                  thread?.familyPhotoUrl,
+                  thread?.familyId ?? otherName,
+                )
+              : thread?.nannyPhotoUrl);
+      fallback = otherName;
+      gradient = controller.isNanny
+          ? const [Color(0xFFFFB347), Color(0xFFFF8042)]
+          : _avatarGradient(otherName);
+    }
+    return KafiAvatar(
+      photoUrl: photoUrl,
+      fallbackText: fallback,
+      size: 26,
+      gradient: gradient,
+      fontSize: 10,
+      radius: 8,
     );
   }
 

@@ -11,7 +11,6 @@ import 'package:kafi_app/controllers/notification_controller.dart';
 import 'package:kafi_app/controllers/permission_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
-import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/chat_models.dart';
 import 'package:kafi_app/models/hire_model.dart';
@@ -180,14 +179,16 @@ class ChatController extends GetxController {
   bool get isNanny => _auth.currentUser.value?.isNanny ?? false;
   bool get _skipSubscriptionGates => AppConfig.subscriptionUsesMock;
 
-  /// Per docs §3.6 & §Subscription Lockdown:
-  /// - Nanny users: always see all threads
-  /// - Family with active subscription: see all threads
-  /// All threads are visible regardless of subscription state — expired
-  /// families still see their history (so they understand what's locked).
-  /// Opening a thread without an active trial is gated by `openThread`,
-  /// which redirects to the paywall.
-  List<ChatThread> get visibleThreads => threads;
+  /// Per the family-access spec: nanny users and families with an active
+  /// plan see all threads. A family whose plan has expired has every thread
+  /// locked AND hidden from view (not just blocked from opening) — including
+  /// threads with nannies unlocked via a free unlock or a past paid plan —
+  /// until they resubscribe. The one exception is a thread tied to a
+  /// currently active/accepted trial, which must stay reachable.
+  List<ChatThread> get visibleThreads {
+    if (isNanny || !_subs.isExpired) return threads;
+    return threads.where(showsActiveTrialUi).toList();
+  }
 
   @override
   void onInit() {
@@ -581,21 +582,19 @@ class ChatController extends GetxController {
       await openThread(existing.id);
       return;
     }
-    // Don't auto-create for free-tier families on expired sub (no contacts).
-    if (!_skipSubscriptionGates && !isNanny && _subs.isExpired) {
-      Get.toNamed(Routes.pricing, arguments: {'reason': 'chat_locked'});
-      return;
-    }
-    // Free-tier families (never subscribed) can only message a nanny *after*
-    // they've consumed a profile view for that nanny — per §8.4 (free contact
-    // matrix). Subscribed and grace-period users skip this check.
-    if (!_skipSubscriptionGates &&
-        !isNanny &&
-        _subs.state.value == SubscriptionState.free &&
-        !_subs.viewedNannyIds.contains(nannyId)) {
-      Get.toNamed(Routes.pricing,
-          arguments: {'reason': 'chat_view_required', 'nannyId': nannyId});
-      return;
+    // Starting a chat is itself one of the 3 unlock triggers (alongside intro
+    // video and contact reveal) — spend a free unlock here if this nanny
+    // isn't already unlocked. An expired plan blocks this unconditionally
+    // (no new free unlocks are ever granted after a plan lapses).
+    if (!_skipSubscriptionGates && !isNanny) {
+      final unlocked = await _subs.unlockNannyIfAllowed(nannyId);
+      if (!unlocked) {
+        Get.toNamed(Routes.pricing, arguments: {
+          'reason': _subs.isExpired ? 'chat_locked' : 'chat_free_limit_reached',
+          'nannyId': nannyId,
+        });
+        return;
+      }
     }
     try {
       await _syncFirestoreEntitlementsIfNeeded();

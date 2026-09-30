@@ -233,7 +233,7 @@ Settings → Delete Account → Select reason → Type "DELETE" → Cascade trig
 
 | Item | Status | Notes |
 |------|--------|-------|
-| **RevenueCat SDK** | Not integrated | Subscription logic exists but uses mock purchases; need real RevenueCat product IDs and SDK initialization |
+| **RevenueCat SDK** | Wired (keys pending) | `purchases_flutter` + `RevenueCatSubscriptionService`; set `REVENUECAT_*_API_KEY` dart-defines and flip `useMockSubscription` false when store products are live |
 | **Firebase project** | Config placeholder | `google-services.json` / `GoogleService-Info.plist` need real project credentials |
 | **Google Maps API key** | Placeholder | `AppConstants.googleMapsApiKey` needs a real billable key |
 | **App Store / Play Store** | Not set up | No store listings, screenshots, or review submissions |

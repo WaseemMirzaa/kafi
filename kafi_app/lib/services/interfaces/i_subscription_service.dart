@@ -12,4 +12,14 @@ abstract class ISubscriptionService {
 
   /// The id of the plan the family last subscribed to (null if none/free).
   Future<String?> getActivePlanId(String familyId);
+
+  /// Restore App Store / Play purchases and sync entitlement.
+  /// Returns true when an active entitlement was restored.
+  Future<bool> restorePurchases(String familyId);
+
+  /// Bind RevenueCat app user id after family auth (no-op for mock).
+  Future<void> onUserSignedIn(String familyId);
+
+  /// Clear RevenueCat user on logout (no-op for mock).
+  Future<void> onUserSignedOut();
 }

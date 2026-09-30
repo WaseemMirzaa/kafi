@@ -111,7 +111,8 @@ kafi_app/
 │   │   │   ├── firestore_trial_service.dart
 │   │   │   ├── firebase_storage_service.dart
 │   │   │   ├── fcm_notification_service.dart
-│   │   │   └── revenuecat_subscription_service.dart
+│   │   │   ├── firestore_subscription_service.dart
+│   │   │   └── revenuecat_subscription_service.dart  # purchases_flutter + Firestore state
 │   │   ├── mock/
 │   │   │   ├── mock_auth_service.dart
 │   │   │   ├── mock_user_service.dart
@@ -779,7 +780,9 @@ class InitialBinding extends Bindings {
       Get.put<ITrialService>(FirestoreTrialService(), permanent: true);
       Get.put<IStorageService>(FirebaseStorageService(), permanent: true);
       Get.put<INotificationService>(FCMNotificationService(), permanent: true);
-      Get.put<ISubscriptionService>(RevenueCatService(), permanent: true);
+      // Live: RevenueCatSubscriptionService (purchases_flutter + Firestore reads).
+      // Mock path: MockSubscriptionService when AppConfig.subscriptionUsesMock.
+      Get.put<ISubscriptionService>(RevenueCatSubscriptionService(), permanent: true);
     }
     
     Get.put(PermissionService(), permanent: true);
@@ -2675,7 +2678,7 @@ dependencies:
   firebase_remote_config: ^4.3.0
   
   # Subscriptions
-  purchases_flutter: ^6.0.0  # RevenueCat
+  purchases_flutter: ^10.0.0  # RevenueCat SDK (public keys via dart-define)
   
   # Permissions
   permission_handler: ^11.0.0
@@ -3172,3 +3175,8 @@ Profile screens → phone blurred, Call/WA buttons removed
 | 2026-09-06 | Support new ticket screen + submit | Done | `/support-new` full screen; `createTicket` returns local model + background reload; first message write no longer blocks ticket id |
 
 | 2026-09-06 | Chat Firestore permission-denied | Done | Nannies may read `families`; chat queries use Firebase Auth uid; rebind listeners after auth restore |
+
+| 2026-09-18 | Kafi V2 edits (PDF) | Done | Login Back→Welcome; `KafiNannyCard`/jobs card scale; Job Detail loads FamilyModel; chat topbar→profile + `KafiAvatar` bubbles; apps family-first; pricing `KafiLogo` |
+
+| 2026-09-28 | Nanny onboarding Log Out | Done | `AppNavigation.confirmSignOut`; `KafiFormHeader`/`KafiStepScaffold.showSignOut`; wired on info/media/exp/refs/docs + pending/rejected |
+| 2026-09-28 | RevenueCat SDK integration | Done | `purchases_flutter` + `RevenueCatSubscriptionService`; `ISubscriptionService` restore/identify; configure on family sign-in; mock when `useMockSubscription` |

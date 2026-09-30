@@ -14,9 +14,9 @@ import 'package:kafi_app/services/firebase/firestore_dispute_service.dart';
 import 'package:kafi_app/services/firebase/firestore_hire_service.dart';
 import 'package:kafi_app/services/firebase/firestore_ticket_service.dart';
 import 'package:kafi_app/services/firebase/firestore_shortlist_service.dart';
-import 'package:kafi_app/services/firebase/firestore_subscription_service.dart';
 import 'package:kafi_app/services/firebase/firestore_trial_service.dart';
 import 'package:kafi_app/services/firebase/firestore_user_service.dart';
+import 'package:kafi_app/services/firebase/revenuecat_subscription_service.dart';
 import 'package:kafi_app/services/interfaces/i_application_service.dart';
 import 'package:kafi_app/services/interfaces/i_auth_service.dart';
 import 'package:kafi_app/services/interfaces/i_chat_service.dart';
@@ -81,7 +81,9 @@ class InitialBinding extends Bindings {
       Get.put<ITrialService>(FirestoreTrialService(), permanent: true);
       Get.put<INotificationService>(FcmNotificationService(), permanent: true);
       Get.put<ISubscriptionService>(
-        mockSubscription ? MockSubscriptionService() : FirestoreSubscriptionService(),
+        mockSubscription
+            ? MockSubscriptionService()
+            : RevenueCatSubscriptionService(),
         permanent: true,
       );
       Get.put<IApplicationService>(FirestoreApplicationService(), permanent: true);

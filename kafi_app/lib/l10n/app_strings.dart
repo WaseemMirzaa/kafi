@@ -757,6 +757,7 @@ abstract class AppStrings {
   static const pricingVatNote = 'pricing_vat_note';
   static const pricingChoose = 'pricing_choose';
   static const pricingPopular = 'pricing_popular';
+  static const pricingBestValue = 'pricing_best_value';
   static const pricingUpgradeTitle = 'pricing_upgrade_title';
   static const pricingUpgradePlan = 'pricing_upgrade_plan';
   static const pricingHeroSub = 'pricing_hero_sub';
@@ -1312,6 +1313,24 @@ abstract class AppStrings {
   static const jobDetailVisaOwnTitle = 'job_detail_visa_own_title';
   static const jobDetailVisaSponsoredSub = 'job_detail_visa_sponsored_sub';
   static const jobDetailVisaOwnSub = 'job_detail_visa_own_sub';
+  static const jobDetailAboutFamily = 'job_detail_about_family';
+  static const jobDetailFamilyDetails = 'job_detail_family_details';
+  static const jobDetailFamilyMembers = 'job_detail_family_members';
+  static const jobDetailChildren = 'job_detail_children';
+  static const jobDetailLanguageAtHome = 'job_detail_language_at_home';
+  static const jobDetailFamilyReligion = 'job_detail_family_religion';
+  static const jobDetailPetsAtHome = 'job_detail_pets_at_home';
+  static const jobDetailCamerasAtHome = 'job_detail_cameras_at_home';
+  static const jobDetailVisaSponsorship = 'job_detail_visa_sponsorship';
+  static const jobDetailWorkingDays = 'job_detail_working_days';
+  static const jobDetailWorkingDaysValue = 'job_detail_working_days_value';
+  static const jobDetailDayOff = 'job_detail_day_off';
+  static const jobDetailTrialPeriod = 'job_detail_trial_period';
+  static const jobDetailTrialDays = 'job_detail_trial_days';
+  static const jobDetailChatWithFamily = 'job_detail_chat_with_family';
+  static const jobDetailChildAges = 'job_detail_child_ages';
+  static const jobDetailMembersCount = 'job_detail_members_count';
+  static const jobDetailVisaProvided = 'job_detail_visa_provided';
 
   // Nanny-side application status labels (badges + timeline + date rows).
   // Distinct from the family-facing appStatus* keys ("New"/"Trial offered")
@@ -1418,6 +1437,9 @@ abstract class AppStrings {
   static const trialPaymentConfirmedToast = 'trial_payment_confirmed_toast';
   static const unlockProfileSubtitle = 'unlock_profile_subtitle';
   static const unlockProfileTitle = 'unlock_profile_title';
+  static const unlockNannyFreeCta = 'unlock_nanny_free_cta';
+  static const renewToUnlockCta = 'renew_to_unlock_cta';
+  static const subscribeToUnlockCta = 'subscribe_to_unlock_cta';
   static const verifiedIdBadge = 'verified_id_badge';
   static const watchLabel = 'watch_label';
   static const whatsappHerBtn = 'whatsapp_her_btn';
@@ -1479,6 +1501,8 @@ abstract class AppStrings {
   static const errTrialOfferExpiredMessage = 'err_trial_offer_expired_message';
   static const errSubPaymentDeclined = 'err_sub_payment_declined';
   static const errSubRestoreFailed = 'err_sub_restore_failed';
+  static const errSubPurchaseFailed = 'err_sub_purchase_failed';
+  static const errSubNotConfigured = 'err_sub_not_configured';
   static const errNetNoConnectionMessage = 'err_net_no_connection_message';
   static const errNetTimeoutMessage = 'err_net_timeout_message';
   static const errNetServerDownMessage = 'err_net_server_down_message';

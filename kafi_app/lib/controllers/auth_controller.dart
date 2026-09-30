@@ -12,6 +12,7 @@ import 'package:kafi_app/models/user_model.dart';
 import 'package:kafi_app/services/interfaces/i_auth_service.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_notification_service.dart';
+import 'package:kafi_app/services/interfaces/i_subscription_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/services/session_monitor.dart';
 import 'package:kafi_app/utils/constants/auth_constants.dart';
@@ -472,6 +473,9 @@ class AuthController extends GetxController with WidgetsBindingObserver {
       }
     }
     await _authService.logout();
+    if (Get.isRegistered<ISubscriptionService>()) {
+      await Get.find<ISubscriptionService>().onUserSignedOut();
+    }
     currentUser.value = null;
     _otpTimer?.cancel();
     _blockSub?.cancel();

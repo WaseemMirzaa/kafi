@@ -27,7 +27,8 @@ fun mapsApiKeyFromLocalProperties(): String {
 android {
     namespace = "com.kafi.kafi_app"
     compileSdk = flutter.compileSdkVersion
-    ndkVersion = flutter.ndkVersion
+    // NDK 28 breaks CMake configure on this machine; pin a known-good 27.x.
+    ndkVersion = "27.1.12297006"
 
     compileOptions {
         isCoreLibraryDesugaringEnabled = true

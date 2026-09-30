@@ -1,7 +1,7 @@
 name: kafi_app
 description: UAE Nanny/Domestic Helper Marketplace
 publish_to: 'none'
-version: 2.2.0+22
+version: 2.2.1+23
 
 environment:
   sdk: ">=3.0.0 <4.0.0"
@@ -47,6 +47,9 @@ dependencies:
 
   # Notifications — local display of FCM foreground messages
   flutter_local_notifications: ^18.0.1
+
+  # Subscriptions — RevenueCat (public SDK keys via dart-define)
+  purchases_flutter: ^10.0.0
 
 dev_dependencies:
   flutter_test:

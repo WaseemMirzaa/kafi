@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
@@ -6,10 +7,9 @@ import 'package:kafi_app/controllers/chat_controller.dart';
 import 'package:kafi_app/controllers/family_shell_controller.dart';
 import 'package:kafi_app/controllers/nanny_shell_controller.dart';
 import 'package:kafi_app/controllers/shortlist_controller.dart';
-import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
-import 'package:kafi_app/utils/nanny_card_resolver.dart';
+import 'package:kafi_app/views/shared/kafi_theme.dart';
 
 /// Shared navigation helpers for consistent flows across screens.
 class AppNavigation {
@@ -55,18 +55,13 @@ class AppNavigation {
 
   static void openNotifications() => Get.toNamed(Routes.notifications);
 
+  /// A nanny's general profile (photos, nationality, experience, skills,
+  /// languages, salary, visa status, etc.) is always free to browse for every
+  /// family, regardless of subscription state — so there's a single profile
+  /// route. Video / contact / chat are gated inline on that screen via
+  /// SubscriptionController.isNannyLocked.
   static void openNannyProfile(NannyCardModel card) {
-    final subs = Get.find<SubscriptionController>();
-    final wasViewed = subs.viewedNannyIds.contains(card.id);
-    final String route;
-    if (subs.isSubscribed) {
-      route = Routes.profileUnlocked;
-    } else if (subs.isExpired) {
-      route = wasViewed ? Routes.profileRelocked : Routes.profileLocked;
-    } else {
-      route = Routes.profileLocked;
-    }
-    Get.toNamed(route, arguments: card);
+    Get.toNamed(Routes.profileUnlocked, arguments: card);
   }
 
   /// Opens pricing, optionally remembering which nanny profile to unlock
@@ -81,35 +76,23 @@ class AppNavigation {
     );
   }
 
-  /// After subscribe succeeds: close the paywall, and if it was opened from a
-  /// locked/re-locked nanny profile, replace that route with the unlocked
-  /// profile so contacts and plan state update without returning to Browse.
+  /// After subscribe succeeds: close the paywall. The profile screen (if
+  /// that's where the paywall was opened from) reactively unlocks itself via
+  /// SubscriptionController's Obx state, so simply popping back to it is
+  /// enough — no route replacement needed.
   static void afterSubscribeSuccess() {
-    final args = Get.arguments;
-    final previous = Get.previousRoute;
-    NannyCardModel? card;
-    if (args is Map && args['unlockNanny'] is NannyCardModel) {
-      card = args['unlockNanny'] as NannyCardModel;
-    }
-    if (previous.isNotEmpty) {
+    if (Get.previousRoute.isNotEmpty) {
       Get.back();
-    } else if (card != null && card.id.isNotEmpty) {
-      Get.offNamed(Routes.profileUnlocked, arguments: card);
-      return;
-    } else {
-      Get.offAllNamed(Routes.browse);
       return;
     }
+    final args = Get.arguments;
+    final card =
+        args is Map && args['unlockNanny'] is NannyCardModel ? args['unlockNanny'] as NannyCardModel : null;
     if (card != null && card.id.isNotEmpty) {
       Get.offNamed(Routes.profileUnlocked, arguments: card);
       return;
     }
-    final fromLocked = previous == Routes.profileLocked ||
-        previous == Routes.profileRelocked;
-    if (!fromLocked) return;
-    card = resolveNannyCard();
-    if (card.id.isEmpty) return;
-    Get.offNamed(Routes.profileUnlocked, arguments: card);
+    Get.offAllNamed(Routes.browse);
   }
 
   static void openChat({String? nannyId, String? nannyName}) {
@@ -279,5 +262,36 @@ class AppNavigation {
     if (Get.isRegistered<NannyShellController>()) {
       Get.find<NannyShellController>().goToTab(index);
     }
+  }
+
+  /// Confirm then clear the session and return to Welcome. Used from nanny
+  /// onboarding / pending headers so a stuck draft profile isn't locked in.
+  static Future<void> confirmSignOut() async {
+    final ok = await Get.dialog<bool>(
+      AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(AppStrings.settingsLogoutConfirm.tr,
+            style: KafiTheme.nunito(15, color: KafiColors.td, w: FontWeight.w900)),
+        content: Text(AppStrings.settingsLogoutConfirmSub.tr,
+            style: KafiTheme.nunito(12, color: KafiColors.ts, w: FontWeight.w600)),
+        actions: [
+          TextButton(
+            onPressed: () => Get.back(result: false),
+            child: Text(AppStrings.cancel.tr,
+                style: KafiTheme.nunito(12, color: KafiColors.ts, w: FontWeight.w700)),
+          ),
+          TextButton(
+            onPressed: () => Get.back(result: true),
+            child: Text(AppStrings.settingsLogout.tr,
+                style: KafiTheme.nunito(12, color: KafiColors.redD, w: FontWeight.w800)),
+          ),
+        ],
+      ),
+    );
+    if (ok != true) return;
+    if (Get.isRegistered<AuthController>()) {
+      await Get.find<AuthController>().signOut();
+    }
+    Get.offAllNamed(Routes.welcome);
   }
 }

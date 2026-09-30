@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
-import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
@@ -204,9 +203,6 @@ class BrowseController extends GetxController {
     selectedJob.value = job;
     refreshList();
   }
-
-  Future<bool> recordView(String nannyId) =>
-      Get.find<SubscriptionController>().recordViewIfAllowed(nannyId);
 
   List<NannyCardModel> get filteredResults {
     // Results are already ranked by job match in the service; apply text search.

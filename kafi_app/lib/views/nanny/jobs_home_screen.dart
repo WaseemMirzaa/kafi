@@ -151,35 +151,51 @@ class JobsHomeScreen extends GetView<JobPostController> {
       ),
       child: Row(
         children: [
-          Obx(() => _statItem('${appCtrl.myApplications.length}', AppStrings.nannyStatsApplied.tr)),
+          Obx(() => _statItem(
+                '${appCtrl.myApplications.length}',
+                AppStrings.nannyStatsApplied.tr,
+                onTap: () => Get.toNamed(Routes.nannyApplications),
+              )),
           _divider(),
           Obx(() {
             final viewed = appCtrl.myApplications
                 .where((a) => a.status != ApplicationStatus.pending && a.status != ApplicationStatus.withdrawn)
                 .length;
-            return _statItem('$viewed', AppStrings.nannyStatsViewed.tr);
+            return _statItem(
+              '$viewed',
+              AppStrings.nannyStatsViewed.tr,
+              onTap: () => Get.toNamed(Routes.nannyApplications),
+            );
           }),
           _divider(),
           Obx(() {
             final offers = appCtrl.myApplications
                 .where((a) => a.status == ApplicationStatus.trialOffered)
                 .length;
-            return _statItem('$offers', AppStrings.nannyStatsOffers.tr);
+            return _statItem(
+              '$offers',
+              AppStrings.nannyStatsOffers.tr,
+              onTap: () => Get.toNamed(Routes.nannyApplications),
+            );
           }),
         ],
       ),
     );
   }
 
-  Widget _statItem(String value, String label) {
+  Widget _statItem(String value, String label, {VoidCallback? onTap}) {
     return Expanded(
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Column(
-          children: [
-            Text(value, style: KafiTheme.nunito(15, color: KafiColors.roseD, w: FontWeight.w900)),
-            Text(label, style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w700)),
-          ],
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: onTap,
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 4),
+          child: Column(
+            children: [
+              Text(value, style: KafiTheme.nunito(15, color: KafiColors.roseD, w: FontWeight.w900)),
+              Text(label, style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w700)),
+            ],
+          ),
         ),
       ),
     );
@@ -357,13 +373,12 @@ class JobsHomeScreen extends GetView<JobPostController> {
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.nannyJobDetail, arguments: job),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.only(bottom: 10),
+        padding: const EdgeInsets.all(13),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: isHotMatch
-              ? Border.all(color: KafiColors.roseL, width: 1.5)
-              : Border.all(color: Colors.transparent, width: 1.5),
+          border: Border.all(
+              color: isHotMatch ? KafiColors.roseL : const Color(0xFFFFE8EF), width: 1.5),
           borderRadius: BorderRadius.circular(13),
           boxShadow: const [
             BoxShadow(color: Color(0x12FF5F96), blurRadius: 8, offset: Offset(0, 2)),
@@ -381,25 +396,25 @@ class JobsHomeScreen extends GetView<JobPostController> {
                     job.familyId.isNotEmpty ? job.familyId : job.familyName,
                   ),
                   fallbackText: initial,
-                  size: 36,
+                  size: 47,
                   gradient: isHotMatch
                       ? const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)]
                       : const [Color(0xFFFFB347), Color(0xFFFF8042)],
-                  fontSize: 14,
+                  fontSize: 18,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 10),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text('$typeLabel ${AppStrings.nannySuffix.tr} · ${job.city}',
-                          style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
+                          style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w800)),
                       Text(
                           '${AppStrings.jobSalaryRange.trParams({
                                 'min': '${job.salaryMin}',
                                 'max': '${job.salaryMax}',
                               })} · ${job.familyName}',
-                          style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
+                          style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600)),
                       // The nanny-side numeric "% match" is suppressed (M8): the
                       // canonical match is scored from the FAMILY's household +
                       // job, which the nanny can't compute — so a job-only number
@@ -411,10 +426,10 @@ class JobsHomeScreen extends GetView<JobPostController> {
                 ),
               ],
             ),
-            const SizedBox(height: 5),
+            const SizedBox(height: 8),
             Wrap(
-              spacing: 3,
-              runSpacing: 3,
+              spacing: 4,
+              runSpacing: 4,
               children: [
                 _tag(typeLabel),
                 if (job.city.isNotEmpty) _tag(job.city),
@@ -429,13 +444,13 @@ class JobsHomeScreen extends GetView<JobPostController> {
 
   Widget _tag(String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: KafiColors.roseP,
         borderRadius: BorderRadius.circular(6),
       ),
       child: Text(label,
-          style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700)),
+          style: KafiTheme.nunito(10.5, color: KafiColors.roseD, w: FontWeight.w700)),
     );
   }
 }

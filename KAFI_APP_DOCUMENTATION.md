@@ -103,12 +103,17 @@ Kafi is a mobile-first marketplace connecting:
 
 **Flow:** Tap role → Navigate to respective login screen
 
+**Back from login:** On Nanny or Family login/signup, Back always returns to this Welcome role selection (even if the navigation stack was cleared), so the user can switch role.
+
+**Session:** After OTP login, the user stays signed in across app restarts until they explicitly log out (or the 90-day inactivity policy fires).
+
 ---
 
 ### Screen 2: Nanny Login / Signup
 **Purpose:** Phone entry for new or returning nanny
 
 **Elements:**
+- Back control → Screen 1 Welcome
 - Header badge: "Nanny / Helper Sign Up - 100% free"
 - Country code dropdown (UAE, Philippines, India, Sri Lanka, Nepal, Indonesia, Ethiopia, Kenya, Ghana, Nigeria, Pakistan, Bangladesh, Uganda)
 - Phone number input
@@ -129,6 +134,7 @@ Kafi is a mobile-first marketplace connecting:
 **Purpose:** Phone entry for new or returning family
 
 **Elements:**
+- Back control → Screen 1 Welcome
 - Purple theme (different from nanny)
 - Header badge: "Family Registration - From 89 AED/week"
 - Country code dropdown (UAE, UK, US, India, Pakistan, France, Germany, Canada, Australia)
@@ -244,6 +250,7 @@ Kafi is a mobile-first marketplace connecting:
 - Tips & character counter
 
 **Navigation:** "Next — Photos & Video" button
+- **Log Out** in the form header (onboarding only, not edit-from-dashboard) so the nanny can leave and switch accounts without finishing the profile. Confirms, then clears the session and returns to Welcome.
 
 ---
 
@@ -349,6 +356,7 @@ Kafi is a mobile-first marketplace connecting:
 - "Profile submitted! 🌸" title
 - "Admin is reviewing... Usually 1-24 hours"
 - While you wait info box
+- **Log Out** control (header) — same confirm → Welcome flow as onboarding steps
 - Document Status List:
   - Passport Copy: Reviewing
   - Visa Page: Reviewing
@@ -472,12 +480,13 @@ Kafi is a mobile-first marketplace connecting:
 
 **Inactive nannies (admin toggle):** When admin `settings/global.hideInactiveNannies` is **on**, Browse (and its search / filter pills / “new conversation” candidate picker, which uses the same browse results) only shows approved+verified nannies whose `lastActiveAt` is within the last **14 days**. Nannies with no `lastActiveAt` or an older stamp are hidden. When the toggle is **off**, all approved+verified nannies are listed. Shortlist, chat threads, applicants, and direct profile links are unchanged (not discovery listings).
 
-**Nanny Cards (Featured & Regular):**
-- Avatar
-- Name with "Verified ✓" badge
-- Nationality, years exp, job type, location, availability
-- Match percentage badge
-- Tags (languages, skills, Video indicator)
+**Nanny Cards (Featured & Regular) — V2 scale (same layout, larger type):**
+- Avatar ~57px (was ~44); card padding/gaps scaled ~30%
+- Name ~14.5sp (~25% larger than prior 11.5) with "Verified ✓" badge
+- Meta line (nationality · years · job type · location · availability) ~11.5–12sp
+- Match percentage badge + optional job-label chip scaled with content
+- Language/skill tags scaled (~11.5sp)
+- Shortlist uses the same card widget and sizes
 
 **Bottom Navigation:** Home, Search, Messages (unread count badge for new received messages; clears when Messages is opened), Profile
 
@@ -591,10 +600,10 @@ Kafi is a mobile-first marketplace connecting:
 **Purpose:** Messaging between family and nanny
 
 **Family View (Subscribed - ACTIVE):**
-- Top bar with nanny avatar, name, status (Online)
-- WhatsApp direct button, Call button
+- Top bar with nanny avatar, name, status (Online · Kafi Verified ✓) — **tap avatar or name → full nanny profile**
+- WhatsApp direct button, Call button (separate from profile tap)
 - Contact strip: "Subscribed · Direct contacts unlocked" with Call/WhatsApp buttons
-- Message bubbles (sender aligned right, receiver left)
+- Message bubbles: sender right (accent color), receiver left (white); **profile photo beside every message** (family photo on family messages, nanny photo on nanny messages)
 - Date separators
 - System messages
 - Trial offer message card with Accept/Counter buttons
@@ -618,10 +627,10 @@ Kafi is a mobile-first marketplace connecting:
 - "Subscribe for direct contact" CTA in chat header
 
 **Nanny View:**
-- Purple theme
-- Top bar with family avatar (first name only + "Family")
+- Rose theme
+- Top bar with family avatar + name — **tap avatar or name → Job Detail / family household view**
 - Contact strip: "Family number is private · Chat is your connection"
-- Same message bubbles
+- Same dual-color bubbles with photos on every message
 - Trial offer received card with **Accept**, **Counter**, and **Decline** actions (Screen 32A; same actions on application detail when status is trial offered)
 - If family's subscription expired:
   - Banner: "Family's subscription has expired - they may not see new messages"
@@ -868,13 +877,15 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 | `payment_failed` | Renewal failed | ❌ Hidden | ❌ Locked |
 
 ### Subscription Management
-- **Platform:** RevenueCat SDK
+- **Platform:** RevenueCat SDK (`purchases_flutter`)
 - **Payment:** Apple Pay (iOS) / Google Pay (Android)
 - **Auto-renewal:** Yes, by default
 - **Cancel:** Via device's subscription settings (App Store / Play Store)
 - **Restore:** "Restore Purchases" button in settings
 - **Grace Period:** Standard Apple/Google grace periods apply
 - **Re-subscription:** Restores all previously-locked features (chat history, contacts, shortlist)
+- **API keys:** Public SDK keys via `--dart-define=REVENUECAT_IOS_API_KEY=…` / `REVENUECAT_ANDROID_API_KEY=…` (placeholders until store products are live). Until keys are set, keep `AppConfig.useMockSubscription = true` for local demo purchases.
+- **Purchase path:** Pricing plan tap → RevenueCat native sheet → webhook updates Firestore `families/{id}.subscription` → app refreshes access. Optimistic unlock after successful store purchase while webhook lands.
 
 ---
 
@@ -905,6 +916,7 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 │  └───────┘ └───────┘ └───────┘         │
 └─────────────────────────────────────────┘
 ```
+- Each stat cell (Applied / Viewed / Offers) is tappable → My Applications (Screen 25D)
 
 **Filter Pills (Horizontal Scroll):**
 - All Jobs (active by default)
@@ -921,15 +933,20 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 - Highest Salary
 - Nearest Location
 
-**Job Cards List:**
+**Job Cards List (V2 scale — same layout, larger type):**
+- Family photo ~47px (+30%); always light-pink card border
+- Job title ~14sp (+25%): `{Live-in/out} Nanny · {city}`
+- Details ~11sp (+20%): salary · family name
+- Tags ~10.5–11sp (+15–20%), larger padding; card ~25% taller
+- Tap → Job Detail
 
 ```
 ┌─────────────────────────────────────────┐
-│ 🔥 HOT MATCH                            │
-│ ┌────┐                                  │
-│ │ F  │  Live-in Nanny · Dubai Marina    │
-│ └────┘  Emirati family · 2 children     │
-│         AED 2,500 - 3,000/mo            │
+│ ┌────┐  Live-in Nanny · Dubai           │
+│ │photo│ AED 2000-3000/mo · Family name  │
+│ └────┘  [Live-in] [Dubai] [Childcare]   │
+└─────────────────────────────────────────┘
+```
 │                                         │
 │  ⭐ 94% match                           │
 │                                         │
@@ -984,17 +1001,20 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 - Share button
 - Save/Bookmark button (heart icon)
 
-**Family Card:**
-```
-┌─────────────────────────────────────────┐
-│  ┌──────┐                               │
-│  │  F   │  Al Mansoori Family           │
-│  │      │  Emirati · Dubai Marina       │
-│  └──────┘  Member since 2024            │
-│                                         │
-│  [Verified ✓]  [5 hires on Kafi]        │
-└─────────────────────────────────────────┘
-```
+**Family Card (V2 — loaded from FamilyModel + job):**
+- Large family photo, name, city with pin
+- Quick facts: family members (childrenCount+2 when children known), children + ages, languages at home, religion
+- About Our Family (`aboutFamily`) when present
+- Trial Period callout when `trialDurationDays > 0`
+- Mid actions: Chat with Family | Apply for Job (or Already applied)
+
+**Family Details section (icon rows):** members, children, language, religion, pets, cameras, visa sponsorship
+
+**Job Details section (icon rows):** job type, start date, working days, day off, salary
+
+**Benefits Offered:** chip/grid with icons (not only a vertical checklist)
+
+**Duties / requirements:** kept as checklist
 
 **Match Score Section:**
 ```
@@ -1329,22 +1349,16 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 └───────────┴───────────┴───────────┘
 ```
 
-**Application Cards:**
+**Application Cards (V2):**
+- Family profile photo (not letter initial)
+- **Family name first** (profile display name)
+- Job role underneath in a light-pink pill (e.g. Nanny / Maid & Nanny)
+- Applied relative time under the pill
+- Cover message snippet; status badge top-right; Withdraw bottom-right when pending/viewed
+- Tap card → Application Details
 
-**Pending:**
-```
-┌─────────────────────────────────────────┐
-│  ⏳ PENDING                             │
-│                                         │
-│  Live-in Nanny · Dubai Marina           │
-│  Al Mansoori Family · Emirati           │
-│                                         │
-│  Applied: May 15, 2026                  │
-│  Match: 94%                             │
-│                                         │
-│  [  Message  ]  [  Withdraw  ]          │
-└─────────────────────────────────────────┘
-```
+**Application Details summary card (V2):**
+- Family photo visible; **family name on top** (tappable → Job Detail); job role in rose under name; salary/location chips + timeline unchanged
 
 **Viewed by Family:**
 ```
@@ -3023,3 +3037,8 @@ Chat → Send Trial Offer → Evaluate Trial → Hire
 | 2026-09-06 | Chat list nanny avatars | Done | Backfill missing `nannyPhotoUrl` from nanny profile; avatar always shows initials under loading/failed photos |
 
 | 2026-09-06 | Support new ticket screen + submit | Done | New ticket is a full screen; submit returns a local ticket model and opens the thread (no sheet Get.back drop) |
+
+| 2026-09-18 | Kafi V2 edits (PDF) | Done | Login Back→Welcome; session persistence verified; browse/jobs card text+photo scale; jobs stats→My Applications; chat topbar→profile + bubble photos; Job Detail household/about/trial/Chat+Apply; applications family-first+photos; pricing KafiLogo |
+
+| 2026-09-28 | Nanny onboarding Log Out | Done | Screens 6–11: Log Out on form header during onboarding (hidden in editMode); step 1 hides back-to-login; pending/rejected heroes show Log Out → confirm → Welcome |
+| 2026-09-28 | RevenueCat SDK integration | Done | `purchases_flutter`; Pricing/Restore use native sheets when live; keys via dart-define placeholders; mock path retained until keys set |

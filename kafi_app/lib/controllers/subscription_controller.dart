@@ -7,6 +7,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/subscription_plan.dart';
 import 'package:kafi_app/models/trial_model.dart';
+import 'package:kafi_app/models/user_model.dart';
 import 'package:kafi_app/services/interfaces/i_subscription_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/services/mock/mock_subscription_service.dart';
@@ -28,8 +29,8 @@ class SubscriptionController extends GetxController {
   /// Id of the plan the family is currently subscribed to (null if none).
   final RxnString activePlanId = RxnString();
 
-  int get freeViewsRemaining =>
-      (SubscriptionConstants.freeProfileViewLimit - freeViewsUsed.value).clamp(0, 999);
+  int get freeUnlocksRemaining =>
+      (SubscriptionConstants.freeNannyUnlockLimit - freeViewsUsed.value).clamp(0, 999);
 
   /// Per docs §3.8: hasActiveAccess covers ACTIVE, TRIAL, CANCELLED-in-period, GRACE.
   /// Grace period maintains access while payment retry is in progress.
@@ -54,9 +55,40 @@ class SubscriptionController extends GetxController {
   /// Derived: chat list should be locked behind paywall
   bool get chatLocked => isExpired;
 
+  /// The single gate for a nanny's premium content — intro video, phone/CV
+  /// reveal, and starting or reopening a chat. Per the family-access spec:
+  ///   - An expired plan re-locks EVERY nanny, even ones unlocked earlier
+  ///     (via a free unlock or a past paid plan) — no exceptions.
+  ///   - An active plan (paid/trial/grace/cancelled-but-in-period) unlocks
+  ///     every nanny.
+  ///   - Free tier (never subscribed): unlocked only for nannies already in
+  ///     [viewedNannyIds] — i.e. one of the family's 3 one-time free unlocks
+  ///     was already spent on this nanny.
+  /// General profile browsing (photos, nationality, experience, skills,
+  /// languages, salary, visa status, etc.) is never gated by this — every
+  /// nanny's general profile is always free to view.
+  bool isNannyLocked(String nannyId) {
+    if (isExpired) return true;
+    if (hasActiveAccess) return false;
+    return !viewedNannyIds.contains(nannyId);
+  }
+
   @override
   void onInit() {
     super.onInit();
+    // Identify / clear RevenueCat when the signed-in family changes.
+    ever(_auth.currentUser, (user) async {
+      if (user != null && user.type == UserType.family) {
+        await _subs.onUserSignedIn(user.id);
+        await refreshAndEnforce();
+      } else if (user == null) {
+        await _subs.onUserSignedOut();
+      }
+    });
+    final existing = _auth.currentUser.value;
+    if (existing != null && existing.type == UserType.family) {
+      _subs.onUserSignedIn(existing.id);
+    }
     refreshAndEnforce();
   }
 
@@ -106,7 +138,7 @@ class SubscriptionController extends GetxController {
 
     if (hasActiveAccess) return true;
 
-    // Free tier path: caller checks freeViewsRemaining()
+    // Free tier path: caller checks unlockNannyIfAllowed()
     if (state.value == SubscriptionState.free) {
       return false;
     }
@@ -127,18 +159,24 @@ class SubscriptionController extends GetxController {
   /// Cache of viewed nanny IDs to avoid burning duplicate free views.
   final RxSet<String> viewedNannyIds = <String>{}.obs;
 
-  Future<bool> recordViewIfAllowed(String nannyId) async {
+  /// Spends one of the family's 3 one-time free nanny unlocks on [nannyId],
+  /// if it isn't already unlocked. Call this from the video / contact / chat
+  /// trigger points — never from opening a profile, which is always free.
+  /// Returns true when the nanny ends up unlocked (already was, subscribed,
+  /// or a free slot was just spent) and the caller should proceed; false
+  /// means no free slots remain (or the plan is expired) and the caller
+  /// should route to the paywall instead.
+  Future<bool> unlockNannyIfAllowed(String nannyId) async {
     final id = currentFamilyId(_auth);
     if (id == null) return false;
-    if (isSubscribed) return true;
-    // Expired users can still re-open profiles they previously viewed
-    // (Screen 16A — Profile Re-Locked); they cannot view NEW profiles.
-    if (isExpired) {
-      return viewedNannyIds.contains(nannyId);
-    }
-    // Already viewed → don't consume another free view.
+    if (hasActiveAccess) return true;
+    // Expired: full lockdown, even for a previously-unlocked nanny — the
+    // family must resubscribe. The one-time 3 free unlocks are never
+    // re-granted (see SubscriptionConstants.freeNannyUnlockLimit).
+    if (isExpired) return false;
+    // Already unlocked → free forever for this nanny, no new slot spent.
     if (viewedNannyIds.contains(nannyId)) return true;
-    if (freeViewsRemaining <= 0) return false;
+    if (freeUnlocksRemaining <= 0) return false;
     await _subs.recordView(id, nannyId);
     viewedNannyIds.add(nannyId);
     // Count locally from the deduped set — the onProfileViewed function updates
@@ -159,7 +197,16 @@ class SubscriptionController extends GetxController {
       await refreshAndEnforce();
       return true;
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      final msg = e.toString();
+      if (msg.contains('cancelled')) {
+        return false;
+      }
+      Get.snackbar(
+        AppStrings.errorTitle.tr,
+        msg.contains('RevenueCat API key')
+            ? AppStrings.errSubNotConfigured.tr
+            : AppStrings.errSubPurchaseFailed.tr,
+      );
       return false;
     }
   }
@@ -167,12 +214,22 @@ class SubscriptionController extends GetxController {
   /// Returns true when the restore succeeded so the caller only confirms on
   /// success (was fire-and-forget with an unconditional "restored" toast).
   Future<bool> restorePurchases() async {
+    final id = currentFamilyId(_auth);
+    if (id == null) return false;
     try {
-      // Call RevenueCat restore in production
+      final ok = await _subs.restorePurchases(id);
       await refreshAndEnforce();
-      return true;
+      if (!ok) {
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.errSubRestoreFailed.tr);
+      }
+      return ok;
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      Get.snackbar(
+        AppStrings.errorTitle.tr,
+        e.toString().contains('RevenueCat API key')
+            ? AppStrings.errSubNotConfigured.tr
+            : AppStrings.errSubRestoreFailed.tr,
+      );
       return false;
     }
   }

@@ -78,7 +78,14 @@ class ProfileSections {
     );
   }
 
-  static Widget mediaGallery(NannyCardModel card) {
+  /// Photos are always free to browse. [videoLocked] gates only the intro
+  /// video tile: when true, tapping it calls [onLockedVideoTap] (attempt to
+  /// spend a free unlock / route to the paywall) instead of playing directly.
+  static Widget mediaGallery(
+    NannyCardModel card, {
+    bool videoLocked = false,
+    VoidCallback? onLockedVideoTap,
+  }) {
     final hasVideo = (card.introVideoUrl ?? '').isNotEmpty;
     if (card.photoUrls.isEmpty && !hasVideo) return const SizedBox.shrink();
     return SizedBox(
@@ -114,10 +121,12 @@ class ProfileSections {
             );
           }
           return GestureDetector(
-            onTap: () => AppNavigation.openIntroVideo(
-              introVideoUrl: card.introVideoUrl,
-              nannyName: card.name,
-            ),
+            onTap: videoLocked
+                ? onLockedVideoTap
+                : () => AppNavigation.openIntroVideo(
+                      introVideoUrl: card.introVideoUrl,
+                      nannyName: card.name,
+                    ),
             child: ClipRRect(
               borderRadius: BorderRadius.circular(ProfileUi.tileRadius),
               child: SizedBox(
@@ -131,8 +140,12 @@ class ProfileSections {
                     else
                       Container(color: KafiColors.navy),
                     Container(color: Colors.black.withValues(alpha: 0.38)),
-                    const Center(
-                      child: Icon(Icons.play_circle_fill, color: Colors.white, size: 30),
+                    Center(
+                      child: Icon(
+                        videoLocked ? Icons.lock : Icons.play_circle_fill,
+                        color: Colors.white,
+                        size: 30,
+                      ),
                     ),
                   ],
                 ),

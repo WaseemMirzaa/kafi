@@ -6,8 +6,10 @@ import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 import 'package:kafi_app/views/widgets/kafi_search_field.dart';
 
 class MyApplicationsScreen extends StatefulWidget {
@@ -148,12 +150,21 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
     // Prefer the denormalized fields on the application so a job that isn't in
     // the browse set doesn't fall back to fabricated 'Dubai'/'Live-in' (NAP-12).
     final famName = (app.familyName?.isNotEmpty ?? false) ? app.familyName! : (job?.familyName ?? '');
-    final initial = famName.isNotEmpty ? famName[0].toUpperCase() : 'F';
-    final title = (app.jobTitle?.isNotEmpty ?? false)
+    final displayFamily = famName.isNotEmpty
+        ? (famName.toLowerCase().endsWith('family')
+            ? famName
+            : '$famName ${AppStrings.jobDetailFamilySuffix.tr}')
+        : AppStrings.jobDetailFamilySuffix.tr;
+    final role = (app.jobTitle?.isNotEmpty ?? false)
         ? app.jobTitle!
         : job != null
-            ? '${job.jobType.name == 'liveOut' ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr} ${AppStrings.nannySuffix.tr}${job.city.isNotEmpty ? ' · ${job.city}' : ''}'
-            : AppStrings.nannyMyApplications.tr;
+            ? '${job.jobType.name == 'liveOut' ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr} ${AppStrings.nannySuffix.tr}'
+            : AppStrings.nannySuffix.tr;
+    final photoSeed = (job?.familyId.isNotEmpty ?? false)
+        ? job!.familyId
+        : (app.familyId.isNotEmpty ? app.familyId : famName);
+    final canWithdraw =
+        app.status == ApplicationStatus.pending || app.status == ApplicationStatus.viewed;
 
     return GestureDetector(
       onTap: () => Get.toNamed(Routes.nannyApplicationDetail, arguments: app),
@@ -172,36 +183,56 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(initial,
-                        style: KafiTheme.fredoka(14, color: Colors.white, w: FontWeight.w900)),
-                  ),
+                KafiAvatar(
+                  photoUrl: FamilyConstants.resolvedPhotoUrl(job?.familyPhotoUrl, photoSeed),
+                  fallbackText: famName.isNotEmpty ? famName : 'F',
+                  size: 42,
+                  gradient: const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
+                  fontSize: 16,
+                  radius: 10,
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(title,
-                          style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w800)),
+                      Text(displayFamily,
+                          style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w800),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
+                        decoration: BoxDecoration(
+                          color: KafiColors.roseP,
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Text(role,
+                            style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis),
+                      ),
+                      const SizedBox(height: 3),
                       Text(
                           '${AppStrings.appDetailApplied.tr} ${formatRelativeTime(app.createdAt)}',
                           style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
                     ],
                   ),
                 ),
-                _statusBadge(app.status),
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.end,
+                  children: [
+                    _statusBadge(app.status),
+                    if (canWithdraw) ...[
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () => _confirmWithdraw(app.id),
+                        child: Text(AppStrings.nannyWithdraw.tr,
+                            style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700)),
+                      ),
+                    ],
+                  ],
+                ),
               ],
             ),
             if (app.coverMessage != null && app.coverMessage!.isNotEmpty) ...[
@@ -211,22 +242,6 @@ class _MyApplicationsScreenState extends State<MyApplicationsScreen> {
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis),
             ],
-            const SizedBox(height: 7),
-            Row(
-              children: [
-                // Nanny-side "% match" suppressed (M8): the canonical match is
-                // scored from the family's household + job, which the nanny
-                // can't compute — a job-only number here would just diverge.
-                const Spacer(),
-                if (app.status == ApplicationStatus.pending ||
-                    app.status == ApplicationStatus.viewed)
-                  GestureDetector(
-                    onTap: () => _confirmWithdraw(app.id),
-                    child: Text(AppStrings.nannyWithdraw.tr,
-                        style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700)),
-                  ),
-              ],
-            ),
           ],
         ),
       ),

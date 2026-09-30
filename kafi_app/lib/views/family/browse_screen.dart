@@ -99,47 +99,11 @@ class BrowseScreen extends GetView<BrowseController> {
                             return KafiNannyCard(
                               card: card,
                               jobLabel: controller.matchJobTitle,
-                              onTap: () async {
-                                final wasViewed = subs.viewedNannyIds.contains(card.id);
-                                final allowed = await controller.recordView(card.id);
-
-                                // Route resolution:
-                                // - subscribed → unlocked
-                                // - expired + previously viewed → re-locked
-                                // - expired + new → locked (no contacts)
-                                // - free + allowed (not over limit) → locked or unlocked depending on sub
-                                // - free + over limit → nudge to pricing
-                                if (subs.isSubscribed) {
-                                  Get.toNamed(Routes.profileUnlocked, arguments: card);
-                                  return;
-                                }
-                                if (subs.isExpired) {
-                                  Get.toNamed(
-                                    wasViewed ? Routes.profileRelocked : Routes.profileLocked,
-                                    arguments: card,
-                                  );
-                                  return;
-                                }
-                                if (!allowed) {
-                                  Get.snackbar(
-                                    AppStrings.subscriptionRequired.tr,
-                                    AppStrings.noFreeViewsLeft.tr,
-                                  );
-                                  Get.toNamed(Routes.pricing);
-                                  return;
-                                }
-                                // Free-tier hint when running low.
-                                final remaining = subs.freeViewsRemaining;
-                                if (!subs.isSubscribed && remaining > 0 && remaining <= 2) {
-                                  Get.snackbar(
-                                    '',
-                                    '$remaining ${AppStrings.freeViewsRemaining.tr}',
-                                    snackPosition: SnackPosition.BOTTOM,
-                                    duration: const Duration(seconds: 2),
-                                  );
-                                }
-                                Get.toNamed(Routes.profileLocked, arguments: card);
-                              },
+                              // General profile browsing is always free and
+                              // unlimited — only video/contact/chat spend one
+                              // of the family's 3 free nanny unlocks, gated
+                              // inline on the profile screen itself.
+                              onTap: () => AppNavigation.openNannyProfile(card),
                             );
                           },
                         ),

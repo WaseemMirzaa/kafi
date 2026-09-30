@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/application_controller.dart';
 import 'package:kafi_app/controllers/chat_controller.dart';
 import 'package:kafi_app/controllers/job_post_controller.dart';
@@ -9,19 +10,15 @@ import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
+import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
 const _heroGradient = LinearGradient(
   begin: Alignment.topLeft,
   end: Alignment.bottomRight,
   colors: [Color(0xFFFFE0EC), Color(0xFFFFF4EE)],
-);
-
-const _avatarGradient = LinearGradient(
-  begin: Alignment.topLeft,
-  end: Alignment.bottomRight,
-  colors: [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
 );
 
 BoxDecoration _cardDecoration({Color border = const Color(0xFFFFE8EF)}) {
@@ -410,15 +407,28 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     final typeLabel =
         job?.jobType.name == 'liveOut' ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr;
     final city = job?.city ?? '—';
-    final title = job?.jobTitle ?? '$typeLabel ${AppStrings.nannySuffix.tr}';
-    final family = job?.familyName ?? '—';
-    final initial = family.isNotEmpty ? family[0].toUpperCase() : 'F';
+    final role = job?.jobTitle ?? '$typeLabel ${AppStrings.nannySuffix.tr}';
+    final familyRaw = (app.familyName?.isNotEmpty ?? false)
+        ? app.familyName!
+        : (job?.familyName ?? '—');
+    final family = familyRaw;
+    final photoSeed = (job?.familyId.isNotEmpty ?? false)
+        ? job!.familyId
+        : (app.familyId.isNotEmpty ? app.familyId : familyRaw);
     final salary = job != null && job.salaryMax > 0
         ? AppStrings.jobSalaryRange.trParams({
             'min': '${job.salaryMin}',
             'max': '${job.salaryMax}',
           })
         : null;
+
+    void openFamilyJob() {
+      if (job != null) {
+        Get.toNamed(Routes.nannyJobDetail, arguments: job);
+      } else {
+        Get.snackbar(AppStrings.errorTitle.tr, AppStrings.jobDetailNotSpecified.tr);
+      }
+    }
 
     return Container(
       padding: const EdgeInsets.all(11),
@@ -429,16 +439,15 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  gradient: _avatarGradient,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Center(
-                  child: Text(initial,
-                      style: KafiTheme.fredoka(18, color: Colors.white, w: FontWeight.w900)),
+              GestureDetector(
+                onTap: openFamilyJob,
+                child: KafiAvatar(
+                  photoUrl: FamilyConstants.resolvedPhotoUrl(job?.familyPhotoUrl, photoSeed),
+                  fallbackText: family,
+                  size: 48,
+                  gradient: const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
+                  fontSize: 18,
+                  radius: 12,
                 ),
               ),
               const SizedBox(width: 10),
@@ -446,12 +455,18 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(title,
-                        style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w900)),
-                    Text('$family · $city',
-                        style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600)),
-                    // Nanny-side "% match" suppressed (M8) — the canonical match
-                    // is the family's household+job score the nanny can't compute.
+                    GestureDetector(
+                      onTap: openFamilyJob,
+                      child: Text(family,
+                          style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w900),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(role,
+                        style: KafiTheme.nunito(11, color: KafiColors.roseD, w: FontWeight.w700),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis),
                   ],
                 ),
               ),

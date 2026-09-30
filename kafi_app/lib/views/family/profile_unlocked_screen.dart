@@ -5,6 +5,7 @@ import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
+import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/nanny_card_resolver.dart';
@@ -75,8 +76,36 @@ class _RevealState extends State<_Reveal> {
   Widget build(BuildContext context) => widget.builder(_phone, _loading, _failed, _reveal);
 }
 
+/// Single family-facing nanny profile screen. General profile info (photos,
+/// nationality, location, experience, work history, skills, languages,
+/// availability, salary, visa status) is always shown — browsing is free and
+/// unlimited. The intro video and the contact/chat quick-actions are gated
+/// inline via SubscriptionController.isNannyLocked: locked for a nanny the
+/// family hasn't unlocked (one of their 3 free unlocks, or an active plan),
+/// with a tap attempting to spend a free unlock before falling back to the
+/// paywall.
 class ProfileUnlockedScreen extends StatelessWidget {
   const ProfileUnlockedScreen({super.key});
+
+  Future<void> _handleVideoTap(NannyCardModel card, SubscriptionController subs) async {
+    if (subs.isExpired) {
+      AppNavigation.openPricing(unlockNanny: card, reason: 'expired');
+      return;
+    }
+    final ok = await subs.unlockNannyIfAllowed(card.id);
+    if (ok) {
+      AppNavigation.openIntroVideo(introVideoUrl: card.introVideoUrl, nannyName: card.name);
+    } else {
+      AppNavigation.openPricing(unlockNanny: card, reason: 'free_limit_reached');
+    }
+  }
+
+  Future<void> _handleUnlockTap(NannyCardModel card, SubscriptionController subs) async {
+    final ok = await subs.unlockNannyIfAllowed(card.id);
+    if (!ok) {
+      AppNavigation.openPricing(unlockNanny: card, reason: 'free_limit_reached');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -97,12 +126,17 @@ class ProfileUnlockedScreen extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   Obx(() {
-                    final contactsHidden = subs.contactsHidden;
+                    final locked = subs.isNannyLocked(card.id);
                     return ProfileHero(
                       card: card,
                       compactBottom: true,
-                      footer: contactsHidden
-                          ? null
+                      footer: locked
+                          ? _LockedQuickActions(
+                              expired: subs.isExpired,
+                              onUnlockTap: () => _handleUnlockTap(card, subs),
+                              onSubscribeTap: () =>
+                                  AppNavigation.openPricing(unlockNanny: card, reason: 'expired'),
+                            )
                           : _Reveal(
                               nannyId: card.id,
                               builder: (phone, loading, failed, retry) {
@@ -144,20 +178,13 @@ class ProfileUnlockedScreen extends StatelessWidget {
                       crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
                         Obx(() => subs.isExpired ? _expiredBanner() : const SizedBox.shrink()),
-                        Obx(() {
-                          if (subs.contactsHidden) {
-                            return Column(
-                              children: [
-                                _contactsLockedBanner(),
-                                const SizedBox(height: ProfileUi.sectionGap),
-                              ],
-                            );
-                          }
-                          return const SizedBox.shrink();
-                        }),
                         _trialBadge(card.id),
                         ProfileSections.mediaGalleryTitle(card),
-                        ProfileSections.mediaGallery(card),
+                        Obx(() => ProfileSections.mediaGallery(
+                              card,
+                              videoLocked: subs.isNannyLocked(card.id),
+                              onLockedVideoTap: () => _handleVideoTap(card, subs),
+                            )),
                         const SizedBox(height: ProfileUi.sectionGap),
                         ProfileSections.sectionTitle(AppStrings.profileExperiencePreferences.tr),
                         ProfileSections.experienceList(card),
@@ -186,31 +213,6 @@ class ProfileUnlockedScreen extends StatelessWidget {
             ),
           ],
         ),
-      ),
-    );
-  }
-
-  Widget _contactsLockedBanner() {
-    return Container(
-      padding: const EdgeInsets.all(11),
-      decoration: BoxDecoration(
-        color: KafiColors.ambL,
-        border: Border.all(color: const Color(0xFFFFD080), width: 1.5),
-        borderRadius: BorderRadius.circular(10),
-      ),
-      child: Row(
-        children: [
-          const Text('🔒', style: TextStyle(fontSize: 16)),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(AppStrings.contactsHiddenBanner.tr,
-                style: KafiTheme.nunito(10, color: const Color(0xFF7A4A00), w: FontWeight.w700)),
-          ),
-          TextButton(
-            onPressed: () => Get.toNamed(Routes.pricing),
-            child: Text(AppStrings.renewNow.tr, style: KafiTheme.fredoka(10, color: KafiColors.roseD)),
-          ),
-        ],
       ),
     );
   }
@@ -267,6 +269,62 @@ class ProfileUnlockedScreen extends StatelessWidget {
               TextButton(
                 onPressed: () => Get.toNamed(Routes.trial),
                 child: Text(AppStrings.detailsLabel.tr, style: KafiTheme.fredoka(10, color: KafiColors.pur)),
+              ),
+            ],
+          ),
+        ),
+      );
+    });
+  }
+}
+
+/// Replaces [ProfileQuickActions] in the hero footer when the nanny is
+/// locked for this family. [expired] means the family had a plan that
+/// lapsed — everything is locked until they resubscribe, free unlocks are
+/// never re-granted. Otherwise the family is still on the free tier and can
+/// spend one of their 3 one-time free unlocks on [onUnlockTap].
+class _LockedQuickActions extends StatelessWidget {
+  const _LockedQuickActions({
+    required this.expired,
+    required this.onUnlockTap,
+    required this.onSubscribeTap,
+  });
+
+  final bool expired;
+  final VoidCallback onUnlockTap;
+  final VoidCallback onSubscribeTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final subs = Get.find<SubscriptionController>();
+    return Obx(() {
+      final remaining = subs.freeUnlocksRemaining;
+      final canUseFreeUnlock = !expired && remaining > 0;
+      return GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: canUseFreeUnlock ? onUnlockTap : onSubscribeTap,
+        child: Container(
+          width: double.infinity,
+          padding: const EdgeInsets.symmetric(vertical: 11, horizontal: 12),
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(colors: [KafiColors.pur, Color(0xFFC084FC)]),
+            borderRadius: BorderRadius.circular(ProfileUi.pillRadius),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.lock_outline, color: Colors.white, size: 15),
+              const SizedBox(width: 7),
+              Flexible(
+                child: Text(
+                  canUseFreeUnlock
+                      ? AppStrings.unlockNannyFreeCta.trParams({'n': '$remaining'})
+                      : (expired ? AppStrings.renewToUnlockCta.tr : AppStrings.subscribeToUnlockCta.tr),
+                  textAlign: TextAlign.center,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: KafiTheme.fredoka(11.5, color: Colors.white, w: FontWeight.w700),
+                ),
               ),
             ],
           ),

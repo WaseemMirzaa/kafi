@@ -84,7 +84,9 @@ class FirestoreSubscriptionService implements ISubscriptionService {
         'plan': planId,
         'startDate': Timestamp.fromDate(now),
         'endDate': Timestamp.fromDate(endDate),
-        'autoRenew': true,
+        // Kafi family plans are one-time purchases, not subscriptions — they
+        // never auto-renew (see the family-access spec).
+        'autoRenew': false,
         'hasEverSubscribed': true,
         'lastRenewalAt': Timestamp.fromDate(now),
       },
@@ -126,4 +128,20 @@ class FirestoreSubscriptionService implements ISubscriptionService {
     final subData = snap.data()?['subscription'] as Map<String, dynamic>?;
     return subData?['plan'] as String?;
   }
+
+  @override
+  Future<bool> restorePurchases(String familyId) async {
+    // Firestore-only path has no store; restore is handled by
+    // [RevenueCatSubscriptionService] in production.
+    final state = await getState(familyId);
+    return state == SubscriptionState.active ||
+        state == SubscriptionState.cancelledInPeriod ||
+        state == SubscriptionState.paymentGrace;
+  }
+
+  @override
+  Future<void> onUserSignedIn(String familyId) async {}
+
+  @override
+  Future<void> onUserSignedOut() async {}
 }

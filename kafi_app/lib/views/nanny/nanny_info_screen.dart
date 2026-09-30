@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
-import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
@@ -50,7 +49,11 @@ class NannyInfoScreen extends GetView<NannyProfileController> {
       step: 1,
       title: AppStrings.nannyAboutYou.tr,
       subtitle: AppStrings.nannyAboutYouSub.tr,
-      onBack: editMode ? Get.back : () => Get.offAllNamed(Routes.loginNanny),
+      // First onboarding step: no back-to-login without clearing session —
+      // use Log Out instead. Edit-from-dashboard keeps normal back.
+      showBack: editMode,
+      onBack: editMode ? Get.back : null,
+      showSignOut: !editMode,
       footer: Obx(
         () => KafiPrimaryButton(
           label: editMode ? AppStrings.saveAndClose.tr : AppStrings.nextPhotos.tr,

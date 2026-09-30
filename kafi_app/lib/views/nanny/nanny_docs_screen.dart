@@ -19,6 +19,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
       title: AppStrings.docsScreenTitle.tr,
       subtitle: AppStrings.docsScreenSubtitle.tr,
       onBack: editMode ? Get.back : null,
+      showSignOut: !editMode,
       footer: Obx(
         () => KafiPrimaryButton(
           label: editMode ? AppStrings.saveAndClose.tr : AppStrings.submitReview.tr,

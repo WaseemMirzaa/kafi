@@ -48,7 +48,8 @@ class _LoginFamilyScreenState extends State<LoginFamilyScreen> {
                   child: Padding(
                     padding: const EdgeInsets.only(left: 8),
                     child: GestureDetector(
-                      onTap: Get.back,
+                      // Always return to Welcome role select (stack may be empty after splash).
+                      onTap: () => Get.offNamed(Routes.welcome),
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

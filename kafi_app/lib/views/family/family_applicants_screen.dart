@@ -3,14 +3,12 @@ import 'package:get/get.dart';
 import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/controllers/application_controller.dart';
 import 'package:kafi_app/controllers/job_post_controller.dart';
-import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/services/interfaces/i_subscription_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/services/mock/mock_subscription_service.dart';
-import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
@@ -352,15 +350,8 @@ class _FamilyApplicantsScreenState extends State<FamilyApplicantsScreen> {
       if (app.status == ApplicationStatus.pending) {
         await controller.markAsViewed(app.id);
       }
-      final subs = Get.find<SubscriptionController>();
-      final allowed = await subs.recordViewIfAllowed(app.nannyId);
-      if (!allowed) {
-        // Out of free views (or expired viewing a new profile) — nudge to
-        // pricing rather than opening a profile the family can't unlock, the
-        // same as the browse flow does.
-        Get.toNamed(Routes.pricing);
-        return;
-      }
+      // General profile browsing is always free — video/contact/chat are
+      // gated inline on the profile screen itself, not here.
       await _syncMockEntitlementsIfNeeded(app.familyId);
       final nanny = await Get.find<IUserService>().getNanny(app.nannyId);
       if (nanny == null) {

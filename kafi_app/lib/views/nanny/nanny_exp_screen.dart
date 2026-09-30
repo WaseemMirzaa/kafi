@@ -21,6 +21,7 @@ class NannyExpScreen extends GetView<NannyProfileController> {
       title: AppStrings.expTitle.tr,
       subtitle: AppStrings.expSub.tr,
       onBack: editMode ? Get.back : null,
+      showSignOut: !editMode,
       footer: Obx(
         () => KafiPrimaryButton(
           label: editMode ? AppStrings.saveAndClose.tr : AppStrings.nextRefs.tr,

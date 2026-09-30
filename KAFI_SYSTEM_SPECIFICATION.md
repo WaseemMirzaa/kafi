@@ -1598,6 +1598,9 @@ END
 - **Restore Purchases** - RevenueCat handles across devices
 - **Trial payments** - NOT handled by app (direct between users)
 - **Nanny salary** - NOT handled by app (direct between users)
+- **App user id** - RevenueCat `app_user_id` = Firebase Auth uid / family document id (same id the webhook uses for `families/{familyId}`)
+- **Entitlement** - `family_premium` (RevenueCat dashboard); maps store products `kafi_weekly` / `kafi_monthly` / `kafi_bimonthly` to plan ids `weekly` / `monthly` / `bimonthly`
+- **SDK keys** - Public iOS/Android SDK keys supplied at build time (`REVENUECAT_IOS_API_KEY`, `REVENUECAT_ANDROID_API_KEY`); never commit secret API keys. Webhook auth uses `REVENUECAT_WEBHOOK_SECRET` on Cloud Functions
 
 ## 8.4 Subscription States & Access Matrix
 
@@ -2636,4 +2639,9 @@ First Launch
 | 2026-09-04 | Subscribe returns to unlocked nanny | Done | §6.8 / Screen 38: payment success unlocks the nanny profile already on the stack (no Browse remount) |
 
 | 2026-09-06 | Family default photo placeholders | Done | Bundled `family_defaults` portraits show on nanny job lists/chats when family has no uploaded photo |
+
+| 2026-09-18 | Kafi V2 edits (PDF) | Done | Auth Back to Welcome; Firebase session retained until logout; nanny reads FamilyModel for Job Detail household; chat dual photos |
+
+| 2026-09-28 | Nanny onboarding Log Out | Done | Incomplete onboarding may leave via Log Out (confirm clears session → Welcome); no silent back-to-login on step 1 |
+| 2026-09-28 | RevenueCat SDK integration | Done | §8.1–8.3: product ids + entitlement `family_premium`; SDK keys via dart-define; webhook remains source of truth for Firestore status |
 

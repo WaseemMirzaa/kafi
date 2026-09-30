@@ -4,6 +4,7 @@ import 'package:kafi_app/config/routes.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/nanny_model.dart';
+import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
@@ -61,7 +62,7 @@ class _NannyPendingScreenState extends State<NannyPendingScreen>
 
   Widget _pendingHero() {
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -71,6 +72,19 @@ class _NannyPendingScreenState extends State<NannyPendingScreen>
       ),
       child: Column(
         children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: AppNavigation.confirmSignOut,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  AppStrings.settingsLogout.tr,
+                  style: KafiTheme.nunito(11, color: KafiColors.redD, w: FontWeight.w800),
+                ),
+              ),
+            ),
+          ),
           AnimatedBuilder(
             animation: _pulse,
             builder: (_, __) => Container(
@@ -129,7 +143,7 @@ class _NannyPendingScreenState extends State<NannyPendingScreen>
   Widget _rejectedHero(NannyProfileController ctrl) {
     final reason = ctrl.nanny.value?.rejectionReason;
     return Container(
-      padding: const EdgeInsets.fromLTRB(18, 22, 18, 18),
+      padding: const EdgeInsets.fromLTRB(18, 12, 18, 18),
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topLeft,
@@ -139,6 +153,19 @@ class _NannyPendingScreenState extends State<NannyPendingScreen>
       ),
       child: Column(
         children: [
+          Align(
+            alignment: Alignment.centerRight,
+            child: GestureDetector(
+              onTap: AppNavigation.confirmSignOut,
+              child: Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(
+                  AppStrings.settingsLogout.tr,
+                  style: KafiTheme.nunito(11, color: KafiColors.redD, w: FontWeight.w800),
+                ),
+              ),
+            ),
+          ),
           Container(
             width: 60,
             height: 60,

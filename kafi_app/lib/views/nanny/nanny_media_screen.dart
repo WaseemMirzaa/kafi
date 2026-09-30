@@ -23,6 +23,7 @@ class NannyMediaScreen extends GetView<NannyProfileController> {
       title: AppStrings.mediaTitle.tr,
       subtitle: AppStrings.mediaSubtitle.tr,
       onBack: editMode ? Get.back : null,
+      showSignOut: !editMode,
       footer: Obx(
         () => KafiPrimaryButton(
           label: editMode ? AppStrings.saveAndClose.tr : AppStrings.nextExp.tr,
