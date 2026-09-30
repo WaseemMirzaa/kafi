@@ -1,0 +1,26 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "kafi_app",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/kafi_app",
+      "toolArgs": [
+        "--dart-define=GOOGLE_MAPS_API_KEY=AIzaSyDqQUR6ygHdXRDDUmJ7Xr02A2HCMH92Lvk"
+      ]
+    },
+    {
+      "name": "kafi_app (profile)",
+      "type": "dart",
+      "request": "launch",
+      "program": "lib/main.dart",
+      "cwd": "${workspaceFolder}/kafi_app",
+      "flutterMode": "profile",
+      "toolArgs": [
+        "--dart-define=GOOGLE_MAPS_API_KEY=AIzaSyDqQUR6ygHdXRDDUmJ7Xr02A2HCMH92Lvk"
+      ]
+    }
+  ]
+}
