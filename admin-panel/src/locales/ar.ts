@@ -172,6 +172,9 @@ export const ar: Record<keyof typeof en, string> = {
   // ── settings ────────────────────────────────────────────────────────────
   'settings.title': 'الإعدادات',
   'settings.subtitle': 'إعدادات التطبيق العامة',
+  'settings.legal': 'قانوني',
+  'settings.legalDesc': 'صفحات السياسات العامة المستضافة مع لوحة الإدارة (وتُستخدم أيضاً لمتاجر التطبيقات).',
+  'settings.privacyPolicy': 'سياسة الخصوصية',
   'settings.saveChanges': 'حفظ التغييرات',
   'settings.failedToLoad': 'فشل تحميل الإعدادات',
   'settings.enterValidNumbers': 'أدخل أرقامًا صحيحة في كل حقل.',

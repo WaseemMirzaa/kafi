@@ -721,17 +721,17 @@ Kafi is a mobile-first marketplace connecting:
 **Purpose:** Display subscription options
 
 **Free Tier Info:**
-- 5 free profile views included (viewing a profile = using 1 contact)
-- Progress bar showing usage (e.g., "3 of 5 used")
-- List of free features
-- Viewed nannies history
+- 3 free nanny unlocks included (one time only when the family joins)
+- An unlock is 1 unique nanny when the family opens her intro video **or** opens contact / starts chat
+- Progress bar showing unlock usage (e.g., "2 of 3 used")
+- General profile browsing stays free after unlocks are used
 
-**Plan Selection:**
+**Plan Selection (non-renewing / one-time):**
 - Features banner (all plans include same features)
-- Weekly: AED 89 (7 days)
-- Monthly: AED 239 (30 days) - "Most popular"
-- 2 Months: AED 369 (60 days) - "Save 129 AED"
-- VAT note: +5%
+- 7 Days: AED 89
+- 30 Days: AED 239 — MOST POPULAR
+- 60 Days: AED 369 — BEST VALUE
+- VAT note: +5% · no auto-renew · nannies always free
 - Trust badges: SSL, UAE trusted, 5-star
 
 **Payment Screen:**
@@ -783,6 +783,10 @@ Kafi is a mobile-first marketplace connecting:
 **Purpose:** Owner-only management interface
 
 **Branding:** Login and sidebar use the same `kafi-logo.png` lockup as the mobile app (wordmark + mother/child mark), plus an Admin badge. Favicon is that asset.
+
+**Public legal pages** (Firebase Hosting on the admin site; no admin login required):
+- Privacy Policy — `/privacy/` (linked from Admin → Settings)
+- Delete Account — `/delete-account/` (store account-deletion URL; in-app steps + email request)
 
 **Sidebar Navigation:**
 - Dashboard
@@ -2955,6 +2959,7 @@ Chat → Send Trial Offer → Evaluate Trial → Hire
 
 | Date (YYYY-MM-DD) | Task | Status | Summary |
 |-------------------|------|--------|---------|
+| 2026-10-02 | Fatima family access plans | Done | Screen 20: 3 free unlocks; 7/30/60 Days AED 89/239/369 MOST POPULAR/BEST VALUE; no auto-renew |
 | 2026-05-19 | Phase 0 scaffold | Done | Welcome + role-select mock auth (OTP 1234), nanny/family placeholder homes, Kafi theme tokens; admin panel routes per Screen 23 |
 | 2026-05-19 | Auth UI foundation v8 | Done | HTML-matched welcome/login/OTP/create-pw screens; widget kit; GetX auth flow; mock OTP 1234 |
 | 2026-05-19 | Restart Task 1 — auth flow | Done | Screens 1–5 rebuilt vs HTML; l10n keys; mock auth; placeholders for post-auth routes |
@@ -3042,3 +3047,5 @@ Chat → Send Trial Offer → Evaluate Trial → Hire
 
 | 2026-09-28 | Nanny onboarding Log Out | Done | Screens 6–11: Log Out on form header during onboarding (hidden in editMode); step 1 hides back-to-login; pending/rejected heroes show Log Out → confirm → Welcome |
 | 2026-09-28 | RevenueCat SDK integration | Done | `purchases_flutter`; Pricing/Restore use native sheets when live; keys via dart-define placeholders; mock path retained until keys set |
+
+| 2026-10-02 | Public privacy + delete-account web pages | Done | Static `/privacy/` and `/delete-account/` on admin Hosting; privacy linked from admin Settings |

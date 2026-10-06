@@ -270,8 +270,12 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   String _displayName(ChatThread t) {
-    final name = controller.isNanny ? t.familyName : t.nannyName;
-    return name.isNotEmpty ? name : AppStrings.chatTitle.tr;
+    final name = controller.peerNameFor(t);
+    if (name.isNotEmpty) return name;
+    // Never fall back to the screen title ("Messages") — use the role instead.
+    return controller.isNanny
+        ? AppStrings.jobDetailFamilySuffix.tr
+        : AppStrings.nannySuffix.tr;
   }
 
   Widget _threadCard(ChatThread t) {
@@ -289,10 +293,10 @@ class _ChatScreenState extends State<ChatScreen> {
     return GestureDetector(
       onTap: () => controller.openThread(t.id),
       child: Container(
-        padding: const EdgeInsets.all(10),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(14),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(
               color: onTrial
                   ? KafiColors.grnL
@@ -317,16 +321,17 @@ class _ChatScreenState extends State<ChatScreen> {
                         )
                       : t.nannyPhotoUrl,
                   fallbackText: initial,
-                  size: 42,
+                  size: 68,
+                  radius: 16,
                   gradient: gradient,
-                  fontSize: 16,
+                  fontSize: 24,
                 ),
                 Positioned(
                   bottom: -2,
                   right: -2,
                   child: Container(
-                    width: 11,
-                    height: 11,
+                    width: 15,
+                    height: 15,
                     decoration: BoxDecoration(
                       color: KafiColors.grn,
                       shape: BoxShape.circle,
@@ -336,7 +341,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
               ],
             ),
-            const SizedBox(width: 9),
+            const SizedBox(width: 12),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
@@ -344,44 +349,44 @@ class _ChatScreenState extends State<ChatScreen> {
                   Text(name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: KafiTheme.nunito(11.5, color: KafiColors.td, w: FontWeight.w800)),
-                  const SizedBox(height: 1),
+                      style: KafiTheme.nunito(16, color: KafiColors.td, w: FontWeight.w800)),
+                  const SizedBox(height: 3),
                   Text(
                     t.lastMessage,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: KafiTheme.nunito(9.5,
+                    style: KafiTheme.nunito(13,
                         color: onTrial
                             ? KafiColors.grnD
                             : (unread > 0 ? KafiColors.td : KafiColors.ts),
                         w: unread > 0 || onTrial ? FontWeight.w700 : FontWeight.w600),
                   ),
-                  const SizedBox(height: 3),
+                  const SizedBox(height: 5),
                   Row(
                     children: [
                       Text(RelativeTime.threadTimestamp(t.lastMessageAt),
-                          style: KafiTheme.nunito(8, color: KafiColors.ts, w: FontWeight.w600)),
+                          style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600)),
                       if (onTrial) ...[
                         const SizedBox(width: 5),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: KafiColors.grnL,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(AppStrings.chatTrialBadge.tr,
-                              style: KafiTheme.fredoka(8, color: KafiColors.grnD, w: FontWeight.w700)),
+                              style: KafiTheme.fredoka(10.5, color: KafiColors.grnD, w: FontWeight.w700)),
                         ),
                       ] else if (hired) ...[
                         const SizedBox(width: 5),
                         Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1),
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                           decoration: BoxDecoration(
                             color: KafiColors.purL,
                             borderRadius: BorderRadius.circular(8),
                           ),
                           child: Text(AppStrings.chatHiredBadge.tr,
-                              style: KafiTheme.fredoka(8, color: KafiColors.purpD, w: FontWeight.w700)),
+                              style: KafiTheme.fredoka(10.5, color: KafiColors.purpD, w: FontWeight.w700)),
                         ),
                       ],
                     ],
@@ -395,35 +400,35 @@ class _ChatScreenState extends State<ChatScreen> {
               children: [
                 if (onTrial)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                       color: KafiColors.grn,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(AppStrings.chatOnTrialBadge.tr,
-                        style: KafiTheme.fredoka(7.5, color: Colors.white, w: FontWeight.w700)),
+                        style: KafiTheme.fredoka(10, color: Colors.white, w: FontWeight.w700)),
                   )
                 else if (hired)
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
                     decoration: BoxDecoration(
                       color: KafiColors.pur,
                       borderRadius: BorderRadius.circular(16),
                     ),
                     child: Text(AppStrings.chatHiredPill.tr,
-                        style: KafiTheme.fredoka(7.5, color: Colors.white, w: FontWeight.w700)),
+                        style: KafiTheme.fredoka(10, color: Colors.white, w: FontWeight.w700)),
                   )
                 else if (unread > 0)
                   Container(
-                    width: 18,
-                    height: 18,
+                    width: 24,
+                    height: 24,
                     alignment: Alignment.center,
                     decoration: const BoxDecoration(
                       color: KafiColors.roseD,
                       shape: BoxShape.circle,
                     ),
                     child: Text('$unread',
-                        style: KafiTheme.fredoka(9, color: Colors.white, w: FontWeight.w800)),
+                        style: KafiTheme.fredoka(12, color: Colors.white, w: FontWeight.w800)),
                   ),
               ],
             ),

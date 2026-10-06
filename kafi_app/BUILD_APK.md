@@ -89,9 +89,25 @@ Install: `adb install -r build/app/outputs/flutter-apk/app-release.apk`
     real Android app + its `google-services.json` and the app's SHA-1/SHA-256
     fingerprints registered in the Firebase project.
 
-## Release signing (optional, for distribution)
+## Release signing (Play Store / AAB)
 
-`--release` signs with the debug keystore (fine for sideloading to testers). For
-Play / wider distribution, add a release keystore + `android/key.properties` (both
-git-ignored) and a `signingConfigs.release` block in
-`android/app/build.gradle.kts`.
+Release builds use `android/key.properties` + `android/upload-keystore.jks`
+(both **git-ignored**). When those files exist, `signingConfigs.release` signs
+APKs and AABs. Without them, release falls back to the debug keystore (sideload only).
+
+```bash
+cd kafi_app
+flutter build appbundle --release
+# → build/app/outputs/bundle/release/app-release.aab
+```
+
+Upload `app-release.aab` in Play Console → Production / Testing track.
+
+**Fingerprints** (register SHA-1 / SHA-256 in Firebase → Project settings → Android app):
+
+```bash
+keytool -list -v -keystore android/upload-keystore.jks -alias upload
+```
+
+Keep a secure offline backup of the `.jks` and passwords — Play updates must use
+the same upload key forever.

@@ -1,4 +1,4 @@
-// Live Firebase options for project yhgc-testing (Kafi).
+// Live Firebase options for project kafi-802c9 (Kafi).
 // Native configs: ios/Runner/GoogleService-Info.plist, android/app/google-services.json
 // (gitignored). Regenerate with `flutterfire configure` if the project changes.
 import 'package:firebase_core/firebase_core.dart' show FirebaseOptions;
@@ -21,31 +21,30 @@ class DefaultFirebaseOptions {
   }
 
   static const FirebaseOptions android = FirebaseOptions(
-    apiKey: 'AIzaSyDDR_NQKd1myC0rL_ULyQsLs6m2MKngen8',
-    appId: '1:944877885594:android:4b3730e255af20e4c52723',
-    messagingSenderId: '944877885594',
-    projectId: 'yhgc-testing',
-    storageBucket: 'yhgc-testing.firebasestorage.app',
+    apiKey: 'AIzaSyAkdIrZ7581WyPJUstYFioFDD_cOb9lWj0',
+    appId: '1:1020989377749:android:d37018a3e4a23820b4265c',
+    messagingSenderId: '1020989377749',
+    projectId: 'kafi-802c9',
+    storageBucket: 'kafi-802c9.firebasestorage.app',
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
-    apiKey: 'AIzaSyDIK6A5CWHgngZq_joGf7HkdE2xQ_TQC4Q',
-    appId: '1:944877885594:ios:87503ec30e8d8fb8c52723',
-    messagingSenderId: '944877885594',
-    projectId: 'yhgc-testing',
-    storageBucket: 'yhgc-testing.firebasestorage.app',
+    apiKey: 'AIzaSyBmDORFINjCUt4vwqR6ekwPjEi2GNg3dh8',
+    appId: '1:1020989377749:ios:c193b144f0609552b4265c',
+    messagingSenderId: '1020989377749',
+    projectId: 'kafi-802c9',
+    storageBucket: 'kafi-802c9.firebasestorage.app',
     iosBundleId: 'com.codetivelab.kafiApp',
   );
 
   static const FirebaseOptions macos = ios;
 
   static const FirebaseOptions web = FirebaseOptions(
-    apiKey: 'AIzaSyB40D-2gDlAXn0LkppxqyJ8dYt213g9Nn8',
-    appId: '1:944877885594:web:ab0043548cbc808dc52723',
-    messagingSenderId: '944877885594',
-    projectId: 'yhgc-testing',
-    authDomain: 'yhgc-testing.firebaseapp.com',
-    storageBucket: 'yhgc-testing.firebasestorage.app',
-    measurementId: 'G-02FWJYB01L',
+    apiKey: 'AIzaSyCkgTzsxMR2tHtnQ3eboTOzYgrOyvFISKU',
+    appId: '1:1020989377749:web:6bfec89ad5bf6bfbb4265c',
+    messagingSenderId: '1020989377749',
+    projectId: 'kafi-802c9',
+    authDomain: 'kafi-802c9.firebaseapp.com',
+    storageBucket: 'kafi-802c9.firebasestorage.app',
   );
 }

@@ -8,9 +8,12 @@ class AppConstants {
   /// docs/GOOGLE_MAPS_SETUP.md). The default matches the iOS
   /// `GMSServices.provideAPIKey` value so local runs open the live map without
   /// an extra flag. Restrict this key in Google Cloud (bundle id / SHA-1).
+  /// Supplied at build time via `--dart-define=GOOGLE_MAPS_API_KEY=…` (CI)
+  /// or falls back to the key stored in android/local.properties / AppDelegate.swift
+  /// for local runs. Never commit a live key as the defaultValue.
   static const googleMapsApiKey = String.fromEnvironment(
     'GOOGLE_MAPS_API_KEY',
-    defaultValue: 'AIzaSyDqQUR6ygHdXRDDUmJ7Xr02A2HCMH92Lvk',
+    defaultValue: '',
   );
 
   /// UAE bounding box used to bias Places Autocomplete results.

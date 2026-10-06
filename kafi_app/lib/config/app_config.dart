@@ -8,11 +8,14 @@
 class AppConfig {
   static const bool useMock = false;
 
+  /// Open Kafi Family Plans at launch for IAP / store screenshots only.
+  static const bool showPricingOnLaunch = false;
+
   /// When `true`, subscription state/plans/purchase flow use [MockSubscriptionService]
   /// (local persistence) instead of RevenueCat — all other services stay live.
   /// Keep `true` until `REVENUECAT_IOS_API_KEY` / `REVENUECAT_ANDROID_API_KEY`
   /// are supplied via `--dart-define`, then set to `false` for store purchases.
-  static const bool useMockSubscription = true;
+  static const bool useMockSubscription = false;
 
   static const String environment = 'prod';
   static const bool enableLogs = true;

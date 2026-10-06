@@ -4,7 +4,8 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 
 /// RevenueCat public SDK keys and config (Technical Architecture § subscriptions).
 ///
-/// Pass real keys at build/run time:
+/// Public SDK keys (safe to embed) are defaulted so Xcode / Android Studio
+/// builds work without `--dart-define`. Override at build/run time if needed:
 /// ```
 /// flutter run \
 ///   --dart-define=REVENUECAT_IOS_API_KEY=appl_xxx \
@@ -15,12 +16,12 @@ import 'package:flutter/foundation.dart' show kIsWeb;
 class RevenueCatConstants {
   static const iosApiKey = String.fromEnvironment(
     'REVENUECAT_IOS_API_KEY',
-    defaultValue: '',
+    defaultValue: 'appl_GvRllDdKOYgqWzjxCDeSPEPhlmh',
   );
 
   static const androidApiKey = String.fromEnvironment(
     'REVENUECAT_ANDROID_API_KEY',
-    defaultValue: '',
+    defaultValue: 'goog_ITTiyZeWjOYEOHOYvsQCbqRLsgp',
   );
 
   /// Public SDK key for the current platform (empty = not configured).

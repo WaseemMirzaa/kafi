@@ -94,6 +94,12 @@ class AuthController extends GetxController with WidgetsBindingObserver {
   /// onboarding step.
   Future<void> bootstrapStartup() async {
     startupError.value = null;
+    // TEMP: show mocked Family Plans at launch for IAP screenshots.
+    // Revert when AppConfig.showPricingOnLaunch is set back to false.
+    if (AppConfig.showPricingOnLaunch) {
+      Get.offAllNamed(Routes.pricing);
+      return;
+    }
     try {
       // Enforce the 90-day inactivity logout using the PREVIOUS session's
       // activity stamp BEFORE reading the current user, so an idle-expired

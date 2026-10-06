@@ -1,4 +1,5 @@
 import java.util.Properties
+import java.io.FileInputStream
 
 plugins {
     id("com.android.application")
@@ -22,6 +23,14 @@ fun mapsApiKeyFromLocalProperties(): String {
     localFile.inputStream().use { stream -> props.load(stream) }
     val key = props.getProperty("MAPS_API_KEY")
     return if (key != null && key.isNotBlank()) key else "YOUR_GOOGLE_MAPS_API_KEY"
+}
+
+// Release signing (Play Store / AAB). key.properties + *.jks are git-ignored.
+val keystoreProperties = Properties()
+val keystorePropertiesFile = rootProject.file("key.properties")
+val hasReleaseKeystore = keystorePropertiesFile.exists()
+if (hasReleaseKeystore) {
+    keystoreProperties.load(FileInputStream(keystorePropertiesFile))
 }
 
 android {
@@ -58,11 +67,25 @@ android {
                 ?: mapsApiKeyFromLocalProperties()
     }
 
+    signingConfigs {
+        if (hasReleaseKeystore) {
+            create("release") {
+                keyAlias = keystoreProperties["keyAlias"] as String
+                keyPassword = keystoreProperties["keyPassword"] as String
+                storeFile = rootProject.file(keystoreProperties["storeFile"] as String)
+                storePassword = keystoreProperties["storePassword"] as String
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = if (hasReleaseKeystore) {
+                signingConfigs.getByName("release")
+            } else {
+                // Fallback for local/CI without a release keystore (sideload only).
+                signingConfigs.getByName("debug")
+            }
         }
     }
 }
@@ -73,4 +96,15 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // Play Billing Library latest. RevenueCat still declares 8.3.0; force 9.1.0
+    // so the AAB meets Play Console billing-library requirements.
+    implementation("com.android.billingclient:billing:9.1.0")
+}
+
+// Ensure every configuration (incl. RevenueCat transitive) resolves Billing 9.1.0.
+configurations.configureEach {
+    resolutionStrategy {
+        force("com.android.billingclient:billing:9.1.0")
+        force("com.android.billingclient:billing-ktx:9.1.0")
+    }
 }

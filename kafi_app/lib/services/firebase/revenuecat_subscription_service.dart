@@ -60,12 +60,62 @@ class RevenueCatSubscriptionService implements ISubscriptionService {
     }
   }
 
+  /// Plans with prices fetched from the stores via RevenueCat offerings.
+  /// Falls back to the static plan list (no store price) if offerings can't
+  /// be loaded, so the screen still renders — but purchase will then surface
+  /// the real reason instead of a generic failure.
   @override
-  Future<List<SubscriptionPlan>> getPlans() => _firestore.getPlans();
+  Future<List<SubscriptionPlan>> getPlans() async {
+    final base = await _firestore.getPlans();
+    if (!RevenueCatConstants.isConfigured) return base;
+    try {
+      await _ensureConfigured();
+      final offering = await _currentOffering();
+      if (offering == null) {
+        debugPrint('RevenueCat: no current offering — check dashboard.');
+        return base;
+      }
+      return [
+        for (final plan in base)
+          plan.withStorePrice(
+            _packageIn(offering, plan.id)?.storeProduct.priceString,
+          ),
+      ];
+    } catch (e, st) {
+      debugPrint('RevenueCat getPlans failed: $e\n$st');
+      return base;
+    }
+  }
+
+  Future<Offering?> _currentOffering() async {
+    final offerings = await Purchases.getOfferings();
+    final current = offerings.current ??
+        offerings.all[SubscriptionConstants.revenueCatOfferingId];
+    if (current == null || current.availablePackages.isEmpty) return null;
+    return current;
+  }
+
+  /// RevenueCat's store-verified entitlement is authoritative for unlocking
+  /// the UI. Clients cannot write `families/{id}.subscription` (Firestore
+  /// rules), so Firestore — kept in sync by `revenueCatWebhook` — is only the
+  /// fallback when RevenueCat is unreachable or reports no active entitlement.
+  Future<CustomerInfo?> _customerInfo() async {
+    if (!RevenueCatConstants.isConfigured) return null;
+    try {
+      await _ensureConfigured();
+      return await Purchases.getCustomerInfo();
+    } catch (e) {
+      debugPrint('RevenueCat getCustomerInfo failed: $e');
+      return null;
+    }
+  }
 
   @override
-  Future<SubscriptionState> getState(String familyId) =>
-      _firestore.getState(familyId);
+  Future<SubscriptionState> getState(String familyId) async {
+    final info = await _customerInfo();
+    if (info != null && _hasPremium(info)) return SubscriptionState.active;
+    return _firestore.getState(familyId);
+  }
 
   @override
   Future<int> freeViewsUsed(String familyId) =>
@@ -84,8 +134,14 @@ class RevenueCatSubscriptionService implements ISubscriptionService {
       _firestore.setState(familyId, state);
 
   @override
-  Future<String?> getActivePlanId(String familyId) =>
-      _firestore.getActivePlanId(familyId);
+  Future<String?> getActivePlanId(String familyId) async {
+    final info = await _customerInfo();
+    if (info != null && _hasPremium(info)) {
+      final fromStore = _planIdFromCustomerInfo(info);
+      if (fromStore != null) return fromStore;
+    }
+    return _firestore.getActivePlanId(familyId);
+  }
 
   @override
   Future<void> subscribe(String familyId, String planId) async {
@@ -103,11 +159,12 @@ class RevenueCatSubscriptionService implements ISubscriptionService {
       if (code == PurchasesErrorCode.purchaseCancelledError) {
         throw StateError('cancelled');
       }
+      debugPrint('RevenueCat purchase failed: code=$code $e');
       rethrow;
     }
-
-    // Optimistic unlock — webhook will reconcile endDate / renewals.
-    await _firestore.subscribe(familyId, planId);
+    // No Firestore write here: rules forbid clients touching `subscription`.
+    // The UI unlocks from the RevenueCat entitlement (see getState) and
+    // `revenueCatWebhook` persists it server-side.
   }
 
   @override
@@ -117,55 +174,48 @@ class RevenueCatSubscriptionService implements ISubscriptionService {
     final info = await Purchases.restorePurchases();
     if (!_hasPremium(info)) return false;
 
-    final planId = _planIdFromCustomerInfo(info) ?? SubscriptionConstants.planMonthly;
-    await _firestore.subscribe(familyId, planId);
     return true;
   }
 
-  Future<Package> _packageForPlan(String planId) async {
-    final offerings = await Purchases.getOfferings();
-    Offering? offering = offerings.current;
-    if (offering == null &&
-        offerings.all.containsKey(SubscriptionConstants.revenueCatOfferingId)) {
-      offering = offerings.all[SubscriptionConstants.revenueCatOfferingId];
-    }
-    if (offering == null || offering.availablePackages.isEmpty) {
-      throw StateError(
-        'No RevenueCat offerings available. Create an offering with products '
-        'kafi_weekly / kafi_monthly / kafi_bimonthly in the dashboard.',
-      );
-    }
-
+  Package? _packageIn(Offering offering, String planId) {
     final productId = SubscriptionConstants.storeProductIdForPlan(planId);
     for (final pkg in offering.availablePackages) {
-      if (pkg.storeProduct.identifier == productId) return pkg;
+      final id = pkg.storeProduct.identifier;
+      // Store ids may carry a suffix (e.g. kafi_weekly_ios) — same plan.
+      if (id == productId || id.startsWith('${productId}_')) return pkg;
     }
-
     // Fallback: package type heuristics when product ids differ in sandbox.
-    switch (planId) {
-      case SubscriptionConstants.planWeekly:
-        final weekly = offering.availablePackages.where(
-          (p) => p.packageType == PackageType.weekly,
-        );
-        if (weekly.isNotEmpty) return weekly.first;
-        break;
-      case SubscriptionConstants.planMonthly:
-        final monthly = offering.availablePackages.where(
-          (p) => p.packageType == PackageType.monthly,
-        );
-        if (monthly.isNotEmpty) return monthly.first;
-        break;
-      case SubscriptionConstants.planBimonthly:
-        final twoMonth = offering.availablePackages.where(
-          (p) => p.packageType == PackageType.twoMonth,
-        );
-        if (twoMonth.isNotEmpty) return twoMonth.first;
-        break;
+    final type = switch (planId) {
+      SubscriptionConstants.planWeekly => PackageType.weekly,
+      SubscriptionConstants.planMonthly => PackageType.monthly,
+      SubscriptionConstants.planBimonthly => PackageType.twoMonth,
+      _ => null,
+    };
+    if (type == null) return null;
+    for (final pkg in offering.availablePackages) {
+      if (pkg.packageType == type) return pkg;
     }
+    return null;
+  }
 
-    throw StateError(
-      'No package for plan "$planId" (product "$productId") in the current offering.',
-    );
+  Future<Package> _packageForPlan(String planId) async {
+    final offering = await _currentOffering();
+    if (offering == null) {
+      throw StateError(
+        'No RevenueCat offerings available. Create an offering with products '
+        'kafi_weekly / kafi_monthly / kafi_bimonthly in the dashboard and make '
+        'sure the products are approved in App Store Connect / Play Console.',
+      );
+    }
+    final pkg = _packageIn(offering, planId);
+    if (pkg == null) {
+      throw StateError(
+        'No package for plan "$planId" '
+        '(product "${SubscriptionConstants.storeProductIdForPlan(planId)}") '
+        'in the current offering.',
+      );
+    }
+    return pkg;
   }
 
   bool _hasPremium(CustomerInfo info) {

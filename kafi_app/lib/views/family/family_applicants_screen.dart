@@ -12,6 +12,7 @@ import 'package:kafi_app/services/mock/mock_subscription_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/relative_time.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
+import 'package:kafi_app/views/widgets/kafi_avatar.dart';
 import 'package:kafi_app/views/widgets/kafi_search_field.dart';
 
 /// Family "Applicants" inbox — the nannies who applied to this family's jobs
@@ -105,7 +106,7 @@ class _FamilyApplicantsScreenState extends State<FamilyApplicantsScreen> {
                   child: ListView.builder(
                     padding: const EdgeInsets.fromLTRB(14, 12, 14, 20),
                     itemCount: apps.length,
-                    itemBuilder: (_, i) => _applicantCard(apps[i]),
+                    itemBuilder: (_, i) => Obx(() => _applicantCard(apps[i])),
                   ),
                 );
               }),
@@ -245,9 +246,12 @@ class _FamilyApplicantsScreenState extends State<FamilyApplicantsScreen> {
   }
 
   Widget _applicantCard(ApplicationModel app) {
-    final name = (app.nannyName?.isNotEmpty ?? false)
-        ? app.nannyName!
-        : AppStrings.roleFallbackNanny.tr;
+    final profile = controller.nannyProfiles[app.nannyId];
+    final name = (profile?.fullName.isNotEmpty ?? false)
+        ? profile!.fullName
+        : (app.nannyName?.isNotEmpty ?? false)
+            ? app.nannyName!
+            : AppStrings.roleFallbackNanny.tr;
     final initial = name.isNotEmpty ? name[0].toUpperCase() : 'N';
     final canAct = app.status == ApplicationStatus.pending ||
         app.status == ApplicationStatus.viewed;
@@ -255,11 +259,11 @@ class _FamilyApplicantsScreenState extends State<FamilyApplicantsScreen> {
     return GestureDetector(
       onTap: () => _openApplicant(app),
       child: Container(
-        margin: const EdgeInsets.only(bottom: 8),
-        padding: const EdgeInsets.all(10),
+        margin: const EdgeInsets.only(bottom: 12),
+        padding: const EdgeInsets.all(12),
         decoration: BoxDecoration(
           color: Colors.white,
-          borderRadius: BorderRadius.circular(13),
+          borderRadius: BorderRadius.circular(18),
           border: Border.all(color: const Color(0xFFEFE2FF), width: 1.5),
           boxShadow: const [
             BoxShadow(color: Color(0x129B6EDB), blurRadius: 8, offset: Offset(0, 2))
@@ -271,39 +275,39 @@ class _FamilyApplicantsScreenState extends State<FamilyApplicantsScreen> {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Container(
-                  width: 36,
-                  height: 36,
-                  decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [Color(0xFF9B6EDB), Color(0xFFC084FC)],
-                    ),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: Center(
-                    child: Text(initial,
-                        style: KafiTheme.fredoka(14, color: Colors.white, w: FontWeight.w900)),
-                  ),
+                // Nanny's profile photo (letter tile only until/unless a photo
+                // exists), pinned top-left of the card.
+                KafiAvatar(
+                  photoUrl: (profile?.photoUrls.isNotEmpty ?? false)
+                      ? profile!.photoUrls.first
+                      : null,
+                  fallbackText: initial,
+                  size: 84,
+                  radius: 16,
+                  gradient: const [Color(0xFF9B6EDB), Color(0xFFC084FC)],
+                  fontSize: 30,
                 ),
-                const SizedBox(width: 8),
+                const SizedBox(width: 12),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(name,
-                          style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w800)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: KafiTheme.nunito(16, color: KafiColors.td, w: FontWeight.w800)),
+                      const SizedBox(height: 2),
                       Builder(builder: (_) {
                         final jobLabel = controller.jobLabelForApplication(app);
                         if (jobLabel.isEmpty) return const SizedBox.shrink();
                         return Text(jobLabel,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: KafiTheme.nunito(9.5, color: KafiColors.ts, w: FontWeight.w600));
+                            style: KafiTheme.nunito(12.5, color: KafiColors.ts, w: FontWeight.w600));
                       }),
+                      const SizedBox(height: 2),
                       Text(_formatDate(app.createdAt),
-                          style: KafiTheme.nunito(8.5, color: KafiColors.ts, w: FontWeight.w500)),
+                          style: KafiTheme.nunito(11.5, color: KafiColors.ts, w: FontWeight.w500)),
                     ],
                   ),
                 ),
@@ -313,7 +317,7 @@ class _FamilyApplicantsScreenState extends State<FamilyApplicantsScreen> {
             if ((app.coverMessage ?? '').isNotEmpty) ...[
               const SizedBox(height: 7),
               Text(app.coverMessage!,
-                  style: KafiTheme.nunito(9.5, color: KafiColors.tm),
+                  style: KafiTheme.nunito(12.5, color: KafiColors.tm, w: FontWeight.w600),
                   maxLines: 3,
                   overflow: TextOverflow.ellipsis),
             ],

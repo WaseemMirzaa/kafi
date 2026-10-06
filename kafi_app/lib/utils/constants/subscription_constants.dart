@@ -40,21 +40,23 @@ class SubscriptionConstants {
   static int get weeklyPriceAed =>
       plans.firstWhere((p) => p.id == planWeekly).priceAed;
 
+  /// Non-renewing (one-time) family access plans — Fatima / product spec.
+  /// Do not configure these as auto-renewing subscriptions in the stores.
   static const plans = [
-    SubscriptionPlan(id: planWeekly, label: 'Weekly', priceAed: 89, durationDays: 7),
+    SubscriptionPlan(id: planWeekly, label: '7 Days', priceAed: 89, durationDays: 7),
     SubscriptionPlan(
         id: planMonthly,
-        label: 'Monthly',
+        label: '30 Days',
         priceAed: 239,
         durationDays: 30,
         popular: true,
-        savingsLabel: 'Most popular'),
+        savingsLabel: 'MOST POPULAR'),
     SubscriptionPlan(
         id: planBimonthly,
-        label: '2 Months',
+        label: '60 Days',
         priceAed: 369,
         durationDays: 60,
-        savingsLabel: 'Save 129 AED'),
+        savingsLabel: 'BEST VALUE'),
   ];
 
   /// Maps Kafi plan id → RevenueCat / store product id.
@@ -73,17 +75,19 @@ class SubscriptionConstants {
 
   /// Maps store product id → Kafi plan id (webhook / restore).
   static String? planIdForStoreProduct(String productId) {
-    if (productId == revenueCatProductWeekly || productId.endsWith('weekly')) {
-      return planWeekly;
-    }
-    if (productId == revenueCatProductMonthly || productId.endsWith('monthly')) {
-      return planMonthly;
-    }
-    if (productId == revenueCatProductBimonthly ||
+    // Bimonthly first: 'bimonthly' also contains 'monthly'. Ids may carry a
+    // platform suffix (kafi_weekly_ios), so match on containment.
+    if (productId.contains(revenueCatProductBimonthly) ||
         productId.contains('bimonth') ||
         productId.contains('2month') ||
         productId.contains('two_month')) {
       return planBimonthly;
+    }
+    if (productId.contains(revenueCatProductWeekly) || productId.contains('weekly')) {
+      return planWeekly;
+    }
+    if (productId.contains(revenueCatProductMonthly) || productId.contains('monthly')) {
+      return planMonthly;
     }
     return null;
   }

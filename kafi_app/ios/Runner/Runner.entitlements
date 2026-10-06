@@ -2,11 +2,12 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
+	<!-- production covers both App Store and TestFlight (internal + external).
+	     Debug builds on simulator/device still work — APNs sandbox is used
+	     automatically when the device runs a development-signed build. -->
 	<key>aps-environment</key>
-	<string>development</string>
+	<string>production</string>
 	<key>keychain-access-groups</key>
-	<array>
-		<string>$(AppIdentifierPrefix)com.codetivelab.kafiApp</string>
-	</array>
+	<array/>
 </dict>
 </plist>

@@ -5,15 +5,13 @@ import 'package:kafi_app/controllers/application_controller.dart';
 import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/controllers/nanny_profile_controller.dart';
 import 'package:kafi_app/controllers/notification_controller.dart';
-import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
-import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
-import 'package:kafi_app/views/widgets/kafi_avatar.dart';
+import 'package:kafi_app/views/widgets/kafi_job_card.dart';
 class JobsHomeScreen extends GetView<JobPostController> {
   const JobsHomeScreen({super.key, this.embedInShell = false});
 
@@ -60,7 +58,7 @@ class JobsHomeScreen extends GetView<JobPostController> {
               ),
               if (embedInShell)
                 GestureDetector(
-                  onTap: () => Get.toNamed(Routes.nannyApplications),
+                  onTap: () => Get.toNamed(Routes.nannyApplications, arguments: SentFilter.all),
                   child: Text(AppStrings.nannyStatsApplied.tr,
                       style: KafiTheme.nunito(10, color: KafiColors.roseD, w: FontWeight.w700)),
                 ),
@@ -154,28 +152,24 @@ class JobsHomeScreen extends GetView<JobPostController> {
           Obx(() => _statItem(
                 '${appCtrl.myApplications.length}',
                 AppStrings.nannyStatsApplied.tr,
-                onTap: () => Get.toNamed(Routes.nannyApplications),
+                onTap: () => Get.toNamed(Routes.nannyApplications, arguments: SentFilter.all),
               )),
           _divider(),
           Obx(() {
-            final viewed = appCtrl.myApplications
-                .where((a) => a.status != ApplicationStatus.pending && a.status != ApplicationStatus.withdrawn)
-                .length;
+            final viewed = appCtrl.sentCount(SentFilter.viewed);
             return _statItem(
               '$viewed',
               AppStrings.nannyStatsViewed.tr,
-              onTap: () => Get.toNamed(Routes.nannyApplications),
+              onTap: () => Get.toNamed(Routes.nannyApplications, arguments: SentFilter.viewed),
             );
           }),
           _divider(),
           Obx(() {
-            final offers = appCtrl.myApplications
-                .where((a) => a.status == ApplicationStatus.trialOffered)
-                .length;
+            final offers = appCtrl.sentCount(SentFilter.offers);
             return _statItem(
               '$offers',
               AppStrings.nannyStatsOffers.tr,
-              onTap: () => Get.toNamed(Routes.nannyApplications),
+              onTap: () => Get.toNamed(Routes.nannyApplications, arguments: SentFilter.offers),
             );
           }),
         ],
@@ -365,92 +359,13 @@ class JobsHomeScreen extends GetView<JobPostController> {
   }
 
   Widget _jobCard(JobPostModel job, int? matchScore) {
-    final isHotMatch = (matchScore ?? 0) >= 90;
     final typeLabel =
         job.jobType == JobType.liveOut ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr;
-    final initial = job.familyName.isNotEmpty ? job.familyName[0].toUpperCase() : 'F';
-
-    return GestureDetector(
+    return KafiJobCard(
+      job: job,
+      isHot: (matchScore ?? 0) >= 90,
       onTap: () => Get.toNamed(Routes.nannyJobDetail, arguments: job),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(
-              color: isHotMatch ? KafiColors.roseL : const Color(0xFFFFE8EF), width: 1.5),
-          borderRadius: BorderRadius.circular(13),
-          boxShadow: const [
-            BoxShadow(color: Color(0x12FF5F96), blurRadius: 8, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                KafiAvatar(
-                  photoUrl: FamilyConstants.resolvedPhotoUrl(
-                    job.familyPhotoUrl,
-                    job.familyId.isNotEmpty ? job.familyId : job.familyName,
-                  ),
-                  fallbackText: initial,
-                  size: 47,
-                  gradient: isHotMatch
-                      ? const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)]
-                      : const [Color(0xFFFFB347), Color(0xFFFF8042)],
-                  fontSize: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('$typeLabel ${AppStrings.nannySuffix.tr} · ${job.city}',
-                          style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w800)),
-                      Text(
-                          '${AppStrings.jobSalaryRange.trParams({
-                                'min': '${job.salaryMin}',
-                                'max': '${job.salaryMax}',
-                              })} · ${job.familyName}',
-                          style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600)),
-                      // The nanny-side numeric "% match" is suppressed (M8): the
-                      // canonical match is scored from the FAMILY's household +
-                      // job, which the nanny can't compute — so a job-only number
-                      // here would diverge from what the family sees. Jobs are
-                      // still ranked best-fit-first and the hot-match highlight
-                      // (no number) remains.
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                _tag(typeLabel),
-                if (job.city.isNotEmpty) _tag(job.city),
-                for (final duty in job.duties.take(2)) _tag(duty),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _tag(String label) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-      decoration: BoxDecoration(
-        color: KafiColors.roseP,
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Text(label,
-          style: KafiTheme.nunito(10.5, color: KafiColors.roseD, w: FontWeight.w700)),
+      tags: [typeLabel, if (job.city.isNotEmpty) job.city, ...job.duties.take(2)],
     );
   }
 }

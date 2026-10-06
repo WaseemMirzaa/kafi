@@ -170,6 +170,9 @@ export const en = {
   // ── settings ────────────────────────────────────────────────────────────
   'settings.title': 'Settings',
   'settings.subtitle': 'App-wide configuration',
+  'settings.legal': 'Legal',
+  'settings.legalDesc': 'Public policy pages hosted with this admin site (also used for store listings).',
+  'settings.privacyPolicy': 'Privacy Policy',
   'settings.saveChanges': 'Save changes',
   'settings.failedToLoad': 'Failed to load settings',
   'settings.enterValidNumbers': 'Enter valid numbers in every field.',

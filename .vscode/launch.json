@@ -9,8 +9,8 @@
       "cwd": "${workspaceFolder}/kafi_app",
       "toolArgs": [
         "--dart-define=GOOGLE_MAPS_API_KEY=AIzaSyDqQUR6ygHdXRDDUmJ7Xr02A2HCMH92Lvk",
-        "--dart-define=REVENUECAT_IOS_API_KEY=",
-        "--dart-define=REVENUECAT_ANDROID_API_KEY="
+        "--dart-define=REVENUECAT_IOS_API_KEY=appl_GvRllDdKOYgqWzjxCDeSPEPhlmh",
+        "--dart-define=REVENUECAT_ANDROID_API_KEY=goog_ITTiyZeWjOYEOHOYvsQCbqRLsgp"
       ]
     },
     {
@@ -22,8 +22,8 @@
       "flutterMode": "profile",
       "toolArgs": [
         "--dart-define=GOOGLE_MAPS_API_KEY=AIzaSyDqQUR6ygHdXRDDUmJ7Xr02A2HCMH92Lvk",
-        "--dart-define=REVENUECAT_IOS_API_KEY=",
-        "--dart-define=REVENUECAT_ANDROID_API_KEY="
+        "--dart-define=REVENUECAT_IOS_API_KEY=appl_GvRllDdKOYgqWzjxCDeSPEPhlmh",
+        "--dart-define=REVENUECAT_ANDROID_API_KEY=goog_ITTiyZeWjOYEOHOYvsQCbqRLsgp"
       ]
     }
   ]

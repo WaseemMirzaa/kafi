@@ -11,9 +11,9 @@ import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
 import 'package:kafi_app/models/trial_outcome_reasons.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
-import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:kafi_app/views/widgets/kafi_avatar.dart';
+import 'package:kafi_app/views/widgets/kafi_job_card.dart';
 
 class NannyDashboardScreen extends GetView<NannyProfileController> {
   const NannyDashboardScreen({
@@ -572,87 +572,13 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
   }
 
   Widget _jobCard(JobPostModel job, int? matchScore) {
-    final isHot = (matchScore ?? 0) >= 90;
     final typeLabel =
         job.jobType == JobType.liveOut ? AppStrings.jobLiveOut.tr : AppStrings.jobLiveIn.tr;
-    final initial = job.familyName.isNotEmpty ? job.familyName[0].toUpperCase() : 'F';
-    return GestureDetector(
+    return KafiJobCard(
+      job: job,
+      isHot: (matchScore ?? 0) >= 90,
       onTap: () => Get.toNamed(Routes.nannyJobDetail, arguments: job),
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(13),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(
-              color: isHot ? KafiColors.roseL : const Color(0xFFFFE8EF), width: 1.5),
-          borderRadius: BorderRadius.circular(13),
-          boxShadow: const [
-            BoxShadow(color: Color(0x12FF5F96), blurRadius: 8, offset: Offset(0, 2)),
-          ],
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                KafiAvatar(
-                  photoUrl: FamilyConstants.resolvedPhotoUrl(
-                    job.familyPhotoUrl,
-                    job.familyId.isNotEmpty ? job.familyId : job.familyName,
-                  ),
-                  fallbackText: initial,
-                  size: 47,
-                  gradient: isHot
-                      ? const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)]
-                      : const [Color(0xFFFFB347), Color(0xFFFF8042)],
-                  fontSize: 18,
-                ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('$typeLabel ${AppStrings.nannySuffix.tr} · ${job.city}',
-                          style: KafiTheme.nunito(14, color: KafiColors.td,
-                              w: FontWeight.w800)),
-                      Text(
-                          '${AppStrings.jobSalaryRange.trParams({
-                                'min': '${job.salaryMin}',
-                                'max': '${job.salaryMax}',
-                              })} · ${job.familyName}',
-                          style: KafiTheme.nunito(11, color: KafiColors.ts,
-                              w: FontWeight.w600)),
-                      // Nanny-side numeric "% match" suppressed (M8) — see the
-                      // jobs feed for the rationale. Jobs stay ranked best-first
-                      // and the hot-match highlight (no number) remains.
-                    ],
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 4,
-              runSpacing: 4,
-              children: [
-                _chip(typeLabel),
-                if (job.city.isNotEmpty) _chip(job.city),
-              ],
-            ),
-          ],
-        ),
-      ),
+      tags: [typeLabel, if (job.city.isNotEmpty) job.city],
     );
   }
-
-  Widget _chip(String label) => Container(
-        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-        decoration: BoxDecoration(
-          color: KafiColors.roseP,
-          borderRadius: BorderRadius.circular(6),
-        ),
-        child: Text(label,
-            style: KafiTheme.nunito(10.5, color: KafiColors.roseD, w: FontWeight.w700)),
-      );
 }

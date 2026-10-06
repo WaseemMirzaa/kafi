@@ -1562,11 +1562,17 @@ END
 
 ## 8.1 Subscription Plans (via RevenueCat)
 
-| Plan | Duration | Price (AED) | +5% VAT | Total | Auto-Renew |
-|------|----------|-------------|---------|-------|------------|
-| Weekly | 7 days | 89 | 4.45 | 93.45 | Yes |
-| Monthly | 30 days | 239 | 11.95 | 250.95 | Yes (Most Popular) |
-| 2 Months | 60 days | 369 | 18.45 | 387.45 | Yes (Save 129 AED) |
+| Plan | Duration | Price (AED) | +5% VAT | Total | Auto-Renew | Badge |
+|------|----------|-------------|---------|-------|------------|-------|
+| 7 Days | 7 days | 89 | 4.45 | 93.45 | **No** (one-time) | — |
+| 30 Days | 30 days | 239 | 11.95 | 250.95 | **No** (one-time) | MOST POPULAR |
+| 60 Days | 60 days | 369 | 18.45 | 387.45 | **No** (one-time) | BEST VALUE |
+
+**Free tier (families):** 3 one-time nanny unlocks (unique nannies). An unlock is spent when the family opens that nanny’s intro video **or** opens contact details / starts a chat. General profile browsing stays free. After 3 unlocks, video / contacts / chat require a paid plan. Free unlocks are never re-granted after a paid plan expires.
+
+**On expiry:** browse stays free; videos, contacts, and all chats (including prior free-unlock and paid-period threads) are locked/hidden until a new plan is purchased. Saved chats restore on repurchase.
+
+**Nannies:** always free — no packages.
 
 ## 8.2 Payment Flow
 
@@ -2565,6 +2571,7 @@ First Launch
 
 | Date (YYYY-MM-DD) | Task | Status | Summary |
 |-------------------|------|--------|---------|
+| 2026-10-02 | Fatima family access plans | Done | 3 one-time free unlocks (video/contact/chat); 7/30/60-day non-renewing AED 89/239/369; expiry re-locks chats; nannies free |
 | 2026-05-19 | Phase 0 scaffold | Done | Created `kafi_app/`, `admin-panel/`, `functions/`; Flutter mock mode, service interfaces, core models, placeholder auth→role home |
 | 2026-05-19 | Auth UI foundation v8 | Done | Phone→OTP→password auth wired in AuthController; role_select removed; mock OTP 1234 |
 | 2026-05-19 | Restart Task 1 — auth flow | Done | AuthConstants + mock OTP; IAuthService/MockAuthService; 4-digit OTP verify per §Authentication |

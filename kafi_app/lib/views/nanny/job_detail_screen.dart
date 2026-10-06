@@ -68,7 +68,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
             _hero(),
             Expanded(
               child: SingleChildScrollView(
-                padding: const EdgeInsets.fromLTRB(14, 14, 14, 14),
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 16),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
@@ -173,22 +173,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
     final city = (_family?.city.isNotEmpty ?? false) ? _family!.city : job.city;
     final langs = _family?.languagesAtHome ?? const <String>[];
     final religion = _family?.religion ?? '';
+    final facts = <Widget>[
+      if (_membersLine != null) _quickFact(Icons.groups_outlined, _membersLine!),
+      _quickFact(Icons.child_care_outlined, _childrenLine),
+      if (langs.isNotEmpty) _quickFact(Icons.chat_bubble_outline, langs.join(' & ')),
+      if (religion.isNotEmpty) _quickFact(Icons.nightlight_round, religion),
+    ];
     return Container(
       padding: const EdgeInsets.all(12),
       decoration: _cardDeco(),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Large square, centre-cropped family photo.
           KafiAvatar(
             photoUrl: FamilyConstants.resolvedPhotoUrl(
               _family?.profilePhoto ?? job.familyPhotoUrl,
               job.familyId.isNotEmpty ? job.familyId : job.familyName,
             ),
             fallbackText: _familyDisplayName,
-            size: 80,
+            size: 132,
             gradient: const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
-            fontSize: 28,
-            radius: 14,
+            fontSize: 42,
+            radius: 16,
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -196,28 +203,29 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(_familyDisplayName,
-                    style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w900)),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: KafiTheme.nunito(19, color: KafiColors.td, w: FontWeight.w900)),
                 if (city.isNotEmpty) ...[
                   const SizedBox(height: 4),
                   Row(
                     children: [
-                      const Icon(Icons.location_on_outlined, size: 13, color: KafiColors.roseD),
-                      const SizedBox(width: 3),
+                      const Icon(Icons.location_on, size: 17, color: KafiColors.roseD),
+                      const SizedBox(width: 6),
                       Flexible(
                         child: Text(city,
-                            style: KafiTheme.nunito(11, color: KafiColors.roseD, w: FontWeight.w700)),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: KafiTheme.nunito(13, color: KafiColors.tm, w: FontWeight.w600)),
                       ),
                     ],
                   ),
                 ],
-                const SizedBox(height: 8),
-                if (_membersLine != null)
-                  _quickFact(Icons.groups_outlined, _membersLine!),
-                _quickFact(Icons.child_care_outlined, _childrenLine),
-                if (langs.isNotEmpty)
-                  _quickFact(Icons.chat_bubble_outline, langs.join(' & ')),
-                if (religion.isNotEmpty)
-                  _quickFact(Icons.nightlight_round, religion),
+                const SizedBox(height: 2),
+                for (var i = 0; i < facts.length; i++) ...[
+                  if (i > 0) _rowDivider,
+                  facts[i],
+                ],
               ],
             ),
           ),
@@ -228,14 +236,16 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   Widget _quickFact(IconData icon, String text) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 4),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
-          Icon(icon, size: 13, color: KafiColors.ts),
-          const SizedBox(width: 6),
+          Icon(icon, size: 17, color: KafiColors.td),
+          const SizedBox(width: 10),
           Expanded(
             child: Text(text,
-                style: KafiTheme.nunito(10, color: KafiColors.tm, w: FontWeight.w600)),
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w600)),
           ),
         ],
       ),
@@ -245,17 +255,17 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
   Widget _aboutSection() {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(12),
+      padding: const EdgeInsets.all(14),
       decoration: _cardDeco(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(AppStrings.jobDetailAboutFamily.tr,
-              style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w900)),
-          const SizedBox(height: 8),
+              style: KafiTheme.nunito(15, color: KafiColors.td, w: FontWeight.w900)),
+          const SizedBox(height: 6),
           Text(_family!.aboutFamily!.trim(),
-              style: KafiTheme.nunito(11, color: KafiColors.tm, w: FontWeight.w600)
-                  .copyWith(height: 1.45)),
+              style: KafiTheme.nunito(13, color: KafiColors.tm, w: FontWeight.w600)
+                  .copyWith(height: 1.4)),
         ],
       ),
     );
@@ -357,7 +367,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
       _iconRow(Icons.videocam_outlined, AppStrings.jobDetailCamerasAtHome.tr, cameras),
       _iconRow(Icons.badge_outlined, AppStrings.jobDetailVisaSponsorship.tr, visa),
     ];
-    return _sectionCard(AppStrings.jobDetailFamilyDetails.tr, rows);
+    return _sectionCard(AppStrings.jobDetailFamilyDetails.tr, rows, dividers: true);
   }
 
   Widget _jobDetailsSection() {
@@ -391,6 +401,7 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
               'max': '${job.salaryMax}',
             })),
       ],
+      dividers: true,
     );
   }
 
@@ -494,21 +505,30 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   BoxDecoration _cardDeco() => BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(13),
-        border: Border.all(color: const Color(0xFFFFE8EF), width: 1.5),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFFFD6E4), width: 1.5),
         boxShadow: const [BoxShadow(color: Color(0x12FF5F96), blurRadius: 8, offset: Offset(0, 2))],
       );
 
-  Widget _sectionCard(String title, List<Widget> children) {
+  /// Hairline between two rows of a details card.
+  static const _rowDivider = Divider(height: 1, thickness: 1, color: Color(0xFFF6E3EA));
+
+  Widget _sectionCard(String title, List<Widget> children, {bool dividers = false}) {
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.all(16),
       decoration: _cardDeco(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(title, style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w900)),
-          const SizedBox(height: 10),
-          ...children,
+          Text(title, style: KafiTheme.nunito(17, color: KafiColors.td, w: FontWeight.w900)),
+          const SizedBox(height: 12),
+          if (dividers)
+            for (var i = 0; i < children.length; i++) ...[
+              if (i > 0) _rowDivider,
+              children[i],
+            ]
+          else
+            ...children,
         ],
       ),
     );
@@ -516,21 +536,21 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   Widget _iconRow(IconData icon, String label, String value) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 5),
+      padding: const EdgeInsets.symmetric(vertical: 10),
       child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
-          Icon(icon, size: 16, color: KafiColors.ts),
-          const SizedBox(width: 8),
+          Icon(icon, size: 21, color: KafiColors.td),
+          const SizedBox(width: 12),
           Expanded(
             child: Text(label,
-                style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w700)),
+                style: KafiTheme.nunito(14, color: KafiColors.ts, w: FontWeight.w700)),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 10),
           Flexible(
             child: Text(value,
                 textAlign: TextAlign.end,
-                style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w800)),
+                style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w800)),
           ),
         ],
       ),
@@ -539,24 +559,24 @@ class _JobDetailScreenState extends State<JobDetailScreen> {
 
   Widget _detailRow(String label, String value, {IconData? icon}) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 3),
+      padding: const EdgeInsets.symmetric(vertical: 5),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 14, color: KafiColors.grnD),
-            const SizedBox(width: 7),
+            Icon(icon, size: 19, color: KafiColors.grnD),
+            const SizedBox(width: 10),
           ],
           if (label.isNotEmpty) ...[
             SizedBox(
-              width: 90,
+              width: 110,
               child: Text(label,
-                  style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w700)),
+                  style: KafiTheme.nunito(14, color: KafiColors.ts, w: FontWeight.w700)),
             ),
           ],
           Expanded(
               child: Text(value,
-                  style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w700))),
+                  style: KafiTheme.nunito(14, color: KafiColors.td, w: FontWeight.w700))),
         ],
       ),
     );

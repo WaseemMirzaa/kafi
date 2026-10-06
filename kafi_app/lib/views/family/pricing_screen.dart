@@ -41,11 +41,13 @@ class PricingScreen extends GetView<SubscriptionController> {
                 ),
               ),
               const SizedBox(height: 8),
-              Text(
-                AppStrings.pricingVatNote.tr,
+              Obx(() => Text(
+                controller.plans.any((p) => p.storePrice != null)
+                    ? AppStrings.pricingTaxNoteStore.tr
+                    : AppStrings.pricingVatNote.tr,
                 textAlign: TextAlign.center,
                 style: KafiTheme.nunito(9, color: KafiColors.ts, w: FontWeight.w600).copyWith(height: 1.5),
-              ),
+              )),
               const SizedBox(height: 8),
               _trustRow(),
               const SizedBox(height: 18),
@@ -85,7 +87,7 @@ class PricingScreen extends GetView<SubscriptionController> {
                 ),
               ),
               const Spacer(),
-              const KafiLogo(size: 28),
+              const KafiLogo(size: 44),
               const Spacer(),
               const SizedBox(width: 27),
             ],
@@ -170,6 +172,10 @@ class PricingScreen extends GetView<SubscriptionController> {
   Widget _planCard(SubscriptionPlan p, bool selected) {
     final monthly = p.popular || p.durationDays == 30;
     final weekly = p.durationDays <= 7;
+    // Store price (incl. any tax the store applies) is the source of truth;
+    // the local AED/VAT maths is only the offline fallback.
+    final fromStore = p.storePrice != null;
+    final priceLabel = p.storePrice ?? '${AppStrings.currencyAedPrefix.tr}${p.priceAed}';
     final vat = p.priceAed * 0.05;
     final total = p.priceAed + vat;
 
@@ -178,7 +184,6 @@ class PricingScreen extends GetView<SubscriptionController> {
     final Color? borderColor;
     final List<Color>? cardGradient;
     final Color tagBg, tagText, btnBg, btnText, nameColor, descColor, priceColor, periodColor, vatColor;
-    final String periodWord;
     if (monthly) {
       cardBg = Colors.transparent;
       cardGradient = const [KafiColors.pur, Color(0xFFC084FC)];
@@ -192,7 +197,6 @@ class PricingScreen extends GetView<SubscriptionController> {
       priceColor = Colors.white;
       periodColor = Colors.white.withValues(alpha: 0.7);
       vatColor = Colors.white.withValues(alpha: 0.6);
-      periodWord = AppStrings.pricingPeriodMonth.tr;
     } else if (weekly) {
       cardBg = const Color(0xFFFFF8EE);
       cardGradient = null;
@@ -206,7 +210,6 @@ class PricingScreen extends GetView<SubscriptionController> {
       priceColor = KafiColors.td;
       periodColor = KafiColors.ts;
       vatColor = KafiColors.ts;
-      periodWord = AppStrings.pricingPeriodWeek.tr;
     } else {
       cardBg = const Color(0xFFF0FFF8);
       cardGradient = null;
@@ -220,7 +223,6 @@ class PricingScreen extends GetView<SubscriptionController> {
       priceColor = KafiColors.td;
       periodColor = KafiColors.ts;
       vatColor = KafiColors.ts;
-      periodWord = AppStrings.pricingPeriod2Months.tr;
     }
 
     final name =
@@ -279,9 +281,13 @@ class PricingScreen extends GetView<SubscriptionController> {
                     TextSpan(
                       style: KafiTheme.nunito(19, color: priceColor, w: FontWeight.w900),
                       children: [
-                        TextSpan(text: AppStrings.currencyAedPrefix.tr,
-                            style: KafiTheme.nunito(9.5, color: priceColor, w: FontWeight.w700)),
-                        TextSpan(text: '${p.priceAed}'),
+                        if (p.storePrice != null)
+                          TextSpan(text: p.storePrice)
+                        else ...[
+                          TextSpan(text: AppStrings.currencyAedPrefix.tr,
+                              style: KafiTheme.nunito(9.5, color: priceColor, w: FontWeight.w700)),
+                          TextSpan(text: '${p.priceAed}'),
+                        ],
                       ],
                     ),
                   ),
@@ -289,12 +295,13 @@ class PricingScreen extends GetView<SubscriptionController> {
                       AppStrings.pricingValidDays
                           .trParams({'days': '${p.durationDays}'}),
                       style: KafiTheme.nunito(9, color: periodColor, w: FontWeight.w600)),
-                  Text(
-                      AppStrings.pricingVatLine.trParams({
-                        'vat': vat.toStringAsFixed(2),
-                        'total': total.toStringAsFixed(2),
-                      }),
-                      style: KafiTheme.nunito(8, color: vatColor, w: FontWeight.w600)),
+                  if (!fromStore)
+                    Text(
+                        AppStrings.pricingVatLine.trParams({
+                          'vat': vat.toStringAsFixed(2),
+                          'total': total.toStringAsFixed(2),
+                        }),
+                        style: KafiTheme.nunito(8, color: vatColor, w: FontWeight.w600)),
                 ],
               ),
             ],
@@ -331,7 +338,7 @@ class PricingScreen extends GetView<SubscriptionController> {
                 selected
                     ? AppStrings.pricingCurrentPlan.tr
                     : AppStrings.pricingSelectPlan
-                        .trParams({'price': '${p.priceAed}', 'period': periodWord}),
+                        .trParams({'price': priceLabel}),
                 style: KafiTheme.fredoka(11.5, color: selected ? KafiColors.grnD : btnText, w: FontWeight.w700),
               ),
             ),
@@ -345,10 +352,10 @@ class PricingScreen extends GetView<SubscriptionController> {
     final String? ribbonText;
     final List<Color> ribbonColors;
     if (monthly) {
-      ribbonText = '🌸 ${AppStrings.pricingPopular.tr}';
+      ribbonText = AppStrings.pricingPopular.tr;
       ribbonColors = const [KafiColors.rose, KafiColors.roseD];
     } else if (!weekly) {
-      ribbonText = '✨ ${AppStrings.pricingBestValue.tr}';
+      ribbonText = AppStrings.pricingBestValue.tr;
       ribbonColors = const [Color(0xFF34B87A), Color(0xFF1A6A40)];
     } else {
       ribbonText = null;

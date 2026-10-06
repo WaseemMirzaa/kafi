@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/config/routes.dart';
@@ -201,6 +202,7 @@ class SubscriptionController extends GetxController {
       if (msg.contains('cancelled')) {
         return false;
       }
+      debugPrint('Subscribe failed for plan $planId: $msg');
       Get.snackbar(
         AppStrings.errorTitle.tr,
         msg.contains('RevenueCat API key')

@@ -2678,7 +2678,8 @@ dependencies:
   firebase_remote_config: ^4.3.0
   
   # Subscriptions
-  purchases_flutter: ^10.0.0  # RevenueCat SDK (public keys via dart-define)
+  purchases_flutter: ^10.14.0  # RevenueCat SDK (forces Play Billing 9.1.0 in Gradle)
+
   
   # Permissions
   permission_handler: ^11.0.0
@@ -3180,3 +3181,8 @@ Profile screens → phone blurred, Call/WA buttons removed
 
 | 2026-09-28 | Nanny onboarding Log Out | Done | `AppNavigation.confirmSignOut`; `KafiFormHeader`/`KafiStepScaffold.showSignOut`; wired on info/media/exp/refs/docs + pending/rejected |
 | 2026-09-28 | RevenueCat SDK integration | Done | `purchases_flutter` + `RevenueCatSubscriptionService`; `ISubscriptionService` restore/identify; configure on family sign-in; mock when `useMockSubscription` |
+| 2026-10-02 | Play Billing 9.1.0 + AAB 2.2.2 | Done | Force `com.android.billingclient:billing:9.1.0` over RevenueCat’s 8.3.0; bump app to 2.2.2+24 |
+
+| 2026-10-02 | Public privacy + delete-account web pages | Done | Static `/privacy/` and `/delete-account/` on admin Hosting; privacy linked from admin Settings |
+| 2026-10-02 | Firebase project → Kafi (`kafi-802c9`) | Done | Switched from `yhgc-testing`: `.firebaserc`, `firebase_options.dart`, Android/iOS native configs, admin `.env` / `.env.production`; registered Android/iOS/Web apps on empty Kafi project |
+| 2026-10-02 | Deploy rules + functions to `kafi-802c9` | Done | Created Firestore `(default)` (nam5); deployed rules + indexes; all Cloud Functions (us-central1); Storage rules released after Console bucket setup |

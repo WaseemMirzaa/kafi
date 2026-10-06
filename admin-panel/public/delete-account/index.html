@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Delete Account — Kafi</title>
+  <meta name="description" content="How to delete your Kafi account and what data is removed." />
+  <style>
+    :root {
+      --td: #1a1a2e;
+      --ts: #6b7280;
+      --rose: #ff8fab;
+      --rose-d: #e85a7a;
+      --bg: #fff7fa;
+      --card: #ffffff;
+      --red: #c62828;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      background: linear-gradient(180deg, #ffe8f5 0%, var(--bg) 45%, #fff 100%);
+      color: var(--td);
+      line-height: 1.55;
+    }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 28px 18px 64px; }
+    .brand {
+      font-weight: 900; font-size: 22px; letter-spacing: -0.02em;
+      background: linear-gradient(90deg, #c084fc, var(--rose-d));
+      -webkit-background-clip: text; background-clip: text; color: transparent;
+    }
+    h1 { font-size: 26px; margin: 18px 0 6px; }
+    .meta { color: var(--ts); font-size: 13px; margin-bottom: 22px; }
+    .card {
+      background: var(--card);
+      border: 1px solid #f0e4ec;
+      border-radius: 16px;
+      padding: 20px 18px;
+      box-shadow: 0 8px 28px rgba(232, 90, 122, 0.06);
+      margin-bottom: 14px;
+    }
+    h2 { font-size: 15px; margin: 0 0 8px; color: var(--rose-d); }
+    p, li { font-size: 14px; color: #374151; }
+    ol, ul { padding-left: 18px; margin: 6px 0 0; }
+    .warn {
+      border-left: 3px solid var(--red);
+      background: #fff5f5;
+      padding: 12px 14px;
+      border-radius: 0 12px 12px 0;
+      font-size: 13px;
+      color: #7f1d1d;
+      margin: 10px 0 0;
+    }
+    a { color: var(--rose-d); font-weight: 600; }
+    .cta {
+      display: inline-block;
+      margin-top: 10px;
+      background: linear-gradient(135deg, var(--rose), var(--rose-d));
+      color: #fff !important;
+      text-decoration: none;
+      padding: 10px 16px;
+      border-radius: 999px;
+      font-size: 13px;
+      font-weight: 800;
+    }
+    footer { margin-top: 20px; font-size: 12px; color: var(--ts); }
+  </style>
+</head>
+<body>
+  <main class="wrap">
+    <div class="brand">Kafi</div>
+    <h1>Delete your Kafi account</h1>
+    <p class="meta">Account deletion is permanent. This page explains how to delete your account and what is removed.</p>
+
+    <section class="card">
+      <h2>Delete in the Kafi app (recommended)</h2>
+      <ol>
+        <li>Open the <strong>Kafi</strong> app and sign in.</li>
+        <li>Go to <strong>Settings</strong>.</li>
+        <li>Tap <strong>Delete Account</strong>.</li>
+        <li>Select a reason, then type <strong>DELETE</strong> to confirm.</li>
+      </ol>
+      <p class="warn">This action cannot be undone. Your profile and related data will be permanently removed.</p>
+    </section>
+
+    <section class="card">
+      <h2>What is deleted</h2>
+      <ul>
+        <li>Your profile and personal data</li>
+        <li>Photos, videos, and uploaded documents</li>
+        <li>Chat history and applications</li>
+        <li>Trial records linked to your account</li>
+        <li>Your Firebase authentication account</li>
+      </ul>
+      <p style="margin-top:12px"><strong>Families with an active subscription:</strong> cancel or manage billing in the App Store or Google Play. Platform refunds follow Apple/Google policies.</p>
+    </section>
+
+    <section class="card">
+      <h2>Request deletion by email</h2>
+      <p>If you cannot access the app, email us from the phone number or email associated with your account:</p>
+      <p><a href="mailto:hello@kafiapp.tech?subject=Kafi%20Account%20Deletion%20Request">hello@kafiapp.tech</a></p>
+      <p>Include: full name, phone number used to sign up, and role (nanny or family). We aim to complete verified deletion requests within <strong>30 days</strong>.</p>
+      <a class="cta" href="mailto:hello@kafiapp.tech?subject=Kafi%20Account%20Deletion%20Request">Email deletion request</a>
+    </section>
+
+    <section class="card">
+      <h2>Privacy</h2>
+      <p>See our <a href="/privacy/">Privacy Policy</a> for how we handle personal data.</p>
+    </section>
+
+    <footer>© Kafi Care Technology FZ-LLC. All rights reserved.</footer>
+  </main>
+</body>
+</html>

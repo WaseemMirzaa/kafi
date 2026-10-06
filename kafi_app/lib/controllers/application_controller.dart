@@ -9,11 +9,15 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
+import 'package:kafi_app/models/nanny_model.dart';
 import 'package:kafi_app/services/interfaces/i_application_service.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/services/match_service.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
+
+/// Status tabs on the nanny "My Applications" screen.
+enum SentFilter { all, pending, viewed, shortlisted, offers, hired, declined, withdrawn }
 
 class ApplicationController extends GetxController {
   final IApplicationService _appService = Get.find<IApplicationService>();
@@ -23,6 +27,50 @@ class ApplicationController extends GetxController {
   final RxList<ApplicationModel> receivedApplications = <ApplicationModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxnString loadError = RxnString();
+
+  /// Live family profiles (name + photo) for the families the nanny applied to,
+  /// keyed by family id. The name/photo denormalized onto an application is a
+  /// snapshot taken from the job post and can be empty or stale; the family's
+  /// own profile is the source of truth shown in "My Applications".
+  final RxMap<String, FamilyModel> familyProfiles = <String, FamilyModel>{}.obs;
+  final Set<String> _familyProfileRequested = <String>{};
+
+  /// Live nanny profiles (name + photo) for the family "Applicants" list, keyed
+  /// by nanny id — applications carry no photo, only a name snapshot.
+  final RxMap<String, NannyModel> nannyProfiles = <String, NannyModel>{}.obs;
+  final Set<String> _nannyProfileRequested = <String>{};
+
+  Future<void> _loadNannyProfiles(List<ApplicationModel> apps) async {
+    if (!Get.isRegistered<IUserService>()) return;
+    final users = Get.find<IUserService>();
+    for (final id in apps.map((a) => a.nannyId).toSet()) {
+      if (id.isEmpty || !_nannyProfileRequested.add(id)) continue;
+      try {
+        final nanny = await users.getNanny(id);
+        if (nanny != null) nannyProfiles[id] = nanny;
+      } catch (e) {
+        _nannyProfileRequested.remove(id); // retry on the next refresh
+        Get.log('nanny profile load failed ($id): $e', isError: true);
+      }
+    }
+  }
+
+  Future<void> _loadFamilyProfiles(List<ApplicationModel> apps) async {
+    if (!Get.isRegistered<IUserService>()) return;
+    final users = Get.find<IUserService>();
+    for (final id in apps.map((a) => a.familyId).toSet()) {
+      if (id.isEmpty || !_familyProfileRequested.add(id)) continue;
+      try {
+        final fam = await users.getFamily(id);
+        if (fam != null) familyProfiles[id] = fam;
+      } catch (e) {
+        // Allow a retry on the next refresh; the card falls back to the
+        // denormalized name/photo meanwhile.
+        _familyProfileRequested.remove(id);
+        Get.log('family profile load failed ($id): $e', isError: true);
+      }
+    }
+  }
 
   // Search queries for the applicants (family) and my-applications (nanny) lists.
   final RxString receivedQuery = ''.obs;
@@ -114,15 +162,50 @@ class ApplicationController extends GetxController {
     return false;
   }
 
-  /// Nanny "My Applications" filtered by the search box (family name / job title).
+  /// Active status tab on the nanny "My Applications" screen.
+  final Rx<SentFilter> sentFilter = SentFilter.all.obs;
+
+  /// Single definition of what each tab / Jobs-page stat tile counts, so the
+  /// tile number and the list it opens can never disagree.
+  /// `viewed` = seen by the family (any status past pending, except withdrawn).
+  bool matchesSentFilter(ApplicationModel a, SentFilter f) {
+    switch (f) {
+      case SentFilter.all:
+        return true;
+      case SentFilter.pending:
+        return a.status == ApplicationStatus.pending;
+      case SentFilter.viewed:
+        return a.status != ApplicationStatus.pending &&
+            a.status != ApplicationStatus.withdrawn;
+      case SentFilter.shortlisted:
+        return a.status == ApplicationStatus.shortlisted;
+      case SentFilter.offers:
+        return a.status == ApplicationStatus.trialOffered;
+      case SentFilter.hired:
+        return a.status == ApplicationStatus.hired;
+      case SentFilter.declined:
+        return a.status == ApplicationStatus.declined;
+      case SentFilter.withdrawn:
+        return a.status == ApplicationStatus.withdrawn;
+    }
+  }
+
+  int sentCount(SentFilter f) =>
+      myApplications.where((a) => matchesSentFilter(a, f)).length;
+
+  /// Nanny "My Applications" filtered by status tab + the search box
+  /// (family name / job title).
   List<ApplicationModel> get filteredSent {
     final q = sentQuery.value.trim().toLowerCase();
-    if (q.isEmpty) return myApplications;
-    return myApplications
-        .where((a) =>
-            (a.familyName ?? '').toLowerCase().contains(q) ||
-            (a.jobTitle ?? '').toLowerCase().contains(q))
-        .toList();
+    final f = sentFilter.value;
+    return myApplications.where((a) {
+      if (!matchesSentFilter(a, f)) return false;
+      if (q.isEmpty) return true;
+      return (familyProfiles[a.familyId]?.fullName ?? a.familyName ?? '')
+              .toLowerCase()
+              .contains(q) ||
+          (a.jobTitle ?? '').toLowerCase().contains(q);
+    }).toList();
   }
 
   @override
@@ -173,8 +256,10 @@ class ApplicationController extends GetxController {
           receivedApplications.assignAll(
             await _withCanonicalMatch(apps, userId),
           );
+          _loadNannyProfiles(apps);
         } catch (e) {
           receivedApplications.assignAll(apps);
+          _loadNannyProfiles(apps);
           Get.log('applicant match recompute failed: $e', isError: true);
         }
       },
@@ -189,6 +274,7 @@ class ApplicationController extends GetxController {
       asNanny: true,
       onData: (apps) {
         myApplications.assignAll(apps);
+        _loadFamilyProfiles(apps);
       },
     );
   }

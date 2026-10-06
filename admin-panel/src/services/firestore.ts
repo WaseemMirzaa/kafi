@@ -976,7 +976,7 @@ export const NannyService = {
       d.type === docId
         ? {
             ...d,
-            status,
+      status,
             rejectionReason: status === 'rejected' ? reason ?? '' : null,
             reviewedAt: new Date().toISOString(),
           }
@@ -1425,19 +1425,19 @@ function parseDisputeAttachments(raw: unknown): DisputeAttachment[] | undefined 
 }
 
 function parseDispute(id: string, data: Record<string, unknown>): DisputeRow {
-  return {
+      return {
     id,
-    reporterId: (data.reporterId as string) ?? '',
+        reporterId: (data.reporterId as string) ?? '',
     reporterName: data.reporterName as string | undefined,
     reporterType: data.reporterType as 'family' | 'nanny' | undefined,
-    reportedUserId: (data.reportedUserId as string) ?? '',
+        reportedUserId: (data.reportedUserId as string) ?? '',
     reportedName: data.reportedName as string | undefined,
     reportedType: data.reportedType as 'family' | 'nanny' | undefined,
-    category: (data.category as DisputeRow['category']) ?? 'other',
-    description: (data.description as string) ?? '',
-    status: (data.status as DisputeRow['status']) ?? 'open',
+        category: (data.category as DisputeRow['category']) ?? 'other',
+        description: (data.description as string) ?? '',
+        status: (data.status as DisputeRow['status']) ?? 'open',
     relatedTrialId: data.relatedTrialId as string | undefined,
-    resolution: data.resolution as string | undefined,
+        resolution: data.resolution as string | undefined,
     createdAt: parseTimestamp(data.createdAt),
     reporterSnapshot: parseDisputeSnapshot(data.reporterSnapshot),
     reportedSnapshot: parseDisputeSnapshot(data.reportedSnapshot),

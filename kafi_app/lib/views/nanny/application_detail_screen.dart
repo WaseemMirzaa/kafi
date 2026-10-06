@@ -12,7 +12,7 @@ import 'package:kafi_app/models/trial_model.dart';
 import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/constants/family_constants.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
-import 'package:kafi_app/views/widgets/kafi_avatar.dart';
+import 'package:kafi_app/views/widgets/kafi_media_image.dart';
 import 'package:kafi_app/views/widgets/kafi_primary_button.dart';
 
 const _heroGradient = LinearGradient(
@@ -21,10 +21,10 @@ const _heroGradient = LinearGradient(
   colors: [Color(0xFFFFE0EC), Color(0xFFFFF4EE)],
 );
 
-BoxDecoration _cardDecoration({Color border = const Color(0xFFFFE8EF)}) {
+BoxDecoration _cardDecoration({Color border = const Color(0xFFFFD6E4)}) {
   return BoxDecoration(
     color: Colors.white,
-    borderRadius: BorderRadius.circular(13),
+    borderRadius: BorderRadius.circular(18),
     border: Border.all(color: border, width: 1.5),
     boxShadow: const [
       BoxShadow(color: Color(0x12FF5F96), blurRadius: 8, offset: Offset(0, 2)),
@@ -114,14 +114,14 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
             _hero(),
             Expanded(
               child: SingleChildScrollView(
-                padding: EdgeInsets.fromLTRB(14, 14, 14, bottomBar != null ? 14 : 24),
+                padding: EdgeInsets.fromLTRB(16, 16, 16, bottomBar != null ? 16 : 24),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     _statusBanner(app.status),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     _jobCard(_job, app),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 16),
                     _buildBody(app),
                   ],
                 ),
@@ -227,20 +227,20 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           child: Ink(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(color: KafiColors.redD.withValues(alpha: 0.35), width: 1.5),
             ),
-            padding: const EdgeInsets.symmetric(vertical: 13),
+            padding: const EdgeInsets.symmetric(vertical: 19),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 14, color: KafiColors.redD),
-                const SizedBox(width: 6),
-                Text(label, style: KafiTheme.fredoka(12, color: KafiColors.redD)),
+                Icon(icon, size: 18, color: KafiColors.redD),
+                const SizedBox(width: 8),
+                Text(label, style: KafiTheme.fredoka(15, color: KafiColors.redD)),
               ],
             ),
           ),
@@ -289,10 +289,10 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
   Widget _statusBanner(ApplicationStatus status) {
     final cfg = _bannerConfig(status);
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: cfg.bg,
-        borderRadius: BorderRadius.circular(13),
+        borderRadius: BorderRadius.circular(18),
         border: Border.all(color: cfg.border, width: 1.5),
         boxShadow: const [
           BoxShadow(color: Color(0x12FF5F96), blurRadius: 8, offset: Offset(0, 2)),
@@ -301,24 +301,24 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
       child: Row(
         children: [
           Container(
-            width: 40,
-            height: 40,
+            width: 54,
+            height: 54,
             decoration: BoxDecoration(
               color: cfg.iconBg,
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(20),
             ),
-            child: Icon(cfg.icon, color: cfg.fg, size: 20),
+            child: Icon(cfg.icon, color: cfg.fg, size: 26),
           ),
-          const SizedBox(width: 10),
+          const SizedBox(width: 14),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(cfg.title,
-                    style: KafiTheme.nunito(12, color: cfg.fg, w: FontWeight.w900)),
-                const SizedBox(height: 2),
+                    style: KafiTheme.nunito(16, color: cfg.fg, w: FontWeight.w900)),
+                const SizedBox(height: 4),
                 Text(cfg.message,
-                    style: KafiTheme.nunito(9.5,
+                    style: KafiTheme.nunito(13,
                         color: cfg.fg.withValues(alpha: 0.75), w: FontWeight.w600)),
               ],
             ),
@@ -431,7 +431,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     }
 
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.all(14),
       decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -439,18 +439,15 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // Landscape (not square), centre-cropped family photo.
               GestureDetector(
                 onTap: openFamilyJob,
-                child: KafiAvatar(
-                  photoUrl: FamilyConstants.resolvedPhotoUrl(job?.familyPhotoUrl, photoSeed),
-                  fallbackText: family,
-                  size: 48,
-                  gradient: const [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
-                  fontSize: 18,
-                  radius: 12,
+                child: _familyPhoto(
+                  FamilyConstants.resolvedPhotoUrl(job?.familyPhotoUrl, photoSeed),
+                  family,
                 ),
               ),
-              const SizedBox(width: 10),
+              const SizedBox(width: 14),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -458,52 +455,93 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                     GestureDetector(
                       onTap: openFamilyJob,
                       child: Text(family,
-                          style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w900),
+                          style: KafiTheme.nunito(18, color: KafiColors.td, w: FontWeight.w900),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(height: 6),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: KafiColors.roseP,
+                        borderRadius: BorderRadius.circular(9),
+                      ),
+                      child: Text(role,
+                          style: KafiTheme.nunito(12, color: KafiColors.td, w: FontWeight.w700),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis),
                     ),
-                    const SizedBox(height: 2),
-                    Text(role,
-                        style: KafiTheme.nunito(11, color: KafiColors.roseD, w: FontWeight.w700),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis),
+                    // Salary + city sit in the right column, under the role.
+                    if (salary != null) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: [
+                          _chip(Icons.payments_outlined, salary),
+                          _chip(Icons.location_on_outlined, city),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
             ],
           ),
-          if (salary != null) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 6,
-              runSpacing: 4,
-              children: [
-                _chip(Icons.payments_outlined, salary),
-                _chip(Icons.location_on_outlined, city),
-              ],
-            ),
-          ],
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
+          const Divider(height: 1, thickness: 1, color: Color(0xFFFBE9EF)),
+          const SizedBox(height: 12),
           _timelineRow(app),
         ],
       ),
     );
   }
 
+  Widget _familyPhoto(String url, String name) {
+    final initial = name.trim().isNotEmpty ? name.trim()[0].toUpperCase() : 'F';
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 124,
+        height: 104,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              decoration: const BoxDecoration(gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [Color(0xFFFF8FAB), Color(0xFFFF5C8A)],
+              )),
+              alignment: Alignment.center,
+              child: Text(initial,
+                  style: KafiTheme.fredoka(36, color: Colors.white, w: FontWeight.w900)),
+            ),
+            KafiMediaImage(
+              url: url,
+              fit: BoxFit.cover,
+              errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _chip(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
       decoration: BoxDecoration(
         color: KafiColors.roseP,
-        borderRadius: BorderRadius.circular(6),
+        borderRadius: BorderRadius.circular(9),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 11, color: KafiColors.roseD),
+          Icon(icon, size: 12, color: KafiColors.roseD),
           const SizedBox(width: 4),
           Text(label,
-              style: KafiTheme.nunito(9, color: KafiColors.roseD, w: FontWeight.w700)),
+              style: KafiTheme.nunito(10.5, color: KafiColors.roseD, w: FontWeight.w700)),
         ],
       ),
     );
@@ -512,11 +550,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
   Widget _timelineRow(ApplicationModel app) {
     final steps = _timelineSteps(app.status);
     return Container(
-      padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
-      decoration: BoxDecoration(
-        color: KafiColors.nannyBg,
-        borderRadius: BorderRadius.circular(10),
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 4),
       child: Row(
         children: List.generate(steps.length, (i) {
           final step = steps[i];
@@ -528,8 +562,8 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                   child: Column(
                     children: [
                       Container(
-                        width: 18,
-                        height: 18,
+                        width: 36,
+                        height: 36,
                         decoration: BoxDecoration(
                           color: step.done ? KafiColors.grnL : const Color(0xFFF0F0F0),
                           shape: BoxShape.circle,
@@ -538,16 +572,16 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
                           child: Text(
                             step.done ? '✓' : '${i + 1}',
                             style: TextStyle(
-                              fontSize: 8,
+                              fontSize: 16,
                               fontWeight: FontWeight.w800,
                               color: step.done ? KafiColors.grnD : KafiColors.ts,
                             ),
                           ),
                         ),
                       ),
-                      const SizedBox(height: 3),
+                      const SizedBox(height: 6),
                       Text(step.label,
-                          style: KafiTheme.nunito(8,
+                          style: KafiTheme.nunito(12.5,
                               color: step.done ? KafiColors.grnD : KafiColors.ts,
                               w: step.done ? FontWeight.w700 : FontWeight.w500),
                           textAlign: TextAlign.center,
@@ -617,9 +651,9 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
             title: AppStrings.appDetailCoverMsg.tr,
             icon: Icons.message_outlined,
             child: Text(app.coverMessage!,
-                style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w600)),
+                style: KafiTheme.nunito(15, color: KafiColors.td, w: FontWeight.w600)),
           ),
-        if (app.coverMessage != null && app.coverMessage!.isNotEmpty) const SizedBox(height: 10),
+        if (app.coverMessage != null && app.coverMessage!.isNotEmpty) const SizedBox(height: 16),
         _sectionCard(
           title: AppStrings.appDetailTimelineTitle.tr,
           icon: Icons.schedule,
@@ -644,9 +678,9 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
             title: AppStrings.appDetailCoverMsg.tr,
             icon: Icons.message_outlined,
             child: Text(app.coverMessage!,
-                style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w600)),
+                style: KafiTheme.nunito(15, color: KafiColors.td, w: FontWeight.w600)),
           ),
-        if (app.coverMessage != null && app.coverMessage!.isNotEmpty) const SizedBox(height: 10),
+        if (app.coverMessage != null && app.coverMessage!.isNotEmpty) const SizedBox(height: 16),
         _sectionCard(
           title: AppStrings.appDetailTimelineTitle.tr,
           icon: Icons.schedule,
@@ -809,23 +843,23 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
         color: Colors.transparent,
         child: InkWell(
           onTap: onPressed,
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(20),
           child: Ink(
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(20),
               border: Border.all(color: const Color(0xFFFFC0D4), width: 1.5),
               boxShadow: const [
                 BoxShadow(color: Color(0x0AFF5F96), blurRadius: 6, offset: Offset(0, 2)),
               ],
             ),
-            padding: const EdgeInsets.symmetric(vertical: 13),
+            padding: const EdgeInsets.symmetric(vertical: 19),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(icon, size: 14, color: KafiColors.roseD),
-                const SizedBox(width: 6),
-                Text(label, style: KafiTheme.fredoka(12, color: KafiColors.roseD)),
+                Icon(icon, size: 18, color: KafiColors.roseD),
+                const SizedBox(width: 8),
+                Text(label, style: KafiTheme.fredoka(15, color: KafiColors.roseD)),
               ],
             ),
           ),
@@ -879,7 +913,7 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
     required Widget child,
   }) {
     return Container(
-      padding: const EdgeInsets.all(11),
+      padding: const EdgeInsets.all(16),
       decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -887,20 +921,20 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
           Row(
             children: [
               Container(
-                width: 24,
-                height: 24,
+                width: 38,
+                height: 38,
                 decoration: BoxDecoration(
                   color: KafiColors.roseP,
-                  borderRadius: BorderRadius.circular(7),
+                  borderRadius: BorderRadius.circular(11),
                 ),
-                child: Icon(icon, size: 13, color: KafiColors.roseD),
+                child: Icon(icon, size: 19, color: KafiColors.roseD),
               ),
-              const SizedBox(width: 7),
+              const SizedBox(width: 12),
               Text(title,
-                  style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w900)),
+                  style: KafiTheme.nunito(16, color: KafiColors.td, w: FontWeight.w900)),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
           child,
         ],
       ),
@@ -909,12 +943,12 @@ class _ApplicationDetailScreenState extends State<ApplicationDetailScreen> {
 
   Widget _dateRow(String label, DateTime dt) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 6),
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
-          Text(label, style: KafiTheme.nunito(10, color: KafiColors.td, w: FontWeight.w700)),
-          Text(_fmtDate(dt), style: KafiTheme.nunito(10, color: KafiColors.ts, w: FontWeight.w600)),
+          Text(label, style: KafiTheme.nunito(15, color: KafiColors.td, w: FontWeight.w700)),
+          Text(_fmtDate(dt), style: KafiTheme.nunito(15, color: KafiColors.ts, w: FontWeight.w600)),
         ],
       ),
     );

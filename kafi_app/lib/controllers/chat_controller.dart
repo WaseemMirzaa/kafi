@@ -37,6 +37,45 @@ class ChatController extends GetxController {
 
   final RxList<ChatThread> threads = <ChatThread>[].obs;
 
+  /// Live profile names for the other party, keyed by their user id. Threads
+  /// created without a name (e.g. a nanny opening a chat from an application
+  /// whose family name was empty) would otherwise render as a blank/generic
+  /// title; the profile is the source of truth.
+  final Map<String, String> _peerNames = <String, String>{};
+  final Set<String> _peerNameRequested = <String>{};
+
+  /// Display name of the other participant: the name stored on the thread, else
+  /// the one resolved from their profile, else empty (the view shows a role
+  /// label — never the screen title).
+  String peerNameFor(ChatThread t) {
+    final stored = isNanny ? t.familyName : t.nannyName;
+    if (stored.trim().isNotEmpty) return stored;
+    return _peerNames[isNanny ? t.familyId : t.nannyId] ?? '';
+  }
+
+  Future<void> _enrichMissingThreadNames(List<ChatThread> list) async {
+    var changed = false;
+    for (final t in list) {
+      final stored = isNanny ? t.familyName : t.nannyName;
+      final peerId = isNanny ? t.familyId : t.nannyId;
+      if (stored.trim().isNotEmpty || peerId.isEmpty || !_peerNameRequested.add(peerId)) {
+        continue;
+      }
+      try {
+        final name = isNanny
+            ? (await _user.getFamily(peerId))?.fullName
+            : (await _user.getNanny(peerId))?.fullName;
+        if (name != null && name.trim().isNotEmpty) {
+          _peerNames[peerId] = name.trim();
+          changed = true;
+        }
+      } catch (_) {
+        _peerNameRequested.remove(peerId); // retry on the next snapshot
+      }
+    }
+    if (changed) threads.refresh();
+  }
+
   /// Active hires for the current user, keyed by the *counterparty* id (the
   /// nanny's id when a family is signed in, the family's id when a nanny is).
   /// Drives the "Hired" badge on the chat list and conversation header.
@@ -306,6 +345,7 @@ class ChatController extends GetxController {
       threadsError.value = null;
       done();
       unawaited(_enrichMissingThreadPhotos(reconciled));
+      unawaited(_enrichMissingThreadNames(reconciled));
     }, onError: (e) => done(e));
     await first.future;
   }

@@ -29,7 +29,8 @@
 			<string>Editor</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>app-1-944877885594-ios-87503ec30e8d8fb8c52723</string>
+				<!-- Firebase Phone Auth reCAPTCHA redirect: GOOGLE_APP_ID with colons → dashes -->
+				<string>app-1-1020989377749-ios-c193b144f0609552b4265c</string>
 			</array>
 		</dict>
 	</array>
@@ -65,6 +66,10 @@
 	</array>
 	<key>FirebaseAppDelegateProxyEnabled</key>
 	<true/>
+	<!-- Kafi uses HTTPS + Firebase SDK only — no custom encryption. Required to
+	     skip the App Store export compliance questionnaire on every release. -->
+	<key>ITSAppUsesNonExemptEncryption</key>
+	<false/>
 	<key>UILaunchStoryboardName</key>
 	<string>LaunchScreen</string>
 	<key>UIMainStoryboardFile</key>

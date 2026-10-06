@@ -3,7 +3,17 @@ import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, InboxType, getUser } from '../utils/notifications';
 import { NotificationKey, tn } from '../i18n/notifications';
 
-export const revenueCatWebhook = onRequest(async (req, res) => {
+function planFromProductId(productId?: string): string | null {
+  const id = (productId ?? '').toLowerCase();
+  if (id.includes('bimonth') || id.includes('2month') || id.includes('two_month')) return 'bimonthly';
+  if (id.includes('weekly')) return 'weekly';
+  if (id.includes('monthly')) return 'monthly';
+  return null;
+}
+
+// Public at the IAM layer so RevenueCat can reach it; the shared secret below
+// is the real authentication.
+export const revenueCatWebhook = onRequest({ invoker: 'public' }, async (req, res) => {
   if (req.method !== 'POST') {
     res.status(405).send('Method Not Allowed');
     return;
@@ -52,10 +62,15 @@ export const revenueCatWebhook = onRequest(async (req, res) => {
   let notification: { keyPrefix: string; type: InboxType } | null = null;
 
   switch (eventType) {
+    // Kafi plans are non-renewing one-time purchases, which RevenueCat reports
+    // as NON_RENEWING_PURCHASE — they previously fell through to "not handled".
+    case 'NON_RENEWING_PURCHASE':
     case 'INITIAL_PURCHASE':
     case 'RENEWAL':
       update = {
         'subscription.status': 'active',
+        'subscription.plan': planFromProductId(event.product_id),
+        'subscription.autoRenew': false,
         'subscription.startDate': admin.firestore.Timestamp.now(),
         'subscription.endDate': admin.firestore.Timestamp.fromMillis(
           event.expiration_at_ms || Date.now() + 30 * 24 * 60 * 60 * 1000

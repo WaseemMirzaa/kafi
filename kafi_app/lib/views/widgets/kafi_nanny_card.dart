@@ -4,7 +4,7 @@ import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/utils/job_type_label.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
-import 'package:kafi_app/views/widgets/kafi_avatar.dart';
+import 'package:kafi_app/views/widgets/kafi_media_image.dart';
 
 class KafiNannyCard extends StatelessWidget {
   const KafiNannyCard({super.key, required this.card, required this.onTap, this.jobLabel});
@@ -14,6 +14,9 @@ class KafiNannyCard extends StatelessWidget {
 
   /// Optional posted-job title this nanny is matched against.
   final String? jobLabel;
+
+  static const double _inset = 7;
+  static const double _photoSize = 108;
 
   // Avatar gradient palette (matches the .av1–.av4 cycle in the web design).
   static const List<List<Color>> _avatarGradients = [
@@ -35,7 +38,9 @@ class KafiNannyCard extends StatelessWidget {
       onTap: onTap,
       child: Container(
         margin: const EdgeInsets.only(bottom: 10),
-        padding: const EdgeInsets.all(13),
+        // Small inset so the photo sits inside the card edge (top/bottom/left).
+        constraints: const BoxConstraints(minHeight: _photoSize + _inset * 2),
+        padding: const EdgeInsets.all(_inset),
         decoration: BoxDecoration(
           gradient: card.featured
               ? const LinearGradient(
@@ -52,19 +57,20 @@ class KafiNannyCard extends StatelessWidget {
             BoxShadow(color: Color(0x14FF5F96), blurRadius: 9, offset: Offset(0, 2)),
           ],
         ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
+        child: IntrinsicHeight(
+          child: Row(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            KafiAvatar(
-              photoUrl: card.photoUrls.isNotEmpty ? card.photoUrls.first : null,
-              fallbackText: card.initials.isNotEmpty ? card.initials : card.name,
-              size: 57,
-              gradient: gradient,
-              fontSize: 22,
+            _photo(
+              card.photoUrls.isNotEmpty ? card.photoUrls.first : null,
+              card.initials.isNotEmpty ? card.initials : card.name,
+              gradient,
             ),
             const SizedBox(width: 10),
             Expanded(
-              child: Column(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
@@ -153,10 +159,55 @@ class KafiNannyCard extends StatelessWidget {
                     ),
                   ],
                 ],
+                ),
               ),
             ),
           ],
+          ),
         ),
+      ),
+    );
+  }
+
+  /// Square photo, centre-cropped, vertically centred in the card.
+  Widget _photo(String? url, String fallbackText, List<Color> gradient) {
+    final initial = fallbackText.trim().isNotEmpty ? fallbackText.trim()[0].toUpperCase() : '?';
+    final hasPhoto = (url ?? '').trim().isNotEmpty;
+    // Always a true square, centred vertically; the photo is centre-cropped
+    // (BoxFit.cover + Alignment.center) so any aspect ratio fills it.
+    return Align(
+      alignment: Alignment.center,
+      child: ClipRRect(
+      borderRadius: BorderRadius.circular(12),
+      child: SizedBox(
+        width: _photoSize,
+        height: _photoSize,
+        child: Stack(
+          fit: StackFit.expand,
+          children: [
+            Container(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: gradient,
+                ),
+              ),
+              alignment: Alignment.center,
+              child: Text(initial,
+                  style: KafiTheme.fredoka(32, color: Colors.white, w: FontWeight.w900)),
+            ),
+            if (hasPhoto)
+              KafiMediaImage(
+                url: url!.trim(),
+                fit: BoxFit.cover,
+                width: _photoSize,
+                height: _photoSize,
+                errorBuilder: (_, __, ___) => const SizedBox.shrink(),
+              ),
+          ],
+        ),
+      ),
       ),
     );
   }

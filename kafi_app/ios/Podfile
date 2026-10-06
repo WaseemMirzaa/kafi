@@ -51,7 +51,9 @@ post_install do |installer|
         'PERMISSION_MICROPHONE=1',
         'PERMISSION_LOCATION_WHENINUSE=1',
         'PERMISSION_NOTIFICATIONS=1',
-        'PERMISSION_CONTACTS=1',
+        # Do NOT enable PERMISSION_CONTACTS — Kafi never reads the device
+        # address book. Leaving it on links Contacts.framework APIs and
+        # triggers ITMS-90683 (NSContactsUsageDescription) on App Store upload.
       ]
     end
   end

@@ -1,4 +1,3 @@
-/// Translation keys only — copy in locales/en_us.dart
 abstract class AppStrings {
   static const appName = 'app_name';
   static const tagline = 'tagline';
@@ -1335,6 +1334,7 @@ abstract class AppStrings {
   // Nanny-side application status labels (badges + timeline + date rows).
   // Distinct from the family-facing appStatus* keys ("New"/"Trial offered")
   // which use applicant-list framing, not the nanny's own-application framing.
+  static const nannyNoApplicationsFiltered = 'nanny_no_applications_filtered';
   static const nannyAppStatusPending = 'nanny_app_status_pending';
   static const nannyAppStatusViewed = 'nanny_app_status_viewed';
   static const nannyAppStatusShortlisted = 'nanny_app_status_shortlisted';
@@ -1501,6 +1501,7 @@ abstract class AppStrings {
   static const errTrialOfferExpiredMessage = 'err_trial_offer_expired_message';
   static const errSubPaymentDeclined = 'err_sub_payment_declined';
   static const errSubRestoreFailed = 'err_sub_restore_failed';
+  static const pricingTaxNoteStore = 'pricing_tax_note_store';
   static const errSubPurchaseFailed = 'err_sub_purchase_failed';
   static const errSubNotConfigured = 'err_sub_not_configured';
   static const errNetNoConnectionMessage = 'err_net_no_connection_message';

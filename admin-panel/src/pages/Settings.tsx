@@ -239,6 +239,22 @@ export default function Settings() {
               </div>
             </DetailCard>
 
+            {/* Public legal pages (hosted next to this admin site). */}
+            <DetailCard>
+              <div className="text-[11px] font-extrabold text-navy">{t('settings.legal')}</div>
+              <div className="text-[9px] font-semibold text-[#8090B0] mt-1 mb-3 leading-relaxed">
+                {t('settings.legalDesc')}
+              </div>
+              <a
+                href="/privacy/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1.5 text-[11px] font-bold text-rose-dark hover:underline"
+              >
+                {t('settings.privacyPolicy')} ↗
+              </a>
+            </DetailCard>
+
             <div className="flex items-center gap-2 h-4">
               {ok && <span className="text-[10px] font-bold text-[#2A8A50]">{ok}</span>}
               {error && <span className="text-[10px] font-bold text-rose-dark">{error}</span>}
