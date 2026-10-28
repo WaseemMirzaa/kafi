@@ -19,15 +19,18 @@ class JobPostController extends GetxController {
   final Rx<JobFilter> filter = JobFilter().obs;
 
   StreamSubscription<List<JobPostModel>>? _activeJobsSub;
+  Worker? _authWorker;
 
   @override
   void onInit() {
     super.onInit();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => loadJobs());
     loadJobs();
   }
 
   @override
   void onClose() {
+    _authWorker?.dispose();
     _activeJobsSub?.cancel();
     super.onClose();
   }
@@ -36,17 +39,27 @@ class JobPostController extends GetxController {
   /// Family: one-shot load of own posts.
   Future<void> loadJobs() async {
     final user = _auth.currentUser.value;
-    if (user?.isNanny ?? false) {
+    if (user == null) {
+      await _activeJobsSub?.cancel();
+      _activeJobsSub = null;
+      allJobs.clear();
+      myJobs.clear();
+      currentJob.value = null;
+      loadError.value = null;
+      isLoading.value = false;
+      return;
+    }
+    if (user.isNanny) {
       _startActiveJobsWatch();
       return;
     }
 
+    await _activeJobsSub?.cancel();
+    _activeJobsSub = null;
     isLoading.value = true;
     loadError.value = null;
     try {
-      final familyId = user?.id;
-      if (familyId == null) return;
-      myJobs.value = await _jobService.getJobsByFamily(familyId);
+      myJobs.value = await _jobService.getJobsByFamily(user.id);
     } catch (e) {
       loadError.value = e.toString();
     } finally {

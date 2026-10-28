@@ -4,7 +4,10 @@ class NannyConstants {
 
   static const minPhotos = 3;
   static const maxPhotos = 5;
-  static const maxVideoSeconds = 60;
+  /// Intro video hard cap (Screen 7 / System Spec) — 4 minutes.
+  /// File size is not capped in Storage rules (auth + video/* only).
+  static const maxVideoSeconds = 240;
+
   static const maxBioChars = 300;
 
   // Profile quality score (§3.2 ProfileQualityScore) — factors sum to 100.

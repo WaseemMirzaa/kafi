@@ -11,26 +11,36 @@ class SettingsController extends GetxController {
 
   final Rx<UserSettings> settings = const UserSettings().obs;
   final RxBool isLoading = false.obs;
+  Worker? _authWorker;
 
   @override
   void onInit() {
     super.onInit();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => loadSettings());
     loadSettings();
+  }
+
+  @override
+  void onClose() {
+    _authWorker?.dispose();
+    super.onClose();
   }
 
   Future<void> loadSettings() async {
     isLoading.value = true;
     try {
       final user = _auth.currentUser.value;
-      if (user != null) {
-        final data = await _userService.getSettings(user.id);
-        if (data != null) {
-          settings.value = UserSettings.fromMap(data);
-          _applyLocale(settings.value.language);
-        } else {
-          settings.value = user.settings;
-          _applyLocale(user.settings.language);
-        }
+      if (user == null) {
+        settings.value = const UserSettings();
+        return;
+      }
+      final data = await _userService.getSettings(user.id);
+      if (data != null) {
+        settings.value = UserSettings.fromMap(data);
+        _applyLocale(settings.value.language);
+      } else {
+        settings.value = user.settings;
+        _applyLocale(user.settings.language);
       }
     } finally {
       isLoading.value = false;

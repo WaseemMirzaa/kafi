@@ -100,6 +100,17 @@ class ProfileUnlockedScreen extends StatelessWidget {
     }
   }
 
+  /// A free unlock lets the family view and contact a nanny, but sending a
+  /// trial offer needs an active plan. Route to the paywall up front rather
+  /// than letting the offer form fail with "subscription required".
+  void _openTrialOrPaywall(NannyCardModel card, SubscriptionController subs) {
+    if (!subs.hasActiveAccess) {
+      AppNavigation.openPricing(unlockNanny: card, reason: 'trial_requires_plan');
+      return;
+    }
+    AppNavigation.openTrialOffer(nannyId: card.id, nannyName: card.name);
+  }
+
   Future<void> _handleUnlockTap(NannyCardModel card, SubscriptionController subs) async {
     final ok = await subs.unlockNannyIfAllowed(card.id);
     if (!ok) {
@@ -158,10 +169,7 @@ class ProfileUnlockedScreen extends StatelessWidget {
                                     nannyId: card.id,
                                     nannyName: card.name,
                                   ),
-                                  onBookTrial: () => AppNavigation.openTrialOffer(
-                                    nannyId: card.id,
-                                    nannyName: card.name,
-                                  ),
+                                  onBookTrial: () => _openTrialOrPaywall(card, subs),
                                 );
                               },
                             ),
@@ -204,12 +212,21 @@ class ProfileUnlockedScreen extends StatelessWidget {
               left: ProfileUi.hPad,
               right: ProfileUi.hPad,
               bottom: MediaQuery.paddingOf(context).bottom + 12,
-              child: ProfileHireCta(
-                onTap: () => AppNavigation.openTrialOffer(
-                  nannyId: card.id,
-                  nannyName: card.name,
-                ),
-              ),
+              child: Obx(() {
+                final locked = subs.isNannyLocked(card.id);
+                return ProfileHireCta(
+                  onTap: () {
+                    if (locked) {
+                      AppNavigation.openPricing(
+                        unlockNanny: card,
+                        reason: subs.isExpired ? 'expired' : 'free_limit_reached',
+                      );
+                      return;
+                    }
+                    _openTrialOrPaywall(card, subs);
+                  },
+                );
+              }),
             ),
           ],
         ),

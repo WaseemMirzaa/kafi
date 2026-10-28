@@ -42,6 +42,8 @@ class SettingsScreen extends GetView<SettingsController> {
             _editTile('💼', AppStrings.editExperience.tr, Routes.nannyExp),
             _editTile('📞', AppStrings.editReferences.tr, Routes.nannyRefs),
             _editTile('📄', AppStrings.editDocuments.tr, Routes.nannyDocs),
+            const SizedBox(height: 16),
+            _pauseProfileTile(),
             const SizedBox(height: 24),
             _actionTile(Icons.work_outline, AppStrings.nannyMyApplications.tr,
                 () => Get.toNamed(Routes.nannyApplications)),
@@ -416,6 +418,37 @@ class SettingsScreen extends GetView<SettingsController> {
 
   // Emoji-led tile used for the nanny "Edit profile" section. Opens the given
   // onboarding screen in edit mode (Save & Close instead of Next).
+  /// Nanny-only: hides her from family browse until she turns it off again.
+  Widget _pauseProfileTile() {
+    final profile = Get.find<NannyProfileController>();
+    return Obx(
+      () => Container(
+        margin: const EdgeInsets.only(bottom: 8),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.05),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        child: SwitchListTile(
+          title: Text(AppStrings.profilePauseTitle.tr,
+              style: KafiTheme.fredoka(14, w: FontWeight.w500)),
+          subtitle: Text(AppStrings.profilePauseSub.tr,
+              style: KafiTheme.nunito(10, color: KafiColors.ts)),
+          value: profile.profilePaused.value,
+          onChanged: profile.setProfilePaused,
+          activeTrackColor: KafiColors.roseL,
+          thumbColor: WidgetStatePropertyAll(KafiColors.roseD),
+        ),
+      ),
+    );
+  }
+
   Widget _editTile(String emoji, String title, String route) {
     return Container(
       margin: const EdgeInsets.only(bottom: 8),

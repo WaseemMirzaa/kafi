@@ -26,15 +26,18 @@ class TicketController extends GetxController {
   final RxBool isSending = false.obs;
   StreamSubscription<List<TicketMessage>>? _sub;
   StreamSubscription<TicketModel?>? _ticketSub;
+  Worker? _authWorker;
 
   @override
   void onInit() {
     super.onInit();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => loadTickets());
     loadTickets();
   }
 
   @override
   void onClose() {
+    _authWorker?.dispose();
     _sub?.cancel();
     _ticketSub?.cancel();
     inputCtrl.dispose();
@@ -44,7 +47,14 @@ class TicketController extends GetxController {
   Future<void> loadTickets() async {
     final uid = currentUserId(_auth);
     if (uid == null) {
+      await _sub?.cancel();
+      await _ticketSub?.cancel();
+      _sub = null;
+      _ticketSub = null;
       tickets.clear();
+      activeTicket.value = null;
+      messages.clear();
+      inputCtrl.clear();
       return;
     }
     isLoading.value = true;

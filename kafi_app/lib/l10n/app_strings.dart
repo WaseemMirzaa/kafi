@@ -376,6 +376,11 @@ abstract class AppStrings {
   static const settingsPrivacy = 'settings_privacy';
   static const settingsOnline = 'settings_online';
   static const settingsOnlineSub = 'settings_online_sub';
+  static const profilePauseTitle = 'profile_pause_title';
+  static const profilePauseSub = 'profile_pause_sub';
+  static const profilePausedOn = 'profile_paused_on';
+  static const profilePausedOff = 'profile_paused_off';
+  static const profilePausedFailed = 'profile_paused_failed';
   static const settingsAccount = 'settings_account';
   static const settingsChangePassword = 'settings_change_password';
   static const settingsRestorePurchases = 'settings_restore_purchases';
@@ -441,6 +446,11 @@ abstract class AppStrings {
   static const trialCounterAccepted = 'trial_counter_accepted';
   static const trialCounterDeclined = 'trial_counter_declined';
   static const chatExpiredListBanner = 'chat_expired_list_banner';
+  /// Locked thread row preview when family plan is expired (not live trial).
+  static const chatThreadLockedHint = 'chat_thread_locked_hint';
+  static const chatThreadLockedBadge = 'chat_thread_locked_badge';
+  /// Short composer placeholder when send is blocked by expiry (not the list banner).
+  static const chatComposerLockedHint = 'chat_composer_locked_hint';
   static const nannyFullNameRequired = 'nanny_full_name_required';
   static const nannyDobRequired = 'nanny_dob_required';
   static const nannyLanguagesRequired = 'nanny_languages_required';
@@ -617,15 +627,21 @@ abstract class AppStrings {
   static const sendTrialOffer = 'send_trial_offer';
   static const subExpiredBanner = 'sub_expired_banner';
   static const renewNow = 'renew_now';
+  static const applicantsLockedBanner = 'applicants_locked_banner';
 
   // Chat
   static const chatTitle = 'chat_title';
   static const chatExpiredTitle = 'chat_expired_title';
   static const chatExpiredSub = 'chat_expired_sub';
   static const chatUnavailable = 'chat_unavailable';
+  static const chatCannotMessageSelf = 'chat_cannot_message_self';
   static const chatExpiredBody = 'chat_expired_body';
   static const viewPlans = 'view_plans';
   static const chatHintActive = 'chat_hint_active';
+  /// Free-tier / unlocked-nanny strip (not paid plan — do not say "expired").
+  static const chatHintUnlocked = 'chat_hint_unlocked';
+  /// Free tier, this nanny not unlocked yet.
+  static const chatHintUnlockNeeded = 'chat_hint_unlock_needed';
   static const chatSend = 'chat_send';
   static const chatTrialBadge = 'chat_trial_badge';
   static const chatEmptyTitle = 'chat_empty_title';
@@ -1007,6 +1023,12 @@ abstract class AppStrings {
 
   // Auth errors & flow (System Spec §14.1) — live phone auth
   static const authPhoneInvalid = 'auth_phone_invalid';
+  /// Spec §14.1 A4 — `@role` is "nanny" or "family" (GetX `trParams`).
+  static const authPhoneWrongRole = 'auth_phone_wrong_role';
+  static const authPhoneWrongRoleTitle = 'auth_phone_wrong_role_title';
+  static const authRoleMismatchOk = 'auth_role_mismatch_ok';
+  static const authRoleNanny = 'auth_role_nanny';
+  static const authRoleFamily = 'auth_role_family';
   static const authOtpIncorrect = 'auth_otp_incorrect';
   static const authOtpSendFailed = 'auth_otp_send_failed';
   static const authSmsRegionDisabled = 'auth_sms_region_disabled';
@@ -1096,6 +1118,10 @@ abstract class AppStrings {
   static const nannyPhotosMin3 = 'nanny_photos_min3';
   static const nannyVideoRequired = 'nanny_video_required';
   static const nannyVideoTooLong = 'nanny_video_too_long';
+  static const nannyVideoTooLarge = 'nanny_video_too_large';
+  static const nannyVideoUploadDenied = 'nanny_video_upload_denied';
+  static const nannyVideoUploadNetwork = 'nanny_video_upload_network';
+  static const nannyVideoUploadFailed = 'nanny_video_upload_failed';
   static const mediaCover = 'media_cover';
   static const mediaIntroVideo = 'media_intro_video';
   static const mediaVideoReady = 'media_video_ready';
@@ -1104,6 +1130,9 @@ abstract class AppStrings {
   static const docUploadFailed = 'doc_upload_failed';
   static const docPickFailed = 'doc_pick_failed';
   static const docTooLarge = 'doc_too_large';
+  static const docChooseSource = 'doc_choose_source';
+  static const docChooseAlbum = 'doc_choose_album';
+  static const docChooseFile = 'doc_choose_file';
 
   // Family job — employment type + edit fields
   static const fldEmployment = 'fld_employment';
@@ -1140,6 +1169,17 @@ abstract class AppStrings {
   static const mediaPhotoViews = 'media_photo_views';
   static const mediaRecordTitle = 'media_record_title';
   static const mediaRecordSub = 'media_record_sub';
+  static const mediaRecorderTitle = 'media_recorder_title';
+  static const mediaRecorderHint = 'media_recorder_hint';
+  static const mediaRecorderTapStart = 'media_recorder_tap_start';
+  static const mediaRecorderTapStop = 'media_recorder_tap_stop';
+  static const mediaRecorderNoCamera = 'media_recorder_no_camera';
+  static const mediaRecorderInitFailed = 'media_recorder_init_failed';
+  static const mediaRecorderStartFailed = 'media_recorder_start_failed';
+  static const mediaRecorderStopFailed = 'media_recorder_stop_failed';
+  static const mediaRecorderTooShort = 'media_recorder_too_short';
+  static const mediaRecorderSwitchCamera = 'media_recorder_switch_camera';
+  static const mediaRecorderInterrupted = 'media_recorder_interrupted';
   static const docsScreenTitle = 'docs_screen_title';
   static const docsScreenSubtitle = 'docs_screen_subtitle';
   static const docsMandatoryHeader = 'docs_mandatory_header';

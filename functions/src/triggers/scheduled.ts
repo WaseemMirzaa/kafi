@@ -2,7 +2,8 @@ import { onSchedule } from 'firebase-functions/v2/scheduler';
 import * as logger from 'firebase-functions/logger';
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getFamily, getUser } from '../utils/notifications';
-import { recomputeActiveTrialNannyIds } from './trial';
+import { recomputeActiveTrialNannyIds, syncChatThreadTrialStatus } from './trial';
+import { recomputeNannyBrowseHidden, reconcileBrowseVisibility } from '../utils/nannyBrowseVisibility';
 import { tn } from '../i18n/notifications';
 
 export const trialStartingReminder = onSchedule('every 1 hours', async () => {
@@ -113,10 +114,16 @@ async function fireOutcomePrompt(doc: FirebaseFirestore.QueryDocumentSnapshot): 
     endReachedAt: admin.firestore.FieldValue.serverTimestamp(),
     outcomePromptSent: true,
   });
-  // The family's chat-unlock list must widen to include this nanny for the
-  // awaitingOutcome wait too — see recomputeActiveTrialNannyIds' doc
-  // comment (trial.ts) for why. Exactly as onTrialResponse does on accept.
+  // Trial period ended → drop nanny from chat-unlock list (spec C14) and
+  // stamp thread.trialStatus so clients stop treating the thread as live.
   await recomputeActiveTrialNannyIds(trial.familyId as string);
+  if (trial.nannyId) await recomputeNannyBrowseHidden(trial.nannyId as string);
+  await syncChatThreadTrialStatus(
+    trial.familyId as string,
+    trial.nannyId as string | undefined,
+    doc.id,
+    'awaitingOutcome',
+  );
 }
 
 /// Detects trials whose execution window has closed (`endDate` reached while
@@ -227,17 +234,32 @@ export const subscriptionExpiringReminder = onSchedule('every day 09:00', async 
 export const subscriptionExpiredEnforcer = onSchedule('every 1 hours', async () => {
   const now = admin.firestore.Timestamp.now();
   const db = admin.firestore();
-  const families = await db
+  const periodEnded = await db
     .collection('families')
     .where('subscription.status', 'in', ['active', 'cancelled'])
     .where('subscription.endDate', '<=', now)
     .limit(450)
     .get();
 
+  // Grace (paymentFailed) ends when its window closes without a recovery. A
+  // paymentFailed doc with no window (written before grace was bounded) is
+  // treated as already over. Filtered here to avoid a composite index.
+  const inGrace = await db
+    .collection('families')
+    .where('subscription.status', '==', 'paymentFailed')
+    .get();
+  const graceOver = inGrace.docs.filter((d) => {
+    const end = (d.data().subscription as { graceEndsAt?: admin.firestore.Timestamp } | undefined)
+      ?.graceEndsAt;
+    return !end || end.toMillis() <= now.toMillis();
+  });
+
+  const docs = [...periodEnded.docs, ...graceOver];
+
   // Chunk into batches of ≤450 writes (Firestore limit 500).
-  for (let i = 0; i < families.docs.length; i += 450) {
+  for (let i = 0; i < docs.length; i += 450) {
     const batch = db.batch();
-    families.docs.slice(i, i + 450).forEach((doc) => {
+    docs.slice(i, i + 450).forEach((doc) => {
       batch.update(doc.ref, {
         'subscription.status': 'expired',
         'subscription.expiredAt': now,
@@ -249,7 +271,7 @@ export const subscriptionExpiredEnforcer = onSchedule('every 1 hours', async () 
   }
 
   await Promise.all(
-    families.docs.map(async (doc) => {
+    docs.map(async (doc) => {
       const family = await getFamily(doc.id);
       const tokens = (family.fcmTokens as string[]) ?? [];
       const locale = family.locale ?? 'en';
@@ -261,4 +283,12 @@ export const subscriptionExpiredEnforcer = onSchedule('every 1 hours', async () 
       await sendNotification(tokens, { title, body, data });
     }),
   );
+});
+
+/// Safety net for the hired-nanny browse rule: stamps the availability snapshot
+/// on nannies who were hired before it existed, and clears stale markers. Runs
+/// daily; the first run also backfills everyone already hired.
+export const browseVisibilityReconciler = onSchedule('every 24 hours', async () => {
+  const n = await reconcileBrowseVisibility();
+  console.log(`[browseVisibilityReconciler] reconciled ${n} nann(ies)`);
 });

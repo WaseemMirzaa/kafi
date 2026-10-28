@@ -36,7 +36,10 @@ export interface WorkExperienceRow {
   id?: string;
   jobTitle: string;
   employer: string;
+  /** Display location — app stores separate `city` + `country`; mapper fills this. */
   cityCountry: string;
+  city?: string;
+  country?: string;
   fromDate?: string;
   toDate?: string;
   children?: string;
@@ -838,7 +841,23 @@ function mapNannyFromFirestore(id: string, data: Record<string, unknown>): Nanny
     createdAt: toDateOrUndef(data.createdAt) ?? row.createdAt,
     lastActiveAt: toDateOrUndef(data.lastActiveAt),
     documents: asArr(row.documents) as NannyRow['documents'],
-    experiences: asArr(row.experiences) as NannyRow['experiences'],
+    // App writes city + country separately; older mock rows use cityCountry.
+    experiences: (asArr(row.experiences) as Array<Record<string, unknown>> | undefined)?.map(
+      (exp) => {
+        const city = typeof exp.city === 'string' ? exp.city.trim() : '';
+        const country = typeof exp.country === 'string' ? exp.country.trim() : '';
+        const existing =
+          typeof exp.cityCountry === 'string' ? exp.cityCountry.trim() : '';
+        const cityCountry =
+          existing || [city, country].filter(Boolean).join(', ');
+        return {
+          ...(exp as unknown as WorkExperienceRow),
+          jobTitle: String(exp.jobTitle ?? ''),
+          employer: String(exp.employer ?? ''),
+          cityCountry,
+        };
+      },
+    ),
     references: asArr(row.references) as NannyRow['references'],
     languages: asArr(row.languages) as string[] | undefined,
     photoUrls: asArr(row.photoUrls) as string[] | undefined,
@@ -856,10 +875,25 @@ export const NannyService = {
     const snap = await getDocs(query(collection(db!, 'nannies'), limit(200)));
     return snap.docs.map((d) => mapNannyFromFirestore(d.id, d.data()));
   },
+  /**
+   * Nannies that still need document review: overall `pending`, **or** any
+   * document still `uploaded`/`reviewing`. Approved profiles can keep
+   * unverified KYC files (e.g. passport still "reviewing") and must stay in
+   * the Verify-docs queue until those files are actioned.
+   */
   async listPendingDocs(): Promise<NannyRow[]> {
-    if (useMock()) return mockNannies.filter((n) => n.status === 'pending');
-    const snap = await getDocs(query(collection(db!, 'nannies'), where('status', '==', 'pending')));
-    return snap.docs.map((d) => mapNannyFromFirestore(d.id, d.data()));
+    const needsDocReview = (n: NannyRow) =>
+      (n.documents ?? []).some(
+        (d) => d.status === 'uploaded' || d.status === 'reviewing',
+      );
+    if (useMock()) {
+      return mockNannies.filter((n) => n.status === 'pending' || needsDocReview(n));
+    }
+    // Nested document.status isn't queryable — scan and filter client-side.
+    const snap = await getDocs(query(collection(db!, 'nannies'), limit(500)));
+    return snap.docs
+      .map((d) => mapNannyFromFirestore(d.id, d.data()))
+      .filter((n) => n.status === 'pending' || needsDocReview(n));
   },
   async listPendingVideos(): Promise<NannyRow[]> {
     if (useMock()) return mockNannies.filter((n) => !!n.introVideoUrl && n.introVideoStatus !== 'approved' && n.introVideoStatus !== 'rejected');
@@ -882,19 +916,68 @@ export const NannyService = {
     }
     await updateDoc(doc(db!, 'nannies', id), patch as Record<string, unknown>);
   },
+  /**
+   * Approve-all: profile goes live **and** every submitted document + intro
+   * video is marked approved (missing doc slots stay missing).
+   */
   async approve(id: string, adminId: string): Promise<void> {
+    const reviewedAt = new Date().toISOString();
     if (useMock()) {
       const i = mockNannies.findIndex((n) => n.id === id);
-      if (i >= 0) mockNannies[i] = { ...mockNannies[i], status: 'approved', isVerified: true };
+      if (i >= 0) {
+        const prev = mockNannies[i];
+        mockNannies[i] = {
+          ...prev,
+          status: 'approved',
+          isVerified: true,
+          documents: (prev.documents ?? []).map((d) =>
+            d.status === 'missing'
+              ? d
+              : { ...d, status: 'approved', rejectionReason: undefined },
+          ),
+          introVideoStatus: prev.introVideoUrl ? 'approved' : prev.introVideoStatus,
+          introVideoRejectionReason: prev.introVideoUrl
+            ? undefined
+            : prev.introVideoRejectionReason,
+        };
+      }
       refreshAdminBadges();
       return;
     }
-    await updateDoc(doc(db!, 'nannies', id), {
+    const ref = doc(db!, 'nannies', id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()) throw new Error(t('nannies.notFoundError'));
+    const data = snap.data() as Record<string, unknown>;
+    const docs = Array.isArray(data.documents)
+      ? ((data.documents as Array<Record<string, unknown>>) ?? [])
+      : [];
+    const nextDocs = docs.map((d) =>
+      d.status === 'missing'
+        ? d
+        : {
+            ...d,
+            status: 'approved',
+            rejectionReason: null,
+            reviewedAt,
+          },
+    );
+    const patch: Record<string, unknown> = {
       status: 'approved',
       isVerified: true,
       verifiedAt: serverTimestamp(),
       verifiedBy: adminId,
-    });
+      documents: nextDocs,
+      updatedAt: serverTimestamp(),
+    };
+    const videoUrl =
+      typeof data.introVideoUrl === 'string' ? data.introVideoUrl.trim() : '';
+    if (videoUrl) {
+      patch.introVideoStatus = 'approved';
+      patch.introVideoRejectionReason = null;
+      patch.introVideoReviewedAt = serverTimestamp();
+      patch.introVideoReviewedBy = adminId;
+    }
+    await updateDoc(ref, patch);
     refreshAdminBadges();
   },
   async reject(id: string, reason: string, adminId: string): Promise<void> {

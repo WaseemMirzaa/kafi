@@ -29,6 +29,16 @@ class MockStorageService implements IStorageService {
   }
 
   @override
+  Future<String> uploadFile({
+    required String path,
+    required File file,
+    String? contentType,
+  }) async {
+    final bytes = await file.readAsBytes();
+    return uploadBytes(path: path, bytes: bytes, contentType: contentType);
+  }
+
+  @override
   Future<void> deleteFile(String path) async {
     await Future<void>.delayed(AppConfig.mockDelay);
     final file = File(path);

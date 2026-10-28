@@ -13,53 +13,43 @@ service firebase.storage {
     function isImage() { return request.resource.contentType.matches('image/.*'); }
     function isVideo() { return request.resource.contentType.matches('video/.*'); }
     function isPdf() { return request.resource.contentType == 'application/pdf'; }
-    function under(maxMB) { return request.resource.size <= maxMB * 1024 * 1024; }
 
-    // Nanny photos (max 5 MB each)
+    // Nanny photos — owner/admin; no Storage size cap (client may still compress).
     match /nannies/{uid}/photos/{file} {
       allow read: if true;
-      allow write: if (isUser(uid) || isAdmin()) && isImage() && under(5);
+      allow write: if (isUser(uid) || isAdmin()) && isImage();
     }
-    // Intro videos (max 25 MB, <= 60s enforced client-side)
+    // Intro videos — owner/admin; duration capped client-side (4 min). No size cap.
     match /nannies/{uid}/videos/{file} {
       allow read: if true;
-      allow write: if (isUser(uid) || isAdmin()) && isVideo() && under(25);
+      allow write: if (isUser(uid) || isAdmin()) && isVideo();
     }
     // Sensitive documents (passport, visa, EID, police, training).
-    // Documents may be images, PDFs, videos or other formats (KYC uploads),
-    // so the content type is unrestricted — only owner/admin + size are gated.
+    // Content type unrestricted — owner/admin only. No size cap.
     match /nannies/{uid}/documents/{file} {
       allow read: if isUser(uid) || isAdmin();
-      allow write: if (isUser(uid) || isAdmin()) && under(25);
+      allow write: if isUser(uid) || isAdmin();
     }
     // Family avatar
     match /families/{uid}/avatar/{file} {
       allow read: if isSignedIn();
-      allow write: if (isUser(uid) || isAdmin()) && isImage() && under(5);
+      allow write: if (isUser(uid) || isAdmin()) && isImage();
     }
-    // Chat attachments (images only). The app uploads to
-    // chats/{threadId}/{uid}/{file}, so match the nested path with {file=**}
-    // (a single {file} segment would not match and the upload would be denied).
+    // Chat attachments (images only). Path: chats/{threadId}/{uid}/{file}
     match /chats/{threadId}/{file=**} {
       allow read: if isSignedIn();
-      allow write: if isSignedIn() && isImage() && under(8);
+      allow write: if isSignedIn() && isImage();
     }
-    // Daily trial proof photos. Path is trial_proofs/{trialId}/{uid}/{file},
-    // so only the nanny whose uid is in the path may upload (images, max 8 MB);
-    // any signed-in user may read (the two parties view them in-app).
+    // Daily trial proof photos. Path: trial_proofs/{trialId}/{uid}/{file}
     match /trial_proofs/{trialId}/{uid}/{file=**} {
       allow read: if isSignedIn();
-      allow write: if (isUser(uid) || isAdmin()) && isImage() && under(8);
+      allow write: if (isUser(uid) || isAdmin()) && isImage();
     }
-    // Report / dispute evidence (images + PDF, max 10 MB). Path:
-    // disputes/{disputeId}/attachments/{file}. Signed-in users may read so
-    // getDownloadURL works at upload time; write is gated to image/PDF ≤10MB.
-    // Admin panel and the reporter also read via download URL / SDK.
+    // Report / dispute evidence (images + PDF). Path:
+    // disputes/{disputeId}/attachments/{file}
     match /disputes/{disputeId}/attachments/{file=**} {
       allow read: if isSignedIn() || isAdmin();
-      allow write: if isSignedIn()
-        && (isImage() || isPdf())
-        && under(10);
+      allow write: if isSignedIn() && (isImage() || isPdf());
     }
     // Public marketing/assets — admin only
     match /public/{file=**} {

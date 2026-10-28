@@ -17,6 +17,7 @@ final List<JobPostModel> mockJobPosts = [
     duties: const ['Childcare', 'Cooking'],
     visaSponsorship: VisaSponsorship.full,
     status: JobPostStatus.active,
+    visibleToNannies: true,
     createdAt: DateTime.now().subtract(const Duration(days: 3)),
   ),
   JobPostModel(
@@ -33,6 +34,7 @@ final List<JobPostModel> mockJobPosts = [
     duties: const ['Childcare', 'Light cleaning', 'Cook family meals'],
     visaSponsorship: VisaSponsorship.full,
     status: JobPostStatus.active,
+    visibleToNannies: true,
     createdAt: DateTime.now().subtract(const Duration(days: 2)),
   ),
   JobPostModel(
@@ -49,6 +51,7 @@ final List<JobPostModel> mockJobPosts = [
     duties: const ['Newborn care', 'Childcare'],
     visaSponsorship: VisaSponsorship.residenceOnly,
     status: JobPostStatus.active,
+    visibleToNannies: true,
     createdAt: DateTime.now().subtract(const Duration(days: 1)),
   ),
   JobPostModel(
@@ -65,6 +68,7 @@ final List<JobPostModel> mockJobPosts = [
     duties: const ['Newborn', 'Night shifts'],
     visaSponsorship: VisaSponsorship.full,
     status: JobPostStatus.active,
+    visibleToNannies: true,
     createdAt: DateTime.now().subtract(const Duration(hours: 8)),
   ),
   JobPostModel(
@@ -81,6 +85,7 @@ final List<JobPostModel> mockJobPosts = [
     duties: const ['Childcare', 'School pickup'],
     visaSponsorship: VisaSponsorship.none,
     status: JobPostStatus.active,
+    visibleToNannies: true,
     createdAt: DateTime.now().subtract(const Duration(days: 4)),
   ),
   JobPostModel(

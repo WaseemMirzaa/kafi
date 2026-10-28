@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:firebase_storage/firebase_storage.dart';
@@ -7,6 +8,9 @@ import 'package:kafi_app/services/interfaces/i_storage_service.dart';
 class FirebaseStorageServiceImpl implements IStorageService {
   final _bucket = FirebaseStorage.instance.ref();
 
+  SettableMetadata? _meta(String? contentType) =>
+      contentType == null ? null : SettableMetadata(contentType: contentType);
+
   @override
   Future<String> uploadBytes({
     required String path,
@@ -14,10 +18,20 @@ class FirebaseStorageServiceImpl implements IStorageService {
     String? contentType,
   }) async {
     final ref = _bucket.child(path);
-    await ref.putData(
-      bytes,
-      contentType == null ? null : SettableMetadata(contentType: contentType),
-    );
+    await ref.putData(bytes, _meta(contentType));
+    return ref.getDownloadURL();
+  }
+
+  @override
+  Future<String> uploadFile({
+    required String path,
+    required File file,
+    String? contentType,
+  }) async {
+    final ref = _bucket.child(path);
+    // putFile uses a resumable upload from disk — required for intro videos
+    // that can be tens of MB (putData loads everything into RAM first).
+    await ref.putFile(file, _meta(contentType));
     return ref.getDownloadURL();
   }
 

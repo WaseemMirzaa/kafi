@@ -28,10 +28,21 @@ class FirestoreApplicationService implements IApplicationService {
     return list;
   }
 
+  /// Applications whose family's plan has lapsed are hidden from the nanny
+  /// while they are still open (`familyLocked` is stamped server-side when the
+  /// family expires). Settled ones — hired, trial offered, declined, withdrawn —
+  /// stay, so a nanny never loses a hire or her own history.
+  static const _openStatuses = {'pending', 'viewed', 'shortlisted'};
+
+  bool _visibleToNanny(QueryDocumentSnapshot<Map<String, dynamic>> d) {
+    final m = d.data();
+    return !(m['familyLocked'] == true && _openStatuses.contains(m['status']));
+  }
+
   @override
   Future<List<ApplicationModel>> getApplicationsForNanny(String nannyId) async {
     final snap = await _forNanny(nannyId).get();
-    return _sorted(snap.docs.map(_fromDoc));
+    return _sorted(snap.docs.where(_visibleToNanny).map(_fromDoc));
   }
 
   @override
@@ -42,7 +53,9 @@ class FirestoreApplicationService implements IApplicationService {
 
   @override
   Stream<List<ApplicationModel>> watchApplicationsForNanny(String nannyId) =>
-      _forNanny(nannyId).snapshots().map((s) => _sorted(s.docs.map(_fromDoc)));
+      _forNanny(nannyId)
+          .snapshots()
+          .map((s) => _sorted(s.docs.where(_visibleToNanny).map(_fromDoc)));
 
   @override
   Stream<List<ApplicationModel>> watchApplicationsForFamily(String familyId) =>

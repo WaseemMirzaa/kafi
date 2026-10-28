@@ -58,6 +58,12 @@ class MockUserService implements IUserService {
   }
 
   @override
+  Future<void> setNannyProfilePaused(String nannyId, bool paused) async {
+    final n = _nannies[nannyId];
+    if (n != null) _nannies[nannyId] = n.copyWith(profilePaused: paused);
+  }
+
+  @override
   Future<void> saveNannyDocumentUrls(
       String nannyId, Map<DocumentType, String> urls) async {
     // Mock keeps document URLs inline on the in-memory model, so nothing extra

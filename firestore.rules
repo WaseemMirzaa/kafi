@@ -33,9 +33,19 @@ service cloud.firestore {
         ? get(path).data.get('subscription', null)
         : null;
     }
+    // Paid access, checked against the plan's own end date so a lapsed plan
+    // stops working the moment it ends — not up to an hour later when the
+    // scheduled enforcer flips the status. `paymentFailed` is the grace state:
+    // access continues, but only until its graceEndsAt window closes.
     function familyHasAccess(uid) {
       let s = familySub(uid);
-      return s != null && (s.status == 'active' || s.status == 'cancelled');
+      return s != null && (
+        ((s.status == 'active' || s.status == 'cancelled')
+          && (s.get('endDate', null) == null || s.endDate > request.time))
+        || (s.status == 'paymentFailed'
+          && s.get('graceEndsAt', null) != null
+          && s.graceEndsAt > request.time)
+      );
     }
     function familyHasMockDevAccess(uid) {
       let s = familySub(uid);
@@ -47,6 +57,26 @@ service cloud.firestore {
         ? get(path).data.get('activeTrialNannyIds', [])
         : [];
       return ids is list && ids.hasAny([nannyId]);
+    }
+    // Free-tier unlock (spec § pricing): nanny id is on families.viewedProfiles
+    // after a free contact was spent. Expired (or an over grace window) must NOT use this.
+    function familyIsFreeTier(uid) {
+      let s = familySub(uid);
+      return s == null || s.status == 'free';
+    }
+    function familyUnlockedNanny(familyId, nannyId) {
+      let path = /databases/$(database)/documents/families/$(familyId);
+      let viewed = exists(path)
+        ? get(path).data.get('viewedProfiles', [])
+        : [];
+      return viewed is list && viewed.hasAny([nannyId]);
+    }
+    // Paid / trial / free-unlock entitlement for chat create + family messages.
+    function familyCanChatWith(familyId, nannyId) {
+      return familyHasAccess(familyId)
+        || familyHasMockDevAccess(familyId)
+        || hasActiveTrialWith(familyId, nannyId)
+        || (familyIsFreeTier(familyId) && familyUnlockedNanny(familyId, nannyId));
     }
 
     // ---------- users ----------
@@ -79,10 +109,14 @@ service cloud.firestore {
       // written by an admin — otherwise a nanny could self-approve or
       // self-unblock. `.get(...)` defaults keep normal client writes (which
       // round-trip these fields unchanged) working.
+      // hiddenFromBrowse and hireAvailabilityKey are server-owned (trial/hire CF) —
+      // the nanny cannot rewrite them. (`profilePaused` IS hers to set.)
       allow update: if isAdmin() || (
         isUser(nannyId)
         && incoming().get('blocked', false) == existing().get('blocked', false)
         && incoming().get('isVerified', false) == existing().get('isVerified', false)
+        && incoming().get('hiddenFromBrowse', false) == existing().get('hiddenFromBrowse', false)
+        && incoming().get('hireAvailabilityKey', null) == existing().get('hireAvailabilityKey', null)
         && (incoming().get('status', 'draft') == existing().get('status', 'draft')
             || incoming().get('status', 'draft') == 'draft'
             || incoming().get('status', 'draft') == 'pending')
@@ -127,10 +161,17 @@ service cloud.firestore {
             && (existing().nannyId == request.auth.uid
                 || existing().familyId == request.auth.uid));
       allow create: if isSignedIn() && incoming().nannyId == request.auth.uid;
+      // The nanny may always update her own application (withdraw). The family
+      // may update it freely while it has access; once its plan has lapsed it
+      // can no longer respond (view / shortlist / decline) — hiring and trial
+      // states are untouched here (trials are gated on their own).
       allow update: if isAdmin()
+        || (isSignedIn() && existing().nannyId == request.auth.uid)
         || (isSignedIn()
-            && (existing().nannyId == request.auth.uid
-                || existing().familyId == request.auth.uid));
+            && existing().familyId == request.auth.uid
+            && (familyHasAccess(request.auth.uid)
+                || familyHasMockDevAccess(request.auth.uid)
+                || !(incoming().get('status', '') in ['viewed', 'shortlisted', 'declined'])));
       allow delete: if isAdmin();
     }
 
@@ -160,7 +201,15 @@ service cloud.firestore {
       allow read: if isAdmin()
         || (isSignedIn() && existing().familyId == request.auth.uid);
       allow create: if isSignedIn() && incoming().familyId == request.auth.uid;
-      allow update, delete: if isAdmin();
+      allow update: if isAdmin();
+      // The trigger only runs on create, so a `denied` result (e.g. requested a
+      // moment before the purchase webhook landed) would otherwise be permanent.
+      // The owner may delete a DENIED doc to re-request; a `revealed` doc (which
+      // holds the phone) is only ever removed by the server.
+      allow delete: if isAdmin()
+        || (isSignedIn()
+            && existing().familyId == request.auth.uid
+            && existing().get('status', '') == 'denied');
     }
 
     // ---------- profileViews (free-contact accounting) ----------
@@ -186,18 +235,14 @@ service cloud.firestore {
         && (
           (
             incoming().familyId == request.auth.uid
-            && (familyHasAccess(request.auth.uid)
-                || familyHasMockDevAccess(request.auth.uid)
-                || hasActiveTrialWith(incoming().familyId, incoming().nannyId))
+            && familyCanChatWith(incoming().familyId, incoming().nannyId)
           )
           ||
           (
             incoming().nannyId == request.auth.uid
             && incoming().familyId is string
             && incoming().familyId.size() > 0
-            && (familyHasAccess(incoming().familyId)
-                || familyHasMockDevAccess(incoming().familyId)
-                || hasActiveTrialWith(incoming().familyId, incoming().nannyId))
+            && familyCanChatWith(incoming().familyId, incoming().nannyId)
           )
         );
       allow update: if isAdmin()
@@ -228,13 +273,9 @@ service cloud.firestore {
             (
               get(/databases/$(database)/documents/chatThreads/$(threadId)).data.familyId == request.auth.uid
               && incoming().senderType == 'family'
-              && (
-                familyHasAccess(request.auth.uid)
-                || familyHasMockDevAccess(request.auth.uid)
-                || hasActiveTrialWith(
-                  request.auth.uid,
-                  get(/databases/$(database)/documents/chatThreads/$(threadId)).data.nannyId
-                )
+              && familyCanChatWith(
+                request.auth.uid,
+                get(/databases/$(database)/documents/chatThreads/$(threadId)).data.nannyId
               )
             )
           )
@@ -250,7 +291,10 @@ service cloud.firestore {
         || (isSignedIn()
             && (existing().familyId == request.auth.uid
                 || existing().nannyId == request.auth.uid));
-      allow create: if isSignedIn() && incoming().familyId == request.auth.uid;
+      // Sending a trial offer needs an active plan (the app enforces the same).
+      allow create: if isSignedIn()
+        && incoming().familyId == request.auth.uid
+        && (familyHasAccess(request.auth.uid) || familyHasMockDevAccess(request.auth.uid));
       // Mutual-outcome gate (kafi-trial-completion-flow): each party may only
       // write their OWN side's outcome fields — otherwise either party could
       // forge the other's response and defeat the mutual-confirm gate. Same

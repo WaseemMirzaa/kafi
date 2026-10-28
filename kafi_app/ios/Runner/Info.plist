@@ -57,6 +57,27 @@
 	<string>Kafi saves photos to your library after capture.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Kafi accesses your photo library to let you upload profile photos and documents.</string>
+	<key>UIApplicationSceneManifest</key>
+	<dict>
+		<key>UIApplicationSupportsMultipleScenes</key>
+		<false/>
+		<key>UISceneConfigurations</key>
+		<dict>
+			<key>UIWindowSceneSessionRoleApplication</key>
+			<array>
+				<dict>
+					<key>UISceneClassName</key>
+					<string>UIWindowScene</string>
+					<key>UISceneConfigurationName</key>
+					<string>flutter</string>
+					<key>UISceneDelegateClassName</key>
+					<string>$(PRODUCT_MODULE_NAME).SceneDelegate</string>
+					<key>UISceneStoryboardFile</key>
+					<string>Main</string>
+				</dict>
+			</array>
+		</dict>
+	</dict>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
@@ -64,8 +85,13 @@
 		<string>remote-notification</string>
 		<string>fetch</string>
 	</array>
+	<!-- NO = Firebase App Delegate Proxy (method swizzling) OFF. With the proxy on,
+	     Firebase replaces UIApplication.delegate with its own wrapper and Phone Auth's
+	     notification-forwarding probe never reaches AppDelegate (I-AUT000015).
+	     AppDelegate.swift forwards the APNs token, remote notifications and URLs to
+	     Firebase Auth / Messaging itself. -->
 	<key>FirebaseAppDelegateProxyEnabled</key>
-	<true/>
+	<false/>
 	<!-- Kafi uses HTTPS + Firebase SDK only — no custom encryption. Required to
 	     skip the App Store export compliance questionnaire on every release. -->
 	<key>ITSAppUsesNonExemptEncryption</key>

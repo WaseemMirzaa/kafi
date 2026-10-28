@@ -223,7 +223,12 @@ export function NannyProfileView({
                 </div>
                 <div className="text-[9px] font-semibold text-[#8090B0] mt-0.5">
                   {exp.employer}
-                  {exp.cityCountry ? ` · ${exp.cityCountry}` : ''}
+                  {(() => {
+                    const place =
+                      exp.cityCountry ||
+                      [exp.city, exp.country].filter(Boolean).join(', ');
+                    return place ? ` · ${place}` : '';
+                  })()}
                 </div>
                 {exp.children && <div className="text-[9px] text-navy/70 mt-1">{t('nannies.children')}: {exp.children}</div>}
                 {exp.duties && <div className="text-[9px] text-navy/70 mt-0.5">{t('nannies.duties')}: {exp.duties}</div>}

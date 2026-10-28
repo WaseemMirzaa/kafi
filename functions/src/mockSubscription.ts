@@ -65,7 +65,11 @@ export const syncMockSubscription = onCall(async (request) => {
       subscription = { status: 'expired', expiredAt: now, mockDev: true };
       break;
     case 'paymentGrace':
-      subscription = { status: 'paymentFailed', mockDev: true };
+      subscription = {
+        status: 'paymentFailed',
+        graceEndsAt: admin.firestore.Timestamp.fromMillis(Date.now() + 7 * 24 * 60 * 60 * 1000),
+        mockDev: true,
+      };
       break;
     default:
       subscription = { status: 'free', mockDev: true };

@@ -268,6 +268,42 @@ class MatchService {
     return _sortByMatchPercent(scored, job);
   }
 
+  /// Scores every job in [jobs] for [nanny] and orders them best match first.
+  ///
+  /// This only ORDERS: no job is ever dropped for matching poorly, so a nanny
+  /// sees every job she is allowed to see, with the strongest fits on top and
+  /// the weakest at the bottom. Which jobs she may see at all (e.g. a family
+  /// without access is hidden from the board) is decided upstream, not here.
+  /// Equal scores fall back to newest first, then id, so the order is stable.
+  /// With no [nanny] profile yet there is nothing to score: every score is null
+  /// and the order is simply newest first.
+  List<(JobPostModel, int?)> rankJobs(
+    NannyModel? nanny,
+    Iterable<JobPostModel> jobs, {
+    FamilyModel? family,
+  }) {
+    final scored = <(JobPostModel, int?)>[
+      for (final job in jobs)
+        (job, nanny == null ? null : calculateJobMatch(nanny, job, family: family)),
+    ];
+    scored.sort((a, b) {
+      final byScore = (b.$2 ?? -1).compareTo(a.$2 ?? -1);
+      if (byScore != 0) return byScore;
+      final aAt = a.$1.createdAt;
+      final bAt = b.$1.createdAt;
+      if (aAt != null && bAt != null) {
+        final byDate = bAt.compareTo(aAt);
+        if (byDate != 0) return byDate;
+      } else if (aAt != null) {
+        return -1;
+      } else if (bAt != null) {
+        return 1;
+      }
+      return a.$1.id.compareTo(b.$1.id);
+    });
+    return scored;
+  }
+
   /// Legacy card-only ranking for mock seeds that lack full [NannyModel] data.
   /// Prefer [rankNannies] whenever the full profile is available.
   List<NannyCardModel> rankCards(List<NannyCardModel> cards, JobPostModel job) {

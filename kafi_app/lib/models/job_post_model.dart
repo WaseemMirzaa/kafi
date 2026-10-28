@@ -50,6 +50,7 @@ class JobPostModel {
     this.applicationsCount = 0,
     this.city = '',
     this.commitmentAgreed = false,
+    this.visibleToNannies = false,
     this.i18n = const {},
   });
 
@@ -62,6 +63,11 @@ class JobPostModel {
   /// job cards fall back to an initials avatar.
   final String? familyPhotoUrl;
   final JobPostStatus status;
+
+  /// When true, active jobs appear on the nanny job board. Stamped from the
+  /// family's subscription (`active` / `cancelled`). Free / expired families
+  /// keep posts in My Jobs but nannies do not see them.
+  final bool visibleToNannies;
   final DateTime? createdAt;
   final DateTime? updatedAt;
   final DateTime? expiresAt;
@@ -145,6 +151,7 @@ class JobPostModel {
     int? applicationsCount,
     String? city,
     bool? commitmentAgreed,
+    bool? visibleToNannies,
     Map<String, Map<String, String>>? i18n,
   }) =>
       JobPostModel(
@@ -153,6 +160,7 @@ class JobPostModel {
         familyName: familyName ?? this.familyName,
         familyPhotoUrl: familyPhotoUrl ?? this.familyPhotoUrl,
         status: status ?? this.status,
+        visibleToNannies: visibleToNannies ?? this.visibleToNannies,
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
         expiresAt: expiresAt ?? this.expiresAt,
@@ -257,6 +265,7 @@ class JobPostModel {
       applicationsCount: (m['applicationsCount'] as num?)?.toInt() ?? 0,
       city: (m['city'] as String?) ?? '',
       commitmentAgreed: m['commitmentAgreed'] ?? false,
+      visibleToNannies: m['visibleToNannies'] == true,
       i18n: i18nMapsFrom(m, const ['jobTitle', 'schedule', 'additionalNotes']),
     );
   }
@@ -267,6 +276,7 @@ class JobPostModel {
         'familyName': familyName,
         'familyPhotoUrl': familyPhotoUrl,
         'status': status.name,
+        'visibleToNannies': visibleToNannies,
         'createdAt': createdAt?.toIso8601String(),
         'updatedAt': updatedAt?.toIso8601String(),
         'expiresAt': expiresAt?.toIso8601String(),

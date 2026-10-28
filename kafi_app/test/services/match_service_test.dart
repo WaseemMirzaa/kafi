@@ -18,6 +18,7 @@ void main() {
   // ── Fixture builders (default = perfect match) ─────────────────────────────
 
   NannyModel makeNanny({
+    String id = 'n',
     JobTypePreference jobType = JobTypePreference.both,
     List<Emirate> emirates = const [Emirate.dubai],
     bool relocate = false,
@@ -38,8 +39,8 @@ void main() {
     bool? transferVisa,
   }) =>
       NannyModel(
-        id: 'n',
-        userId: 'n',
+        id: id,
+        userId: id,
         jobTypePreference: jobType,
         workEmirates: emirates,
         willingToRelocate: relocate,
@@ -61,6 +62,8 @@ void main() {
       );
 
   JobPostModel makeJob({
+    String id = 'j',
+    DateTime? createdAt,
     JobType type = JobType.liveIn,
     String city = 'Dubai',
     List<String> required = const ['English'],
@@ -75,7 +78,8 @@ void main() {
     VisaSponsorship visa = VisaSponsorship.full,
   }) =>
       JobPostModel(
-        id: 'j',
+        id: id,
+        createdAt: createdAt,
         familyId: 'f',
         jobType: type,
         city: city,
@@ -530,6 +534,21 @@ void main() {
       final ranked = svc.rankNannies([nanny], job);
       expect(ranked.single.matchPercent, 100);
     });
+
+    test('every nanny is kept — match % only orders, never removes', () {
+      final job = makeJob();
+      final perfect = makeNanny(id: 'hi');
+      final weak = makeNanny(
+        id: 'lo',
+        jobType: JobTypePreference.liveOut,
+        emirates: const [Emirate.sharjah],
+        languages: const ['Tagalog'],
+        experiences: const [],
+      );
+      final ranked = svc.rankNannies([weak, perfect], job);
+      expect(ranked.map((c) => c.id).toList(), ['hi', 'lo']);
+      expect(ranked.last.matchPercent, lessThan(ranked.first.matchPercent));
+    });
   });
 
   group('rankCards', () {
@@ -562,6 +581,71 @@ void main() {
       final y = makeCard(id: 'Y', nationality: 'Filipino', city: 'Sharjah'); // lower
       final ranked = svc.rankCards([y, x], job);
       expect(ranked.first.id, 'X');
+    });
+  });
+
+  // ════════════════════════ Job listing for a nanny ═════════════════════════
+
+  group('rankJobs — nanny job listing', () {
+    final nanny = makeNanny(jobType: JobTypePreference.liveIn, emirates: const [Emirate.dubai]);
+
+    test('every job is kept, however poorly it matches', () {
+      final perfect = makeJob(id: 'perfect');
+      final awful = makeJob(
+        id: 'awful',
+        type: JobType.liveOut,
+        city: 'Fujairah',
+        required: const ['Swahili'],
+        experienceYears: 10,
+        salaryMin: 9000,
+        salaryMax: 12000,
+      );
+      final ranked = svc.rankJobs(nanny, [awful, perfect]);
+      expect(ranked.length, 2);
+      expect(ranked.map((e) => e.$1.id).toSet(), {'perfect', 'awful'});
+      expect(ranked.last.$2, lessThan(60)); // genuinely poor, yet still listed
+    });
+
+    test('best match first, weakest last', () {
+      final best = makeJob(id: 'best');
+      final mid = makeJob(id: 'mid', city: 'Sharjah'); // location 20
+      final worst = makeJob(id: 'worst', city: 'Sharjah', required: const ['Swahili']);
+      final ranked = svc.rankJobs(nanny, [worst, best, mid]);
+      expect(ranked.map((e) => e.$1.id).toList(), ['best', 'mid', 'worst']);
+      final scores = ranked.map((e) => e.$2!).toList();
+      expect(scores, [...scores]..sort((a, b) => b.compareTo(a)));
+    });
+
+    test('equal scores fall back to the newest job first', () {
+      final older = makeJob(id: 'older', createdAt: DateTime(2026, 1, 1));
+      final newer = makeJob(id: 'newer', createdAt: DateTime(2026, 6, 1));
+      final undated = makeJob(id: 'undated');
+      final ranked = svc.rankJobs(nanny, [undated, older, newer]);
+      expect(ranked.map((e) => e.$1.id).toList(), ['newer', 'older', 'undated']);
+    });
+
+    test('is deterministic regardless of input order', () {
+      final jobs = [
+        makeJob(id: 'a', createdAt: DateTime(2026, 3, 1)),
+        makeJob(id: 'b', city: 'Sharjah', createdAt: DateTime(2026, 4, 1)),
+        makeJob(id: 'c', createdAt: DateTime(2026, 5, 1)),
+      ];
+      final one = svc.rankJobs(nanny, jobs).map((e) => e.$1.id).toList();
+      final two = svc.rankJobs(nanny, jobs.reversed).map((e) => e.$1.id).toList();
+      expect(one, two);
+    });
+
+    test('with no nanny profile yet nothing is scored but all jobs still show, newest first', () {
+      final older = makeJob(id: 'older', createdAt: DateTime(2026, 1, 1));
+      final newer = makeJob(id: 'newer', createdAt: DateTime(2026, 6, 1));
+      final ranked = svc.rankJobs(null, [older, newer]);
+      expect(ranked.map((e) => e.$1.id).toList(), ['newer', 'older']);
+      expect(ranked.every((e) => e.$2 == null), isTrue);
+    });
+
+    test('score matches calculateJobMatch exactly', () {
+      final job = makeJob(id: 'x', city: 'Sharjah');
+      expect(svc.rankJobs(nanny, [job]).single.$2, svc.calculateJobMatch(nanny, job));
     });
   });
 }

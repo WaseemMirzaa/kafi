@@ -57,6 +57,7 @@ class _FamilyApplicantsScreenState extends State<FamilyApplicantsScreen> {
               hint: AppStrings.searchHint.tr,
               onChanged: (v) => controller.receivedQuery.value = v,
             ),
+            Obx(() => controller.applicantsLocked ? _lockedBanner() : const SizedBox.shrink()),
             Obx(() {
               // Touch myJobs so chips rebuild once titles load (not job ids).
               if (Get.isRegistered<JobPostController>()) {
@@ -113,6 +114,30 @@ class _FamilyApplicantsScreenState extends State<FamilyApplicantsScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _lockedBanner() {
+    return Container(
+      margin: const EdgeInsets.fromLTRB(14, 0, 14, 8),
+      padding: const EdgeInsets.all(11),
+      decoration: BoxDecoration(
+        color: KafiColors.ambL,
+        border: Border.all(color: const Color(0xFFFFD080), width: 1.5),
+        borderRadius: BorderRadius.circular(10),
+      ),
+      child: Row(
+        children: [
+          Expanded(
+            child: Text(AppStrings.applicantsLockedBanner.tr,
+                style: KafiTheme.nunito(10, color: const Color(0xFF7A4A00), w: FontWeight.w700)),
+          ),
+          TextButton(
+            onPressed: () => AppNavigation.openPricing(reason: 'applicants_locked'),
+            child: Text(AppStrings.renewNow.tr, style: KafiTheme.fredoka(10, color: KafiColors.roseD)),
+          ),
+        ],
       ),
     );
   }

@@ -51,16 +51,19 @@ class FirestoreTrialService implements ITrialService {
 
   @override
   Future<Set<String>> activeTrialNannyIds() async {
-    // Single-field `status` filter (auto-indexed). Bounded like the hire
-    // equivalent — if ever exceeded, denormalize an "engaged" flag instead.
-    final snap = await _trials
-        .where('status', whereIn: ['active', 'accepted'])
+    // Do NOT query trials by status alone — rules only allow reading own
+    // familyId/nannyId docs, so a global status query permission-denies.
+    // Engaged nannies carry the server-owned `nannies.hiddenFromBrowse` flag.
+    // Browse no longer hides on it (on-trial nannies stay listed); this helper
+    // just reads it for any caller that wants the engaged ids.
+    final snap = await FirebaseFirestore.instance
+        .collection('nannies')
+        .where('hiddenFromBrowse', isEqualTo: true)
+        .where('status', isEqualTo: 'approved')
+        .where('isVerified', isEqualTo: true)
         .limit(1000)
         .get();
-    return snap.docs
-        .map((d) => (d.data()['nannyId'] as String?) ?? '')
-        .where((id) => id.isNotEmpty)
-        .toSet();
+    return snap.docs.map((d) => d.id).toSet();
   }
 
   @override

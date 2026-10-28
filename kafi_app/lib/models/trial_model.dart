@@ -214,10 +214,18 @@ class TrialModel {
         status == TrialStatus.active;
   }
 
-  /// Live for chat / lockdown bypass: accepted or active, and not finished via
-  /// payment confirm (or escalated via payment-issue report).
-  bool get isLiveTrial =>
-      isAcceptedOrActive && !nannyConfirmedPayment && !paymentIssueReported;
+  /// Live for chat / lockdown bypass (spec C14 / S15): accepted (paid, waiting
+  /// to start) or active with [endDate] still in the future — and not finished
+  /// via payment confirm / payment-issue. Past [endDate] while status is still
+  /// `active` (scheduled flip lag) or `awaitingOutcome` does **not** bypass.
+  bool get isLiveTrial {
+    if (nannyConfirmedPayment || paymentIssueReported) return false;
+    if (status == TrialStatus.accepted) return true;
+    if (status == TrialStatus.active) {
+      return !DateTime.now().isAfter(endDate);
+    }
+    return false;
+  }
 
   /// Execution window closed; waiting on the mutual hired/notHired resolution.
   bool get isAwaitingOutcome => status == TrialStatus.awaitingOutcome;

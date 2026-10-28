@@ -74,6 +74,10 @@ class _ChatScreenState extends State<ChatScreen> {
     });
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       if (!mounted) return;
+      // Re-sync entitlement so Messages never shows a stale "expired" strip/list
+      // after browse/profile already reflect free or active access.
+      await subs.refreshAndEnforce();
+      if (!mounted) return;
       // Opening the chat list clears the bottom-nav Messages badge.
       controller.onMessagesTabOpened();
       await controller.refreshThreads();
@@ -107,6 +111,9 @@ class _ChatScreenState extends State<ChatScreen> {
   @override
   Widget build(BuildContext context) {
     return Obx(() {
+      // Depend on live subscription state (not only ChatController getters) so
+      // Messages rebuilds in sync with browse/profile after refresh.
+      final expired = !controller.isNanny && subs.isExpired;
       final inThread = controller.activeThreadId.value.isNotEmpty;
       final canPopRoute = !embedInShell && Navigator.of(context).canPop();
 
@@ -124,12 +131,14 @@ class _ChatScreenState extends State<ChatScreen> {
             top: true,
             bottom: false,
             child: () {
-              if (!controller.isNanny &&
-                  controller.isSubscriptionExpired &&
-                  controller.visibleThreads.isEmpty) {
+              // No threads at all while expired → full placeholder. If threads
+              // exist they stay visible as locked rows (renew restores taps).
+              if (expired &&
+                  controller.threads.isEmpty &&
+                  !controller.isLoading.value) {
                 return _expiredOverlay();
               }
-              return inThread ? _conversation() : _inbox(canPopRoute);
+              return inThread ? _conversation() : _inbox(canPopRoute, expired: expired);
             }(),
           ),
         ),
@@ -138,11 +147,11 @@ class _ChatScreenState extends State<ChatScreen> {
   }
 
   // ══════════════════════════ INBOX (messages list) ════════════════════════
-  Widget _inbox(bool canPopRoute) {
+  Widget _inbox(bool canPopRoute, {required bool expired}) {
     return Column(
       children: [
         _inboxHeader(canPopRoute),
-        if (!controller.isNanny && controller.isSubscriptionExpired)
+        if (expired)
           GestureDetector(
             onTap: () => Get.toNamed(Routes.pricing),
             child: Container(
@@ -159,6 +168,8 @@ class _ChatScreenState extends State<ChatScreen> {
             final _ = Get.isRegistered<TrialController>()
                 ? Get.find<TrialController>().all.length
                 : 0;
+            // Keep list lock state in sync with subscription Rx.
+            final listExpired = subs.isExpired;
             final q = _query.value.trim().toLowerCase();
             final threads = q.isEmpty
                 ? controller.visibleThreads
@@ -173,10 +184,10 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.fromLTRB(12, 8, 12, 14),
               children: [
                 for (final t in threads) ...[
-                  _threadCard(t),
+                  _threadCard(t, forceUnlocked: !listExpired),
                   const SizedBox(height: 4),
                 ],
-                if (!controller.isNanny) ...[
+                if (!controller.isNanny && !listExpired) ...[
                   const SizedBox(height: 2),
                   _newConversationCard(),
                 ],
@@ -278,161 +289,197 @@ class _ChatScreenState extends State<ChatScreen> {
         : AppStrings.nannySuffix.tr;
   }
 
-  Widget _threadCard(ChatThread t) {
+  Widget _threadCard(ChatThread t, {bool forceUnlocked = false}) {
     final name = _displayName(t);
     final initial = name.isNotEmpty ? name[0].toUpperCase() : '?';
     final unread = _unreadForCurrentRole(t);
     final onTrial = controller.showsActiveTrialUi(t);
+    // Never paint locked/expired rows unless subscription is actually expired
+    // (free / active families must not see renew-lock UI on Messages only).
+    final locked = !forceUnlocked && controller.isThreadLocked(t);
     // A hire only exists once the trial has completed (which clears the trial
     // flags), so the two states never overlap — guard anyway for safety.
-    final hired = !onTrial && controller.activeHireFor(t) != null;
-    final gradient = onTrial
-        ? const [KafiColors.rose, KafiColors.roseD]
-        : _avatarGradient(name);
+    final hired = !onTrial && !locked && controller.activeHireFor(t) != null;
+    final gradient = locked
+        ? const [Color(0xFFC8CDD8), Color(0xFFA8B0C0)]
+        : onTrial
+            ? const [KafiColors.rose, KafiColors.roseD]
+            : _avatarGradient(name);
 
     return GestureDetector(
-      onTap: () => controller.openThread(t.id),
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: Colors.white,
-          borderRadius: BorderRadius.circular(18),
-          border: Border.all(
-              color: onTrial
-                  ? KafiColors.grnL
-                  : hired
-                      ? KafiColors.purL
-                      : Colors.transparent,
-              width: 1.5),
-          boxShadow: const [BoxShadow(color: Color(0x12FF5F96), blurRadius: 9, offset: Offset(0, 2))],
-        ),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Avatar with online dot
-            Stack(
-              clipBehavior: Clip.none,
-              children: [
-                KafiAvatar(
-                  photoUrl: controller.isNanny
-                      ? FamilyConstants.resolvedPhotoUrl(
-                          t.familyPhotoUrl,
-                          t.familyId.isNotEmpty ? t.familyId : name,
-                        )
-                      : t.nannyPhotoUrl,
-                  fallbackText: initial,
-                  size: 68,
-                  radius: 16,
-                  gradient: gradient,
-                  fontSize: 24,
-                ),
-                Positioned(
-                  bottom: -2,
-                  right: -2,
-                  child: Container(
-                    width: 15,
-                    height: 15,
-                    decoration: BoxDecoration(
-                      color: KafiColors.grn,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: Colors.white, width: 2),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+      onTap: locked
+          ? () => Get.toNamed(Routes.pricing, arguments: {'reason': 'chat_locked'})
+          : () => controller.openThread(t.id),
+      child: Opacity(
+        opacity: locked ? 0.72 : 1,
+        child: Container(
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: locked ? const Color(0xFFF5F6FA) : Colors.white,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+                color: locked
+                    ? KafiColors.cardBorder
+                    : onTrial
+                        ? KafiColors.grnL
+                        : hired
+                            ? KafiColors.purL
+                            : Colors.transparent,
+                width: 1.5),
+            boxShadow: locked
+                ? const []
+                : const [BoxShadow(color: Color(0x12FF5F96), blurRadius: 9, offset: Offset(0, 2))],
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Stack(
+                clipBehavior: Clip.none,
                 children: [
-                  Text(name,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: KafiTheme.nunito(16, color: KafiColors.td, w: FontWeight.w800)),
-                  const SizedBox(height: 3),
-                  Text(
-                    t.lastMessage,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: KafiTheme.nunito(13,
-                        color: onTrial
-                            ? KafiColors.grnD
-                            : (unread > 0 ? KafiColors.td : KafiColors.ts),
-                        w: unread > 0 || onTrial ? FontWeight.w700 : FontWeight.w600),
+                  KafiAvatar(
+                    photoUrl: controller.isNanny
+                        ? FamilyConstants.resolvedPhotoUrl(
+                            t.familyPhotoUrl,
+                            t.familyId.isNotEmpty ? t.familyId : name,
+                          )
+                        : t.nannyPhotoUrl,
+                    fallbackText: initial,
+                    size: 68,
+                    radius: 16,
+                    gradient: gradient,
+                    fontSize: 24,
                   ),
-                  const SizedBox(height: 5),
-                  Row(
-                    children: [
-                      Text(RelativeTime.threadTimestamp(t.lastMessageAt),
-                          style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600)),
-                      if (onTrial) ...[
-                        const SizedBox(width: 5),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: KafiColors.grnL,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(AppStrings.chatTrialBadge.tr,
-                              style: KafiTheme.fredoka(10.5, color: KafiColors.grnD, w: FontWeight.w700)),
-                        ),
-                      ] else if (hired) ...[
-                        const SizedBox(width: 5),
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: KafiColors.purL,
-                            borderRadius: BorderRadius.circular(8),
-                          ),
-                          child: Text(AppStrings.chatHiredBadge.tr,
-                              style: KafiTheme.fredoka(10.5, color: KafiColors.purpD, w: FontWeight.w700)),
-                        ),
-                      ],
-                    ],
+                  Positioned(
+                    bottom: -2,
+                    right: -2,
+                    child: Container(
+                      width: 15,
+                      height: 15,
+                      decoration: BoxDecoration(
+                        color: locked ? KafiColors.ts : KafiColors.grn,
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.white, width: 2),
+                      ),
+                      child: locked
+                          ? const Icon(Icons.lock, size: 8, color: Colors.white)
+                          : null,
+                    ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(width: 6),
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                if (onTrial)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: KafiColors.grn,
-                      borderRadius: BorderRadius.circular(16),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: KafiTheme.nunito(16,
+                            color: locked ? KafiColors.tm : KafiColors.td,
+                            w: FontWeight.w800)),
+                    const SizedBox(height: 3),
+                    Text(
+                      locked ? AppStrings.chatThreadLockedHint.tr : t.lastMessage,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: KafiTheme.nunito(13,
+                          color: locked
+                              ? const Color(0xFF7A4A00)
+                              : onTrial
+                                  ? KafiColors.grnD
+                                  : (unread > 0 ? KafiColors.td : KafiColors.ts),
+                          w: locked || unread > 0 || onTrial
+                              ? FontWeight.w700
+                              : FontWeight.w600),
                     ),
-                    child: Text(AppStrings.chatOnTrialBadge.tr,
-                        style: KafiTheme.fredoka(10, color: Colors.white, w: FontWeight.w700)),
-                  )
-                else if (hired)
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: KafiColors.pur,
-                      borderRadius: BorderRadius.circular(16),
+                    const SizedBox(height: 5),
+                    Row(
+                      children: [
+                        Text(RelativeTime.threadTimestamp(t.lastMessageAt),
+                            style: KafiTheme.nunito(11, color: KafiColors.ts, w: FontWeight.w600)),
+                        if (locked) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: KafiColors.ambL,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(AppStrings.chatThreadLockedBadge.tr,
+                                style: KafiTheme.fredoka(10.5,
+                                    color: const Color(0xFF7A4A00), w: FontWeight.w700)),
+                          ),
+                        ] else if (onTrial) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: KafiColors.grnL,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(AppStrings.chatTrialBadge.tr,
+                                style: KafiTheme.fredoka(10.5, color: KafiColors.grnD, w: FontWeight.w700)),
+                          ),
+                        ] else if (hired) ...[
+                          const SizedBox(width: 5),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                            decoration: BoxDecoration(
+                              color: KafiColors.purL,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: Text(AppStrings.chatHiredBadge.tr,
+                                style: KafiTheme.fredoka(10.5, color: KafiColors.purpD, w: FontWeight.w700)),
+                          ),
+                        ],
+                      ],
                     ),
-                    child: Text(AppStrings.chatHiredPill.tr,
-                        style: KafiTheme.fredoka(10, color: Colors.white, w: FontWeight.w700)),
-                  )
-                else if (unread > 0)
-                  Container(
-                    width: 24,
-                    height: 24,
-                    alignment: Alignment.center,
-                    decoration: const BoxDecoration(
-                      color: KafiColors.roseD,
-                      shape: BoxShape.circle,
+                  ],
+                ),
+              ),
+              const SizedBox(width: 6),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  if (locked)
+                    const Icon(Icons.lock_outline, size: 22, color: KafiColors.ts)
+                  else if (onTrial)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: KafiColors.grn,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(AppStrings.chatOnTrialBadge.tr,
+                          style: KafiTheme.fredoka(10, color: Colors.white, w: FontWeight.w700)),
+                    )
+                  else if (hired)
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 4),
+                      decoration: BoxDecoration(
+                        color: KafiColors.pur,
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                      child: Text(AppStrings.chatHiredPill.tr,
+                          style: KafiTheme.fredoka(10, color: Colors.white, w: FontWeight.w700)),
+                    )
+                  else if (unread > 0)
+                    Container(
+                      width: 24,
+                      height: 24,
+                      alignment: Alignment.center,
+                      decoration: const BoxDecoration(
+                        color: KafiColors.roseD,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text('$unread',
+                          style: KafiTheme.fredoka(12, color: Colors.white, w: FontWeight.w800)),
                     ),
-                    child: Text('$unread',
-                        style: KafiTheme.fredoka(12, color: Colors.white, w: FontWeight.w800)),
-                  ),
-              ],
-            ),
-          ],
+                ],
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -765,7 +812,7 @@ class _ChatScreenState extends State<ChatScreen> {
           // Report the other party (files a dispute) — both roles, always on.
           _topbarAction(Icons.flag_outlined, Colors.white.withValues(alpha: 0.25),
               _reportCounterparty),
-          if (controller.isSubscribed && !controller.isNanny) ...[
+          if (_canContactActiveNanny) ...[
             const SizedBox(width: 6),
             _topbarAction(Icons.chat, const Color(0xFF25D366),
                 () => _launchNannyContact(whatsapp: true)),
@@ -960,44 +1007,69 @@ class _ChatScreenState extends State<ChatScreen> {
     ));
   }
 
+  /// Family may call/WA this thread's nanny when paid **or** this nanny was
+  /// free-unlocked. Do not use [ChatController.isSubscribed] alone — free
+  /// families are not "expired" and still get contact after an unlock.
+  bool get _canContactActiveNanny {
+    if (controller.isNanny) return false;
+    final nannyId = controller.activeThread?.nannyId;
+    if (nannyId == null || nannyId.isEmpty) return false;
+    return !subs.isNannyLocked(nannyId);
+  }
+
+  String get _contactStripMessage {
+    if (controller.isNanny || controller.isSubscribed) {
+      return AppStrings.chatHintActive.tr;
+    }
+    // Free-unlock / live-trial contact wins over expired copy — never tell an
+    // unlocked free family their subscription expired.
+    if (_canContactActiveNanny) {
+      return AppStrings.chatHintUnlocked.tr;
+    }
+    if (subs.isExpired) {
+      return AppStrings.chatExpiredListBanner.tr;
+    }
+    return AppStrings.chatHintUnlockNeeded.tr;
+  }
+
   Widget _contactStrip() {
-    // Nannies never carry a paid subscription, so they always see the active
-    // hint — the "subscription expired" copy is family-only.
-    final subscribed = controller.isNanny || controller.isSubscribed;
-    final accentColor = controller.isNanny ? KafiColors.pur : KafiColors.grnD;
-    final bg = controller.isNanny
-        ? const [KafiColors.purL, Color(0xFFEDE4FF)]
-        : const [KafiColors.grnL, Color(0xFFD0F5E0)];
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
-      decoration: BoxDecoration(
-        gradient: LinearGradient(colors: subscribed ? bg : const [KafiColors.ambL, Color(0xFFFFE8C0)]),
-        border: Border(bottom: BorderSide(color: KafiColors.cardBorder, width: 0.5)),
-      ),
-      child: Row(
-        children: [
-          Icon(subscribed ? Icons.verified_user : Icons.lock_outline,
-              color: subscribed ? accentColor : const Color(0xFFA06010), size: 14),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              subscribed
-                  ? AppStrings.chatHintActive.tr
-                  : AppStrings.chatExpiredListBanner.tr,
-              style: KafiTheme.fredoka(9.5,
-                  color: subscribed ? accentColor : const Color(0xFF7A4A00), w: FontWeight.w700),
+    // Obx so free unlock / expire updates rebuild this strip (never label a
+    // free family as "subscription expired" via isSubscribed alone).
+    return Obx(() {
+      final open = controller.isNanny || _canContactActiveNanny;
+      final accentColor = controller.isNanny ? KafiColors.pur : KafiColors.grnD;
+      final bg = controller.isNanny
+          ? const [KafiColors.purL, Color(0xFFEDE4FF)]
+          : const [KafiColors.grnL, Color(0xFFD0F5E0)];
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 7),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(colors: open ? bg : const [KafiColors.ambL, Color(0xFFFFE8C0)]),
+          border: Border(bottom: BorderSide(color: KafiColors.cardBorder, width: 0.5)),
+        ),
+        child: Row(
+          children: [
+            Icon(open ? Icons.verified_user : Icons.lock_outline,
+                color: open ? accentColor : const Color(0xFFA06010), size: 14),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                _contactStripMessage,
+                style: KafiTheme.fredoka(9.5,
+                    color: open ? accentColor : const Color(0xFF7A4A00), w: FontWeight.w700),
+              ),
             ),
-          ),
-          if (subscribed && !controller.isNanny) ...[
-            _ccsButton('📞 ${AppStrings.callHer.tr.split(' ').first}', KafiColors.grnD,
-                () => _launchNannyContact(whatsapp: false)),
-            const SizedBox(width: 5),
-            _ccsButton(AppStrings.contactWhatsappLabel.tr, const Color(0xFF25D366),
-                () => _launchNannyContact(whatsapp: true)),
+            if (_canContactActiveNanny) ...[
+              _ccsButton('📞 ${AppStrings.callHer.tr.split(' ').first}', KafiColors.grnD,
+                  () => _launchNannyContact(whatsapp: false)),
+              const SizedBox(width: 5),
+              _ccsButton(AppStrings.contactWhatsappLabel.tr, const Color(0xFF25D366),
+                  () => _launchNannyContact(whatsapp: true)),
+            ],
           ],
-        ],
-      ),
-    );
+        ),
+      );
+    });
   }
 
   Widget _ccsButton(String label, Color bg, VoidCallback onTap) {
@@ -1048,7 +1120,9 @@ class _ChatScreenState extends State<ChatScreen> {
                   maxLines: 4,
                   style: KafiTheme.nunito(11, color: KafiColors.td, w: FontWeight.w600),
                   decoration: InputDecoration(
-                    hintText: locked ? AppStrings.chatExpiredListBanner.tr : AppStrings.chatSend.tr,
+                    hintText: locked
+                        ? AppStrings.chatComposerLockedHint.tr
+                        : AppStrings.chatSend.tr,
                     hintStyle: KafiTheme.nunito(10.5, color: KafiColors.ts, w: FontWeight.w500),
                     filled: true,
                     fillColor: locked ? KafiColors.cardBorder : const Color(0xFFFFF7FA),
@@ -1091,14 +1165,22 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  // Sender-role palettes (not viewer-role): family = purple, nanny = rose.
+  static const _familyBubbleColors = [KafiColors.pur, Color(0xFFC084FC)];
+  static const _nannyBubbleColors = [KafiColors.rose, KafiColors.roseD];
+
+  bool _messageFromNanny(ChatMessage m) =>
+      m.senderType == 'nanny' || m.senderId.startsWith('mock_nanny');
+
   // ── Message bubbles ───────────────────────────────────────────────────────
   Widget _bubble(ChatMessage m, bool mine, String otherName) {
+    final fromNanny = _messageFromNanny(m);
+    final colors = fromNanny ? _nannyBubbleColors : _familyBubbleColors;
     final bubble = Container(
       constraints: const BoxConstraints(maxWidth: 220),
       padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 8),
       decoration: BoxDecoration(
-        gradient: mine ? LinearGradient(colors: _accent) : null,
-        color: mine ? null : Colors.white,
+        gradient: LinearGradient(colors: colors),
         borderRadius: BorderRadius.only(
           topLeft: const Radius.circular(14),
           topRight: const Radius.circular(14),
@@ -1107,18 +1189,17 @@ class _ChatScreenState extends State<ChatScreen> {
         ),
         boxShadow: [
           BoxShadow(
-              color: mine ? _accent.last.withValues(alpha: 0.2) : const Color(0x0F000000),
+              color: colors.last.withValues(alpha: 0.22),
               blurRadius: 8,
               offset: const Offset(0, 2)),
         ],
       ),
       child: Text(m.content,
-          style: KafiTheme.nunito(10.5,
-              color: mine ? Colors.white : KafiColors.td, w: FontWeight.w600)
+          style: KafiTheme.nunito(10.5, color: Colors.white, w: FontWeight.w600)
               .copyWith(height: 1.45)),
     );
 
-    final avatar = _msgAvatar(mine, otherName);
+    final avatar = _msgAvatar(fromNanny: fromNanny, mine: mine, otherName: otherName);
     final time = Padding(
       padding: const EdgeInsets.only(top: 2),
       child: Text(RelativeTime.clock(m.createdAt),
@@ -1145,37 +1226,28 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
-  Widget _msgAvatar(bool mine, String otherName) {
+  /// Avatar is always the *sender*: family photo on family texts, nanny photo
+  /// on nanny texts (Screen 17).
+  Widget _msgAvatar({
+    required bool fromNanny,
+    required bool mine,
+    required String otherName,
+  }) {
     final thread = controller.activeThread;
     final String? photoUrl;
     final String fallback;
     final List<Color> gradient;
-    if (mine) {
-      // Current user's photo: nanny uses nannyPhotoUrl; family uses family photo.
-      if (controller.isNanny) {
-        photoUrl = thread?.nannyPhotoUrl;
-        fallback = AppStrings.chatYou.tr;
-        gradient = _accent;
-      } else {
-        photoUrl = FamilyConstants.resolvedPhotoUrl(
-          thread?.familyPhotoUrl,
-          thread?.familyId ?? '',
-        );
-        fallback = AppStrings.chatYou.tr;
-        gradient = _accent;
-      }
+    if (fromNanny) {
+      photoUrl = thread?.nannyPhotoUrl;
+      fallback = mine ? AppStrings.chatYou.tr : otherName;
+      gradient = _nannyBubbleColors;
     } else {
-      photoUrl = controller.counterpartyPhotoUrl(thread) ??
-          (controller.isNanny
-              ? FamilyConstants.resolvedPhotoUrl(
-                  thread?.familyPhotoUrl,
-                  thread?.familyId ?? otherName,
-                )
-              : thread?.nannyPhotoUrl);
-      fallback = otherName;
-      gradient = controller.isNanny
-          ? const [Color(0xFFFFB347), Color(0xFFFF8042)]
-          : _avatarGradient(otherName);
+      photoUrl = FamilyConstants.resolvedPhotoUrl(
+        thread?.familyPhotoUrl,
+        thread?.familyId ?? (mine ? '' : otherName),
+      );
+      fallback = mine ? AppStrings.chatYou.tr : otherName;
+      gradient = _familyBubbleColors;
     }
     return KafiAvatar(
       photoUrl: photoUrl,

@@ -32,19 +32,32 @@ class FirestoreChatService implements IChatService {
     final uid = _uidForQuery(userId);
     final byId = <String, ChatThread>{};
 
-    Future<void> load(Query<Map<String, dynamic>> query) async {
+    Future<void> load(
+      Query<Map<String, dynamic>> query, {
+      bool Function(QueryDocumentSnapshot<Map<String, dynamic>>)? keep,
+    }) async {
       final snap = await query.get();
       for (final d in snap.docs) {
-        byId[d.id] = _threadFromDoc(d);
+        if (keep == null || keep(d)) byId[d.id] = _threadFromDoc(d);
       }
     }
 
     await load(_threads.where('familyId', isEqualTo: uid));
-    await load(_threads.where('nannyId', isEqualTo: uid));
+    await load(_threads.where('nannyId', isEqualTo: uid), keep: _visibleToNanny);
 
     final list = byId.values.toList()
       ..sort((a, b) => b.lastMessageAt.compareTo(a.lastMessageAt));
     return list;
+  }
+
+  /// A nanny stops seeing a conversation while the family's plan is lapsed
+  /// (`familyLocked` is stamped server-side), unless a trial with that family
+  /// is live — the same bypass the family side honours.
+  bool _visibleToNanny(QueryDocumentSnapshot<Map<String, dynamic>> d) {
+    final m = d.data();
+    if (m['familyLocked'] != true) return true;
+    final trial = m['trialStatus'];
+    return trial == 'accepted' || trial == 'active';
   }
 
   @override
@@ -100,7 +113,7 @@ class FirestoreChatService implements IChatService {
       emit();
     }, onError: (e, st) => onStreamError(e, st, 'family'));
     final subNanny = _threads.where('nannyId', isEqualTo: uid).snapshots().listen((s) {
-      asNanny = s.docs.map(_threadFromDoc).toList();
+      asNanny = s.docs.where(_visibleToNanny).map(_threadFromDoc).toList();
       emit();
     }, onError: (e, st) => onStreamError(e, st, 'nanny'));
 
@@ -228,6 +241,9 @@ class FirestoreChatService implements IChatService {
     String? nannyPhotoUrl,
     String? familyPhotoUrl,
   }) async {
+    if (familyId.isEmpty || nannyId.isEmpty || familyId == nannyId) {
+      throw StateError('Cannot create a chat with yourself.');
+    }
     final snap = await _threads
         .where('familyId', isEqualTo: familyId)
         .where('nannyId', isEqualTo: nannyId)

@@ -1,3 +1,4 @@
+import 'package:cloud_functions/cloud_functions.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'package:kafi_app/models/family_model.dart';
@@ -95,10 +96,9 @@ class RevenueCatSubscriptionService implements ISubscriptionService {
     return current;
   }
 
-  /// RevenueCat's store-verified entitlement is authoritative for unlocking
-  /// the UI. Clients cannot write `families/{id}.subscription` (Firestore
-  /// rules), so Firestore — kept in sync by `revenueCatWebhook` — is only the
-  /// fallback when RevenueCat is unreachable or reports no active entitlement.
+  /// Customer info from the on-device RevenueCat SDK, or null if unreachable.
+  /// This is the *store's* view for whichever Kafi account is logged in — it is
+  /// only a hint that a purchase exists, never what unlocks features.
   Future<CustomerInfo?> _customerInfo() async {
     if (!RevenueCatConstants.isConfigured) return null;
     try {
@@ -110,12 +110,42 @@ class RevenueCatSubscriptionService implements ISubscriptionService {
     }
   }
 
+  static bool _grantsAccess(SubscriptionState s) =>
+      s == SubscriptionState.active ||
+      s == SubscriptionState.cancelledInPeriod ||
+      s == SubscriptionState.paymentGrace;
+
+  /// Firestore (`families/{id}.subscription`, written only by the webhook and
+  /// the server-side sync) is the single source of truth. The security rules,
+  /// the contact gate and every other client read the same document, so the UI
+  /// can never show unlocked while the server refuses. The on-device store
+  /// entitlement is only used to notice "paid but the server hasn't caught up"
+  /// and ask the server to re-verify.
   @override
   Future<SubscriptionState> getState(String familyId) async {
+    final server = await _firestore.getState(familyId);
+    if (_grantsAccess(server)) return server;
     final info = await _customerInfo();
-    if (info != null && _hasPremium(info)) return SubscriptionState.active;
-    return _firestore.getState(familyId);
+    if (info != null && _hasPremium(info)) {
+      await syncWithServer(familyId);
+      return _firestore.getState(familyId);
+    }
+    return server;
   }
+
+  @override
+  Future<void> syncWithServer(String familyId) async {
+    try {
+      await FirebaseFunctions.instance.httpsCallable('syncSubscription').call();
+    } catch (e) {
+      // Best effort: the webhook remains the primary path.
+      debugPrint('syncSubscription failed: $e');
+    }
+  }
+
+  @override
+  Stream<void> watchEntitlement(String familyId) =>
+      _firestore.watchEntitlement(familyId);
 
   @override
   Future<int> freeViewsUsed(String familyId) =>
@@ -135,12 +165,11 @@ class RevenueCatSubscriptionService implements ISubscriptionService {
 
   @override
   Future<String?> getActivePlanId(String familyId) async {
+    final fromServer = await _firestore.getActivePlanId(familyId);
+    if (fromServer != null) return fromServer;
     final info = await _customerInfo();
-    if (info != null && _hasPremium(info)) {
-      final fromStore = _planIdFromCustomerInfo(info);
-      if (fromStore != null) return fromStore;
-    }
-    return _firestore.getActivePlanId(familyId);
+    if (info != null && _hasPremium(info)) return _planIdFromCustomerInfo(info);
+    return null;
   }
 
   @override
@@ -165,6 +194,34 @@ class RevenueCatSubscriptionService implements ISubscriptionService {
     // No Firestore write here: rules forbid clients touching `subscription`.
     // The UI unlocks from the RevenueCat entitlement (see getState) and
     // `revenueCatWebhook` persists it server-side.
+    await _awaitServerEntitlement(familyId);
+  }
+
+  /// RevenueCat reports the entitlement the moment the store confirms, but the
+  /// Firestore rules and Cloud Functions (chat create, contact reveal) only see
+  /// it once `revenueCatWebhook` has written `subscription`. Unlocking the UI
+  /// before then lets the first chat/reveal be rejected, so hold the purchase
+  /// flow open until the server agrees. Best-effort: on timeout the purchase
+  /// still stands (the webhook will land) and we just stop waiting.
+  Future<void> _awaitServerEntitlement(String familyId) async {
+    const attempts = 16;
+    const interval = Duration(milliseconds: 500);
+    for (var i = 0; i < attempts; i++) {
+      // If the webhook hasn't landed after ~1s, ask the server to check the
+      // store itself rather than wait on it alone.
+      if (i == 2) await syncWithServer(familyId);
+      try {
+        final s = await _firestore.getState(familyId);
+        if (s == SubscriptionState.active ||
+            s == SubscriptionState.cancelledInPeriod) {
+          return;
+        }
+      } catch (e) {
+        debugPrint('Waiting for server entitlement: $e');
+      }
+      await Future<void>.delayed(interval);
+    }
+    debugPrint('RevenueCat webhook has not updated Firestore yet for $familyId.');
   }
 
   @override
@@ -174,6 +231,8 @@ class RevenueCatSubscriptionService implements ISubscriptionService {
     final info = await Purchases.restorePurchases();
     if (!_hasPremium(info)) return false;
 
+    await syncWithServer(familyId);
+    await _awaitServerEntitlement(familyId);
     return true;
   }
 

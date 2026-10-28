@@ -1,4 +1,6 @@
-import 'package:flutter/foundation.dart';
+import 'dart:async';
+
+import 'package:flutter/widgets.dart';
 import 'package:get/get.dart';
 import 'package:kafi_app/config/app_config.dart';
 import 'package:kafi_app/config/routes.dart';
@@ -17,7 +19,7 @@ import 'package:kafi_app/utils/constants/subscription_constants.dart';
 
 /// Subscription controller per Technical Architecture §3.8
 /// Manages subscription states and lockdown enforcement.
-class SubscriptionController extends GetxController {
+class SubscriptionController extends GetxController with WidgetsBindingObserver {
   final ISubscriptionService _subs = Get.find<ISubscriptionService>();
   final AuthController _auth = Get.find<AuthController>();
   final IUserService _users = Get.find<IUserService>();
@@ -58,8 +60,9 @@ class SubscriptionController extends GetxController {
 
   /// The single gate for a nanny's premium content — intro video, phone/CV
   /// reveal, and starting or reopening a chat. Per the family-access spec:
-  ///   - An expired plan re-locks EVERY nanny, even ones unlocked earlier
-  ///     (via a free unlock or a past paid plan) — no exceptions.
+  ///   - An expired plan re-locks EVERY nanny (prior free unlocks / paid period
+  ///     do not carry over), except a nanny with a **live** trial (accepted /
+  ///     running active) — contacts + chat stay until the trial period ends.
   ///   - An active plan (paid/trial/grace/cancelled-but-in-period) unlocks
   ///     every nanny.
   ///   - Free tier (never subscribed): unlocked only for nannies already in
@@ -69,28 +72,106 @@ class SubscriptionController extends GetxController {
   /// languages, salary, visa status, etc.) is never gated by this — every
   /// nanny's general profile is always free to view.
   bool isNannyLocked(String nannyId) {
-    if (isExpired) return true;
+    if (isExpired) return !_hasLiveTrialWith(nannyId);
     if (hasActiveAccess) return false;
     return !viewedNannyIds.contains(nannyId);
   }
 
+  /// Live trial with [nannyId] (accepted / active, endDate not past) — the only
+  /// contact/chat bypass while the family's plan is expired (C14 / S15).
+  bool _hasLiveTrialWith(String nannyId) {
+    if (nannyId.isEmpty || !Get.isRegistered<TrialController>()) return false;
+    return Get.find<TrialController>().all.any(
+          (t) => t.nannyId == nannyId && t.isLiveTrial,
+        );
+  }
+
+  StreamSubscription<void>? _entitlementSub;
+  bool _refreshing = false;
+  bool _refreshQueued = false;
+
   @override
   void onInit() {
     super.onInit();
+    WidgetsBinding.instance.addObserver(this);
     // Identify / clear RevenueCat when the signed-in family changes.
     ever(_auth.currentUser, (user) async {
       if (user != null && user.type == UserType.family) {
-        await _subs.onUserSignedIn(user.id);
-        await refreshAndEnforce();
+        await _bindFamily(user.id);
       } else if (user == null) {
+        await _unbindFamily();
         await _subs.onUserSignedOut();
+        state.value = SubscriptionState.free;
+        freeViewsUsed.value = 0;
+        viewedNannyIds.clear();
+        activePlanId.value = null;
+        isLocked.value = false;
       }
     });
     final existing = _auth.currentUser.value;
     if (existing != null && existing.type == UserType.family) {
-      _subs.onUserSignedIn(existing.id);
+      unawaited(_bindFamily(existing.id));
+    } else {
+      refreshAndEnforce();
     }
-    refreshAndEnforce();
+  }
+
+  @override
+  void onClose() {
+    WidgetsBinding.instance.removeObserver(this);
+    _entitlementSub?.cancel();
+    super.onClose();
+  }
+
+  /// Opening or returning to the app re-verifies the plan against the store and
+  /// refreshes every gate, so a purchase, expiry, refund or restore made while
+  /// the app was backgrounded (or on another device) shows up straight away.
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState lifecycle) {
+    if (lifecycle != AppLifecycleState.resumed) return;
+    final user = _auth.currentUser.value;
+    if (user == null || user.type != UserType.family) return;
+    unawaited(() async {
+      await _subs.syncWithServer(user.id);
+      await _refreshCoalesced();
+    }());
+  }
+
+  /// Binds the store identity, asks the server to re-verify, loads state, then
+  /// keeps it live by listening to the family document.
+  Future<void> _bindFamily(String familyId) async {
+    await _subs.onUserSignedIn(familyId);
+    await _subs.syncWithServer(familyId);
+    await refreshAndEnforce();
+    await _entitlementSub?.cancel();
+    // The first emission is the current state we just loaded; skip it.
+    _entitlementSub = _subs.watchEntitlement(familyId).skip(1).listen(
+          (_) => unawaited(_refreshCoalesced()),
+          onError: (Object e) => debugPrint('Subscription listener: $e'),
+        );
+  }
+
+  Future<void> _unbindFamily() async {
+    await _entitlementSub?.cancel();
+    _entitlementSub = null;
+  }
+
+  /// Runs [refreshAndEnforce] but never concurrently: a burst of document
+  /// changes collapses into one in-flight refresh plus at most one follow-up.
+  Future<void> _refreshCoalesced() async {
+    if (_refreshing) {
+      _refreshQueued = true;
+      return;
+    }
+    _refreshing = true;
+    try {
+      do {
+        _refreshQueued = false;
+        await refreshAndEnforce();
+      } while (_refreshQueued);
+    } finally {
+      _refreshing = false;
+    }
   }
 
   /// Called on app start, foreground resume, and Cloud Function trigger.
@@ -184,7 +265,23 @@ class SubscriptionController extends GetxController {
     // the server's freeContactsUsed asynchronously, so re-reading it here would
     // lag and let the gate over-grant. refreshAndEnforce() re-syncs from server.
     freeViewsUsed.value = viewedNannyIds.length;
+    // Firestore chat rules read `families.viewedProfiles` — wait briefly for
+    // onProfileViewed so createThread is not permission-denied on a cold unlock.
+    await _waitForViewedProfilesPersist(id, nannyId);
     return true;
+  }
+
+  /// Polls the family doc until [nannyId] appears in `viewedProfiles` (or timeout).
+  Future<void> _waitForViewedProfilesPersist(String familyId, String nannyId) async {
+    for (var i = 0; i < 15; i++) {
+      try {
+        final ids = await _subs.viewedNannyIds(familyId);
+        if (ids.contains(nannyId)) return;
+      } catch (_) {
+        // Best-effort — chat may still succeed if rules see a prior unlock.
+      }
+      await Future<void>.delayed(const Duration(milliseconds: 350));
+    }
   }
 
   /// Returns true when the subscription write succeeded, so the caller only

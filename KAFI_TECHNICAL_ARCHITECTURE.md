@@ -950,7 +950,7 @@ firebase-storage/
 │       │   ├── photo_2_{timestamp}.jpg
 │       │   └── photo_5_{timestamp}.jpg (max 5)
 │       ├── video/
-│       │   └── intro_{timestamp}.mp4 (max 60s, max 50MB)
+│       │   └── intro_{timestamp}.mp4 (max 4 min, max 50MB)
 │       └── documents/
 │           ├── passport.{ext}
 │           ├── visa.{ext}
@@ -1002,7 +1002,7 @@ Future<String> uploadVideo(File file, String userId) async {
   
   final duration = await VideoDuration.get(file);
   if (duration > 60) {
-    throw Exception('Video must be 60 seconds or less');
+    throw Exception('Video must be 4 minutes or less');
   }
   
   final ref = FirebaseStorage.instance
@@ -2046,7 +2046,7 @@ class UploadError extends AppError {
   );
   factory UploadError.videoTooLong() => UploadError._(
     code: 'upload/video-too-long',
-    message: 'Video must be 60 seconds or less',
+    message: 'Video must be 4 minutes or less',
   );
   factory UploadError.networkFailure() => UploadError._(
     code: 'upload/network',
@@ -3186,3 +3186,36 @@ Profile screens → phone blurred, Call/WA buttons removed
 | 2026-10-02 | Public privacy + delete-account web pages | Done | Static `/privacy/` and `/delete-account/` on admin Hosting; privacy linked from admin Settings |
 | 2026-10-02 | Firebase project → Kafi (`kafi-802c9`) | Done | Switched from `yhgc-testing`: `.firebaserc`, `firebase_options.dart`, Android/iOS native configs, admin `.env` / `.env.production`; registered Android/iOS/Web apps on empty Kafi project |
 | 2026-10-02 | Deploy rules + functions to `kafi-802c9` | Done | Created Firestore `(default)` (nam5); deployed rules + indexes; all Cloud Functions (us-central1); Storage rules released after Console bucket setup |
+
+| 2026-10-12 | Browse pills + video 4min + doc sources | Done | `maxVideoSeconds=240`; Storage rules videos under(50); `pickDocumentFromGallery/File` + docs source sheet; browse `_filterPills` height clip fix |
+
+| 2026-10-12 | Chat colors + AED prices + 4min recorder | Done | `chat_screen` sender palettes; pricing ignores RevenueCat priceString; `camera` + `IntroVideoRecorderScreen` for record path |
+
+| 2026-10-14 | Intro video upload over ~50s | Done | `IStorageService.uploadFile` + Firebase `putFile`; nanny video uses file stream; maxVideoMb=100 |
+
+| 2026-10-14 | Remove Storage size caps | Done | Dropped all `under(MB)` checks (≤100 MB) from storage.rules; auth + content-type only; redeployed |
+
+| 2026-10-20 | One phone = one role (A4) | Done | `FirebaseAuthService._assertRoleAllowed`; `setUserRole` no longer overwrites Firestore type |
+
+| 2026-10-20 | Dual-role self-chat data cleanup | Done | Deleted self-thread PLK3… + messages; removed nannies/b8RQ… (Rhea) so +923025453549 is family-only (Waseem) |
+
+| 2026-10-20 | Verify-docs identity summary | Done | Verify docs popup shows photos + intro video + work experience above documents before approve; experience city/country mapped to cityCountry |
+
+| 2026-10-20 | Verify-docs full document previews | Done | Always show all 5 DocumentType slots with full DocViewer (passport/visa/EID/training/police); merge subcollection URLs; approve only when uploaded |
+
+| 2026-10-20 | Verify-docs include unverified on approved | Done | Queue lists any nanny with uploaded/reviewing docs (not only status=pending); unverified docs sorted/highlighted first |
+
+| 2026-10-20 | Approve all docs + video + profile | Done | NannyService.approve now marks all non-missing documents approved, intro video approved when URL present, and profile approved+verified |
+
+| 2026-10-20 | A4 role-mismatch dialog | Done | Wrong-role OTP shows blocking dialog; OK signs out and offAllNamed Welcome |
+
+| 2026-10-20 | Chat free-unlock Firestore rules | Done | familyCanChatWith allows free+viewedProfiles; wait for onProfileViewed before createThread |
+
+| 2026-10-20 | Hide free-family jobs from nannies | Done | jobs.visibleToNannies stamped from subscription; nanny browse filters true; CF syncs on family sub change |
+| 2026-10-20 | Expired-sub chat after trial ends | Done | `isLiveTrial` respects endDate; ChatController bypass = `showsActiveTrialUi`; CF `recomputeActiveTrialNannyIds` is accepted/active only; detector stamps thread on awaitingOutcome |
+| 2026-10-20 | Sign-out clears permanent controllers | Done | ever(currentUser) on profile/jobs/browse/settings/jobPost/ticket/dispute/trial; AuthController clears OTP/phone on signOut |
+| 2026-10-20 | Free chat strip false "expired" | Done | ChatScreen contact strip + topbar Call/WA gate on isNannyLocked / isExpired, not isSubscribed alone |
+| 2026-10-20 | Expired chat list locked rows | Done | visibleThreads shows all; isThreadLocked for expired non-trial; isNannyLocked allows live-trial contact only |
+| 2026-10-21 | nannies.hiddenFromBrowse | Done | CF `recomputeNannyBrowseHidden` on trial/hire; rules lock field; Browse filters client-side; `activeTrialNannyIds`/`activeHiredNannyIds` read nannies flag not global status queries |
+| 2026-10-27 | Browse keep hired/trial visible | Done | Browse ignores engaged marker for hide; rankNannies keeps all scores; mock uses isListableRecord |
+| 2026-10-28 | iOS Phone Auth App Delegate Proxy | Done | Re-enabled `FirebaseAppDelegateProxyEnabled`; AppDelegate forwards APNs + `canHandleNotification` (+ UNUserNotificationCenter); SceneDelegate URL forward; FIREBASE_SETUP.md updated |

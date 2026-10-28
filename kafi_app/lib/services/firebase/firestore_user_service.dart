@@ -85,7 +85,9 @@ class FirestoreUserService implements IUserService {
     // stale snapshot and regress the dashboard counters.
     final data = nanny.toMap()
       ..remove('stats')
-      ..remove('profileScore');
+      ..remove('profileScore')
+      // Server-owned (trial/hire Cloud Functions) — client must not clear it.
+      ..remove('hiddenFromBrowse');
     await _col.doc(nanny.id).set(data, SetOptions(merge: true));
   }
 
@@ -98,6 +100,11 @@ class FirestoreUserService implements IUserService {
       {'lastActiveAt': FieldValue.serverTimestamp()},
       SetOptions(merge: true),
     );
+  }
+
+  @override
+  Future<void> setNannyProfilePaused(String nannyId, bool paused) async {
+    await _col.doc(nannyId).set({'profilePaused': paused}, SetOptions(merge: true));
   }
 
   @override
@@ -161,28 +168,33 @@ class FirestoreUserService implements IUserService {
     final ref = FirebaseFirestore.instance
         .collection('contactReveals')
         .doc('${familyId}_$nannyId');
+
+    DocumentSnapshot<Map<String, dynamic>>? existing;
     try {
-      final existing = await ref.get();
-      if (!existing.exists) {
-        await ref.set({
-          'familyId': familyId,
-          'nannyId': nannyId,
-          'requestedAt': FieldValue.serverTimestamp(),
-        });
-      }
+      existing = await ref.get();
     } on FirebaseException catch (e) {
-      // If the reveal doc does not exist yet, the rules deny the initial read.
-      // Fall back to a create-only write in that case.
-      if (e.code == 'permission-denied') {
-        await ref.set({
-          'familyId': familyId,
-          'nannyId': nannyId,
-          'requestedAt': FieldValue.serverTimestamp(),
-        });
-        return await _awaitRevealResult(ref);
-      }
+      // A missing doc has no `familyId` for the read rule to match, so the
+      // initial read is denied — treat that as "nothing requested yet".
       if (e.code != 'permission-denied') rethrow;
     }
+
+    if (existing != null && existing.exists) {
+      final data = existing.data();
+      final status = data?['status'];
+      if (status == 'revealed') return data?['phone'] as String?;
+      if (status != 'denied') return _awaitRevealResult(ref); // still resolving
+      // The function only runs when the doc is created, so a stale `denied`
+      // (e.g. asked a moment before the purchase webhook landed, or before the
+      // family subscribed) never flips. Delete it so the new request below is a
+      // fresh create and gets re-evaluated; the rules only allow this for denied.
+      await ref.delete();
+    }
+
+    await ref.set({
+      'familyId': familyId,
+      'nannyId': nannyId,
+      'requestedAt': FieldValue.serverTimestamp(),
+    });
     return _awaitRevealResult(ref);
   }
 

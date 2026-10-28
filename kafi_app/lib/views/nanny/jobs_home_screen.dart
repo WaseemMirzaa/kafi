@@ -294,14 +294,8 @@ class JobsHomeScreen extends GetView<JobPostController> {
       final nanny = Get.isRegistered<NannyProfileController>()
           ? Get.find<NannyProfileController>().nanny.value
           : null;
-      final matchService = MatchService();
-      final scored = [
-        for (final job in jobs)
-          (job, nanny == null ? null : matchService.calculateJobMatch(nanny, job)),
-      ];
-      if (nanny != null) {
-        scored.sort((a, b) => (b.$2 ?? 0).compareTo(a.$2 ?? 0));
-      }
+      // Every job stays in the list; match only decides the order (best first).
+      final scored = MatchService().rankJobs(nanny, jobs);
       return RefreshIndicator(
         color: KafiColors.roseD,
         onRefresh: controller.loadJobs,

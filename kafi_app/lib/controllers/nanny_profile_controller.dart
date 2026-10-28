@@ -22,6 +22,7 @@ import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/utils/constants/nanny_constants.dart';
 import 'package:kafi_app/utils/profile_quality.dart';
 import 'package:kafi_app/utils/validators.dart';
+import 'package:kafi_app/views/nanny/intro_video_recorder_screen.dart';
 import 'package:kafi_app/views/shared/rate_app_dialog.dart';
 import 'package:kafi_app/views/shared/kafi_theme.dart';
 import 'package:uuid/uuid.dart';
@@ -76,6 +77,8 @@ class NannyProfileController extends GetxController {
   final salaryMaxCtrl = TextEditingController();
   final Rx<JobTypePreference> jobTypePref = JobTypePreference.both.obs;
   final Rx<AvailabilityStatus> availability = AvailabilityStatus.availableNow.obs;
+  /// Her own pause switch: when on she is hidden from family browse.
+  final RxBool profilePaused = false.obs;
   final Rx<DateTime?> availableFrom = Rx<DateTime?>(null);
   final availableFromCtrl = TextEditingController();
   // Employment type + part-time availability (System Spec — net-new).
@@ -119,6 +122,8 @@ class NannyProfileController extends GetxController {
 
   StreamSubscription<NannyModel?>? _nannyWatch;
   NannyOnboardingStatus? _lastWatchedStatus;
+  Worker? _authWorker;
+  String? _boundUid;
 
   bool get hasRequiredDocs {
     final passport = documents[DocumentType.passport]!;
@@ -160,11 +165,13 @@ class NannyProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _bootstrap().then((_) => _startApprovalWatch());
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => _syncToAuth());
+    _syncToAuth();
   }
 
   @override
   void onClose() {
+    _authWorker?.dispose();
     _nannyWatch?.cancel();
     fullNameCtrl.dispose();
     dobCtrl.dispose();
@@ -179,6 +186,76 @@ class NannyProfileController extends GetxController {
     religionCtrl.dispose();
     bioCtrl.dispose();
     super.onClose();
+  }
+
+  /// Permanent controller: clear prior nanny form on logout / account switch,
+  /// then bootstrap the newly signed-in nanny.
+  Future<void> _syncToAuth() async {
+    final user = _auth.currentUser.value;
+    if (user == null || user.type != UserType.nanny) {
+      if (_boundUid != null) await _clearSessionState();
+      _boundUid = null;
+      return;
+    }
+    if (user.id == _boundUid) return;
+    await _clearSessionState();
+    _boundUid = user.id;
+    await _bootstrap();
+    _startApprovalWatch();
+  }
+
+  Future<void> _clearSessionState() async {
+    await _nannyWatch?.cancel();
+    _nannyWatch = null;
+    _lastWatchedStatus = null;
+    nanny.value = null;
+    activeHire.value = null;
+    activeTrial.value = null;
+    fullNameCtrl.clear();
+    dobCtrl.clear();
+    ageCtrl.clear();
+    dob.value = null;
+    nationality.value = '';
+    selectedLanguages.clear();
+    visaStatus.value = null;
+    hasEid.value = false;
+    willingTransferVisa.value = true;
+    workEmirates.clear();
+    willingRelocate.value = true;
+    currentEmirate.value = null;
+    salaryMinCtrl.clear();
+    salaryMaxCtrl.clear();
+    jobTypePref.value = JobTypePreference.both;
+    availability.value = AvailabilityStatus.availableNow;
+    availableFrom.value = null;
+    availableFromCtrl.clear();
+    employmentTypes.clear();
+    partTimeAvailability.clear();
+    maritalStatus.value = null;
+    hasChildren.value = false;
+    childrenCountCtrl.clear();
+    healthCtrl.clear();
+    medsCtrl.clear();
+    allergiesCtrl.clear();
+    comfortCameras.value = true;
+    comfortPets.value = true;
+    cooks.value = true;
+    nightShifts.value = false;
+    comfortDifferentFaith.value = true;
+    religionCtrl.clear();
+    bioCtrl.clear();
+    photoUrls.clear();
+    introVideoUrl.value = null;
+    introVideoName.value = null;
+    experiences.clear();
+    hasReferences.value = true;
+    references.clear();
+    commitsToShare.value = false;
+    documents.assignAll({
+      for (final t in DocumentType.values)
+        t: NannyDocument(type: t, status: DocumentStatus.missing),
+    });
+    _stagedDocs.clear();
   }
 
   Future<void> _bootstrap() async {
@@ -308,6 +385,7 @@ class NannyProfileController extends GetxController {
     salaryMaxCtrl.text = n.expectedSalaryMax > 0 ? '${n.expectedSalaryMax}' : '';
     jobTypePref.value = n.jobTypePreference;
     availability.value = n.availability;
+    profilePaused.value = n.profilePaused;
     availableFrom.value = n.availableFrom;
     if (n.availableFrom != null) availableFromCtrl.text = _fmtDate(n.availableFrom!);
     employmentTypes.assignAll(n.employmentTypes);
@@ -659,17 +737,30 @@ class NannyProfileController extends GetxController {
       );
       return;
     }
-    final picked = await ImagePicker().pickVideo(
-      source: source,
-      maxDuration: Duration(seconds: NannyConstants.maxVideoSeconds),
-    );
-    if (picked == null) return;
 
-    // image_picker's `maxDuration` only caps *camera* recordings — a clip
-    // chosen from the gallery is never length-checked. Enforce the limit
-    // ourselves so an over-long video is rejected (the nanny trims it first)
-    // instead of being uploaded.
-    if (await _videoExceedsLimit(picked.path)) {
+    // Camera: use in-app recorder (OEMs often ignore image_picker maxDuration
+    // and hard-stop at ~10s). Gallery: image_picker + length check.
+    late final String path;
+    late final String displayName;
+    if (source == ImageSource.camera) {
+      final recorded = await Get.to<String>(
+        () => const IntroVideoRecorderScreen(),
+        fullscreenDialog: true,
+      );
+      if (recorded == null || recorded.isEmpty) return;
+      path = recorded;
+      displayName = recorded.split('/').last;
+    } else {
+      final picked = await ImagePicker().pickVideo(
+        source: ImageSource.gallery,
+        maxDuration: Duration(seconds: NannyConstants.maxVideoSeconds),
+      );
+      if (picked == null) return;
+      path = picked.path;
+      displayName = picked.name;
+    }
+
+    if (await _videoExceedsLimit(path)) {
       Get.snackbar(
         AppStrings.errorTitle.tr,
         AppStrings.nannyVideoTooLong.tr,
@@ -678,26 +769,45 @@ class NannyProfileController extends GetxController {
       return;
     }
 
+    final file = File(path);
+
     isLoading.value = true;
     try {
       if (AppConfig.useMock) {
-        introVideoUrl.value = picked.path;
-        introVideoName.value = picked.name;
+        introVideoUrl.value = path;
+        introVideoName.value = displayName;
         return;
       }
-      final bytes = await picked.readAsBytes();
-      introVideoUrl.value = await _storageService.uploadBytes(
+      // Stream from disk — loading 50s+ videos into RAM via uploadBytes was
+      // causing network drops and Storage "unauthorized" on timeouts.
+      introVideoUrl.value = await _storageService.uploadFile(
         // Must match storage.rules `/nannies/{uid}/videos/{file}`.
         path: 'nannies/${user.id}/videos/video.mp4',
-        bytes: bytes,
+        file: file,
         contentType: 'video/mp4',
       );
-      introVideoName.value = picked.name;
+      introVideoName.value = displayName;
     } catch (e) {
-      Get.snackbar(AppStrings.errorTitle.tr, e.toString());
+      Get.snackbar(AppStrings.errorTitle.tr, _videoUploadError(e));
     } finally {
       isLoading.value = false;
     }
+  }
+
+  String _videoUploadError(Object e) {
+    final raw = e.toString().toLowerCase();
+    if (raw.contains('unauthorized') ||
+        raw.contains('permission-denied') ||
+        raw.contains('not authorized')) {
+      return AppStrings.nannyVideoUploadDenied.tr;
+    }
+    if (raw.contains('network') ||
+        raw.contains('-1005') ||
+        raw.contains('unavailable') ||
+        raw.contains('connection')) {
+      return AppStrings.nannyVideoUploadNetwork.tr;
+    }
+    return AppStrings.nannyVideoUploadFailed.tr;
   }
 
   /// True when the video at [path] runs longer than [NannyConstants.maxVideoSeconds].
@@ -917,20 +1027,43 @@ class NannyProfileController extends GetxController {
     }
   }
 
-  /// Picks a document and stages it locally. Nothing is uploaded until the user
-  /// submits (or saves in edit mode) — see [_uploadStagedDocs].
-  Future<void> pickDocument(DocumentType type) async {
+  /// Stages a document from the photo library (album).
+  Future<void> pickDocumentFromGallery(DocumentType type) async {
     final user = _auth.currentUser.value;
     if (user == null) return;
-    // Documents are chosen through the system file picker (Storage Access
-    // Framework on Android / UIDocumentPicker on iOS), which grants one-shot
-    // access to the picked file. That needs NO photo-library permission, so we
-    // must not gate on it — doing so previously blocked PDF uploads outright on
-    // Android 13+ where the photos permission does not apply to documents.
+    final permissions = Get.find<PermissionController>();
+    if (!await permissions.ensureGallery()) {
+      Get.snackbar(
+        AppStrings.errorTitle.tr,
+        AppStrings.permissionGalleryDenied.tr,
+      );
+      return;
+    }
+    final picked = await ImagePicker().pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 85,
+    );
+    if (picked == null) return;
+    try {
+      final bytes = await picked.readAsBytes();
+      final name = picked.name;
+      final ext = name.contains('.')
+          ? name.split('.').last.toLowerCase()
+          : 'jpg';
+      await _stageDocumentBytes(type, bytes, ext);
+    } catch (_) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docPickFailed.tr);
+    }
+  }
+
+  /// Stages a document from the system file picker (PDF / any file).
+  Future<void> pickDocumentFromFile(DocumentType type) async {
+    final user = _auth.currentUser.value;
+    if (user == null) return;
+    // System file picker (SAF / UIDocumentPicker) needs no photo-library
+    // permission — gating on gallery previously blocked PDFs on Android 13+.
     FilePickerResult? result;
     try {
-      // Accept any document format — pictures, PDFs, videos or other files —
-      // per the admin verification requirements.
       result = await FilePicker.platform.pickFiles(
         type: FileType.any,
         withData: true,
@@ -941,9 +1074,6 @@ class NannyProfileController extends GetxController {
     }
     if (result == null || result.files.isEmpty) return;
     final file = result.files.first;
-    // `withData: true` usually populates bytes, but large files on some
-    // platforms are exposed only via a path. Fall back to reading the file so a
-    // valid pick never silently no-ops.
     Uint8List? bytes = file.bytes;
     if (bytes == null && file.path != null) {
       try {
@@ -956,17 +1086,27 @@ class NannyProfileController extends GetxController {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docPickFailed.tr);
       return;
     }
+    await _stageDocumentBytes(type, bytes, (file.extension ?? 'jpg').toLowerCase());
+  }
+
+  /// Backward-compatible entry (file picker). Prefer [pickDocumentFromGallery]
+  /// / [pickDocumentFromFile] from the docs source sheet.
+  Future<void> pickDocument(DocumentType type) => pickDocumentFromFile(type);
+
+  Future<void> _stageDocumentBytes(
+    DocumentType type,
+    Uint8List bytes,
+    String ext,
+  ) async {
     if (bytes.length > _maxDocBytes) {
       Get.snackbar(AppStrings.errorTitle.tr, AppStrings.docTooLarge.tr);
       return;
     }
-    final ext = (file.extension ?? 'jpg').toLowerCase();
     _stagedDocs[type] = _StagedDoc(
       bytes: bytes,
       ext: ext,
       contentType: _docContentType(ext),
     );
-    // Mark selected locally (drives the ✓ tile); real upload happens on submit.
     documents[type] = documents[type]!.copyWith(
       status: DocumentStatus.uploaded,
       uploadedAt: DateTime.now(),
@@ -1163,6 +1303,28 @@ class NannyProfileController extends GetxController {
     if (n == null) return;
     final quality = profileQuality;
     nanny.value = n.copyWith(profileScore: quality.totalScore);
+  }
+
+  /// Pauses / resumes her own listing in family browse. Optimistic (the switch
+  /// flips at once) and rolled back, with a message, if the write fails.
+  Future<void> setProfilePaused(bool paused) async {
+    final user = _auth.currentUser.value;
+    if (user == null) return;
+    final previous = profilePaused.value;
+    if (paused == previous) return;
+    profilePaused.value = paused;
+    try {
+      await _userService.setNannyProfilePaused(user.id, paused);
+      final n = nanny.value;
+      if (n != null) nanny.value = n.copyWith(profilePaused: paused);
+      Get.snackbar(
+        AppStrings.successTitle.tr,
+        (paused ? AppStrings.profilePausedOn : AppStrings.profilePausedOff).tr,
+      );
+    } catch (e) {
+      profilePaused.value = previous;
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.profilePausedFailed.tr);
+    }
   }
 }
 

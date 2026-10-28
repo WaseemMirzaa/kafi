@@ -11,7 +11,6 @@ import NannyDetail from './pages/nannies/NannyDetail';
 import AllFamilies from './pages/families/AllFamilies';
 import Subscriptions from './pages/families/Subscriptions';
 import FamilyDetail from './pages/families/FamilyDetail';
-import Revenue from './pages/business/Revenue';
 import Broadcast from './pages/business/Broadcast';
 import Disputes from './pages/disputes/Disputes';
 import DisputeDetail from './pages/disputes/DisputeDetail';
@@ -71,7 +70,8 @@ export default function App() {
                 <Route path="/disputes/:id" element={<DisputeDetailRedirect />} />
                 <Route path="/support" element={<SupportTickets />} />
                 <Route path="/support/:id" element={<SupportTicketDetail />} />
-                <Route path="/revenue" element={<Revenue />} />
+                {/* Revenue page hidden until billing is live — stale links go home */}
+                <Route path="/revenue" element={<Navigate to="/" replace />} />
                 <Route path="/broadcast" element={<Broadcast />} />
                 <Route path="/settings" element={<Settings />} />
                 {/* Unknown paths (typos, stale bookmarks, deleted-entity links)

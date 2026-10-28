@@ -21,11 +21,19 @@ class FamilyJobsController extends GetxController {
   final RxList<HireModel> _activeHires = <HireModel>[].obs;
   final RxBool isLoading = false.obs;
   final RxnString error = RxnString();
+  Worker? _authWorker;
 
   @override
   void onInit() {
     super.onInit();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => load());
     load();
+  }
+
+  @override
+  void onClose() {
+    _authWorker?.dispose();
+    super.onClose();
   }
 
   Future<void> load() async {

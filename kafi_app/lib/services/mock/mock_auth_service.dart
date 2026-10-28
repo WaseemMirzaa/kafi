@@ -12,6 +12,8 @@ class MockAuthService implements IAuthService {
   static const _keyUser = 'mock_current_user';
   static const _keyPendingPhone = 'mock_pending_phone';
   static const _keyPendingRole = 'mock_pending_role';
+  /// Survives logout so the same mock phone cannot flip nanny ↔ family.
+  static const _keyPhoneRoleMap = 'mock_phone_role_map';
 
   UserModel? _memoryUser;
   String? _pendingPhone;
@@ -40,6 +42,24 @@ class MockAuthService implements IAuthService {
     final phone = _pendingPhone ?? prefs.getString(_keyPendingPhone) ?? '+971502345678';
     final roleIndex = prefs.getInt(_keyPendingRole) ?? _pendingRole?.index ?? 0;
     final role = UserType.values[roleIndex];
+
+    final map = Map<String, String>.from(
+      prefs.getStringList(_keyPhoneRoleMap)?.fold<Map<String, String>>({}, (m, e) {
+            final i = e.indexOf('=');
+            if (i > 0) m[e.substring(0, i)] = e.substring(i + 1);
+            return m;
+          }) ??
+          {},
+    );
+    final prior = map[phone];
+    if (prior != null && prior != role.name) {
+      throw Exception('role_mismatch:$prior');
+    }
+    map[phone] = role.name;
+    await prefs.setStringList(
+      _keyPhoneRoleMap,
+      map.entries.map((e) => '${e.key}=${e.value}').toList(),
+    );
 
     _memoryUser = UserModel(
       id: 'mock_${role.name}_1',

@@ -56,8 +56,9 @@ Create / use a Firebase project and register an **Android** app and an **iOS** a
 1. Apple Developer → App ID → enable **Push Notifications**.
 2. Upload an APNs key (or certificates) in Firebase Console → Project settings → Cloud Messaging → Apple app configuration.
 3. Xcode target → **Signing & Capabilities** → Push Notifications (+ Background Modes → Remote notifications). `Runner/Runner.entitlements` already has `aps-environment`.
-4. `AppDelegate` registers for remote notifications and sets `Messaging.messaging().apnsToken` (and Auth APNs token) on device-token receipt.
-5. Rebuild on a **physical device** (Simulator does not receive real APNs). Grant notification permission when prompted after login.
+4. **`FirebaseAppDelegateProxyEnabled` is `true`** in `Info.plist` (Firebase default). Keep it on — with Flutter’s UIScene / `FlutterImplicitEngineDelegate` stack, disabling the proxy breaks Phone Auth (`notification-not-forwarded` / “need to be forwarded to … canHandleNotification”) even when AppDelegate forwards manually. `AppDelegate` still registers for remote notifications and forwards APNs + `canHandleNotification`; `SceneDelegate` forwards reCAPTCHA URLs via `canHandle(url)`.
+5. Do **not** hard-code APNs token type `.prod` in `AppDelegate` — use `.unknown` so sandbox (debug / `flutter run`) vs production is auto-detected.
+6. Rebuild on a **physical device** (Simulator does not receive real APNs). Grant notification permission when prompted after login.
 
 ## 6. Run
 

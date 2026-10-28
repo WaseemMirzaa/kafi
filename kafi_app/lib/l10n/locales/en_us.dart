@@ -197,7 +197,7 @@ const Map<String, String> enUs = {
   AppStrings.mediaPhotosTip: 'Profiles with photos get 3× more views',
   AppStrings.mediaUploadPhoto: 'Add photo',
   AppStrings.mediaVideo: 'Intro Video',
-  AppStrings.mediaVideoRule: 'Max 60 seconds · No phone numbers',
+  AppStrings.mediaVideoRule: 'Max 4 minutes · No phone numbers',
   AppStrings.mediaUploadVideo: 'Record or upload video',
 
   AppStrings.expTitle: 'Work Experience',
@@ -401,15 +401,20 @@ const Map<String, String> enUs = {
   AppStrings.sendTrialOffer: 'Send trial offer →',
   AppStrings.subExpiredBanner: '⚠️ Your subscription expired — renew to view contact details and chat',
   AppStrings.renewNow: 'Renew now',
+  AppStrings.applicantsLockedBanner: '⚠️ Your plan has expired — renew to respond to applicants',
 
   AppStrings.chatTitle: 'Messages',
   AppStrings.chatExpiredTitle: 'Your subscription has expired',
   AppStrings.chatExpiredSub: 'Renew to view chats and contacts',
   AppStrings.chatUnavailable: 'Chat is unavailable right now. Please try again shortly.',
+  AppStrings.chatCannotMessageSelf:
+      'You can’t message yourself. Use a different phone number for family vs nanny accounts.',
   AppStrings.chatExpiredBody:
       'All your messages, shortlists, and contacts are saved and will be restored instantly when you renew.',
   AppStrings.viewPlans: 'View plans',
   AppStrings.chatHintActive: 'Subscribed · Direct contacts unlocked',
+  AppStrings.chatHintUnlocked: 'Unlocked · Direct contacts available',
+  AppStrings.chatHintUnlockNeeded: 'Unlock this nanny to call or WhatsApp',
   AppStrings.chatSend: 'Type a message…',
   AppStrings.chatTrialBadge: 'Trial Active',
   AppStrings.chatEmptyTitle: 'No messages yet',
@@ -663,6 +668,11 @@ const Map<String, String> enUs = {
   AppStrings.settingsPrivacy: 'Privacy',
   AppStrings.settingsOnline: 'Show Online Status',
   AppStrings.settingsOnlineSub: 'Let others see when you are online',
+  AppStrings.profilePauseTitle: 'Pause my profile',
+  AppStrings.profilePauseSub: 'Hide your profile from families. Turn off to appear again.',
+  AppStrings.profilePausedOn: 'Your profile is paused and hidden from families.',
+  AppStrings.profilePausedOff: 'Your profile is visible to families again.',
+  AppStrings.profilePausedFailed: 'Could not update your profile visibility. Please try again.',
   AppStrings.settingsAccount: 'Account',
   AppStrings.settingsChangePassword: 'Change Password',
   AppStrings.settingsRestorePurchases: 'Restore Purchases',
@@ -726,7 +736,10 @@ const Map<String, String> enUs = {
   AppStrings.trialCounterAccepted: 'Counter offer accepted: AED @rate/day',
   AppStrings.trialCounterDeclined: 'Counter offer declined',
   AppStrings.chatExpiredListBanner:
-      'Your subscription expired. Older conversations are hidden until you renew — tap to renew.',
+      'Your subscription expired. Chats are locked until you renew — tap to renew.',
+  AppStrings.chatThreadLockedHint: 'Locked · Renew to open this chat',
+  AppStrings.chatThreadLockedBadge: 'Locked',
+  AppStrings.chatComposerLockedHint: 'Renew to send messages…',
   AppStrings.nannyFullNameRequired: 'Please enter your full name.',
   AppStrings.nannyDobRequired: 'Please select your date of birth.',
   AppStrings.nannyLanguagesRequired: 'Please select at least one language.',
@@ -993,6 +1006,12 @@ const Map<String, String> enUs = {
 
   // Auth errors & flow (System Spec §14.1)
   AppStrings.authPhoneInvalid: 'Please enter a valid phone number',
+  AppStrings.authPhoneWrongRole:
+      'This number is registered as a @role. One number = one role. Sign in as that role, or use a different number.',
+  AppStrings.authPhoneWrongRoleTitle: 'Wrong account type',
+  AppStrings.authRoleMismatchOk: 'OK',
+  AppStrings.authRoleNanny: 'nanny',
+  AppStrings.authRoleFamily: 'family',
   AppStrings.authOtpIncorrect: 'Invalid code. Please check and try again.',
   AppStrings.authOtpSendFailed: "Couldn't send code. Check your number and try again.",
   AppStrings.authSmsRegionDisabled:
@@ -1085,7 +1104,14 @@ const Map<String, String> enUs = {
   AppStrings.nannyCurrentAreaRequired: 'Please add your current area / neighbourhood.',
   AppStrings.nannyPhotosMin3: 'Please add at least 3 photos.',
   AppStrings.nannyVideoRequired: 'Please add a short intro video.',
-  AppStrings.nannyVideoTooLong: 'Video must be 60 seconds or less. Please trim it or choose a shorter clip.',
+  AppStrings.nannyVideoTooLong: 'Video must be 4 minutes or less. Please trim it or choose a shorter clip.',
+  AppStrings.nannyVideoTooLarge:
+      'Video is too large (max @mb MB). Record at a shorter length or lower quality.',
+  AppStrings.nannyVideoUploadDenied:
+      'Could not upload this video (size or permission). Try a shorter clip on Wi‑Fi.',
+  AppStrings.nannyVideoUploadNetwork:
+      'Upload lost network connection. Stay on Wi‑Fi and try again.',
+  AppStrings.nannyVideoUploadFailed: 'Video upload failed. Please try again.',
   AppStrings.mediaCover: 'Cover',
   AppStrings.mediaIntroVideo: 'My intro video',
   AppStrings.mediaVideoReady: 'Ready to submit',
@@ -1093,6 +1119,9 @@ const Map<String, String> enUs = {
   AppStrings.docUploadingHint: 'This may take a moment — please keep the app open.',
   AppStrings.docUploadFailed: 'Upload failed. Please check your connection and try again.',
   AppStrings.docPickFailed: "Couldn't open that file. Please try another.",
+  AppStrings.docChooseSource: 'Add a document',
+  AppStrings.docChooseAlbum: 'Choose from album',
+  AppStrings.docChooseFile: 'Choose a file',
   AppStrings.docTooLarge: 'That file is too large. Please choose a file under 25 MB.',
 
   // Family job — employment type + edit fields
@@ -1119,7 +1148,7 @@ const Map<String, String> enUs = {
   AppStrings.mediaTitle: 'Your nanny profile',
   AppStrings.mediaSubtitle: 'Let families see & hear you 🌸',
   AppStrings.mediaPhotosHeader: 'Profile Photos (min 3, max 5)',
-  AppStrings.mediaVideoHeader: 'Intro Video (max 60 seconds)',
+  AppStrings.mediaVideoHeader: 'Intro Video (max 4 minutes)',
   AppStrings.mediaTapAdd: 'Tap to add photos or videos',
   AppStrings.mediaPhotoRule: 'No sunglasses · No heavy filters · Min 3 photos',
   AppStrings.mediaChoosePhotoSource: 'Add a photo',
@@ -1130,6 +1159,17 @@ const Map<String, String> enUs = {
   AppStrings.mediaPhotoViews: '📈 Profiles with photos get 3× more views',
   AppStrings.mediaRecordTitle: 'Record your intro video',
   AppStrings.mediaRecordSub: 'Let families meet the real you 🌸',
+  AppStrings.mediaRecorderTitle: 'Intro video',
+  AppStrings.mediaRecorderHint: 'Up to @mins minutes',
+  AppStrings.mediaRecorderTapStart: 'Tap to start recording',
+  AppStrings.mediaRecorderTapStop: 'Tap to stop',
+  AppStrings.mediaRecorderNoCamera: 'No camera found on this device.',
+  AppStrings.mediaRecorderInitFailed: 'Could not open the camera. Please try again.',
+  AppStrings.mediaRecorderStartFailed: 'Could not start recording. Please try again.',
+  AppStrings.mediaRecorderStopFailed: 'Could not save the recording. Please try again.',
+  AppStrings.mediaRecorderTooShort: 'Record a bit longer, then stop.',
+  AppStrings.mediaRecorderSwitchCamera: 'Switch camera',
+  AppStrings.mediaRecorderInterrupted: 'Recording was interrupted — we kept what you had recorded.',
   AppStrings.docsScreenTitle: 'Upload documents',
   AppStrings.docsScreenSubtitle: 'Admin verifies these before you go live 🔒',
   AppStrings.docsMandatoryHeader: 'Mandatory documents',
@@ -1228,7 +1268,7 @@ const Map<String, String> enUs = {
   AppStrings.fldBioHint: 'Tell families a little about yourself...',
 
   // Nanny media screen — l10n sweep
-  AppStrings.mediaRuleMaxDuration: 'Maximum 60 seconds — strict limit',
+  AppStrings.mediaRuleMaxDuration: 'Maximum 4 minutes — strict limit',
   AppStrings.mediaRuleLighting: 'Speak clearly, smile, good lighting',
   AppStrings.mediaRuleNoPhone: 'Do NOT share phone number in video',
   AppStrings.mediaWhatToSay: 'What to say:',

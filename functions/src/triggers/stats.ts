@@ -5,7 +5,9 @@ import {
 } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getUser } from '../utils/notifications';
+import { recomputeNannyBrowseHidden } from '../utils/nannyBrowseVisibility';
 import { tn } from '../i18n/notifications';
+import { FREE_NANNY_UNLOCK_LIMIT } from '../utils/subscriptionPlans';
 
 /// Clamps a counter to `>= 0` after applying a delta, tolerating a missing or
 /// non-numeric current value. Pure so the floor behaviour can be unit-tested.
@@ -43,11 +45,31 @@ export const onShortlistDeleted = onDocumentDeleted('shortlists/{shortlistId}', 
   });
 });
 
+export type ProfileViewDecision = 'record' | 'already' | 'subscribed' | 'locked' | 'limit';
+
+/// Whether a profile-view event may burn one of the family's free unlocks.
+/// The app counts unlocks itself, but a client can't be trusted to — this is
+/// the real cap. Only the FREE tier spends unlocks: a subscriber has no need to
+/// (the app never records one), and an expired family is never re-granted any.
+/// A family in payment grace keeps its access and spends nothing. Pure so the rules can be unit tested.
+export function decideProfileView(
+  fam: { subscription?: { status?: string } | null; viewedProfiles?: unknown },
+  nannyId: string,
+): ProfileViewDecision {
+  const viewed = Array.isArray(fam.viewedProfiles) ? (fam.viewedProfiles as string[]) : [];
+  if (viewed.includes(nannyId)) return 'already';
+  const status = fam.subscription?.status;
+  if (status === 'active' || status === 'cancelled' || status === 'paymentFailed') return 'subscribed';
+  if (status !== undefined && status !== null && status !== 'free') return 'locked';
+  return viewed.length >= FREE_NANNY_UNLOCK_LIMIT ? 'limit' : 'record';
+}
+
 /// A family records a profile view by creating `profileViews/{familyId}_{nannyId}`
 /// (deterministic id → one event per pair). The family can't write its own
 /// `viewedProfiles`/`freeContactsUsed` or the nanny's stats (security rules), so
 /// this trigger owns both: it burns a free contact only the FIRST time a family
-/// views a given nanny, and bumps the nanny's server-owned profileViews stat.
+/// views a given nanny, never past [FREE_NANNY_UNLOCK_LIMIT], and bumps the
+/// nanny's server-owned profileViews stat.
 export const onProfileViewed = onDocumentCreated('profileViews/{viewId}', async (event) => {
   const view = event.data?.data();
   const familyId = view?.familyId as string | undefined;
@@ -55,25 +77,26 @@ export const onProfileViewed = onDocumentCreated('profileViews/{viewId}', async 
   if (!familyId || !nannyId) return;
   const db = admin.firestore();
 
-  // Family free-contact accounting — only new views count.
-  let isNew = false;
-  await db.runTransaction(async (tx) => {
+  // Family free-contact accounting — only new views count, up to the cap.
+  const decision = await db.runTransaction(async (tx): Promise<ProfileViewDecision> => {
     const ref = db.collection('families').doc(familyId);
-    const snap = await tx.get(ref);
-    const viewed: string[] = Array.isArray(snap.data()?.viewedProfiles)
-      ? (snap.data()!.viewedProfiles as string[])
-      : [];
-    if (viewed.includes(nannyId)) return;
-    isNew = true;
-    viewed.push(nannyId);
-    tx.set(
-      ref,
-      { viewedProfiles: viewed, freeContactsUsed: admin.firestore.FieldValue.increment(1) },
-      { merge: true },
-    );
+    const data = (await tx.get(ref)).data() ?? {};
+    const d = decideProfileView(data, nannyId);
+    if (d === 'record') {
+      const viewed = [...((data.viewedProfiles as string[] | undefined) ?? []), nannyId];
+      tx.set(
+        ref,
+        { viewedProfiles: viewed, freeContactsUsed: admin.firestore.FieldValue.increment(1) },
+        { merge: true },
+      );
+    }
+    return d;
   });
 
-  if (!isNew) return;
+  // Leave the outcome on the event doc so a refused unlock is diagnosable.
+  await event.data!.ref.set({ outcome: decision }, { merge: true });
+
+  if (decision !== 'record') return;
   await db
     .collection('nannies')
     .doc(nannyId)
@@ -96,6 +119,9 @@ export const onHireCreated = onDocumentCreated('hires/{hireId}', async (event) =
     .collection('nannies')
     .doc(nannyId)
     .set({ stats: { hiresCount: admin.firestore.FieldValue.increment(1) } }, { merge: true });
+
+  // Hide from family Browse while actively hired.
+  await recomputeNannyBrowseHidden(nannyId);
 
   // Tell the nanny. The ongoing relationship lives in Messages (matching the
   // app's own convention), so route the tap there.
@@ -135,6 +161,10 @@ export const onHireEnded = onDocumentUpdated('hires/{hireId}', async (event) => 
     familyId: String(after.familyId ?? ''),
     route: '/chat',
   };
+
+  // Re-open browse once no active hire (and no live trial) remains.
+  const endedNannyId = after.nannyId as string | undefined;
+  if (endedNannyId) await recomputeNannyBrowseHidden(endedNannyId);
 
   if (reason === 'resigned') {
     // The nanny resigned → notify the family.

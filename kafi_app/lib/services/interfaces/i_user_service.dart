@@ -12,6 +12,10 @@ abstract class IUserService {
   /// ignore failures.
   Future<void> touchNannyActive(String nannyId);
 
+  /// Pauses / resumes the nanny's own listing in family browse. Written on its
+  /// own (never via [saveNanny]) so a stale profile snapshot can't undo it.
+  Future<void> setNannyProfilePaused(String nannyId, bool paused);
+
   /// Persists sensitive document download URLs to the **private**
   /// `nannies/{id}/documents/{type}` subcollection (owner/admin only) instead of
   /// the world-readable parent doc (C5). The admin panel reads these to review.

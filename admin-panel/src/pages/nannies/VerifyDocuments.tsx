@@ -15,11 +15,11 @@ import { NannyService, NannyRow } from '../../services/firestore';
 import { gradientFor, initials } from '../../utils/avatar';
 import { useAuthStore } from '../../hooks/useAuth';
 import { NannyProfileView } from '../../components/nanny/NannyProfileView';
-import { DocThumb } from '../../components/nanny/DocFilePreview';
+import { DocViewer } from '../../components/nanny/DocFilePreview';
 import { FilterBar, FilterSelect, Pagination } from '../../components/ui/ListControls';
 import { useListControls } from '../../hooks/useListControls';
 import { useLocale } from '../../context/LocaleContext';
-import { docStatusLabel } from '../../utils/nannyLabels';
+import { docStatusLabel, nannyProfileStatusLabel } from '../../utils/nannyLabels';
 import { t as translate, TranslationKey } from '../../locales/t';
 
 // Mirrors the app's real DocumentStatus enum (nanny_model.dart): missing,
@@ -27,6 +27,17 @@ import { t as translate, TranslationKey } from '../../locales/t';
 // and 'pending' (mock-only labels that never match a real doc) and omitted
 // 'reviewing', so those filters were always empty.
 const DOC_STATUSES = ['missing', 'uploaded', 'reviewing', 'approved', 'rejected'];
+
+/** Canonical slots from Flutter `DocumentType` — always show all five in review. */
+const DOC_TYPES = [
+  'passport',
+  'visa',
+  'emiratesId',
+  'trainingCert',
+  'policeClearance',
+] as const;
+
+const MANDATORY_DOC_TYPES = new Set(['passport', 'visa']);
 
 const docLabelKeys: Record<string, TranslationKey> = {
   passport: 'nannyLabels.docType.passport',
@@ -36,6 +47,45 @@ const docLabelKeys: Record<string, TranslationKey> = {
   policeClearance: 'nannyLabels.docType.policeClearance',
 };
 const docLabel = (type: string): string => (docLabelKeys[type] ? translate(docLabelKeys[type]) : type);
+
+type DocRow = { type: string; status: string; url?: string; rejectionReason?: string };
+
+/** Merge embedded `documents[]` + private subcollection URLs into the full checklist. */
+function buildDocChecklist(
+  nanny: NannyRow,
+  urls: Record<string, string>,
+): DocRow[] {
+  const byType = new Map<string, DocRow>();
+  for (const d of nanny.documents ?? []) {
+    byType.set(d.type, { ...d });
+  }
+  // Subcollection may have a file even if the parent array omitted the slot.
+  for (const [type, url] of Object.entries(urls)) {
+    const existing = byType.get(type);
+    if (existing) {
+      byType.set(type, { ...existing, url: existing.url ?? url });
+    } else {
+      byType.set(type, { type, status: 'uploaded', url });
+    }
+  }
+  return DOC_TYPES.map((type) => {
+    const row = byType.get(type);
+    if (!row) return { type, status: 'missing' };
+    return { ...row, url: row.url ?? urls[type] };
+  });
+}
+
+function canReviewDoc(status: string): boolean {
+  return status === 'uploaded' || status === 'reviewing' || status === 'rejected';
+}
+
+function isUnverifiedDoc(status: string): boolean {
+  return status === 'uploaded' || status === 'reviewing';
+}
+
+function unverifiedDocCount(n: NannyRow): number {
+  return (n.documents ?? []).filter((d) => isUnverifiedDoc(d.status)).length;
+}
 
 function docVariant(status: string): string {
   if (status === 'approved') return 'verified';
@@ -254,21 +304,29 @@ export default function VerifyDocuments() {
               {pending.length === 0 ? t('nannies.allCaughtUpDocs') : t('nannies.noMatchFilters')}
             </div>
           )}
-          {lc.pageItems.map((d) => (
-            <Row key={d.id}>
-              <Avatar letter={initials(d.fullName)} gradient={gradientFor(d.id)} />
-              <div className="flex-1 min-w-0">
-                <div className="text-[10.5px] font-extrabold text-navy">{d.fullName}</div>
-                <div className="text-[8.5px] font-semibold text-[#8090B0]">
-                  {d.nationality} · {d.city} · {t('nannies.documentsCount', { count: (d.documents ?? []).length })}
+          {lc.pageItems.map((d) => {
+            const unverified = unverifiedDocCount(d);
+            return (
+              <Row key={d.id}>
+                <Avatar letter={initials(d.fullName)} gradient={gradientFor(d.id)} />
+                <div className="flex-1 min-w-0">
+                  <div className="text-[10.5px] font-extrabold text-navy">{d.fullName}</div>
+                  <div className="text-[8.5px] font-semibold text-[#8090B0]">
+                    {d.nationality} · {d.city} ·{' '}
+                    {t('nannies.profileStatus', {
+                      status: nannyProfileStatusLabel(d.status),
+                    })}
+                  </div>
                 </div>
-              </div>
-              <StatusBadge variant="verify">{t('nannies.needsReview')}</StatusBadge>
-              <button type="button" className="qa-btn qa-p" onClick={() => openDocs(d)}>
-                {t('common.view')}
-              </button>
-            </Row>
-          ))}
+                <StatusBadge variant="verify">
+                  {t('nannies.unverifiedDocsCount', { count: unverified })}
+                </StatusBadge>
+                <button type="button" className="qa-btn qa-p" onClick={() => openDocs(d)}>
+                  {t('common.view')}
+                </button>
+              </Row>
+            );
+          })}
           <Pagination
             page={lc.page}
             pageCount={lc.pageCount}
@@ -286,7 +344,7 @@ export default function VerifyDocuments() {
         {/* ── Documents popup ── */}
         {docsFor && (
           <div className="fixed inset-0 bg-black/40 z-50 flex items-center justify-center px-4 py-6">
-            <div className="admin-card w-full max-w-2xl max-h-[88vh] flex flex-col overflow-hidden">
+            <div className="admin-card w-full max-w-3xl max-h-[88vh] flex flex-col overflow-hidden">
               {/* Header */}
               <div className="flex items-center gap-2.5 px-4 py-3 border-b border-[#EBEEF8]">
                 <Avatar letter={initials(docsFor.fullName)} gradient={gradientFor(docsFor.id)} />
@@ -321,70 +379,214 @@ export default function VerifyDocuments() {
                   <NannyProfileView nanny={docsFor} showDocuments={false} />
                 ) : (
                   <>
-                    <div className="text-[9px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">
-                      {t('nannies.submittedDocuments', { count: (docsFor.documents ?? []).length })}
-                    </div>
-                    {(docsFor.documents ?? []).length === 0 ? (
-                      <div className="text-[10px] text-[#8090B0]">{t('nannies.noDocumentsUploaded')}</div>
-                    ) : (
-                      <div className="flex flex-col gap-2">
-                        {(docsFor.documents ?? []).map((doc) => {
-                          const docBusyKey = `${docsFor.id}:${doc.type}`;
-                          // Prefer the inline url (mock / legacy data), else the
-                          // one fetched from the private documents subcollection.
-                          const docUrl = doc.url ?? docUrls[doc.type];
-                          return (
-                            <div
-                              key={doc.type}
-                              className="flex items-center gap-3 rounded-lg border border-[#EBEEF8] p-2"
-                            >
-                              <DocThumb url={docUrl} label={docLabel(doc.type)} />
-                              <div className="flex-1 min-w-0">
-                                <div className="text-[10.5px] font-extrabold text-navy">
-                                  {docLabel(doc.type)}
-                                </div>
-                                {doc.rejectionReason && (
-                                  <div className="text-[8.5px] font-semibold text-rose-dark mt-0.5">
-                                    {doc.rejectionReason}
-                                  </div>
-                                )}
-                                {docUrl && (
-                                  <a
-                                    href={docUrl}
-                                    target="_blank"
-                                    rel="noreferrer"
-                                    className="text-[8.5px] font-bold text-purple font-fredoka"
-                                  >
-                                    {t('common.openFile')}
-                                  </a>
-                                )}
-                              </div>
-                              <StatusBadge variant={docVariant(doc.status)}>{docStatusLabel(doc.status)}</StatusBadge>
-                              {doc.status !== 'approved' && (
-                                <div className="flex gap-1">
-                                  <button
-                                    type="button"
-                                    className="verify-btn"
-                                    disabled={busyId === docBusyKey}
-                                    onClick={() => approveDoc(docsFor, doc.type)}
-                                  >
-                                    ✓
-                                  </button>
-                                  <button
-                                    type="button"
-                                    className="reject-btn"
-                                    disabled={busyId === docBusyKey}
-                                    onClick={() => setDocRejectFor({ nanny: docsFor, docType: doc.type })}
-                                  >
-                                    ✗
-                                  </button>
-                                </div>
-                              )}
-                            </div>
-                          );
+                    {/* Identity summary — always shown before document approve/reject */}
+                    <div className="rounded-lg border border-[#EBEEF8] bg-[#F8F9FD] p-3 mb-3">
+                      <div className="text-[10px] font-black text-navy">
+                        {t('nannies.identityMatchTitle')}
+                      </div>
+                      <div className="text-[8.5px] font-semibold text-[#8090B0] mt-0.5 mb-2.5">
+                        {t('nannies.identityMatchHint')}
+                      </div>
+
+                      <div className="text-[9px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">
+                        {t('nannies.photosCount', { count: docsFor.photoUrls?.length ?? 0 })}
+                      </div>
+                      {(docsFor.photoUrls?.length ?? 0) === 0 ? (
+                        <div className="text-[10px] text-[#8090B0] mb-3">{t('nannies.noPhotosUploaded')}</div>
+                      ) : (
+                        <div className="flex flex-wrap gap-2 mb-3">
+                          {docsFor.photoUrls!.map((url, i) => (
+                            <a key={url + i} href={url} target="_blank" rel="noreferrer">
+                              <img
+                                src={url}
+                                alt={`${docsFor.fullName} ${i + 1}`}
+                                className="w-20 h-20 rounded-lg object-cover border border-[#EBEEF8] bg-white"
+                                loading="lazy"
+                              />
+                            </a>
+                          ))}
+                        </div>
+                      )}
+
+                      <div className="flex items-center gap-2 mb-1.5">
+                        <div className="text-[9px] font-bold text-[#8090B0] uppercase tracking-wide">
+                          {t('nannies.introVideo')}
+                        </div>
+                        {docsFor.introVideoUrl && docsFor.introVideoStatus && (
+                          <StatusBadge variant={docVariant(docsFor.introVideoStatus)}>
+                            {docStatusLabel(docsFor.introVideoStatus)}
+                          </StatusBadge>
+                        )}
+                      </div>
+                      {!docsFor.introVideoUrl ? (
+                        <div className="text-[10px] text-[#8090B0] mb-3">{t('nannies.noIntroVideo')}</div>
+                      ) : (
+                        <div
+                          className={`mb-3 rounded-lg p-2 ${
+                            docsFor.introVideoStatus === 'approved'
+                              ? ''
+                              : 'bg-amber-50 ring-1 ring-amber-200'
+                          }`}
+                        >
+                          <video
+                            src={docsFor.introVideoUrl}
+                            controls
+                            preload="metadata"
+                            className="w-full max-h-56 rounded-lg bg-black"
+                          />
+                          <a
+                            href={docsFor.introVideoUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="inline-block mt-1 text-[8.5px] font-bold text-purple font-fredoka"
+                          >
+                            {t('common.openVideo')}
+                          </a>
+                        </div>
+                      )}
+
+                      <div className="text-[9px] font-bold text-[#8090B0] uppercase tracking-wide mb-1.5">
+                        {t('nannies.workExperienceCount', {
+                          count: docsFor.experiences?.length ?? 0,
                         })}
                       </div>
-                    )}
+                      {(docsFor.experiences?.length ?? 0) === 0 ? (
+                        <div className="text-[10px] text-[#8090B0]">{t('nannies.noExperienceListed')}</div>
+                      ) : (
+                        <div className="flex flex-col gap-1.5">
+                          {docsFor.experiences!.map((exp, i) => {
+                            const place =
+                              exp.cityCountry ||
+                              [exp.city, exp.country].filter(Boolean).join(', ');
+                            return (
+                              <div
+                                key={exp.id ?? i}
+                                className="rounded-lg border border-[#EBEEF8] bg-white p-2"
+                              >
+                                <div className="flex items-center justify-between gap-2">
+                                  <div className="text-[10.5px] font-extrabold text-navy truncate">
+                                    {exp.jobTitle || '—'}
+                                  </div>
+                                  <div className="text-[8px] font-semibold text-[#8090B0] shrink-0">
+                                    {exp.fromDate ? String(exp.fromDate).slice(0, 10) : '—'}
+                                    {' – '}
+                                    {exp.toDate ? String(exp.toDate).slice(0, 10) : '—'}
+                                  </div>
+                                </div>
+                                <div className="text-[9px] font-semibold text-[#8090B0] mt-0.5">
+                                  {exp.employer || '—'}
+                                  {place ? ` · ${place}` : ''}
+                                </div>
+                                {exp.children && (
+                                  <div className="text-[8.5px] text-navy/70 mt-0.5">
+                                    {t('nannies.children')}: {exp.children}
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+
+                    {(() => {
+                      const checklist = buildDocChecklist(docsFor, docUrls).slice().sort((a, b) => {
+                        // Unverified first, then rejected, then approved, missing last.
+                        const rank = (s: string) =>
+                          isUnverifiedDoc(s) ? 0 : s === 'rejected' ? 1 : s === 'approved' ? 2 : 3;
+                        return rank(a.status) - rank(b.status);
+                      });
+                      const uploadedCount = checklist.filter(
+                        (d) => d.status !== 'missing' && !!d.url,
+                      ).length;
+                      const unverifiedCount = checklist.filter((d) => isUnverifiedDoc(d.status)).length;
+                      return (
+                        <>
+                          <div className="text-[9px] font-bold text-[#8090B0] uppercase tracking-wide mb-2">
+                            {t('nannies.allDocumentSlots', { count: checklist.length })}
+                            <span className="normal-case font-semibold text-[#A0ADC8] ml-1">
+                              · {t('nannies.docsUploadedOfSlots', {
+                                uploaded: uploadedCount,
+                                total: checklist.length,
+                              })}
+                              {' · '}
+                              {t('nannies.unverifiedDocsCount', { count: unverifiedCount })}
+                            </span>
+                          </div>
+                          <div className="flex flex-col gap-3">
+                            {checklist.map((doc) => {
+                              const docBusyKey = `${docsFor.id}:${doc.type}`;
+                              const docUrl = doc.url;
+                              const reviewable = canReviewDoc(doc.status) && !!docUrl;
+                              const slotHint =
+                                doc.type === 'emiratesId'
+                                  ? t('nannies.docConditional')
+                                  : MANDATORY_DOC_TYPES.has(doc.type)
+                                    ? t('nannies.docMandatory')
+                                    : t('nannies.docOptional');
+                              return (
+                                <div
+                                  key={doc.type}
+                                  className={`rounded-lg border overflow-hidden ${
+                                    isUnverifiedDoc(doc.status)
+                                      ? 'border-amber-300 ring-1 ring-amber-200'
+                                      : 'border-[#EBEEF8]'
+                                  }`}
+                                >
+                                  <div
+                                    className={`flex items-center gap-2 px-3 py-2 border-b border-[#EBEEF8] ${
+                                      isUnverifiedDoc(doc.status) ? 'bg-amber-50' : 'bg-[#F8F9FD]'
+                                    }`}
+                                  >
+                                    <div className="flex-1 min-w-0">
+                                      <div className="text-[10.5px] font-extrabold text-navy">
+                                        {docLabel(doc.type)}
+                                      </div>
+                                      <div className="text-[8px] font-semibold text-[#8090B0]">
+                                        {slotHint}
+                                      </div>
+                                      {doc.rejectionReason && (
+                                        <div className="text-[8.5px] font-semibold text-rose-dark mt-0.5">
+                                          {doc.rejectionReason}
+                                        </div>
+                                      )}
+                                    </div>
+                                    <StatusBadge variant={docVariant(doc.status)}>
+                                      {docStatusLabel(doc.status)}
+                                    </StatusBadge>
+                                    {reviewable && (
+                                      <div className="flex gap-1">
+                                        <button
+                                          type="button"
+                                          className="verify-btn"
+                                          disabled={busyId === docBusyKey}
+                                          onClick={() => approveDoc(docsFor, doc.type)}
+                                        >
+                                          ✓
+                                        </button>
+                                        <button
+                                          type="button"
+                                          className="reject-btn"
+                                          disabled={busyId === docBusyKey}
+                                          onClick={() =>
+                                            setDocRejectFor({ nanny: docsFor, docType: doc.type })
+                                          }
+                                        >
+                                          ✗
+                                        </button>
+                                      </div>
+                                    )}
+                                  </div>
+                                  <div className="p-3">
+                                    <DocViewer url={docUrl} label={docLabel(doc.type)} />
+                                  </div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </>
+                      );
+                    })()}
                   </>
                 )}
               </div>
@@ -396,6 +598,7 @@ export default function VerifyDocuments() {
                   className="qa-btn qa-g"
                   disabled={busyId === docsFor.id}
                   onClick={() => approve(docsFor)}
+                  title={t('nannies.approveAllHint')}
                 >
                   {t('nannies.approveAll')}
                 </button>

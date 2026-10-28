@@ -2,12 +2,10 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<!-- production covers both App Store and TestFlight (internal + external).
-	     Debug builds on simulator/device still work — APNs sandbox is used
-	     automatically when the device runs a development-signed build. -->
+	<!-- Xcode rewrites this to development for Debug / flutter-run installs.
+	     App Store / TestFlight keep production. Firebase Auth APNs type is
+	     set to `.unknown` in AppDelegate so sandbox vs prod is auto-detected. -->
 	<key>aps-environment</key>
 	<string>production</string>
-	<key>keychain-access-groups</key>
-	<array/>
 </dict>
 </plist>

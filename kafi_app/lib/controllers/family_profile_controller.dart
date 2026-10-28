@@ -24,6 +24,11 @@ class FamilyProfileController extends GetxController {
   final AuthController _auth = Get.find<AuthController>();
   final _uuid = const Uuid();
 
+  /// Last family uid this form was bound to. Permanent controller must clear /
+  /// rehydrate when another family signs in after logout.
+  String? _boundUid;
+  Worker? _authWorker;
+
   /// The specific post the edit form targets (a family may hold one full-time
   /// and one part-time post). Null = the generic edit, which uses the most
   /// recent post. Set via [startJobEdit] (M6).
@@ -84,7 +89,45 @@ class FamilyProfileController extends GetxController {
   @override
   void onInit() {
     super.onInit();
-    _hydrateFromCurrentUser();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => _syncToAuth());
+    _syncToAuth();
+  }
+
+  /// Clears prior family's form when signed out / switched, then hydrates the
+  /// newly signed-in family (permanent controller survives [Get.offAllNamed]).
+  Future<void> _syncToAuth() async {
+    final user = _auth.currentUser.value;
+    if (user == null || !user.isFamily) {
+      if (_boundUid != null) _clearSessionState();
+      _boundUid = null;
+      return;
+    }
+    if (user.id == _boundUid) return;
+    _clearSessionState();
+    _boundUid = user.id;
+    await _hydrateFromCurrentUser();
+  }
+
+  /// Wipes in-memory profile + job form so Settings / Edit never show the
+  /// previous account's name/photo after logout.
+  void _clearSessionState() {
+    _editJobId = null;
+    family.value = null;
+    profilePhoto.value = null;
+    fullNameCtrl.clear();
+    nationality.value = 'Emirati';
+    cityEmirate.value = null;
+    childrenCtrl.text = '2';
+    childrenAgesCtrl.clear();
+    languages.value = <String>['English', 'Arabic'];
+    hasCameras.value = true;
+    petTypes.clear();
+    aboutFamilyCtrl.clear();
+    religion.value = '';
+    religionPref.value = NannyReligionPreference.noPreference;
+    houseRulesCtrl.clear();
+    _resetJobSpecificFieldsKeepingFamily();
+    employmentLocked.value = false;
   }
 
   /// Called each time Screen 13 opens for a new post (permanent controller).
@@ -237,6 +280,7 @@ class FamilyProfileController extends GetxController {
 
   @override
   void onClose() {
+    _authWorker?.dispose();
     fullNameCtrl.dispose();
     childrenCtrl.dispose();
     childrenAgesCtrl.dispose();

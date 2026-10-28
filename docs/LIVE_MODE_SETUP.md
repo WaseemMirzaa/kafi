@@ -171,18 +171,44 @@ flutter run -d chrome             # web, live Firebase
 
 ## 5. Cloud Functions (`functions/`)
 
-1. Set the RevenueCat webhook secret (secret #8):
+1. Put the RevenueCat values in `functions/.env` (gitignored; `firebase deploy` uploads it as
+   plain function environment variables):
    ```bash
-   firebase functions:secrets:set REVENUECAT_WEBHOOK_SECRET
+   REVENUECAT_WEBHOOK_SECRET=<long random string>   # authenticates RevenueCat -> webhook
+   REVENUECAT_API_KEY=sk_...                        # RevenueCat secret REST key (server only)
    ```
-   (or a `.env` for the emulator). `triggers/webhook.ts` rejects webhook calls without it.
+   - `REVENUECAT_WEBHOOK_SECRET` is **required**; `triggers/webhook.ts` answers 500 without it.
+   - `REVENUECAT_API_KEY` (RevenueCat -> API keys -> *Secret* key, never the public `appl_`/`goog_`
+     SDK keys) powers `syncSubscription`, `subscriptionReconciler` and `TRANSFER` handling. Without it
+     the app still works off the webhook alone, but a missed webhook is not self-healing.
+   - Do **not** also run `firebase functions:secrets:set` for the same name: secrets are only injected
+     into functions that declare `secrets: [...]` (this one does not), and a name defined as both an env
+     var and a secret fails the deploy.
 2. Deploy:
    ```bash
    cd functions && npm install && npm run build
    firebase deploy --only functions
+   firebase deploy --only firestore:rules
    ```
-3. Point the **RevenueCat dashboard** webhook at the deployed `revenueCatWebhook` URL with
-   the same shared secret.
+3. In the **RevenueCat dashboard**:
+   - Project settings -> Integrations -> Webhooks: URL = the deployed `revenueCatWebhook` URL,
+     Authorization header = the same `REVENUECAT_WEBHOOK_SECRET` (bare or `Bearer <secret>`), all events.
+   - Project settings -> **Restore behavior**: set to **Keep with original App User ID**, so one Apple ID
+     on a shared phone cannot move a plan from one Kafi account to another. (`TRANSFER` is still handled
+     if it happens.)
+   - Entitlement `family_premium` with products `kafi_weekly`, `kafi_monthly`, `kafi_bimonthly`;
+     offering `default`.
+4. Test: "Send test event" in the webhook page. 404/200 = authenticated; 401 = secret mismatch.
+
+### How subscription state stays correct
+| Layer | Role |
+|---|---|
+| `revenueCatWebhook` | Primary writer of `families/{id}.subscription` (purchase, expiry, refund, transfer). Ignores duplicate/out-of-order events. |
+| `syncSubscription` (callable) | App calls it on open, resume, sign-in, purchase and restore; re-verifies with RevenueCat and corrects Firestore. |
+| `subscriptionReconciler` (daily) | Re-verifies paid families not checked in 48h - catches a webhook that never arrived. |
+| `subscriptionExpiredEnforcer` (hourly) | Flips status at `endDate` whether or not the user opens the app. |
+| Firestore rules | Check `endDate` directly, so access ends at the exact moment. |
+| App | Listens to the family doc live; Firestore is the only thing that unlocks features. |
 
 ---
 

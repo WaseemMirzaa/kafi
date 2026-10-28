@@ -156,9 +156,12 @@ class TrialController extends GetxController {
     return null;
   }
 
+  Worker? _authWorker;
+
   @override
   void onInit() {
     super.onInit();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => refreshAll());
     refreshAll();
   }
 
@@ -249,6 +252,7 @@ class TrialController extends GetxController {
 
   @override
   void onClose() {
+    _authWorker?.dispose();
     _displayedTrialSub?.cancel();
     super.onClose();
   }
@@ -278,6 +282,19 @@ class TrialController extends GetxController {
   Future<void> refreshAll() async {
     final familyId = currentFamilyId(_auth);
     final nannyId = _auth.currentUser.value?.isNanny == true ? currentUserId(_auth) : null;
+    if (familyId == null && nannyId == null) {
+      await _displayedTrialSub?.cancel();
+      _displayedTrialSub = null;
+      _watchedTrialId = null;
+      all.clear();
+      active.value = null;
+      selected.value = null;
+      dayProofs.clear();
+      nannyCards.clear();
+      familyDisplayName.value = null;
+      _resetForm();
+      return;
+    }
     if (familyId != null) {
       all.value = await _trials.listTrials(familyId);
       TrialModel? act;

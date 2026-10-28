@@ -282,13 +282,6 @@ export default function Dashboard() {
             </svg>
             {t('dashboard.verifyDocsCount', { count: pendingDocs.length })}
           </Link>
-          <Link to="/revenue" className="qa-btn qa-g">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-              <line x1="12" y1="1" x2="12" y2="23" />
-              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-            </svg>
-            {t('dashboard.viewRevenue')}
-          </Link>
           <Link to="/broadcast" className="qa-btn qa-p">
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
               <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />

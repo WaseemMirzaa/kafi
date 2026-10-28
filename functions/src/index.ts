@@ -14,6 +14,7 @@ import { onDocumentReviewed } from './triggers/nanny';
 import {
   subscriptionExpiredEnforcer,
   subscriptionExpiringReminder,
+  browseVisibilityReconciler,
   trialOutcomeDetector,
   trialStartingReminder,
 } from './triggers/scheduled';
@@ -29,8 +30,10 @@ import {
   onHireEnded,
 } from './triggers/stats';
 import { onContactRevealRequested } from './triggers/contact';
+import { onFamilySubscriptionWritten } from './triggers/family';
 import { bootstrapFirstAdmin } from './bootstrapAdmin';
 import { syncMockSubscription } from './mockSubscription';
+import { syncSubscription, subscriptionReconciler } from './triggers/subscriptionSync';
 
 admin.initializeApp();
 
@@ -49,6 +52,7 @@ export {
   onDocumentReviewed,
   subscriptionExpiredEnforcer,
   subscriptionExpiringReminder,
+  browseVisibilityReconciler,
   trialOutcomeDetector,
   trialStartingReminder,
   revenueCatWebhook,
@@ -63,6 +67,9 @@ export {
   onHireCreated,
   onHireEnded,
   onContactRevealRequested,
+  onFamilySubscriptionWritten,
   bootstrapFirstAdmin,
   syncMockSubscription,
+  syncSubscription,
+  subscriptionReconciler,
 };

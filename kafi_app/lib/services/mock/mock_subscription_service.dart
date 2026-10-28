@@ -133,4 +133,10 @@ class MockSubscriptionService implements ISubscriptionService {
 
   @override
   Future<void> onUserSignedOut() async {}
+
+  @override
+  Future<void> syncWithServer(String familyId) async {}
+
+  @override
+  Stream<void> watchEntitlement(String familyId) => const Stream<void>.empty();
 }

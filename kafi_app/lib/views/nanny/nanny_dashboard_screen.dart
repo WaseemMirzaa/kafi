@@ -540,14 +540,7 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
             // decorative placeholder. Rank by match BEFORE taking the top 2 so
             // "Jobs for you" surfaces the best matches, not the first two.
             final nanny = controller.nanny.value;
-            final matchService = MatchService();
-            final ranked = jobsCtrl.filteredJobs.toList();
-            if (nanny != null) {
-              ranked.sort((a, b) => matchService
-                  .calculateJobMatch(nanny, b)
-                  .compareTo(matchService.calculateJobMatch(nanny, a)));
-            }
-            final preview = ranked.take(2).toList();
+            final preview = MatchService().rankJobs(nanny, jobsCtrl.filteredJobs).take(2).toList();
             if (preview.isEmpty) {
               return Padding(
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -557,12 +550,7 @@ class NannyDashboardScreen extends GetView<NannyProfileController> {
             }
             return Column(
               children: [
-                for (final job in preview)
-                  _jobCard(
-                      job,
-                      nanny == null
-                          ? null
-                          : matchService.calculateJobMatch(nanny, job)),
+                for (final entry in preview) _jobCard(entry.$1, entry.$2),
               ],
             );
           }),

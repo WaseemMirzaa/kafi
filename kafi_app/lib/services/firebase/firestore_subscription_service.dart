@@ -22,11 +22,14 @@ class FirestoreSubscriptionService implements ISubscriptionService {
     if (subData == null) return SubscriptionState.free;
 
     final status = subData['status'] as String?;
+    final endDate = (subData['endDate'] as Timestamp?)?.toDate();
+    final endPassed = endDate != null && !endDate.isAfter(DateTime.now());
     switch (status) {
       case 'active':
+        // Client-side lag defense if the hourly enforcer hasn't flipped yet.
+        if (endPassed) return SubscriptionState.expired;
         return SubscriptionState.active;
       case 'cancelled':
-        final endDate = (subData['endDate'] as Timestamp?)?.toDate();
         if (endDate != null && endDate.isAfter(DateTime.now())) {
           return SubscriptionState.cancelledInPeriod;
         }
@@ -34,7 +37,13 @@ class FirestoreSubscriptionService implements ISubscriptionService {
       case 'expired':
         return SubscriptionState.expired;
       case 'paymentFailed':
-        return SubscriptionState.paymentGrace;
+        // Grace keeps access only while its window is open; the server flips it
+        // to expired when it closes (a doc with no window counts as over).
+        final graceEnd = (subData['graceEndsAt'] as Timestamp?)?.toDate();
+        if (graceEnd != null && graceEnd.isAfter(DateTime.now())) {
+          return SubscriptionState.paymentGrace;
+        }
+        return SubscriptionState.expired;
       default:
         return SubscriptionState.free;
     }
@@ -144,4 +153,21 @@ class FirestoreSubscriptionService implements ISubscriptionService {
 
   @override
   Future<void> onUserSignedOut() async {}
+
+  // Firestore-only path has no store to re-verify against.
+  @override
+  Future<void> syncWithServer(String familyId) async {}
+
+  @override
+  Stream<void> watchEntitlement(String familyId) {
+    return _families.doc(familyId).snapshots().map((snap) {
+      final d = snap.data();
+      final sub = d?['subscription'] as Map<String, dynamic>?;
+      final end = (sub?['endDate'] as Timestamp?)?.millisecondsSinceEpoch;
+      final viewed = (d?['viewedProfiles'] as List?)?.length ?? 0;
+      // Only the fields that change access — a heartbeat write such as
+      // `lastVerifiedAt` must not trigger a refresh storm.
+      return '${sub?['status']}|${sub?['plan']}|$end|$viewed';
+    }).distinct().map((_) {});
+  }
 }

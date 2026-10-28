@@ -30,6 +30,7 @@ class DisputeController extends GetxController {
   final RxBool isSending = false.obs;
   StreamSubscription<List<DisputeMessage>>? _sub;
   StreamSubscription<DisputeModel?>? _disputeSub;
+  Worker? _authWorker;
 
   bool get isDisputeClosed {
     final d = activeDispute.value;
@@ -40,11 +41,13 @@ class DisputeController extends GetxController {
   @override
   void onInit() {
     super.onInit();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => loadDisputes());
     loadDisputes();
   }
 
   @override
   void onClose() {
+    _authWorker?.dispose();
     _sub?.cancel();
     _disputeSub?.cancel();
     inputCtrl.dispose();
@@ -54,7 +57,14 @@ class DisputeController extends GetxController {
   Future<void> loadDisputes() async {
     final uid = currentUserId(_auth);
     if (uid == null) {
+      await _sub?.cancel();
+      await _disputeSub?.cancel();
+      _sub = null;
+      _disputeSub = null;
       disputes.clear();
+      activeDispute.value = null;
+      messages.clear();
+      inputCtrl.clear();
       return;
     }
     isLoading.value = true;

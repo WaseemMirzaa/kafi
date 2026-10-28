@@ -8,9 +8,7 @@ import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/nanny_card_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
-import 'package:kafi_app/services/interfaces/i_hire_service.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
-import 'package:kafi_app/services/interfaces/i_trial_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 
 class BrowseController extends GetxController {
@@ -55,14 +53,18 @@ class BrowseController extends GetxController {
   String get familyFirstName =>
       _auth.currentUser.value?.fullName?.split(' ').first ?? AppStrings.roleFallbackFamily.tr;
 
+  Worker? _authWorker;
+
   @override
   void onInit() {
     super.onInit();
+    _authWorker = ever<dynamic>(_auth.currentUser, (_) => refreshList());
     refreshList();
   }
 
   @override
   void onClose() {
+    _authWorker?.dispose();
     _browseSub?.cancel();
     searchCtrl.dispose();
     super.onClose();
@@ -93,9 +95,10 @@ class BrowseController extends GetxController {
       if (epoch != _browseEpoch) return;
 
       final job = selectedJob.value ?? (myJobs.isNotEmpty ? myJobs.first : null);
-      final engaged = await _engagedNannyIds();
       if (epoch != _browseEpoch) return;
 
+      // Every approved + verified, non-blocked nanny is listed — including
+      // hired nannies and those on a live trial — ranked by match %.
       _browseSub = _jobs
           .watchBrowseNannies(
             filter: activeFilter.value,
@@ -105,9 +108,7 @@ class BrowseController extends GetxController {
           .listen(
         (ranked) {
           if (epoch != _browseEpoch) return;
-          results.value = engaged.isEmpty
-              ? ranked
-              : ranked.where((c) => !engaged.contains(c.id)).toList();
+          results.value = ranked;
           loadError.value = null;
           isLoading.value = false;
         },
@@ -180,22 +181,6 @@ class BrowseController extends GetxController {
   void onFilterTap(String f) {
     activeFilter.value = f;
     refreshList();
-  }
-
-  /// User ids of nannies to hide from browse because they are currently hired
-  /// or on an accepted/active trial (M5). Two bounded queries fetched in
-  /// parallel; any failure degrades to hiding nobody so browse still loads.
-  Future<Set<String>> _engagedNannyIds() async {
-    try {
-      final sets = await Future.wait([
-        Get.find<IHireService>().activeHiredNannyIds(),
-        Get.find<ITrialService>().activeTrialNannyIds(),
-      ]);
-      return sets.expand((s) => s).toSet();
-    } catch (e) {
-      Get.log('engaged-nanny browse filter failed: $e', isError: true);
-      return const <String>{};
-    }
   }
 
   /// Re-rank Top Matches against [job] (null = back to the default job).

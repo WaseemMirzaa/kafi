@@ -50,7 +50,7 @@ Kafi is a mobile-first marketplace connecting:
 - 100% free forever
 
 ### 2. Family (Paying Users)
-- Post job requirements
+- Post job requirements (free-tier onboarding posts stay in My Jobs only; nannies see a family's jobs only while subscription is active or cancelled-in-period)
 - Browse verified nannies
 - 5 free contacts, then subscription required
 - View full profiles (phone, CV, video) when subscribed
@@ -65,7 +65,7 @@ Kafi is a mobile-first marketplace connecting:
   - CV downloads, trial offers, Call/WhatsApp all disabled
   - Browsing still works; data is preserved
   - Re-subscribing restores all access instantly
-  - **Exception:** Active trials keep their chat/contact access until the trial ends
+  - **Exception:** Live trials (`accepted` / still-running `active`) keep chat/contact access until the trial period ends — not during `awaitingOutcome` or after complete/cancel
 
 ### 3. Admin (Web Dashboard)
 - Verify nanny documents
@@ -267,7 +267,7 @@ Kafi is a mobile-first marketplace connecting:
 **B. Intro Video**
 - Video recording/upload area
 - Rules:
-  - Maximum 60 seconds (strict)
+  - Maximum 4 minutes (240 seconds, strict) — **Record** opens an in-app camera (not the system camera app, which often hard-caps at ~10s on some devices)
   - Speak clearly, smile, good lighting
   - Do NOT share phone number in video
 - Tips on what to say:
@@ -331,6 +331,10 @@ Kafi is a mobile-first marketplace connecting:
 **Purpose:** Upload verification documents
 
 **Warning Banner:** "Your profile stays hidden until admin approves all mandatory documents"
+
+**Pick source (per document):** bottom sheet with both options:
+- **Choose from album** — photo library (JPG/PNG scans)
+- **Choose a file** — system file picker (PDF / any file)
 
 **Mandatory Documents:**
 - Passport Copy (bio page, JPG/PDF)
@@ -478,7 +482,9 @@ Kafi is a mobile-first marketplace connecting:
 
 **Filter Pills:** All, Live-in, Live-out, Arabic, Filipino, Indian
 
-**Inactive nannies (admin toggle):** When admin `settings/global.hideInactiveNannies` is **on**, Browse (and its search / filter pills / “new conversation” candidate picker, which uses the same browse results) only shows approved+verified nannies whose `lastActiveAt` is within the last **14 days**. Nannies with no `lastActiveAt` or an older stamp are hidden. When the toggle is **off**, all approved+verified nannies are listed. Shortlist, chat threads, applicants, and direct profile links are unchanged (not discovery listings).
+**Browse visibility (family discovery):** Normal Browse lists **all** approved+verified nannies, ranked by match % against the selected job (highest first → lowest last). Match % never removes a profile. Hired nannies and nannies on a live trial stay visible unless the nanny pauses her profile (`profilePaused`) or — while hired — changes her availability herself. Blocked and unapproved/unverified profiles stay hidden. Filter pills, job-type/nationality/language filters, and the search box may remove non-matching profiles from that filtered view only.
+
+**Inactive nannies (admin toggle):** When admin `settings/global.hideInactiveNannies` is **on**, Browse (and its search / filter pills / “new conversation” candidate picker, which uses the same browse results) also hides nannies whose `lastActiveAt` is missing or older than **14 days**. When the toggle is **off**, inactivity does not hide anyone. Shortlist, chat threads, applicants, and direct profile links are unchanged (not discovery listings).
 
 **Nanny Cards (Featured & Regular) — V2 scale (same layout, larger type):**
 - Avatar ~57px (was ~44); card padding/gaps scaled ~30%
@@ -590,9 +596,14 @@ Kafi is a mobile-first marketplace connecting:
 
 **Special Case - Active Trials:**
 - If active trial(s) exist:
-  - Show banner: "You have 1 active trial - chat below"
-  - Display only active-trial chat threads below the lock UI
-  - All other threads remain hidden
+  - Show renew banner at top
+  - Live-trial threads stay open (tapable, full chat + contacts)
+  - All other threads appear as **locked list rows** (visible, not tapable → Renew)
+
+**Expired chat list (no live trial):**
+- Show existing threads as locked rows (lock badge, muted preview, not tapable)
+- Renew banner / CTA; data preserved and unlocks on re-subscribe
+- Empty inbox (no threads at all) → full-screen expired overlay (Screen 16B body)
 
 ---
 
@@ -603,7 +614,7 @@ Kafi is a mobile-first marketplace connecting:
 - Top bar with nanny avatar, name, status (Online · Kafi Verified ✓) — **tap avatar or name → full nanny profile**
 - WhatsApp direct button, Call button (separate from profile tap)
 - Contact strip: "Subscribed · Direct contacts unlocked" with Call/WhatsApp buttons
-- Message bubbles: sender right (accent color), receiver left (white); **profile photo beside every message** (family photo on family messages, nanny photo on nanny messages)
+- Message bubbles: own messages on the right, received on the left; **family texts = purple bubble + family photo**, **nanny texts = rose bubble + nanny photo** (by sender role, not viewer)
 - Date separators
 - System messages
 - Trial offer message card with Accept/Counter buttons
@@ -612,14 +623,12 @@ Kafi is a mobile-first marketplace connecting:
 - Input area with attach button, text input, send button
 
 **Family View (EXPIRED Subscription):**
-- Chat thread hidden from chat list entirely
-- If accessed via deep link (push notif): Land on paywall
-- Full-screen lock overlay: "🔒 Your subscription expired"
-- Subtext: "Renew to view this chat and contact details"
-- "Renew Subscription" CTA button
-- Back button returns to chat list (empty)
-- No message history visible, no send capability
-- Exception: If chat thread has an ACTIVE trial → full access remains until trial ends
+- Chat list shows threads as locked rows (not tapable) except live-trial threads
+- Call / WhatsApp / revealed phone locked everywhere (profile + chat strip) unless a live trial with that nanny
+- If accessed via deep link to a non-trial thread: Land on paywall
+- Composer locked; send blocked
+- Exception: Live trial (`accepted` / running `active`) → full chat + contacts until the trial period ends
+- Re-subscribe restores list taps, history, and contacts instantly
 
 **Family View (Free Tier - Never Subscribed):**
 - Limited: can send text messages after viewing profile
@@ -649,11 +658,10 @@ Kafi is a mobile-first marketplace connecting:
     - Trial day progress
   - Privacy note explaining contact rules
 - IF subscription EXPIRED / PAYMENT_FAILED:
-  - Empty state with lock icon
-  - Heading: "Your subscription has expired"
-  - Subtext: "Renew to view your chats and contacts"
-  - "Renew Subscription" CTA button
-  - **Exception:** Active-trial threads still appear (with badge: "Trial Active")
+  - Renew banner at top of list
+  - Prior threads shown as locked rows (lock badge, not tapable) → Renew
+  - Live-trial threads remain open (badge: "Trial Active")
+  - If zero threads: full-screen expired empty state (Screen 16B)
 
 **Chat List Screen (Nanny View):**
 - Always full access (free tier users)
@@ -731,6 +739,7 @@ Kafi is a mobile-first marketplace connecting:
 - 7 Days: AED 89
 - 30 Days: AED 239 — MOST POPULAR
 - 60 Days: AED 369 — BEST VALUE
+- Plan cards always show **AED catalog prices** (not App Store/Play localized `$` from RevenueCat `priceString`)
 - VAT note: +5% · no auto-renew · nannies always free
 - Trust badges: SSL, UAE trusted, 5-star
 
@@ -795,7 +804,7 @@ Kafi is a mobile-first marketplace connecting:
 - Review videos (14)
 - All families (87)
 - Subscriptions (54)
-- Revenue
+- Revenue — **hidden until RevenueCat billing is live** (page + nav removed; `/revenue` redirects home)
 - Broadcast
 - Settings
 
@@ -814,6 +823,9 @@ Kafi is a mobile-first marketplace connecting:
 **Nannies Column:**
 - Stats: Active (134), Pending docs (8), Videos to review (14)
 - Document verification queue with Approve/Reject buttons
+- **Verify docs queue:** includes every nanny who still has unverified documents (`uploaded` / `reviewing`), even if her overall profile is already approved — not only `status = pending`
+- **Verify docs review popup (before approve):** identity summary always visible above the document list — profile photos, intro video player, and work experience — so admin can confirm the person matches the KYC documents; then **all document slots** (Passport, Visa, Emirates ID, Training certificate, Police clearance) with full inline previews (image/PDF/video) and per-doc approve/reject; unverified docs listed first; full profile remains available via “View full profile”
+- **Approve all:** approves every non-missing document, approves the intro video (when present), and sets the profile to approved + verified in one step
 - All nannies list with status
 - Nationality breakdown chart
 - City breakdown chart
@@ -1605,7 +1617,7 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 │                                         │
 └─────────────────────────────────────────┘
 ```
-**Note:** Profile hiding/deactivation is NOT available. Nannies must delete account if they no longer want to be found.
+**Profile pause:** Nannies can pause their profile (`profilePaused`) so they are hidden from family Browse until they unpause. Deleting the account remains the hard exit.
 
 ---
 
@@ -1833,7 +1845,7 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 - Trial events → Trial screen for that `trialId`
 - Support / report replies → ticket or report thread
 
-**iOS push:** `AppDelegate` registers for remote notifications, forwards the APNs device token to Firebase Auth + Messaging; `Info.plist` includes `remote-notification` background mode and Push entitlements (`aps-environment`).
+**iOS push / Phone Auth:** `FirebaseAppDelegateProxyEnabled` is **true**; `AppDelegate` also registers for remote notifications and forwards the APNs token + `canHandleNotification` to Firebase Auth / Messaging; `SceneDelegate` forwards reCAPTCHA URLs. `Info.plist` includes `remote-notification` background mode and Push entitlements (`aps-environment`).
 
 ---
 
@@ -2810,7 +2822,7 @@ When a family's subscription **ends** (expires, billing fails, or cancellation r
 |----------|--------|
 | **Free Contact Usage** | Profile view counts as using 1 free contact (5 total) |
 | **Multiple Roles** | No - one phone number = one account type only (nanny OR family) |
-| **Profile Deactivation** | Not available - nannies cannot hide profile |
+| **Profile pause** | Nanny can pause (`profilePaused`) to leave family Browse; unpause restores visibility. Hire/trial alone do not hide. |
 | **Visa Sponsorship Enforcement** | No enforcement - honor-based commitment |
 | **Reference Verification** | Honor-based only - no admin verification |
 | **Job Post Visibility** | 7 days default (dynamic, managed from database) |
@@ -2879,7 +2891,7 @@ Display:
 | Visa | Firebase Storage (standard) |
 | Emirates ID | Firebase Storage (standard) |
 | Photos | Firebase Storage (standard) |
-| Videos | Firebase Storage (standard, max 60 sec) |
+| Videos | Firebase Storage (standard, max 4 min) |
 | Training Certificates | Firebase Storage (standard) |
 
 **Note:** Documents stored in Firebase Storage without additional encryption. Access controlled via Firebase Security Rules.
@@ -3049,3 +3061,40 @@ Chat → Send Trial Offer → Evaluate Trial → Hire
 | 2026-09-28 | RevenueCat SDK integration | Done | `purchases_flutter`; Pricing/Restore use native sheets when live; keys via dart-define placeholders; mock path retained until keys set |
 
 | 2026-10-02 | Public privacy + delete-account web pages | Done | Static `/privacy/` and `/delete-account/` on admin Hosting; privacy linked from admin Settings |
+
+| 2026-10-12 | Browse pills + video 4min + doc sources | Done | Screen 14 filter pills no longer clipped; Screen 7 intro video cap 240s + copy; Screen 10 doc pick sheet = album + file |
+
+| 2026-10-12 | Hide admin Revenue until billing | Done | Sidebar Revenue removed; `/revenue` redirects home; Dashboard “View revenue” QA removed |
+
+| 2026-10-12 | Chat colors + AED prices + 4min recorder | Done | Screen 17 family=purple/nanny=rose bubbles+photos; Pricing always AED catalog; intro video uses in-app camera recorder (240s) |
+
+| 2026-10-14 | Intro video upload over ~50s | Done | Stream putFile (not putData); Storage under(100); client size check; medium recorder preset; clearer upload errors |
+
+| 2026-10-14 | Remove Storage size caps | Done | storage.rules no longer enforces file size; client maxVideoMb check removed |
+
+| 2026-10-20 | Block self-chat same Auth uid | Done | Family+nanny same phone shared uid; block openThread self, exclude self from browse, hide familyId==nannyId threads |
+
+| 2026-10-20 | One phone = one role (A4) | Done | finalizePhoneRegistration blocks opposite role (nanny↔family); no users.type flip on Welcome; mock phone→role map |
+
+| 2026-10-20 | Dual-role self-chat data cleanup | Done | Deleted self-thread PLK3… + messages; removed nannies/b8RQ… (Rhea) so +923025453549 is family-only (Waseem) |
+
+| 2026-10-20 | Verify-docs identity summary | Done | Verify docs popup shows photos + intro video + work experience above documents before approve; experience city/country mapped to cityCountry |
+
+| 2026-10-20 | Verify-docs full document previews | Done | Always show all 5 DocumentType slots with full DocViewer (passport/visa/EID/training/police); merge subcollection URLs; approve only when uploaded |
+
+| 2026-10-20 | Verify-docs include unverified on approved | Done | Queue lists any nanny with uploaded/reviewing docs (not only status=pending); unverified docs sorted/highlighted first |
+
+| 2026-10-20 | Approve all docs + video + profile | Done | NannyService.approve now marks all non-missing documents approved, intro video approved when URL present, and profile approved+verified |
+
+| 2026-10-20 | A4 role-mismatch dialog | Done | Wrong-role OTP shows blocking dialog; OK signs out and offAllNamed Welcome |
+
+| 2026-10-20 | Chat free-unlock Firestore rules | Done | familyCanChatWith allows free+viewedProfiles; wait for onProfileViewed before createThread |
+
+| 2026-10-20 | Hide free-family jobs from nannies | Done | jobs.visibleToNannies stamped from subscription; nanny browse filters true; CF syncs on family sub change |
+| 2026-10-20 | Expired-sub chat after trial ends | Done | Bypass only while trial is live (accepted/active, endDate not past); open/send/lock use live trial check; awaitingOutcome no longer unlocks chat |
+| 2026-10-20 | Sign-out clears permanent controllers | Done | Family/nanny profile + jobs/browse/settings/tickets/etc. rehydrate on auth change; login OTP/phone cleared on signOut |
+| 2026-10-20 | Free chat strip false "expired" | Done | Conversation contact strip used isSubscribed and showed expired copy to free families; now uses unlock/expired correctly |
+| 2026-10-20 | Expired chat list locked rows | Done | Expired families see locked non-tapable thread rows (renew restores); contacts/Call/WA locked except live-trial nanny; empty overlay only if no threads |
+| 2026-10-21 | Browse hide engaged nannies | Done | Family Browse skips `hiddenFromBrowse` cards (hired / live trial); no client listen on global trials/hires by status |
+| 2026-10-27 | Browse keep hired/trial visible | Done | Match % ranks only; hired + live trial stay listed unless pause / hire-availability change; docs + mock aligned |
+| 2026-10-28 | iOS Phone Auth App Delegate Proxy | Done | Proxy ON for Flutter UIScene Phone Auth; native forward paths kept; see Technical + FIREBASE_SETUP |

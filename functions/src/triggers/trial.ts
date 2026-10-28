@@ -1,41 +1,53 @@
 import { onDocumentCreated, onDocumentUpdated } from 'firebase-functions/v2/firestore';
 import * as admin from 'firebase-admin';
 import { sendNotification, writeInbox, getUser, getNanny, getFamily } from '../utils/notifications';
+import { recomputeNannyBrowseHidden } from '../utils/nannyBrowseVisibility';
 import { tn } from '../i18n/notifications';
 
 /// Recomputes `families/{familyId}.activeTrialNannyIds` from the family's trials
-/// currently in an entitling state (accepted/active/awaitingOutcome). This
-/// server-owned list is what the security rules' `hasActiveTrialWith` reads to
-/// let a family without a subscription chat with a nanny during a trial, so it
-/// must be refreshed whenever a trial ENTERS that set (accept; the scheduled
-/// detector's active→awaitingOutcome flip) as well as when it LEAVES it (end)
-/// — previously only the end transition recomputed it, so an accepted trial
-/// never unlocked the chat for a free family. `awaitingOutcome` is included so
-/// an unsubscribed family doesn't lose chat access at exactly the point both
-/// parties most need to discuss the outcome — she hasn't left the
-/// relationship, she's just waiting on both sides to record what happened.
-/// Distinct from the browse-hide derivation (`activeTrialNannyIds` on
-/// `ITrialService`), which is intentionally left unwidened — see the
-/// trial-completion plan §4.4. Exported so the scheduled detector
-/// (scheduled.ts) can call it too.
+/// currently in an entitling state (accepted/active only). This server-owned
+/// list is what the security rules' `hasActiveTrialWith` reads to let a family
+/// without a subscription chat with a nanny during a trial (spec C14 / S15 —
+/// bypass until the trial period ends). Must refresh when a trial ENTERS that
+/// set (accept / start) and when it LEAVES (endDate → awaitingOutcome, or
+/// completed/cancelled/declined). `awaitingOutcome` is intentionally excluded:
+/// once the calendar window closes, chat/contact lockdown applies again even
+/// while both parties record hire/pass outcomes. Exported so the scheduled
+/// detector (scheduled.ts) can call it too.
 export async function recomputeActiveTrialNannyIds(familyId: string): Promise<void> {
   if (!familyId) return;
   const db = admin.firestore();
   const snap = await db
     .collection('trials')
     .where('familyId', '==', familyId)
-    .where('status', 'in', ['active', 'accepted', 'awaitingOutcome'])
+    .where('status', 'in', ['active', 'accepted'])
     .get();
+  const now = Date.now();
   const activeIds = Array.from(
-    new Set(snap.docs.map((d) => d.data().nannyId as string).filter(Boolean)),
+    new Set(
+      snap.docs
+        .filter((d) => {
+          const data = d.data();
+          if (data.status === 'accepted') return true;
+          // Lag defense: status still `active` but endDate already passed.
+          const end = data.endDate as FirebaseFirestore.Timestamp | undefined;
+          if (end && typeof end.toMillis === 'function' && end.toMillis() <= now) {
+            return false;
+          }
+          return true;
+        })
+        .map((d) => d.data().nannyId as string)
+        .filter(Boolean),
+    ),
   );
   await db.collection('families').doc(familyId).update({ activeTrialNannyIds: activeIds });
 }
 
-/// Mirrors terminal trial status onto the linked chat thread so both family and
-/// nanny clients drop the "active trial" badge / lockdown bypass (hasActiveTrial
-/// only treats accepted|active as live).
-async function syncChatThreadTrialStatus(
+/// Mirrors trial status onto the linked chat thread so both family and nanny
+/// clients drop the "active trial" badge / lockdown bypass (hasActiveTrial only
+/// treats accepted|active as live). Also used when status flips to
+/// awaitingOutcome (trial period ended).
+export async function syncChatThreadTrialStatus(
   familyId: string,
   nannyId: string | undefined,
   trialId: string,
@@ -240,6 +252,7 @@ export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (even
     );
     await sendNotification((nanny.fcmTokens as string[]) ?? [], { title, body, data });
     if (accepted) await recomputeActiveTrialNannyIds(after.familyId as string);
+    if (after.nannyId) await recomputeNannyBrowseHidden(after.nannyId as string);
     return;
   }
 
@@ -288,6 +301,8 @@ export const onTrialResponse = onDocumentUpdated('trials/{trialId}', async (even
   if (after.status === 'accepted') {
     await recomputeActiveTrialNannyIds(after.familyId as string);
   }
+  // Hide / re-show on family Browse (accepted|active ↔ terminal).
+  if (after.nannyId) await recomputeNannyBrowseHidden(after.nannyId as string);
 });
 
 /// Pure truth table behind `onTrialOutcomeResolved` — decides the
@@ -436,6 +451,7 @@ export const onTrialEnded = onDocumentUpdated('trials/{trialId}', async (event) 
   // A trial left the entitling set — recompute the list (shared with the accept
   // path) and stamp when the last trial ended.
   await recomputeActiveTrialNannyIds(familyId);
+  if (after.nannyId) await recomputeNannyBrowseHidden(after.nannyId as string);
   await admin.firestore().collection('families').doc(familyId).update({
     'subscription.lastTrialEndedAt': admin.firestore.FieldValue.serverTimestamp(),
   });

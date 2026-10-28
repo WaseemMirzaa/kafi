@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'dart:typed_data';
 
 abstract class IStorageService {
@@ -5,6 +6,14 @@ abstract class IStorageService {
   Future<String> uploadBytes({
     required String path,
     required Uint8List bytes,
+    String? contentType,
+  });
+
+  /// Streams [file] to Storage (resumable). Prefer this for large videos —
+  /// [uploadBytes] loads the whole file into memory and drops on long uploads.
+  Future<String> uploadFile({
+    required String path,
+    required File file,
     String? contentType,
   });
 

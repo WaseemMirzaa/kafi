@@ -315,24 +315,33 @@ class BrowseScreen extends GetView<BrowseController> {
           Obx(() {
             final job = controller.selectedJob.value;
             if (job == null) return const SizedBox(height: 9);
+            // Width comes from the hero Column — no MediaQuery/context needed
+            // (_hero has none). Long multi-role titles ellipsize in place.
             return Padding(
               padding: const EdgeInsets.only(top: 8),
               child: GestureDetector(
                 onTap: () => controller.selectJob(null),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 11, vertical: 6),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(16),
                     border: Border.all(color: KafiColors.pur, width: 1.2),
                   ),
                   child: Row(
-                    mainAxisSize: MainAxisSize.min,
                     children: [
-                      Text(
+                      Expanded(
+                        child: Text(
                           AppStrings.browseMatchesFor
                               .trParams({'job': _jobName(job)}),
-                          style: KafiTheme.nunito(9.5, color: KafiColors.pur, w: FontWeight.w800)),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: KafiTheme.nunito(
+                              9.5, color: KafiColors.pur, w: FontWeight.w800),
+                        ),
+                      ),
                       const SizedBox(width: 5),
                       const Icon(Icons.close, size: 12, color: KafiColors.pur),
                     ],
@@ -513,41 +522,47 @@ class BrowseScreen extends GetView<BrowseController> {
     );
   }
 
+  /// Horizontal filter pills — match HTML `.pills` / `.pill` (no fixed height
+  /// that clips Fredoka baselines).
   Widget _filterPills() {
-    return SizedBox(
-      height: 38,
-      child: Obx(
-        () {
-          final active = controller.activeFilter.value;
-          return ListView.separated(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
-          scrollDirection: Axis.horizontal,
-          itemBuilder: (_, i) {
-            final f = BrowseController.filters[i];
-            final isActive = active == f;
-            return GestureDetector(
-              onTap: () => controller.onFilterTap(f),
-              child: Container(
-                alignment: Alignment.center,
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: isActive ? KafiColors.pur : KafiColors.purL,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Text(
-                  _filterLabel(f),
-                  style: KafiTheme.fredoka(10,
-                      color: isActive ? Colors.white : KafiColors.pur, w: FontWeight.w700),
-                ),
-              ),
-            );
-          },
-          separatorBuilder: (_, __) => const SizedBox(width: 4),
-          itemCount: BrowseController.filters.length,
-        );
-        },
-      ),
-    );
+    return Obx(() {
+      final active = controller.activeFilter.value;
+      return SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.fromLTRB(12, 9, 12, 6),
+        child: Row(
+          children: [
+            for (var i = 0; i < BrowseController.filters.length; i++) ...[
+              if (i > 0) const SizedBox(width: 4),
+              () {
+                final f = BrowseController.filters[i];
+                final isActive = active == f;
+                return GestureDetector(
+                  onTap: () => controller.onFilterTap(f),
+                  child: Container(
+                    alignment: Alignment.center,
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: isActive ? KafiColors.pur : KafiColors.purL,
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Text(
+                      _filterLabel(f),
+                      style: KafiTheme.fredoka(
+                        10,
+                        color: isActive ? Colors.white : KafiColors.pur,
+                        w: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                );
+              }(),
+            ],
+          ],
+        ),
+      );
+    });
   }
 
   /// Slim banner shown above the browse list when subscription expired.

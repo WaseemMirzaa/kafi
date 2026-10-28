@@ -176,4 +176,5 @@ NannyModel nannyModelFromMap(String id, Map<String, dynamic> m) => NannyModel(
       stats: _statsFromMap(m['stats'] as Map<String, dynamic>?),
       i18n: i18nMapsFrom(m, const ['bio', 'healthConditions', 'religiousNotes']),
       lastActiveAt: _parseDate(m['lastActiveAt']),
+      profilePaused: m['profilePaused'] == true,
     );

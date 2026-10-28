@@ -279,6 +279,7 @@ class NannyModel {
     this.stats = const NannyStats(),
     this.i18n = const {},
     this.lastActiveAt,
+    this.profilePaused = false,
   });
 
   final String id;
@@ -379,6 +380,12 @@ class NannyModel {
   /// throttled presence heartbeat). Drives the admin "hide nannies inactive for
   /// 2 weeks" filter. Never written by [toMap] — set only by the presence write.
   final DateTime? lastActiveAt;
+
+  /// The nanny has paused her own profile: she is hidden from family browse
+  /// (hired, on trial or not) until she turns it back on. Written only by the
+  /// dedicated pause switch — never by [toMap], so a stale full-profile save
+  /// can't undo it.
+  final bool profilePaused;
 
   int? get age {
     if (dateOfBirth == null) return null;
@@ -505,6 +512,7 @@ class NannyModel {
     NannyStats? stats,
     Map<String, Map<String, String>>? i18n,
     DateTime? lastActiveAt,
+    bool? profilePaused,
   }) =>
       NannyModel(
         id: id,
@@ -571,6 +579,7 @@ class NannyModel {
         stats: stats ?? this.stats,
         i18n: i18n ?? this.i18n,
         lastActiveAt: lastActiveAt ?? this.lastActiveAt,
+        profilePaused: profilePaused ?? this.profilePaused,
       );
 
   Map<String, dynamic> toMap() => {

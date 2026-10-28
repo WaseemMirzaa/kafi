@@ -218,16 +218,21 @@ class ChatController extends GetxController {
   bool get isNanny => _auth.currentUser.value?.isNanny ?? false;
   bool get _skipSubscriptionGates => AppConfig.subscriptionUsesMock;
 
-  /// Per the family-access spec: nanny users and families with an active
-  /// plan see all threads. A family whose plan has expired has every thread
-  /// locked AND hidden from view (not just blocked from opening) — including
-  /// threads with nannies unlocked via a free unlock or a past paid plan —
-  /// until they resubscribe. The one exception is a thread tied to a
-  /// currently active/accepted trial, which must stay reachable.
-  List<ChatThread> get visibleThreads {
-    if (isNanny || !_subs.isExpired) return threads;
-    return threads.where(showsActiveTrialUi).toList();
+  /// Inbox list: always show the family's threads (including when expired) so
+  /// locked rows remind them chats are preserved. Opening is gated separately
+  /// via [isThreadLocked] / [openThread] — live-trial threads stay tapable.
+  List<ChatThread> get visibleThreads => threads;
+
+  /// Expired family may not open/send on this thread unless it has a live trial.
+  bool isThreadLocked(ChatThread t) {
+    if (isNanny || !_subs.isExpired) return false;
+    return !showsActiveTrialUi(t);
   }
+
+  /// Drops threads where family and nanny are the same Auth uid (self-chat
+  /// created when one phone was used for both roles).
+  List<ChatThread> _withoutSelfThreads(List<ChatThread> list) =>
+      list.where((t) => t.familyId.isNotEmpty && t.familyId != t.nannyId).toList();
 
   @override
   void onInit() {
@@ -324,8 +329,17 @@ class ChatController extends GetxController {
     threadsError.value = null;
     await _syncFirestoreEntitlementsIfNeeded();
     await _loadActiveHires(id);
+    // Load trials before reconciling thread.trialStatus so expired-sub bypass
+    // uses live isLiveTrial instead of a stale accepted/active badge.
+    if (Get.isRegistered<TrialController>()) {
+      try {
+        await Get.find<TrialController>().refreshAll();
+      } catch (_) {
+        // Non-fatal — reconcile falls back to denormalized trialStatus.
+      }
+    }
     try {
-      threads.value = await _chat.listThreads(id);
+      threads.value = _withoutSelfThreads(await _chat.listThreads(id));
     } catch (_) {
       // Keep the stream path as the source of truth; this is only a bootstrap fallback.
     }
@@ -340,8 +354,15 @@ class ChatController extends GetxController {
     }
 
     _threadsSub = _chat.watchThreads(id).listen((list) {
-      final reconciled = _reconcileTerminalTrialBadges(list);
+      final reconciled = _reconcileTerminalTrialBadges(_withoutSelfThreads(list));
       threads.value = reconciled;
+      // Close an open thread if lockdown applies and trial bypass no longer holds.
+      if (!_skipSubscriptionGates && !isNanny && _subs.isExpired) {
+        final open = activeThread;
+        if (open != null && !allowsExpiredChatBypass(open)) {
+          closeThread();
+        }
+      }
       threadsError.value = null;
       done();
       unawaited(_enrichMissingThreadPhotos(reconciled));
@@ -451,8 +472,8 @@ class ChatController extends GetxController {
   }
 
   /// If a thread still has accepted/active [ChatThread.trialStatus] but the
-  /// linked trial is already cancelled/completed/declined (or payment confirmed),
-  /// clear the badge locally and heal the thread doc.
+  /// linked trial is no longer live (ended, awaitingOutcome, past endDate, or
+  /// payment confirmed), clear the badge locally and heal the thread doc.
   List<ChatThread> _reconcileTerminalTrialBadges(List<ChatThread> list) {
     if (!Get.isRegistered<TrialController>()) return list;
     final byId = {
@@ -463,9 +484,12 @@ class ChatController extends GetxController {
       final tid = th.trialId;
       if (tid == null || tid.isEmpty || !th.hasActiveTrial) return th;
       final trial = byId[tid];
-      if (trial == null) return th;
-      final ended = !trial.isLiveTrial;
-      if (!ended) return th;
+      if (trial == null) {
+        // Trials list loaded but this id missing → drop stale bypass badge.
+        _chat.linkTrialToThread(th.id, tid, trialStatus: TrialStatus.completed.name).ignore();
+        return th.copyWith(trialStatus: TrialStatus.completed.name);
+      }
+      if (trial.isLiveTrial) return th;
       final status = trial.nannyConfirmedPayment || trial.paymentIssueReported
           ? TrialStatus.completed.name
           : trial.status.name;
@@ -474,21 +498,27 @@ class ChatController extends GetxController {
     }).toList();
   }
 
-  /// Whether chat list / conversation should show the active-trial bar & badges.
-  /// Uses live [TrialController] when available so cancel / complete / payment
-  /// confirmed hide the UI even if [ChatThread.trialStatus] is briefly stale.
+  /// Whether chat list / conversation should show the active-trial bar & badges,
+  /// and whether an expired family may open/send on this thread (C14 / S15).
+  /// Prefer live [TrialModel.isLiveTrial] over denormalized [ChatThread.trialStatus]
+  /// so ended / past-endDate trials never keep the lockdown bypass.
   bool showsActiveTrialUi(ChatThread t) {
     final tid = t.trialId;
     if (tid == null || tid.isEmpty) return false;
     if (Get.isRegistered<TrialController>()) {
-      final trial =
-          Get.find<TrialController>().all.firstWhereOrNull((x) => x.id == tid);
-      if (trial != null) {
-        return trial.isLiveTrial;
-      }
+      final trials = Get.find<TrialController>().all;
+      final trial = trials.firstWhereOrNull((x) => x.id == tid);
+      if (trial != null) return trial.isLiveTrial;
+      // Controller has loaded this user's trials and this id is absent → ended
+      // or not theirs; do not trust a stale thread.trialStatus of active/accepted.
+      if (trials.isNotEmpty) return false;
     }
     return t.hasActiveTrial;
   }
+
+  /// Expired-family chat bypass — same live check as the trial UI badge.
+  bool allowsExpiredChatBypass(ChatThread? t) =>
+      t != null && showsActiveTrialUi(t);
 
   /// Loads the current user's active hires into [_activeHires], keyed by the
   /// counterparty id. Non-fatal — a failure just means no "Hired" badge shows.
@@ -551,7 +581,7 @@ class ChatController extends GetxController {
   Future<void> openThread(String threadId) async {
     if (!_skipSubscriptionGates && !isNanny && _subs.isExpired) {
       final thread = threads.firstWhereOrNull((t) => t.id == threadId);
-      if (thread == null || !thread.hasActiveTrial) {
+      if (!allowsExpiredChatBypass(thread)) {
         Get.toNamed(Routes.pricing, arguments: {
           'reason': 'chat_locked',
           'returnTo': '/chat/$threadId',
@@ -617,6 +647,12 @@ class ChatController extends GetxController {
   }) async {
     final familyId = currentUserId(_auth);
     if (familyId == null) return;
+    // Same phone → same Auth uid for family + nanny. Chatting that listing
+    // creates a thread where both sides are you.
+    if (nannyId == familyId) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.chatCannotMessageSelf.tr);
+      return;
+    }
     final existing = threads.firstWhereOrNull((t) => t.nannyId == nannyId);
     if (existing != null) {
       await openThread(existing.id);
@@ -669,6 +705,10 @@ class ChatController extends GetxController {
   Future<void> openThreadForFamily({required String familyId, String? familyName}) async {
     final me = _auth.currentUser.value;
     if (me == null || familyId.isEmpty) return;
+    if (familyId == me.id) {
+      Get.snackbar(AppStrings.errorTitle.tr, AppStrings.chatCannotMessageSelf.tr);
+      return;
+    }
     final existing = threads.firstWhereOrNull((t) => t.familyId == familyId);
     if (existing != null) {
       await openThread(existing.id);
@@ -707,7 +747,7 @@ class ChatController extends GetxController {
 
     // Check family subscription status before sending
     if (!_skipSubscriptionGates && sendingAsFamily) {
-      if (_subs.isExpired && !(thread?.hasActiveTrial ?? false)) {
+      if (_subs.isExpired && !allowsExpiredChatBypass(thread)) {
         Get.snackbar(AppStrings.subscriptionRequired.tr, AppStrings.renewToSendMessages.tr);
         return;
       }
@@ -747,7 +787,7 @@ class ChatController extends GetxController {
     final sendingAsFamily = senderType == 'family';
 
     if (!_skipSubscriptionGates && sendingAsFamily) {
-      if (_subs.isExpired && !(thread?.hasActiveTrial ?? false)) {
+      if (_subs.isExpired && !allowsExpiredChatBypass(thread)) {
         Get.snackbar(AppStrings.subscriptionRequired.tr, AppStrings.renewToSendImages.tr);
         return;
       }
@@ -824,7 +864,7 @@ class ChatController extends GetxController {
     if (_skipSubscriptionGates) return;
     isLocked.value = true;
     final open = activeThread;
-    if (open == null || !open.hasActiveTrial) {
+    if (!allowsExpiredChatBypass(open)) {
       _messagesSub?.cancel();
       _messagesSub = null;
       activeThreadId.value = '';

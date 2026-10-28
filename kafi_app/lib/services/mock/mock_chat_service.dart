@@ -63,6 +63,9 @@ class MockChatService implements IChatService {
     String? nannyPhotoUrl,
     String? familyPhotoUrl,
   }) async {
+    if (familyId.isEmpty || nannyId.isEmpty || familyId == nannyId) {
+      throw StateError('Cannot create a chat with yourself.');
+    }
     await Future<void>.delayed(AppConfig.mockDelay);
     try {
       final existing =

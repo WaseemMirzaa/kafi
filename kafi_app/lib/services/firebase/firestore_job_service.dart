@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/models/family_model.dart';
 import 'package:kafi_app/models/job_post_model.dart';
@@ -82,9 +83,16 @@ class FirestoreJobService implements IJobService {
     required bool hideInactive,
   }) {
     final nannies = <NannyModel>[];
+    // Hide the signed-in user's own nanny doc (same Auth uid as family login)
+    // so they cannot open a self-chat from Browse.
+    final selfUid = FirebaseAuth.instance.currentUser?.uid;
     for (final d in snap.docs) {
+      if (selfUid != null && d.id == selfUid) continue;
       final m = d.data();
-      if (m['blocked'] == true) continue;
+      // Only a blocked nanny is dropped here. Hired nannies and nannies on a
+      // live trial stay visible (their server-stamped `hiddenFromBrowse` is
+      // intentionally ignored); match % only orders the list.
+      if (!NannyListingActivity.isListableRecord(m)) continue;
       final n = nannyModelFromMap(d.id, m);
       if (NannyListingActivity.shouldHideFromListing(n, hideInactiveEnabled: hideInactive)) {
         continue;
@@ -129,17 +137,36 @@ class FirestoreJobService implements IJobService {
   Future<void> saveJobPost(JobPostModel post) async {
     final ref = _jobs.doc(post.id);
     final exists = (await ref.get()).exists;
-    final data = post.toMap()
+    final visible = await _familyJobsVisibleToNannies(post.familyId);
+    final data = post.copyWith(visibleToNannies: visible).toMap()
       ..remove('createdAt')
       ..remove('expiresAt')
       ..remove('updatedAt');
     data['updatedAt'] = FieldValue.serverTimestamp();
+    data['visibleToNannies'] = visible;
     if (!exists) {
       data['createdAt'] = FieldValue.serverTimestamp();
       data['expiresAt'] =
           Timestamp.fromDate(DateTime.now().add(const Duration(days: 7)));
     }
     await ref.set(data, SetOptions(merge: true));
+  }
+
+  /// Matches Firestore chat entitlement: paid or cancelled-in-period only.
+  Future<bool> _familyJobsVisibleToNannies(String familyId) async {
+    if (familyId.isEmpty) return false;
+    try {
+      final snap = await FirebaseFirestore.instance
+          .collection('families')
+          .doc(familyId)
+          .get();
+      final sub = snap.data()?['subscription'];
+      if (sub is! Map) return false;
+      final status = sub['status'] as String?;
+      return status == 'active' || status == 'cancelled';
+    } catch (_) {
+      return false;
+    }
   }
 
   @override
@@ -161,10 +188,12 @@ class FirestoreJobService implements IJobService {
         );
   }
 
-  /// Active jobs visible to nannies. No hard `.limit(...)` — a previous limit of
-  /// 50 without `orderBy` could drop newly posted jobs at random.
+  /// Active jobs visible to nannies (paid-family stamp). No hard `.limit(...)`
+  /// — a previous limit of 50 without `orderBy` could drop newly posted jobs.
   Query<Map<String, dynamic>> _activeJobsQuery(JobFilter? filter) {
-    Query<Map<String, dynamic>> query = _jobs.where('status', isEqualTo: 'active');
+    Query<Map<String, dynamic>> query = _jobs
+        .where('status', isEqualTo: 'active')
+        .where('visibleToNannies', isEqualTo: true);
     if (filter?.emirate != null) {
       query = query.where('city', isEqualTo: filter!.emirate);
     }
@@ -230,6 +259,7 @@ class FirestoreJobService implements IJobService {
         applicationsCount: (m['applicationsCount'] as num?)?.toInt() ?? 0,
         city: m['city'] ?? '',
         commitmentAgreed: m['commitmentAgreed'] ?? false,
+        visibleToNannies: m['visibleToNannies'] == true,
         i18n: i18nMapsFrom(m, const ['jobTitle', 'schedule', 'additionalNotes']),
       );
 

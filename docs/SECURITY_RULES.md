@@ -70,8 +70,8 @@ from `firestore.indexes.json` under **Firestore Database → Indexes**.
 | `shortlists/{id}` | owner family / admin | owner family | owner family | owner family / admin |
 | `profileViews/{id}` | owner family / admin | owner family | owner family | admin *(server-processed into `viewedProfiles`/`freeContactsUsed`/`stats.profileViews`)* |
 | `contactReveals/{id}` | owner family / admin | owner family | admin *(function writes back the nanny phone if entitled)* | admin |
-| `chatThreads/{id}` | the two parties / admin | family *(needs active subscription **or** an active trial with that nanny)* | either party / admin | admin |
-| `chatThreads/{id}/messages/{id}` | the two parties / admin | nanny always; family only with access/trial; admin | admin | admin |
+| `chatThreads/{id}` | the two parties / admin | either party when family has paid access, active trial, **or free-tier unlock** (`viewedProfiles` contains that nanny) | either party / admin | admin |
+| `chatThreads/{id}/messages/{id}` | the two parties / admin | nanny always; family only with paid/trial/**free unlock**; admin | admin | admin |
 | `trials/{id}` | the two parties / admin | owner family | either party / admin | admin |
 | `trials/{id}/days/{dayId}` | the two parties / admin | the trial's nanny | the trial's nanny / admin | admin |
 | `notifications/{id}` | recipient / admin | **admin/server only** | recipient / admin | recipient / admin |
@@ -88,8 +88,11 @@ from `firestore.indexes.json` under **Firestore Database → Indexes**.
 Key protections baked into the rules:
 
 - **Nannies can't self‑approve or self‑unblock.** The `nannies` update rule pins
-  `blocked`, `isVerified`, and approved/rejected `status` to admin writes, while
-  still letting a nanny move herself to `draft`/`pending`.
+  `blocked`, `isVerified`, `hiddenFromBrowse`, and approved/rejected `status` to
+  admin/server writes, while still letting a nanny move herself to `draft`/`pending`.
+  `hiddenFromBrowse` is stamped by Cloud Functions while the nanny is on an
+  accepted/active trial or an active hire (family Browse filters it client-side;
+  clients must never query global `trials`/`hires` by status alone).
 - **Families can't grant themselves paid access.** `subscription`,
   `freeContactsUsed`, `activeTrialNannyIds`, and `viewedProfiles` are server‑owned
   (Cloud Functions / RevenueCat webhook), never client‑writable.

@@ -172,12 +172,13 @@ class PricingScreen extends GetView<SubscriptionController> {
   Widget _planCard(SubscriptionPlan p, bool selected) {
     final monthly = p.popular || p.durationDays == 30;
     final weekly = p.durationDays <= 7;
-    // Store price (incl. any tax the store applies) is the source of truth;
-    // the local AED/VAT maths is only the offline fallback.
-    final fromStore = p.storePrice != null;
-    final priceLabel = p.storePrice ?? '${AppStrings.currencyAedPrefix.tr}${p.priceAed}';
+    // Always show catalog AED on plan cards. RevenueCat `priceString` follows
+    // the device App Store / Play country (often USD in sandbox) — keep that
+    // for the purchase sheet only, not the marketing price.
+    final priceLabel = '${AppStrings.currencyAedPrefix.tr}${p.priceAed}';
     final vat = p.priceAed * 0.05;
     final total = p.priceAed + vat;
+    const fromStore = false;
 
     // Per-plan palette
     final Color cardBg;
@@ -281,13 +282,11 @@ class PricingScreen extends GetView<SubscriptionController> {
                     TextSpan(
                       style: KafiTheme.nunito(19, color: priceColor, w: FontWeight.w900),
                       children: [
-                        if (p.storePrice != null)
-                          TextSpan(text: p.storePrice)
-                        else ...[
-                          TextSpan(text: AppStrings.currencyAedPrefix.tr,
-                              style: KafiTheme.nunito(9.5, color: priceColor, w: FontWeight.w700)),
-                          TextSpan(text: '${p.priceAed}'),
-                        ],
+                        TextSpan(
+                            text: AppStrings.currencyAedPrefix.tr,
+                            style: KafiTheme.nunito(9.5,
+                                color: priceColor, w: FontWeight.w700)),
+                        TextSpan(text: '${p.priceAed}'),
                       ],
                     ),
                   ),

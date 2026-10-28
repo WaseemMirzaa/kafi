@@ -4,6 +4,7 @@ import 'package:get/get.dart';
 import 'package:kafi_app/controllers/auth_controller.dart';
 import 'package:kafi_app/controllers/job_post_controller.dart';
 import 'package:kafi_app/controllers/shortlist_controller.dart';
+import 'package:kafi_app/controllers/subscription_controller.dart';
 import 'package:kafi_app/controllers/trial_controller.dart';
 import 'package:kafi_app/l10n/app_strings.dart';
 import 'package:kafi_app/models/application_model.dart';
@@ -14,6 +15,7 @@ import 'package:kafi_app/services/interfaces/i_application_service.dart';
 import 'package:kafi_app/services/interfaces/i_job_service.dart';
 import 'package:kafi_app/services/interfaces/i_user_service.dart';
 import 'package:kafi_app/services/match_service.dart';
+import 'package:kafi_app/utils/app_navigation.dart';
 import 'package:kafi_app/utils/auth_scope.dart';
 
 /// Status tabs on the nanny "My Applications" screen.
@@ -421,7 +423,19 @@ class ApplicationController extends GetxController {
     }
   }
 
+  /// A family whose plan has lapsed still sees who applied, but cannot respond.
+  /// Responding (shortlist / decline) and the automatic "viewed" signal both go
+  /// back to the nanny, so they require an active plan; the rules enforce the
+  /// same server-side.
+  bool get applicantsLocked =>
+      Get.isRegistered<SubscriptionController>() &&
+      Get.find<SubscriptionController>().isExpired;
+
+  void _promptRenew() => AppNavigation.openPricing(reason: 'applicants_locked');
+
   Future<void> markAsViewed(String appId) async {
+    // Don't tell the nanny she was viewed by a family that can't answer her.
+    if (applicantsLocked) return;
     try {
       await _appService.markViewed(appId);
       final idx = receivedApplications.indexWhere((a) => a.id == appId);
@@ -435,6 +449,10 @@ class ApplicationController extends GetxController {
   }
 
   Future<void> shortlist(String appId) async {
+    if (applicantsLocked) {
+      _promptRenew();
+      return;
+    }
     try {
       await _appService.shortlist(appId);
       final idx = receivedApplications.indexWhere((a) => a.id == appId);
@@ -451,6 +469,10 @@ class ApplicationController extends GetxController {
   }
 
   Future<void> decline(String appId) async {
+    if (applicantsLocked) {
+      _promptRenew();
+      return;
+    }
     try {
       await _appService.decline(appId);
       final idx = receivedApplications.indexWhere((a) => a.id == appId);

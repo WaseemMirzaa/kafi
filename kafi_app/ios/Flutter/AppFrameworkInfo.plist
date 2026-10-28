@@ -20,7 +20,15 @@
   <string>????</string>
   <key>CFBundleVersion</key>
   <string>1.0</string>
-  <key>MinimumOSVersion</key>
-  <string>13.0</string>
+  <!--
+    MinimumOSVersion must stay in this file. Older Flutter SDKs (including the
+    3.38.x this repo pins in .fvmrc) copy this plist verbatim into App.framework
+    and do NOT fill the value in, so without it App Store Connect rejects the
+    upload (errors 90360 / 90530). Flutter 3.47+ strips a multi-line entry and
+    injects the value itself at build time; it leaves this one-line form alone,
+    and its build-time value overrides it. Keep it equal to the app's iOS
+    deployment target.
+  -->
+  <key>MinimumOSVersion</key><string>15.0</string>
 </dict>
 </plist>

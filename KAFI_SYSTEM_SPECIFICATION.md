@@ -132,7 +132,7 @@ interface Nanny extends User {
   // 'French', 'Swahili', 'Amharic', 'Indonesian', 'Russian'
   profilePhoto: string;          // URL
   photos: string[];              // Max 5 URLs
-  introVideo?: string;           // URL, max 60 seconds
+  introVideo?: string;           // URL, max 4 minutes (240s)
   bio: string;                   // Max 300 chars
   
   // Visa & Legal
@@ -197,6 +197,19 @@ interface Nanny extends User {
   verificationStatus: VerificationStatus;
   isVerified: boolean;
   verifiedAt?: Timestamp;
+
+  /**
+   * Server-owned "engaged" marker: true while accepted/active trial OR active
+   * hire. Family Browse does NOT hide on this flag — hired and live-trial
+   * nannies stay listed (match % only ranks). Clients must never derive this
+   * via a global trials/hires status query (rules allow party-only reads).
+   * While hired, `hireAvailabilityKey` snapshots availability; if the nanny
+   * changes availability herself, Browse hides her until the hire ends.
+   * `profilePaused` (nanny self-pause) also hides from Browse.
+   */
+  hiddenFromBrowse?: boolean;
+  hireAvailabilityKey?: string;
+  profilePaused?: boolean;
   
   // Profile Quality
   profileScore: number;          // 0-100
@@ -775,10 +788,10 @@ interface SubscriptionPlan {
 | Feature | Access |
 |---------|--------|
 | Create profile | ✅ Full |
-| Upload photos/video | ✅ Full (max 5 photos, 60s video) |
+| Upload photos/video | ✅ Full (max 5 photos, 4 min video) |
 | Upload documents | ✅ Full |
-| Browse job posts | ✅ Full |
-| Apply to jobs | ✅ Full |
+| Browse job posts | ✅ Only jobs from families with paid access (`subscription` active or cancelled-in-period). Free-tier family posts are hidden from the nanny job board |
+| Apply to jobs | ✅ Only to jobs visible on the board (same entitlement) |
 | Receive trial offers | ✅ Full |
 | Accept/decline/counter trials | ✅ Full |
 | In-app chat | ✅ Full |
@@ -789,7 +802,7 @@ interface SubscriptionPlan {
 
 | Feature | Access |
 |---------|--------|
-| Post job requirements | ✅ Full |
+| Post job requirements | ✅ Full (My Jobs). Posts are **not** listed on the nanny job board until paid access |
 | Browse nanny profiles | ✅ Full (preview only) |
 | View nanny profile (full) | ⚠️ Limited (5 free views) |
 | Watch intro videos | ✅ Full |
@@ -1790,7 +1803,7 @@ PENDING → ACCEPTED → ACTIVE → COMPLETED → HIRED
 | Active subscriptions | Count where status = active |
 | This month revenue | Sum of subscription payments |
 | VAT collected | 5% of revenue (for FTA reporting) |
-| Pending document reviews | Count where status = pending |
+| Pending document reviews | Count of nannies with any document `uploaded`/`reviewing`, **or** overall profile `status = pending` (not only pending profiles — approved profiles can still have unverified docs) |
 | Pending video reviews | Count where status = pending |
 
 ### Revenue by Plan Breakdown
@@ -1838,6 +1851,22 @@ PENDING → ACCEPTED → ACTIVE → COMPLETED → HIRED
 | Reject document | Set document.status = 'rejected' + reason |
 | Approve video | Set video.status = 'approved' |
 | Reject video | Set video.status = 'rejected' + reason |
+| Approve all (Verify docs) | One action: set every non-`missing` document to `approved`, set `introVideoStatus = approved` when an intro video URL exists, and set profile `status = approved` + `isVerified = true` |
+
+### Chat entitlement (Firestore rules)
+
+A `chatThreads` create (family or nanny) and family message send are allowed when the **family** has any of:
+
+1. Paid access — `subscription.status` is `active` or `cancelled` (in-period)
+2. Live trial with that nanny — `activeTrialNannyIds` contains the nanny id (`accepted` / `active` only; dropped when the trial period ends → `awaitingOutcome` / completed / cancelled)
+3. Free-tier unlock — `subscription.status` is `free` **and** `viewedProfiles` contains that nanny id (spent free contact)
+
+Expired / payment-failed families cannot use (3) even if the nanny remains in `viewedProfiles`.
+
+### Job board visibility (nannies)
+
+Active job posts are shown to nannies only when `jobs.visibleToNannies == true`, stamped from the family's subscription (`active` / `cancelled`). Free / expired / payment-failed families keep posts in My Jobs but they are hidden from the nanny browse/apply board. Subscription changes re-stamp all of that family's jobs.
+| Review pending docs (identity) | Before approve/reject, admin sees that nanny’s photos, intro video, and work experience, then **every** document type (passport, visa, Emirates ID, training cert, police clearance) with full file preview for identity match |
 | Send broadcast | Create Broadcast document + trigger FCM |
 | View user | Read full user document |
 | Edit user | Update user fields |
@@ -1845,6 +1874,7 @@ PENDING → ACCEPTED → ACTIVE → COMPLETED → HIRED
 | Export CSV | Download data as CSV file |
 | Send reminder | Send subscription reminder to free users |
 | Hide inactive nannies | Toggle `settings/global.hideInactiveNannies` — when on, family Browse lists only nannies with `lastActiveAt` within 14 days |
+| Family Browse visibility | **Always listed (ranked by match % best→worst):** approved+verified nannies, including hired and live-trial, unless they pause the profile or (if hired) change availability. **Hidden:** unapproved/unverified (query), `blocked`, `profilePaused`, hired with changed availability (`hireAvailabilityKey` mismatch), and — only when admin Hide Inactive is on — inactive (`lastActiveAt` older than 14 days / missing). **Filters/search** (job type, nationality, language, text search, duties/tags) may narrow results. Match % never removes a card. `hiddenFromBrowse` is an engaged marker only (rules-locked); do not query `trials`/`hires` by status alone from the app. |
 
 ## 12.4 Analytics Events to Track
 
@@ -2033,7 +2063,7 @@ All notifications are sent regardless of subscription status. Free tier families
 | A1 | Invalid phone format | "Please enter a valid phone number" | Highlight field |
 | A2 | Phone not registered (login) | "No account found with this number" | Suggest signup |
 | A3 | Phone already registered (signup) | "An account already exists. Sign in instead." | Redirect to login |
-| A4 | Phone registered with different role | "This number is registered as a [role]. One number = one role." | Block, show contact support |
+| A4 | Phone registered with different role | "This number is registered as a [role]. One number = one role." | Block with dialog; on OK sign out and return to Welcome / role login |
 | A5 | OTP send failed | "Couldn't send code. Check your number and try again." | Retry button |
 | A6 | OTP rate limited | "Too many attempts. Try again in [X] minutes." | Disable resend |
 | A7 | OTP expired (5 min) | "Code expired. Tap resend." | Show resend |
@@ -2087,8 +2117,8 @@ Permission Requested
 | # | Scenario | User Message | Action |
 |---|----------|--------------|--------|
 | F1 | Photo > 5 MB | "Photo too large. Max 5 MB." | Show compress option |
-| F2 | Video > 50 MB | "Video too large. Max 50 MB." | Show shorter video tip |
-| F3 | Video > 60 seconds | "Video must be 60 seconds or less" | Trim option |
+| F2 | Video upload fails (network / auth) | Clear upload error snackbar | Retry on Wi‑Fi; duration still ≤ 4 min client-side |
+| F3 | Video > 4 minutes | "Video must be 4 minutes or less" | Trim option |
 | F4 | Document > 10 MB | "Document too large. Max 10 MB." | Compress / re-scan |
 | F5 | Unsupported format | "File type not supported. Use JPG/PNG/PDF." | Re-pick |
 | F6 | Corrupt file | "Could not read file. Try another." | Re-pick |
@@ -2171,7 +2201,7 @@ Permission Requested
 | C11 | Family subscription expired - tap chat | "Renew subscription to access chats" | Show paywall |
 | C12 | Family subscription expires while chat open | Auto-close chat, show paywall, preserve drafts | Paywall |
 | C13 | Nanny sends to expired-sub family | Allow send (queued); show "Pending family renewal" status | Queue |
-| C14 | Active trial chat (despite expired sub) | Chat remains accessible until trial ends | Bypass |
+| C14 | Active trial chat (despite expired sub) | Chat remains accessible until trial ends (`accepted`/`active` only; not `awaitingOutcome` / completed / cancelled) | Bypass |
 | C15 | Re-subscription mid-conversation | Chat reappears with latest messages | Sync |
 
 ## 14.8 Subscription & Payment Errors
@@ -2188,11 +2218,11 @@ Permission Requested
 | S8 | App Store/Play Store down | "Service temporarily unavailable" | Retry later |
 | S9 | Cancellation requires platform | "Cancel via App Store / Play Store settings" | Open settings |
 | S10 | Refund request | Direct to App Store/Play Store policy | Show info |
-| S11 | Subscription expired - opens chat list | Empty state + paywall "Renew to view your chats" | Pricing |
+| S11 | Subscription expired - opens chat list | Renew banner + locked (non-tapable) thread rows; empty overlay only if zero threads; live-trial rows stay open | Pricing |
 | S12 | Subscription expired - opens chat thread (deep link) | Full-screen paywall "Renew to access this chat" | Pricing / Back |
 | S13 | Subscription expired - taps Call/WhatsApp | Hide buttons; show "Renew to contact" | Pricing |
 | S14 | Subscription expired - taps nanny profile (full) | Blur phone; show "Renew for full access" | Pricing |
-| S15 | Subscription expired but active trial exists | Allow trial chat/contact only; lock others | Trial bypass |
+| S15 | Subscription expired but active trial exists | Allow trial chat/contact only while trial is `accepted`/`active` (calendar window open); lock once period ends (`awaitingOutcome`+) | Trial bypass |
 | S16 | Nanny tries to message expired-sub family | Allow send; system message: "Family's subscription expired - delivery delayed" | Send queued |
 | S17 | Nanny opens chat to family whose sub expired | Show banner: "Family's subscription has expired" | Read-only side |
 | S18 | Re-subscription after expiration | Restore chats, contacts; ⚡ PUSH: "Welcome back! Access restored" | Auto-restore |
@@ -2628,6 +2658,10 @@ First Launch
 | 2026-08-06 | Family Applicants multi-job inbox | Done | Family Applicants lists applications for all of a family's job posts; onNewApplication maintains job applicant counts + familyId |
 | 2026-08-06 | Trial offer gate after end | Done | §14.6 T3/T4 / duplicate-offer: ended trials (payment confirmed, payment issue reported, cancelled) do not block a new offer |
 | 2026-08-06 | Rate app after payment confirm | Done | Screen 19 Confirm payment available to family; triggers throttled rate-the-app dialog |
+| 2026-10-20 | Expired-sub chat after trial ends | Done | C14/S15: bypass only accepted/active; `activeTrialNannyIds` drops at awaitingOutcome; client open/send use live `isLiveTrial` |
+| 2026-10-20 | Sign-out clears permanent controllers | Done | Permanent GetX controllers clear/rehydrate on `currentUser` change so account switch does not show prior profile |
+| 2026-10-20 | Free chat strip false "expired" | Done | Chat conversation strip must not use paid `isSubscribed` alone — free+unlocked shows unlock hint; expired copy only when status is expired |
+| 2026-10-20 | Expired chat list locked rows | Done | S11: locked non-tapable rows when expired; contacts locked except live trial; renew restores access |
 
 | 2026-08-06 | Trial offer chat bubble details | Done | §3.7 TrialOfferBubble expanded: duration, rate, total, starting from, type, location, notes for both parties; ensureTrialInList when nanny list misses the offer |
 
@@ -2652,3 +2686,31 @@ First Launch
 | 2026-09-28 | Nanny onboarding Log Out | Done | Incomplete onboarding may leave via Log Out (confirm clears session → Welcome); no silent back-to-login on step 1 |
 | 2026-09-28 | RevenueCat SDK integration | Done | §8.1–8.3: product ids + entitlement `family_premium`; SDK keys via dart-define; webhook remains source of truth for Firestore status |
 
+
+| 2026-10-12 | Browse pills + video 4min + doc sources | Done | Intro video max 4 min (was 60s); Storage video write under(50); nanny docs album+file picker |
+
+| 2026-10-12 | Chat colors + AED prices + 4min recorder | Done | Chat bubbles by sender role; plan cards AED-only (ignore store \$); in-app intro recorder max 4 min |
+
+| 2026-10-14 | Intro video upload over ~50s | Done | F2 max video 100 MB; Storage rules under(100) for nanny intro videos |
+
+| 2026-10-14 | Remove Storage size caps | Done | No Storage MB caps; intro video length still ≤4 min in app |
+
+| 2026-10-20 | One phone = one role (A4) | Done | Enforced §14.1 A4 on OTP finalize for Firebase + mock auth |
+
+| 2026-10-20 | Dual-role self-chat data cleanup | Done | Deleted self-thread PLK3… + messages; removed nannies/b8RQ… (Rhea) so +923025453549 is family-only (Waseem) |
+
+| 2026-10-20 | Verify-docs identity summary | Done | Verify docs popup shows photos + intro video + work experience above documents before approve; experience city/country mapped to cityCountry |
+
+| 2026-10-20 | Verify-docs full document previews | Done | Always show all 5 DocumentType slots with full DocViewer (passport/visa/EID/training/police); merge subcollection URLs; approve only when uploaded |
+
+| 2026-10-20 | Verify-docs include unverified on approved | Done | Queue lists any nanny with uploaded/reviewing docs (not only status=pending); unverified docs sorted/highlighted first |
+
+| 2026-10-20 | Approve all docs + video + profile | Done | NannyService.approve now marks all non-missing documents approved, intro video approved when URL present, and profile approved+verified |
+
+| 2026-10-20 | A4 role-mismatch dialog | Done | Wrong-role OTP shows blocking dialog; OK signs out and offAllNamed Welcome |
+
+| 2026-10-20 | Chat free-unlock Firestore rules | Done | familyCanChatWith allows free+viewedProfiles; wait for onProfileViewed before createThread |
+
+| 2026-10-20 | Hide free-family jobs from nannies | Done | jobs.visibleToNannies stamped from subscription; nanny browse filters true; CF syncs on family sub change |
+| 2026-10-21 | Browse hide via hiddenFromBrowse | Done | Engaged nannies stamped server-side; Browse filters flag; removed illegal global trials/hires status queries that permission-denied |
+| 2026-10-27 | Browse keep hired/trial visible | Done | Product: do not hide on engaged marker; match ranks only; pause + hire-availability-change still hide; docs corrected |

@@ -92,8 +92,10 @@ class ShortlistScreen extends GetView<ShortlistController> {
         padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
         child: GestureDetector(
           onTap: () => Get.toNamed(Routes.compare),
+          // No `alignment` here: a Container with an alignment expands to the
+          // largest size it is offered, and as the Scaffold's bottom bar that
+          // is the whole screen height — it covered the entire shortlist.
           child: Container(
-            alignment: Alignment.center,
             padding: const EdgeInsets.symmetric(vertical: 13),
             decoration: BoxDecoration(
               color: KafiColors.pur,

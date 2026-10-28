@@ -139,9 +139,95 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
         required: t == DocumentType.passport || t == DocumentType.visa,
         status: d.status,
         variant: variant,
-        onTap: () => controller.pickDocument(t),
+        onTap: () => _chooseDocSource(t),
       );
     });
+  }
+
+  /// Album (photo library) + Files — same pattern as media source sheet.
+  void _chooseDocSource(DocumentType type) {
+    Get.bottomSheet<void>(
+      SafeArea(
+        child: Container(
+          padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+          decoration: const BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 36,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: KafiColors.ts.withValues(alpha: 0.35),
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 14),
+              Text(
+                AppStrings.docChooseSource.tr,
+                style: KafiTheme.fredoka(18, color: KafiColors.td),
+              ),
+              const SizedBox(height: 10),
+              _docSourceTile(
+                icon: Icons.photo_library_outlined,
+                label: AppStrings.docChooseAlbum.tr,
+                onTap: () => controller.pickDocumentFromGallery(type),
+              ),
+              const SizedBox(height: 8),
+              _docSourceTile(
+                icon: Icons.insert_drive_file_outlined,
+                label: AppStrings.docChooseFile.tr,
+                onTap: () => controller.pickDocumentFromFile(type),
+              ),
+            ],
+          ),
+        ),
+      ),
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+    );
+  }
+
+  Widget _docSourceTile({
+    required IconData icon,
+    required String label,
+    required Future<void> Function() onTap,
+  }) {
+    return InkWell(
+      borderRadius: BorderRadius.circular(12),
+      onTap: () async {
+        Get.back();
+        await Future<void>.delayed(const Duration(milliseconds: 200));
+        await onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+        decoration: BoxDecoration(
+          color: KafiColors.roseP,
+          border: Border.all(color: KafiColors.roseL),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Icon(icon, color: KafiColors.roseD, size: 22),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                label,
+                style: KafiTheme.nunito(13, color: KafiColors.td, w: FontWeight.w700),
+              ),
+            ),
+            const Icon(Icons.chevron_right, color: KafiColors.ts, size: 20),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _emiratesIdRow() {
@@ -189,7 +275,7 @@ class NannyDocsScreen extends GetView<NannyProfileController> {
                     runSpacing: 4,
                     children: [
                       GestureDetector(
-                        onTap: () => controller.pickDocument(DocumentType.emiratesId),
+                        onTap: () => _chooseDocSource(DocumentType.emiratesId),
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 2),
                           decoration: BoxDecoration(

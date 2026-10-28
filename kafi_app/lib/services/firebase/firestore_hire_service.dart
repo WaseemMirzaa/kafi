@@ -41,17 +41,18 @@ class FirestoreHireService implements IHireService {
 
   @override
   Future<Set<String>> activeHiredNannyIds() async {
-    // Single-field `status` filter (auto-indexed, no composite index). Bounded
-    // so a large platform never reads unboundedly on every browse; if this cap
-    // is ever hit, move to a denormalized "engaged" flag on the nanny doc.
-    final snap = await _hires
-        .where('status', isEqualTo: HireStatus.active.name)
+    // Do NOT query hires by status alone — rules only allow reading own
+    // familyId/nannyId docs. Engaged nannies are stamped on the nanny profile
+    // as `hiddenFromBrowse` (Cloud Functions). Browse no longer hides on it
+    // (hired nannies stay listed); this helper just reports the engaged set.
+    final snap = await FirebaseFirestore.instance
+        .collection('nannies')
+        .where('hiddenFromBrowse', isEqualTo: true)
+        .where('status', isEqualTo: 'approved')
+        .where('isVerified', isEqualTo: true)
         .limit(1000)
         .get();
-    return snap.docs
-        .map((d) => (d.data()['nannyId'] as String?) ?? '')
-        .where((id) => id.isNotEmpty)
-        .toSet();
+    return snap.docs.map((d) => d.id).toSet();
   }
 
   @override

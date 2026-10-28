@@ -70,6 +70,16 @@ class MockJobService implements IJobService {
       final users = Get.find<IUserService>();
       if (users is MockUserService) {
         for (final n in users.browseableNannies) {
+          // Same record-level rules as Firestore browse (pause / blocked /
+          // hired-then-changed-availability). Match % never removes anyone.
+          if (!NannyListingActivity.isListableRecord({
+            'profilePaused': n.profilePaused,
+            'availability': n.availability.name,
+            if (n.availableFrom != null)
+              'availableFrom': n.availableFrom!.toIso8601String(),
+          })) {
+            continue;
+          }
           if (NannyListingActivity.shouldHideFromListing(
             n,
             hideInactiveEnabled: hideInactiveNannies,
@@ -138,6 +148,15 @@ class MockJobService implements IJobService {
 
   @override
   Future<void> saveJobPost(JobPostModel post) async {
+    // Stamp visibility from the family's mock subscription (same rule as live).
+    var visible = post.visibleToNannies;
+    try {
+      final fam = await Get.find<IUserService>().getFamily(post.familyId);
+      final status = fam?.subscription.status;
+      visible = status == SubscriptionStatus.active ||
+          status == SubscriptionStatus.cancelled;
+    } catch (_) {}
+    post = post.copyWith(visibleToNannies: visible);
     await Future<void>.delayed(AppConfig.mockDelay);
     _posts[post.id] = post;
     _notifyJobsChanged();
@@ -170,7 +189,9 @@ class MockJobService implements IJobService {
   }
 
   List<JobPostModel> _activeJobs(JobFilter? filter) {
-    var list = _posts.values.where((j) => j.status == JobPostStatus.active);
+    var list = _posts.values.where(
+      (j) => j.status == JobPostStatus.active && j.visibleToNannies,
+    );
     if (filter?.emirate != null) {
       list = list.where((j) => j.city == filter!.emirate);
     }

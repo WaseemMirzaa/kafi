@@ -22,4 +22,13 @@ abstract class ISubscriptionService {
 
   /// Clear RevenueCat user on logout (no-op for mock).
   Future<void> onUserSignedOut();
+
+  /// Ask the server to re-verify this family against the store and correct
+  /// `families/{id}.subscription` (no-op for mock). Best effort: never throws.
+  Future<void> syncWithServer(String familyId);
+
+  /// Emits whenever the family's server-side entitlement changes (plan status,
+  /// end date, plan, free unlocks) so every screen can react live instead of
+  /// waiting for the next manual refresh. Empty for mock.
+  Stream<void> watchEntitlement(String familyId);
 }

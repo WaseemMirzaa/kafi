@@ -74,9 +74,10 @@ class FirebaseAuthService implements IAuthService {
         if (!completer.isCompleted) completer.complete();
       },
       verificationFailed: (e) {
-        if (!completer.isCompleted) {
-          completer.completeError(Exception(e.message ?? 'verification_failed'));
-        }
+        // Keep the FirebaseAuthException (code + message) so AuthController
+        // can map invalid-phone / region / quota instead of always showing
+        // the generic "check your number" snackbar.
+        if (!completer.isCompleted) completer.completeError(e);
       },
       codeSent: (verificationId, _) {
         // Fire-and-forget the durable write; the in-memory field is set
@@ -110,6 +111,8 @@ class FirebaseAuthService implements IAuthService {
     if (user == null) throw Exception('no_user');
 
     final role = await _resolveRole();
+    await _assertRoleAllowed(user.uid, role);
+
     final phone = user.phoneNumber ?? '';
     // Idempotent merge — records the phone + role without clobbering an existing
     // returning-user document.
@@ -124,6 +127,51 @@ class FirebaseAuthService implements IAuthService {
     // Signup is complete and the role is now durable in Firestore — drop the
     // transient prefs so a later fresh signup can't inherit this one's role.
     await _clearSignupState();
+  }
+
+  /// System Spec §14.1 A4 — one phone / Auth uid = one role (nanny XOR family).
+  /// Throws `role_mismatch:<existing>` and signs out when the user tries the
+  /// opposite role. Returning users of the *same* role are allowed.
+  Future<void> _assertRoleAllowed(String uid, UserType intended) async {
+    final nannyExists =
+        (await FirebaseFirestore.instance.collection('nannies').doc(uid).get())
+            .exists;
+    final familyExists =
+        (await FirebaseFirestore.instance.collection('families').doc(uid).get())
+            .exists;
+    final userSnap = await _users.doc(uid).get();
+    final typeRaw =
+        (userSnap.data()?['type'] ?? userSnap.data()?['userType']) as String?;
+    final storedType = typeRaw == UserType.family.name
+        ? UserType.family
+        : typeRaw == UserType.nanny.name
+            ? UserType.nanny
+            : null;
+
+    final opposite = intended == UserType.family ? UserType.nanny : UserType.family;
+    final oppositeExists =
+        intended == UserType.family ? nannyExists : familyExists;
+    final sameExists = intended == UserType.family ? familyExists : nannyExists;
+
+    UserType? conflict;
+    if (oppositeExists && !sameExists) {
+      conflict = opposite;
+    } else if (oppositeExists && sameExists) {
+      // Dual profiles from older builds — only allow the stored role.
+      if (storedType != null && storedType != intended) {
+        conflict = storedType;
+      } else if (storedType == null) {
+        conflict = opposite;
+      }
+    } else if (storedType != null && storedType != intended && !sameExists) {
+      conflict = storedType;
+    }
+
+    if (conflict != null) {
+      await _auth.signOut();
+      await _clearSignupState();
+      throw Exception('role_mismatch:${conflict.name}');
+    }
   }
 
   /// Creates the role-specific profile skeleton **only if it does not already
@@ -183,13 +231,9 @@ class FirebaseAuthService implements IAuthService {
     // resumes with the right role instead of the `nanny` default.
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_keyPendingRole, type.name);
-    final uid = _auth.currentUser?.uid;
-    if (uid != null) {
-      await _users.doc(uid).set({
-        'type': type.name,
-        'userType': type.name,
-      }, SetOptions(merge: true));
-    }
+    // Do not rewrite Firestore `type` here while signed in — that previously
+    // let a nanny pick "Family" on Welcome and flip their account. Role is
+    // committed only in [finalizePhoneRegistration] after A4 checks.
   }
 
   @override

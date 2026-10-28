@@ -255,10 +255,49 @@ class AuthController extends GetxController with WidgetsBindingObserver {
       // pending / approved / next-unfinished-onboarding screen.
       await _routeForUser(user);
     } catch (e) {
+      if (_isRoleMismatch(e)) {
+        isLoading.value = false;
+        await _showRoleMismatchDialogAndReturnToLogin(e);
+        return;
+      }
       Get.snackbar(AppStrings.errorTitle.tr, _authErrorMessage(e));
     } finally {
       isLoading.value = false;
     }
+  }
+
+  bool _isRoleMismatch(Object e) => e.toString().contains('role_mismatch:');
+
+  /// Spec §14.1 A4 — blocking dialog; OK signs out and returns to Welcome so
+  /// they can pick the correct role / number.
+  Future<void> _showRoleMismatchDialogAndReturnToLogin(Object e) async {
+    final message = _authErrorMessage(e);
+    // Firebase already signed out in `_assertRoleAllowed`; clear local session
+    // + OTP UI so Welcome starts clean.
+    await signOut();
+    phoneController.clear();
+    otpCode.value = '';
+    otpError.value = '';
+    _otpTimer?.cancel();
+    _resendTimer?.cancel();
+
+    if (Get.isDialogOpen ?? false) Get.back();
+    await Get.dialog<void>(
+      AlertDialog(
+        title: Text(AppStrings.authPhoneWrongRoleTitle.tr),
+        content: Text(message),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Get.back();
+              Get.offAllNamed(Routes.welcome);
+            },
+            child: Text(AppStrings.authRoleMismatchOk.tr),
+          ),
+        ],
+      ),
+      barrierDismissible: false,
+    );
   }
 
   /// Maps auth exceptions (Firebase live + mock service) to a localized,
@@ -309,8 +348,15 @@ class AuthController extends GetxController with WidgetsBindingObserver {
           return msg.isNotEmpty ? msg : AppStrings.authOtpSendFailed.tr;
       }
     }
-    // Mock service throws Exception('invalid_otp' | 'verification_failed' | …).
+    // Mock/Firebase services throw Exception('invalid_otp' | 'role_mismatch:…').
     final s = e.toString();
+    if (s.contains('role_mismatch:')) {
+      final roleKey = s.split('role_mismatch:').last.trim().split(RegExp(r'[\s\]]')).first;
+      final roleLabel = roleKey == 'family'
+          ? AppStrings.authRoleFamily.tr
+          : AppStrings.authRoleNanny.tr;
+      return AppStrings.authPhoneWrongRole.trParams({'role': roleLabel});
+    }
     if (s.contains('invalid_otp')) return AppStrings.authOtpIncorrect.tr;
     if (s.contains('no_verification_id') ||
         s.contains('verification_failed')) {
@@ -483,7 +529,15 @@ class AuthController extends GetxController with WidgetsBindingObserver {
       await Get.find<ISubscriptionService>().onUserSignedOut();
     }
     currentUser.value = null;
+    // Clear login form state so the next account never sees the prior phone/OTP.
+    phoneController.clear();
+    otpCode.value = '';
+    phoneError.value = '';
+    otpError.value = '';
+    otpSecondsLeft.value = AuthConstants.otpExpirySeconds;
+    otpResendLeft.value = 0;
     _otpTimer?.cancel();
+    _resendTimer?.cancel();
     _blockSub?.cancel();
     _blockSub = null;
   }
